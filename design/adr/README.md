@@ -43,4 +43,4 @@ Use `/adr-review` before moving a draft to `accepted`.
 
 | ADR | Title | Status | RFC | Specs |
 |---|---|---|---|---|
-| [ADR-001](ADR-001-catalog-format-seeding.md) | Puzzle Catalog Format and Seeding | proposed | RFC-001 | _(none yet)_ |
+| [ADR-001](ADR-001-catalog-format-seeding.md) | Puzzle Catalog Format and Seeding | proposed | RFC-001 | specs/001-catalog-seeding |
