@@ -112,8 +112,7 @@ implementing this ADR should include maintaining that index as a functional requ
 
 ### 2.4 Seeding
 
-Seed the initial catalog with (1) the canonical 1962 *Life International* puzzle (public domain,
-widely reproduced) transcribed into this format, and (2) a small number of hand-authored
+Seed the initial catalog with (1) the canonical 1962 *Life International* puzzle (widely reproduced; verify licensing/redistribution rights before copying) transcribed into this format, and (2) a small number of hand-authored
 puzzles expressible as classic CSPs, rather than scraping third-party collections — see section
 3 (Alternatives Considered) for why. Seed entries leave `tier` at its `unknown` placeholder
 value (2.1); they're chosen to match RFC-001's Goal of supporting classic-CSP puzzles first
