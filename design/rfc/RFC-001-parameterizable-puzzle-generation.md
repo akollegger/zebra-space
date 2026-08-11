@@ -3,7 +3,7 @@ id: RFC-001
 title: Parameterizable Natural-Language Zebra Puzzle Generation
 status: draft
 created: 2026-08-11
-adrs: []
+adrs: [ADR-001]
 ---
 
 # RFC-001: Parameterizable Natural-Language Zebra Puzzle Generation
@@ -55,7 +55,7 @@ they imply, would need to be bolted on as an afterthought.
 - Generation strategies are evaluated not only on effort/correctness/novelty but on resistance
   to solver memorization, so regression testing (did a known puzzle still get solved correctly?)
   and generalization testing (is the solver actually reasoning, or recalling?) can be told apart
-  (see 7, 9.1–9.5).
+  (see 7.5, 9.1–9.5).
 
 ## 4. Non-Goals
 
@@ -161,26 +161,30 @@ Two further ideas apply *across* the strategies in 5.2 rather than being alterna
 
 ## 7. Open Questions
 
-- Where exactly is the boundary between "expressible as a classic CSP" and "needs a dynamic/
-  flexible CSP" — is it per-clue-tier, or can a single puzzle mix tiers?
-- Given the generation strategies in 5.2 are complementary rather than exclusive, what order
-  should they be built in, and how should their output actually compose through the shared
-  catalog (9.1) — e.g. does 3/4's validated output get folded into the catalog automatically, or
-  via a separate curation step before it's trusted as a benchmark entry?
-- Should vague/contextual and subjective/preference clues be modeled as increasingly relaxed
-  constraint types within one puzzle representation, or as distinct puzzle "modes"?
-- What must a catalog entry capture, beyond the puzzle itself, to support solver evaluation and
-  human success/fail tracking (9.1) — e.g. generating strategy/provenance, clue-strictness tier,
-  known difficulty, solve/attempt history?
-- How should regression testing (did a known puzzle still get solved correctly?) and
-  generalization testing (is the solver actually reasoning, or recalling?) be kept distinct,
-  given that catalog selection is suited to the former and catalog modification/generate-from-
-  solution/scenario generation are suited to the latter (9.1–9.4)? Does a solve/attempt history
-  entry (previous open question) need to record *which* kind of test it was?
+7.1. Where exactly is the boundary between "expressible as a classic CSP" and "needs a dynamic/
+flexible CSP" — is it per-clue-tier, or can a single puzzle mix tiers?
+
+7.2. Given the generation strategies in 5.2 are complementary rather than exclusive, what order
+should they be built in, and how should their output actually compose through the shared
+catalog (9.1) — e.g. does 3/4's validated output get folded into the catalog automatically, or
+via a separate curation step before it's trusted as a benchmark entry?
+
+7.3. Should vague/contextual and subjective/preference clues be modeled as increasingly relaxed
+constraint types within one puzzle representation, or as distinct puzzle "modes"?
+
+7.4. What must a catalog entry capture, beyond the puzzle itself, to support solver evaluation
+and human success/fail tracking (9.1) — e.g. generating strategy/provenance, clue-strictness
+tier, known difficulty, solve/attempt history?
+
+7.5. How should regression testing (did a known puzzle still get solved correctly?) and
+generalization testing (is the solver actually reasoning, or recalling?) be kept distinct,
+given that catalog selection is suited to the former and catalog modification/generate-from-
+solution/scenario generation are suited to the latter (9.1–9.4)? Does a solve/attempt history
+entry (7.4) need to record *which* kind of test it was?
 
 ## 8. ADRs
 
-_(populated automatically as `/adr-create` links ADRs to this RFC)_
+- ADR-001: Puzzle Catalog Format and Seeding
 
 ## 9. Appendix: Strategy Evaluations
 
@@ -254,7 +258,7 @@ implementation.
 - **Fit with clue-strictness tiers (5.1)**: Naturally fits the strict/explicit tier, where "the
   clue that proves this fact" is a well-defined operation. Extending it to the vague/contextual
   or subjective/preference tiers is not obvious — those clues don't "prove" a fact the same way —
-  and is left as an open question (see 7) rather than assumed to work.
+  and is left as an open question (see 7.1, 7.3) rather than assumed to work.
 - **Testing/evaluation value**: Strongest of the four — because every solution grid (and thus
   every clue set) is freshly derived, memorization is structurally impossible, not just made
   harder. Combined with its correctness guarantee, a solver's failure on a generate-from-solution
@@ -291,13 +295,13 @@ the puzzle content is produced.
 |---|---|---|---|---|---|
 | Catalog selection | Low | Strong (pre-curated) | Low per selection (grows over time — see 9.1) | Regression-only — recall risk (memorization caveat, 9.1) | Any (bounded by catalog) |
 | Catalog modification | Low–Moderate | Conditional (needs validation) | Moderate | Partial generalization test — defeats answer recall, not shape recognition | Strict/explicit |
-| Generate-from-solution | Moderate | Strong (by construction) | High | Strongest — memorization structurally impossible, clean failure attribution | Strict/explicit — extending further is open (7) |
+| Generate-from-solution | Moderate | Strong (by construction) | High | Strongest — memorization structurally impossible, clean failure attribution | Strict/explicit — extending further is open (7.1, 7.3) |
 | Scenario generation — symbolic | High | Weak (needs post-hoc solver check) | High | High but muddied — failure could be solver or malformed puzzle | Strict/explicit |
 | Scenario generation — LLM-native | High | Weakest (needs post-hoc solver check + output reliability) | Highest | High but muddied — same caveat as symbolic | Vague/contextual, subjective/preference |
 
 This comparison proposes *criteria* for evaluating the strategies (effort, correctness
 guarantee, novelty/variety, testing/evaluation value, tier fit) — it does not resolve which
-criteria should be weighted most heavily, which remains open (see 7). It also doesn't score
+criteria should be weighted most heavily, which remains open (see 7.2). It also doesn't score
 "contributes to the shared catalog dataset" as its own criterion (9.1) — every strategy above is
 a potential *source* for the catalog, not just an alternative to it. Note the general pattern:
 testing/evaluation value and correctness guarantee track together for 9.3, but *diverge* for

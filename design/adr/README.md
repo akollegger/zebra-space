@@ -27,14 +27,15 @@ Created/updated via `/adr-create`. File: `design/adr/ADR-NNN-short-title.md`, `N
 | `created` | ISO date (`YYYY-MM-DD`) |
 | `specs` | List of speckit feature directories derived from this ADR — maintained automatically by the `speckit-adr-link` hook, do not hand-edit |
 
-**Required sections** (`##`):
+**Required sections** (numbered `##`, renumber if one is omitted) — `status` lives only in
+front-matter, no matching body section:
 
-1. Status
-2. Context
-3. Decision
-4. Alternatives Considered
-5. Consequences
-6. Related — RFC link and (automatically maintained) spec links
+1. Context
+2. Decision — split into numbered `###` subsections (`2.1`, `2.2`, ...) when the decision has
+   more than one genuinely distinct facet (e.g. format, location, seeding plan)
+3. Alternatives Considered
+4. Consequences
+5. Related — RFC link and (automatically maintained) spec links
 
 Use `/adr-review` before moving a draft to `accepted`.
 
@@ -42,4 +43,4 @@ Use `/adr-review` before moving a draft to `accepted`.
 
 | ADR | Title | Status | RFC | Specs |
 |---|---|---|---|---|
-| _(none yet)_ | | | | |
+| [ADR-001](ADR-001-catalog-format-seeding.md) | Puzzle Catalog Format and Seeding | proposed | RFC-001 | _(none yet)_ |

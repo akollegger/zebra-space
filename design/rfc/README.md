@@ -34,7 +34,8 @@ Created/updated via `/rfc-create`. File: `design/rfc/RFC-NNN-short-title.md`, `N
 5. Proposed Approach (high-level) — split into numbered `###` subsections when more than one
    distinct axis or strategy is being explored
 6. Alternatives Considered
-7. Open Questions
+7. Open Questions — each item individually numbered (`7.1.`, `7.2.`, ...), never a plain bullet
+   list, so other sections, ADRs, and future RFCs can cite exactly which question they address
 8. ADRs — list of child ADRs, kept in sync with the `adrs:` front-matter field
 
 Optional appendices may follow as additional numbered sections (`## 9. Appendix: ...`, etc.) —
@@ -48,4 +49,4 @@ Use `/rfc-review` before moving a draft to `review`/`accepted`.
 
 | RFC | Title | Status | ADRs |
 |---|---|---|---|
-| [RFC-001](RFC-001-parameterizable-puzzle-generation.md) | Parameterizable Natural-Language Zebra Puzzle Generation | draft | _(none yet)_ |
+| [RFC-001](RFC-001-parameterizable-puzzle-generation.md) | Parameterizable Natural-Language Zebra Puzzle Generation | draft | ADR-001 |
