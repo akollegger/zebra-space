@@ -43,9 +43,11 @@ This points toward an architecture where puzzle constraints are represented as *
 
 This project uses [speckit](https://github.com/github/spec-kit) (`.specify/`, `.claude/skills/speckit-*`) for spec-driven implementation, extended with an RFC/ADR layer that must precede it. Together they form a double-diamond: RFC covers Discover/Define, ADR covers Develop, speckit covers Deliver.
 
-- **RFC** (`design/rfc/RFC-NNN-*.md`, via `/rfc-create`) — the problem and why it matters, plus high-level candidate approaches. WHAT/WHY only, no implementation detail.
-- **ADR** (`design/adr/ADR-NNN-*.md`, via `/adr-create`) — one technical decision, concrete enough to implement. Always requires an existing parent RFC (`rfc:` front-matter field); `/adr-create` never creates or touches anything under `specs/`.
+- **RFC** (`design/rfc/RFC-NNN-*.md`, via `/rfc-create`; reviewed via `/rfc-review`) — the problem and why it matters, plus high-level candidate approaches. WHAT/WHY only, no implementation detail. Numbered `##` sections (renumber if one is omitted); index at `design/rfc/README.md`.
+- **ADR** (`design/adr/ADR-NNN-*.md`, via `/adr-create`; reviewed via `/adr-review`) — one technical decision, concrete enough to implement. Always requires an existing parent RFC (`rfc:` front-matter field); `/adr-create` never creates or touches anything under `specs/`. Index at `design/adr/README.md`.
 - **speckit** (`specs/NNN-*/`, via `/speckit-specify` → `/speckit-plan` → `/speckit-tasks` → `/speckit-implement`) — implementation, seeded from one or more ADRs referenced in the `/speckit-specify` call (e.g. `/speckit-specify ADR-005: <description>`).
+
+`/rfc-create` and `/adr-create` keep their respective `design/*/README.md` index tables in sync automatically — don't hand-edit those tables. Use `/rfc-review`/`/adr-review` before moving a draft to `review`/`accepted` status; they report findings and suggested revisions but don't edit the document themselves.
 
 This is enforced, not just conventional: `/speckit-specify` has mandatory hooks registered in `.specify/extensions.yml`:
 - `before_specify` → `speckit-adr-gate` hard-blocks the call if it doesn't reference at least one existing ADR (bare `ADR-5`, zero-padded, filename, or `@design/adr/ADR-005-*.md` form all resolve).
