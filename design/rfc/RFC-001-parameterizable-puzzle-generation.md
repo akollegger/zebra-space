@@ -45,13 +45,17 @@ they imply, would need to be bolted on as an afterthought.
   satisfaction problems.
 - Keep the door open for vague/contextual and subjective/preference-based clues as later
   additions, without needing to redo the foundational generation work to accommodate them.
-- Explore and evaluate multiple candidate generation strategies rather than committing to one
-  up front.
+- No single generation strategy (5.2) is committed to by this RFC — which one(s) to build, and
+  in what order, is deferred to a child ADR informed by the comparative evaluation in 9.
 - Treat the puzzle catalog as growing shared infrastructure, not just a lookup table: every
   generation strategy that produces a validated puzzle should be able to contribute it back to
   the catalog, so the catalog accumulates into a dataset usable for solver evaluation, analysis
   of what makes puzzles harder or easier, and tracking human success/fail outcomes over time (see
   9.1).
+- Generation strategies are evaluated not only on effort/correctness/novelty but on resistance
+  to solver memorization, so regression testing (did a known puzzle still get solved correctly?)
+  and generalization testing (is the solver actually reasoning, or recalling?) can be told apart
+  (see 7, 9.1–9.5).
 
 ## 4. Non-Goals
 
@@ -77,19 +81,25 @@ replacing it.
 
 ### 5.2 Generation strategies
 
-Treat *how* a puzzle is produced as its own axis, independent of clue-strictness, spanning these
-candidate strategies:
+Treat *how* a puzzle is produced as its own axis, independent of clue-strictness. These are
+**complementary capabilities that compose through the shared catalog (9.1), not mutually
+exclusive alternatives to pick one from** — each buys a different guarantee at a different cost,
+and there's no reason a mature system wouldn't eventually have all of them:
 
-1. **Catalog selection** — pick an existing, pre-authored puzzle from a catalog.
+1. **Catalog selection** — pick an existing, pre-authored puzzle from a catalog. The shared
+   substrate every other strategy below feeds.
 2. **Catalog modification** — take a cataloged puzzle and vary it (e.g. swap entities/attributes,
-   adjust size) to produce a new but related puzzle.
+   adjust size) to produce a new but related puzzle. Depends on 1 already having something to
+   vary — this is the one genuine prerequisite relationship among the four.
 3. **Generate-from-solution** — pick a valid answer grid first, derive the full set of clues that
    would prove it, then minimize down to the smallest subset that still uniquely determines the
    solution. Unlike the other strategies, this gives a uniqueness guarantee by construction
-   rather than needing a separate solver pass to check it afterward.
+   rather than needing a separate solver pass to check it afterward. Independent of 1 and 2 — it
+   doesn't need a catalog to run — but its validated output is a natural contribution back into it.
 4. **Scenario generation** — generate a complete puzzle from scratch, including its entities,
-   attributes, and clues. This strategy itself has at least two distinct mechanisms worth
-   evaluating separately:
+   attributes, and clues. Also independent of 1–3, and likewise a natural contributor back into
+   the catalog. This strategy itself has at least two distinct mechanisms worth evaluating
+   separately:
    - *Symbolic generation*: assemble entities, attributes, and clues procedurally from
      constraint-generation rules, then verify solvability/uniqueness afterward.
    - *LLM-native authoring*: let an LLM invent the theme and clues directly, using the
@@ -97,10 +107,12 @@ candidate strategies:
      natural fit for the vague/contextual and subjective/preference clue tiers (5.1), since those
      clue kinds resist clean procedural/template generation.
 
-Each strategy should be explored and evaluated rather than assumed — they likely trade off
-implementation effort, correctness guarantees, and novelty/variety, and a later ADR should record
-which one(s) to build and in what order. See the Appendix (section 9) for a comparative,
-research-level evaluation of each.
+So the relationship among them is a hub (1, the catalog) with one consumer that also produces
+(2) and two independent producers (3, 4) — not a sequential ladder where each requires the last,
+and not a menu where building one forecloses the others. The real decision isn't *which* to
+build, it's *what order* to build them in and *how* their output composes through the catalog.
+A later ADR should record that sequencing and composition, informed by the comparative
+evaluation in the Appendix (section 9).
 
 ### 5.3 Cross-cutting concerns
 
@@ -123,11 +135,20 @@ Two further ideas apply *across* the strategies in 5.2 rather than being alterna
   them as a separate future RFC.** Rejected: parameterizability is a stated goal, and clue
   strictness is one of the parameters — designing as if only strict clues will ever exist risks
   a foundation that can't accommodate the others later without rework.
-- **Commit to one generation strategy (e.g. full scenario generation) up front instead of
-  evaluating the spectrum.** Rejected: the strategies in 5.2 differ enough in cost, risk, and
-  correctness guarantees that picking one without comparison is premature; evaluating
-  catalog-based and generate-from-solution approaches first gives a working, guaranteed-correct
-  fallback while more ambitious generation is explored.
+- **Treat the generation strategies in 5.2 as mutually exclusive alternatives to choose between**
+  (e.g. commit to full scenario generation up front and treat the others as rejected options).
+  Rejected: they aren't actually exclusive — 5.2's hub-and-spoke relationship (the catalog as
+  shared substrate, with one dependent consumer and two independent producers) means most or all
+  of them are likely to get built eventually. Picking one and discarding the rest would throw
+  away a working, guaranteed-correct fallback (generate-from-solution, or catalog-based
+  approaches) for no real benefit; the actual decision is build order and composition, not
+  selection.
+- **Adopt or adapt an existing zebra-puzzle generator instead of building one.** Rejected:
+  existing generators typically only cover the strict/explicit tier (5.1) and don't obviously
+  extend to the vague/contextual or subjective/preference tiers this RFC treats as first-class,
+  nor to the catalog-as-growing-dataset goal (3) — adapting one to all of that is likely as much
+  work as building against this RFC's strategy spectrum (5.2, 9) directly, without the benefit
+  of having evaluated the trade-offs ourselves.
 - **Recognize and extract an implicit CSP from arbitrary prose about a real-world domain**
   (e.g. a loan-increase approval decision shaped by the immediate scenario, applicable business
   rules, and the regulatory environment), rather than generating zebra-style puzzles from
@@ -142,8 +163,10 @@ Two further ideas apply *across* the strategies in 5.2 rather than being alterna
 
 - Where exactly is the boundary between "expressible as a classic CSP" and "needs a dynamic/
   flexible CSP" — is it per-clue-tier, or can a single puzzle mix tiers?
-- What criteria should be used to evaluate and compare the generation strategies in 5.2 (e.g.
-  novelty, guaranteed solvability, implementation effort, output quality)?
+- Given the generation strategies in 5.2 are complementary rather than exclusive, what order
+  should they be built in, and how should their output actually compose through the shared
+  catalog (9.1) — e.g. does 3/4's validated output get folded into the catalog automatically, or
+  via a separate curation step before it's trusted as a benchmark entry?
 - Should vague/contextual and subjective/preference clues be modeled as increasingly relaxed
   constraint types within one puzzle representation, or as distinct puzzle "modes"?
 - What must a catalog entry capture, beyond the puzzle itself, to support solver evaluation and
