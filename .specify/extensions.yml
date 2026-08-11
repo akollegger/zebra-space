@@ -1,0 +1,20 @@
+installed: []
+settings:
+  auto_execute_hooks: true
+hooks:
+  before_specify:
+  - extension: adr
+    command: speckit.adr.gate
+    enabled: true
+    optional: false
+    prompt: Verify ADR reference before specification?
+    description: Block specification unless at least one existing ADR is referenced
+    condition: null
+  after_specify:
+  - extension: adr
+    command: speckit.adr.link
+    enabled: true
+    optional: false
+    prompt: Link specification back to its ADR(s)?
+    description: Backlink the new spec to its source ADR(s) and append the spec path to each ADR
+    condition: null
