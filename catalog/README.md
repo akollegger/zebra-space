@@ -21,6 +21,16 @@ natural-language prose.
 | [PZL-0002](puzzles/PZL-0002-context-graphs-example.md) | Three Houses (Context Graphs Example) | 6/2/4 | [Medium](https://medium.com/neo4j/context-graphs-agentic-decisions-9a125f22f411) | seeded |
 | [PZL-0003](puzzles/PZL-0003-rock-paper-scissors.md) | Rock Paper Scissors | 1/1/4 | hand-authored | seeded |
 | [PZL-0004](puzzles/PZL-0004-whodunit.md) | Whodunit | 3/3/6 | hand-authored | seeded |
+| [PZL-0005](puzzles/PZL-0005-four-countries.md) | Four Countries | 4/1/8 | hand-authored | seeded |
+| [PZL-0006](puzzles/PZL-0006-four-queens.md) | Four Queens | 4/1/3 | hand-authored | seeded |
+| [PZL-0007](puzzles/PZL-0007-send-more-money.md) | SEND + MORE = MONEY | 8/1/4 | [Wikipedia](https://en.wikipedia.org/wiki/Verbal_arithmetic) | seeded |
+| [PZL-0008](puzzles/PZL-0008-lo-shu-square.md) | Lo Shu Square | 9/1/5 | [Wikipedia](https://en.wikipedia.org/wiki/Lo_Shu_Square) | seeded |
+| [PZL-0009](puzzles/PZL-0009-interview-slots.md) | Interview Slots | 3/1/3 | hand-authored | seeded |
+| [PZL-0010](puzzles/PZL-0010-four-way-stop.md) | Four-Way Stop | 5/1/7 | hand-authored | seeded |
+| [PZL-0011](puzzles/PZL-0011-loan-review.md) | Loan Review | 1/1/7 | hand-authored | seeded |
+| [PZL-0012](puzzles/PZL-0012-medication-schedule.md) | Medication Schedule | 3/1/3 | hand-authored | seeded |
+| [PZL-0013](puzzles/PZL-0013-picking-a-restaurant.md) | Picking a Restaurant | 1/1/7 | hand-authored | seeded |
+| [PZL-0014](puzzles/PZL-0014-packing-the-box.md) | Packing the Box | 5/1/2 | hand-authored | seeded |
 
 `Size` is `variables/domains/constraints` (ADR-001 §2.1) — a CSP-neutral profile, not a
 difficulty rating.
