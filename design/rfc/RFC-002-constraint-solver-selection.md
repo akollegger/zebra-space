@@ -101,8 +101,8 @@ Independent of which ecosystem is chosen (5.2), any solver hand-off needs the co
 expose, at minimum:
 
 - **Finite, enumerable domains** — every variable's possible values must be a finite, enumerable
-  set. This excludes continuous domains (e.g. Gemini's loan-APR-range example from the earlier
-  Finance puzzle discussion) — consistent with this project's classic-CSP scope.
+  set. This excludes continuous domains (e.g. real-valued ranges) — consistent with this project's
+  classic-CSP scope.
 - **An explicit constraint list** — every constraint expressible as a computable predicate over a
   finite set of variables, not natural-language prose. The graph must be translatable into "for
   these N variables, this relation must hold," not left implicit in a clue's wording.
