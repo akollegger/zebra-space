@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project state
 
-This repository is a fresh scaffold with no application source code yet — only `package.json`, the pnpm lockfile/workspace config, and this documentation. There are no commits on `main`. When adding the first real code, establish the directory layout and update this file's Architecture section accordingly.
+`catalog/` holds a seeded puzzle catalog (`catalog/puzzles/PZL-NNNN-*.md`, indexed in `catalog/README.md`, per [ADR-001](design/adr/ADR-001-catalog-format-seeding.md)) and `tests/` holds automated checks against it (`pnpm test`, Node's built-in test runner). There is otherwise still no application source code — no puzzle generation, graph representation, or solver yet. When adding that, establish the directory layout and update this file's Architecture section accordingly.
 
 ## Purpose
 
@@ -23,7 +23,7 @@ Package manager is **pnpm** (pinned via `packageManager` in `package.json`; Node
 
 ```bash
 pnpm install       # install dependencies
-pnpm test          # placeholder — no tests configured yet, exits with an error
+pnpm test          # runs tests/**/*.test.ts via Node's built-in test runner (node --test)
 ```
 
 `pnpm-workspace.yaml` currently only sets `allowBuilds` for `msgpackr-extract` (a transitive dependency's native build gate) — there are no workspace packages defined yet.

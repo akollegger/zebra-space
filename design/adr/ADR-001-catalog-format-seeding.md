@@ -4,7 +4,8 @@ title: Puzzle Catalog Format and Seeding
 status: proposed
 rfc: RFC-001
 created: 2026-08-11
-specs: []
+specs:
+  - specs/001-catalog-seeding
 ---
 
 # ADR-001: Puzzle Catalog Format and Seeding
@@ -51,7 +52,7 @@ body holding the puzzle as natural-language prose (the clues a person reads, per
 
 ```yaml
 ---
-id: PUZZLE-NNN
+id: PZL-NNNN
 title: <short title>
 # tier taxonomy isn't settled yet (RFC-001 Open Question 7.3) — reserved, no defined values yet
 tier: unknown
@@ -91,16 +92,21 @@ This schema is deliberately minimal and scoped to catalog-selection's own seed e
 entries right now, so recording "which strategy produced this" would be a constant, meaningless
 value. When ADR-002/003/004 (catalog modification, generate-from-solution, scenario generation)
 start contributing entries, each is free to add whatever fields actually justify themselves for
-*that* strategy (e.g. catalog modification likely wants a `derived_from: PUZZLE-NNN` pointer;
+*that* strategy (e.g. catalog modification likely wants a `derived_from: PZL-NNNN` pointer;
 generate-from-solution might want a random seed) rather than forcing one shared field to cover
 every case speculatively.
 
 ### 2.2 Directory
 
-`catalog/puzzles/PUZZLE-NNN-short-name.md`, `NNN` zero-padded, numbered sequentially — the same
-convention already established for `design/rfc/RFC-NNN-*` and `design/adr/ADR-NNN-*`.
-`catalog/` sits at the repo root, sibling to `design/` and `src/`: it's runtime data the
-application consumes, not design documentation and not source code.
+`catalog/puzzles/PZL-NNNN-short-name.md`, `NNNN` zero-padded to 4 digits (max 9999), numbered
+sequentially — a wider counter than `design/rfc/RFC-NNN-*`/`design/adr/ADR-NNN-*`'s 3 digits,
+since this catalog is expected to grow to a materially larger volume than RFCs/ADRs ever will.
+The [ZebraLogic benchmark](https://huggingface.co/blog/yuchenlin/zebra-logic) noted in Context
+(category b) contains 1,000 puzzles at one fixed generation scale alone; a catalog fed
+organically by all four of RFC-001's generation strategies over time should have headroom well
+beyond that without a disruptive re-numbering later. `catalog/` sits at the repo root, sibling to
+`design/` and `src/`: it's runtime data the application consumes, not design documentation and
+not source code.
 
 ### 2.3 Index
 
@@ -135,6 +141,14 @@ value (2.1); they're chosen to match RFC-001's Goal of supporting classic-CSP pu
   avoids that risk; the `source` field exists specifically so any future adaptation is cited
   rather than silently absorbed — anyone adding a `source` URL is expected to have already
   checked it's public-domain or otherwise permitted before copying.
+- **Slug-based filenames (derived from title, no sequential id) instead of `PZL-NNNN`.**
+  Rejected: this catalog's value includes supporting a stable, compact, citable reference to one
+  specific puzzle (e.g. flagging that a particular puzzle is notoriously hard, or logging a solve
+  attempt against it — RFC-001 Open Question 7.4) — a numeric id is easier to cite and sort by
+  than a slug at the volume this catalog is sized for (2.2). The trade-off: sequential numbering
+  has a real collision risk under concurrent contributions (two branches both claiming the same
+  next number), which a slug avoids entirely; accepted for now since contributions are low-volume
+  and not yet concurrent, revisit if that changes.
 - **Import an existing structured benchmark (e.g. a ZebraLogic-style dataset) wholesale.**
   Rejected for this ADR: those are distributed as structured constraint grids for LLM-eval
   benchmarking, not natural-language prose, and importing a well-known public eval set risks
@@ -177,4 +191,4 @@ value (2.1); they're chosen to match RFC-001's Goal of supporting classic-CSP pu
 ## 5. Related
 
 - RFC: RFC-001
-- Specs: _(populated automatically by the speckit ADR-link hook once `/speckit-specify` references this ADR)_
+- Specs: specs/001-catalog-seeding
