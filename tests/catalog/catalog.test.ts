@@ -64,14 +64,24 @@ test("SC-001: catalog/puzzles/ contains at least 3 puzzle files", () => {
 test("SC-002: every puzzle file has complete frontmatter", () => {
   const files = listPuzzleFiles()
   assert.ok(files.length > 0, "no puzzle files found to check")
+
+  const seenIds = new Set<string>()
+
   for (const file of files) {
     const fields = readFrontmatter(join(PUZZLES_DIR, file))
+
     for (const field of REQUIRED_FRONTMATTER_FIELDS) {
       assert.ok(
         field in fields && fields[field] !== "",
         `${file} is missing a non-empty "${field}" frontmatter field`,
       )
     }
+
+    const expectedId = file.match(/^PZL-\d{4}/)?.[0]
+    assert.ok(expectedId, `${file} filename does not start with a PZL-#### id`)
+    assert.equal(fields.id, expectedId, `${file} frontmatter id must match filename id (${expectedId})`)
+    assert.ok(!seenIds.has(fields.id), `duplicate puzzle id found: ${fields.id}`)
+    seenIds.add(fields.id)
   }
 })
 
