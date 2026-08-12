@@ -143,9 +143,9 @@ complete.
   into *how* under-constrained a multiply-satisfiable puzzle is (e.g. 2 solutions vs. 200) unless
   a future need justifies paying for fuller enumeration.
 - MiniZinc itself is MPL 2.0-licensed (Gecode is separately MIT-licensed, per 2.2). This project
-  invokes MiniZinc as an external CLI tool (2.3) rather than linking or modifying its source, so
-  MPL 2.0's file-level copyleft obligations don't attach to this codebase. This resolves RFC-002
-  Open Question 7.3.
+  invokes MiniZinc as an external CLI tool (2.3) rather than linking or modifying its source; as a
+  result, adopting MiniZinc is not expected to impose MPL obligations on this repository beyond
+  complying with MiniZinc's license terms. This resolves RFC-002 Open Question 7.3.
 - `catalog/mzn/` (2.6) starts empty — it's a follow-up authoring effort, one example at a time,
   not something this ADR populates. It's expected to directly inform (and later validate against)
   the graph-to-`.mzn` compiler ADR once that's written.
