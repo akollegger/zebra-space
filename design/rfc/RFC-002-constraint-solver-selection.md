@@ -18,8 +18,8 @@ to hand a distilled CSP off to, rather than building solving logic ourselves.
 ## 2. Problem / Motivation
 
 Every seed puzzle in the catalog (RFC-001, ADR-001) was verified solvable by hand, one at a
-time. That doesn't scale: RFC-001's catalog-modification strategy (§9.2, a prospective ADR-002
-under RFC-001) needs to confirm that a *programmatically generated* variant is still uniquely
+time. That doesn't scale: RFC-001's catalog-modification strategy (§9.2; a follow-up ADR under
+RFC-001) needs to confirm that a *programmatically generated* variant is still uniquely
 solvable, and manual solving can't be the verification method for something meant to run
 automatically. RFC-001's own Non-Goals (4) and ADR-001's Context explicitly exclude solving from
 that RFC's scope — this is a genuinely separate problem needing its own RFC, not a late addition
