@@ -2,8 +2,10 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 import { readdirSync, readFileSync, existsSync } from "node:fs"
 import { join } from "node:path"
+import { fileURLToPath } from "node:url"
 
-const CATALOG_DIR = join(import.meta.dirname, "..", "..", "catalog")
+const HERE = fileURLToPath(new URL(".", import.meta.url))
+const CATALOG_DIR = join(HERE, "..", "..", "catalog")
 const PUZZLES_DIR = join(CATALOG_DIR, "puzzles")
 const README_PATH = join(CATALOG_DIR, "README.md")
 const PUZZLE_FILENAME = /^PZL-\d{4}-.+\.md$/
