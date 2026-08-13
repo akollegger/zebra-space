@@ -2,9 +2,10 @@
 id: ADR-002
 title: Adopt MiniZinc as the Constraint-Solver Ecosystem
 status: proposed
-rfc: RFC-002
+rfcs: [RFC-002]
 created: 2026-08-12
-specs: []
+specs:
+  - specs/002-minizinc-integration
 ---
 
 # ADR-002: Adopt MiniZinc as the Constraint-Solver Ecosystem
@@ -152,5 +153,5 @@ complete.
 
 ## 5. Related
 
-- RFC: RFC-002
-- Specs: _(populated automatically by the speckit ADR-link hook once `/speckit-specify` references this ADR)_
+- RFCs: RFC-002
+- Specs: specs/002-minizinc-integration

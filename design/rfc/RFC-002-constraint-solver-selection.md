@@ -3,7 +3,7 @@ id: RFC-002
 title: Constraint Solver Selection
 status: draft
 created: 2026-08-12
-adrs: [ADR-002]
+adrs: [ADR-002, ADR-003]
 ---
 
 # RFC-002: Constraint Solver Selection
@@ -164,6 +164,7 @@ the solver choice more easily revisable later?
 ## 8. ADRs
 
 - ADR-002: Adopt MiniZinc as the Constraint-Solver Ecosystem
+- ADR-003: CLI Interface Shape
 
 ## 9. Appendix: Solver Ecosystem Comparison
 

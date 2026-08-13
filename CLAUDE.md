@@ -2,9 +2,17 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+See [README.md](README.md) for the project's mission, non-goals, and a human-facing summary of
+the design process (its own "Design Process" section). This file is the more detailed,
+operational counterpart: commands, key dependencies, and the mechanics of how RFC/ADR/speckit
+are actually enforced. The other top-level READMEs (`design/rfc/README.md`, `design/adr/README.md`,
+`catalog/README.md`, `catalog/mzn/README.md`) are each scoped to their own directory — living
+indexes and format docs for that directory's content — and are linked from the relevant sections
+below rather than duplicated here.
+
 ## Project state
 
-`catalog/` holds a seeded puzzle catalog (`catalog/puzzles/PZL-NNNN-*.md`, indexed in `catalog/README.md`, per [ADR-001](design/adr/ADR-001-catalog-format-seeding.md)) and `tests/` holds automated checks against it (`pnpm test`, Node's built-in test runner). There is otherwise still no application source code — no puzzle generation, graph representation, or solver yet. When adding that, establish the directory layout and update this file's Architecture section accordingly.
+`catalog/` holds a seeded puzzle catalog (`catalog/puzzles/PZL-NNNN-*.md`, indexed in `catalog/README.md`, per [ADR-001](design/adr/ADR-001-catalog-format-seeding.md)) plus a growing MiniZinc example catalog (`catalog/mzn/*.mzn`, per [ADR-002](design/adr/ADR-002-adopt-minizinc-solver.md) §2.6). `src/solver/` holds the MiniZinc solve-and-classify capability (ADR-002); `tests/` holds automated checks against both (`pnpm test`, Node's built-in test runner). There is otherwise still no puzzle generation or graph representation. When adding that, establish the directory layout and update this file's Architecture section accordingly.
 
 ## Purpose
 
@@ -28,9 +36,16 @@ pnpm test          # runs tests/**/*.test.ts via Node's built-in test runner (no
 
 `pnpm-workspace.yaml` currently only sets `allowBuilds` for `msgpackr-extract` (a transitive dependency's native build gate) — there are no workspace packages defined yet.
 
+**MiniZinc prerequisite**: `src/solver/`'s tests require the `minizinc` CLI with a registered
+finite-domain (CP) solver (Gecode by default — MIP-only solvers like COIN-BC don't support the
+multi-solution enumeration this project needs). Install MiniZinc (e.g. `brew install minizinc`
+on macOS), then run `./scripts/setup-minizinc-solver.sh` to check/register a CP solver if it
+isn't wired up automatically (see `specs/002-minizinc-integration/research.md` Finding 1 for
+why that step is sometimes needed).
+
 ## Key dependencies
 
-- **`effect`** — the `Effect` functional-effects library. Expect puzzle generation/solving logic to be modeled as `Effect` pipelines (Effect, Option, pipe, etc.) rather than plain async/await or thrown exceptions.
+- **`effect`** — the `Effect` functional-effects library (pinned to a `4.0.0-beta` line). Expect puzzle generation/solving logic to be modeled as `Effect` pipelines (Effect, Option, pipe, etc.) rather than plain async/await or thrown exceptions. Note: `@effect/platform`'s `Command` module is **not** usable here — its only stable release peer-depends on `effect@^3.22.1`, incompatible with this repo's pin (confirmed by a broken install; see `specs/002-minizinc-integration/research.md`/`tasks.md` T001). `src/solver/solve.ts` instead wraps `node:child_process` by hand in an `Effect`, which still satisfies this principle's actual intent.
 - **`@relateby/pattern`** — native TypeScript `Pattern`/`Subject`/`StandardGraph` APIs (backed by a Rust "gram" codec) for representing puzzles as graphs. Notable pieces:
   - `Subject.fromId(...).withLabel(...).withProperty(...)` builds graph entities.
   - `Pattern` composes subjects/relationships; `StandardGraph.fromPatterns([...])` builds a queryable graph.
@@ -44,7 +59,7 @@ This points toward an architecture where puzzle constraints are represented as *
 This project uses [speckit](https://github.com/github/spec-kit) (`.specify/`, `.claude/skills/speckit-*`) for spec-driven implementation, extended with an RFC/ADR layer that must precede it. Together they form a double-diamond: RFC covers Discover/Define, ADR covers Develop, speckit covers Deliver.
 
 - **RFC** (`design/rfc/RFC-NNN-*.md`, via `/rfc-create`; reviewed via `/rfc-review`) — the problem and why it matters, plus high-level candidate approaches. WHAT/WHY only, no implementation detail. Numbered `##` sections (renumber if one is omitted); index at `design/rfc/README.md`.
-- **ADR** (`design/adr/ADR-NNN-*.md`, via `/adr-create`; reviewed via `/adr-review`) — one technical decision, concrete enough to implement. Always requires an existing parent RFC (`rfc:` front-matter field); `/adr-create` never creates or touches anything under `specs/`. Index at `design/adr/README.md`.
+- **ADR** (`design/adr/ADR-NNN-*.md`, via `/adr-create`; reviewed via `/adr-review`) — one technical decision, concrete enough to implement. Always requires at least one existing parent RFC (`rfcs:` front-matter field, a list — an ADR MAY serve more than one RFC when it's genuinely shared infrastructure, e.g. a CLI shape multiple problem explorations depend on); `/adr-create` never creates or touches anything under `specs/`. Index at `design/adr/README.md`.
 - **speckit** (`specs/NNN-*/`, via `/speckit-specify` → `/speckit-plan` → `/speckit-tasks` → `/speckit-implement`) — implementation, seeded from one or more ADRs referenced in the `/speckit-specify` call (e.g. `/speckit-specify ADR-005: <description>`).
 
 `/rfc-create` and `/adr-create` keep their respective `design/*/README.md` index tables in sync automatically — don't hand-edit those tables. Use `/rfc-review`/`/adr-review` before moving a draft to `review`/`accepted` status; they report findings and suggested revisions but don't edit the document themselves.

@@ -9,7 +9,8 @@ or more child [ADRs](../adr/README.md).
 
 - A new capability or subsystem is being considered and the problem/scope isn't settled yet.
 - Multiple genuinely different high-level directions exist and the trade-off is worth recording.
-- Before any `/adr-create` or `/speckit-specify` work — every ADR requires a parent RFC.
+- Before any `/adr-create` or `/speckit-specify` work — every ADR requires at least one parent
+  RFC (an ADR MAY serve more than one RFC when it's genuinely shared infrastructure).
 
 ## Format
 
@@ -50,4 +51,4 @@ Use `/rfc-review` before moving a draft to `review`/`accepted`.
 | RFC | Title | Status | ADRs |
 |---|---|---|---|
 | [RFC-001](RFC-001-parameterizable-puzzle-generation.md) | Parameterizable Natural-Language Zebra Puzzle Generation | draft | ADR-001 |
-| [RFC-002](RFC-002-constraint-solver-selection.md) | Constraint Solver Selection | draft | ADR-002 |
+| [RFC-002](RFC-002-constraint-solver-selection.md) | Constraint Solver Selection | draft | ADR-002, ADR-003 |

@@ -1,15 +1,13 @@
 <!--
 Sync Impact Report
-Version change: (unratified template) → 1.0.0
-Modified principles: n/a — initial ratification
-Added sections:
-  - Core Principles: I. RFC/ADR-Gated Delivery, II. Effect-Idiomatic Code,
-    III. Graphs as the Constraint Representation, IV. Design-First, Then Test-First
-  - Governance
-Removed sections:
-  - [SECTION_2_NAME]/[SECTION_2_CONTENT] and [SECTION_3_NAME]/[SECTION_3_CONTENT] placeholders
-    (omitted — no additional-constraints or workflow content beyond the principles/governance
-    below is established yet; add a section if and when concrete content exists)
+Version change: 1.0.0 → 1.1.0
+Modified principles:
+  - I. RFC/ADR-Gated Delivery — clarified the RFC:ADR relationship as many-to-many (an ADR still
+    requires at least one parent RFC, but MAY legitimately serve more than one when a decision
+    is genuinely shared infrastructure). Materially expanded allowance, not a wording-only
+    change — hence MINOR, not PATCH.
+Added sections: none
+Removed sections: none
 Deferred TODOs: none
 -->
 
@@ -20,15 +18,21 @@ Deferred TODOs: none
 ### I. RFC/ADR-Gated Delivery
 
 No implementation work MAY proceed through `/speckit-specify` without referencing at least one
-existing Architecture Decision Record (ADR), and no ADR MAY exist without a parent RFC. The
-chain is: RFC (the problem, and why it matters) → ADR (the technical decision, and how) →
-speckit spec/plan/tasks/implement. This is mechanically enforced, not just conventional: the
-`speckit-adr-gate` hook (registered in `.specify/extensions.yml`, `before_specify`) hard-blocks
-`/speckit-specify` when no ADR is referenced, and `speckit-adr-link` (`after_specify`) backlinks
-the resulting spec to its ADR(s).
+existing Architecture Decision Record (ADR), and no ADR MAY exist without at least one parent
+RFC. The RFC:ADR relationship is many-to-many, not one-to-one: usually one RFC motivates one
+ADR, but an ADR MAY list more than one parent RFC when the decision is genuinely shared
+infrastructure that multiple problem explorations depend on (e.g. a CLI interface shape serving
+both a generation-strategy RFC and a solving RFC) — such an ADR MUST NOT arbitrarily pick one
+RFC as "the" parent and relegate the others to prose. The chain is: RFC(s) (the problem, and why
+it matters) → ADR (the technical decision, and how) → speckit spec/plan/tasks/implement. This is
+mechanically enforced, not just conventional: the `speckit-adr-gate` hook (registered in
+`.specify/extensions.yml`, `before_specify`) hard-blocks `/speckit-specify` when no ADR is
+referenced, and `speckit-adr-link` (`after_specify`) backlinks the resulting spec to its ADR(s).
 
 Rationale: implementation must trace back to an explicit, reviewed design decision, not to scope
-invented ad hoc mid-build.
+invented ad hoc mid-build. Allowing an ADR multiple parent RFCs reflects how shared-infrastructure
+decisions actually arise, rather than forcing an artificial single-parent choice that a prose
+workaround would then quietly undermine.
 
 ### II. Effect-Idiomatic Code
 
@@ -68,4 +72,4 @@ wording or clarification fixes with no rule change. `/speckit-plan`'s Constituti
 the primary compliance checkpoint for new work; any justified deviation from a principle MUST be
 recorded in that plan's Complexity Tracking rather than silently ignored.
 
-**Version**: 1.0.0 | **Ratified**: 2026-08-11 | **Last Amended**: 2026-08-11
+**Version**: 1.1.0 | **Ratified**: 2026-08-11 | **Last Amended**: 2026-08-13
