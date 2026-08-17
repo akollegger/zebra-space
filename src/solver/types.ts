@@ -8,6 +8,16 @@ export interface SolveRequest {
   readonly timeoutMs?: number
 }
 
+export interface SolveFileRequest {
+  readonly modelPath: string
+  // `| undefined` (not just `?:`) so callers can pass through an already-optional value (e.g.
+  // `flags.data`) as an explicit key without tripping exactOptionalPropertyTypes.
+  readonly dataPath?: string | undefined
+  readonly solverId?: string | undefined
+  readonly maxSolutions?: number | undefined
+  readonly timeoutMs?: number | undefined
+}
+
 export type Assignment = Record<string, unknown>
 
 export interface Unsatisfiable {

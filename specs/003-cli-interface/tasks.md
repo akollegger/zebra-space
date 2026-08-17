@@ -31,9 +31,9 @@ Single project (per plan.md's Project Structure): `src/cli/`, `tests/cli/` at re
 
 **Purpose**: Get `@stricli/core` wired into a runnable entrypoint before any subcommand logic exists.
 
-- [ ] T001 Add `"bin": { "zebra": "./src/cli/main.ts" }` to `package.json` (plan.md's Project Structure; `@stricli/core` dependency already added in ADR-003's revision)
-- [ ] T002 Create `src/cli/main.ts` with `#!/usr/bin/env node` shebang, executable bit set (`chmod +x`), building an empty `buildRouteMap({ routes: {} })` passed to `buildApplication` and `run` (research.md Finding 1 & 2) — no subcommands yet, just confirms the entrypoint runs and `--help`/`--version` work
-- [ ] T003 Verify `./src/cli/main.ts --help` and `./src/cli/main.ts --version` run directly with no build step (research.md Finding 1)
+- [X] T001 Add `"bin": { "zebra": "./src/cli/main.ts" }` to `package.json` (plan.md's Project Structure; `@stricli/core` dependency already added in ADR-003's revision)
+- [X] T002 Create `src/cli/main.ts` with `#!/usr/bin/env node` shebang, executable bit set (`chmod +x`), building an empty `buildRouteMap({ routes: {} })` passed to `buildApplication` and `run` (research.md Finding 1 & 2) — no subcommands yet, just confirms the entrypoint runs and `--help`/`--version` work
+- [X] T003 Verify `./src/cli/main.ts --help` and `./src/cli/main.ts --version` run directly with no build step (research.md Finding 1)
 
 **Checkpoint**: A runnable `zebra` entrypoint exists with working top-level `--help`/`--version` and zero subcommands.
 
@@ -45,7 +45,7 @@ Single project (per plan.md's Project Structure): `src/cli/`, `tests/cli/` at re
 
 **⚠️ CRITICAL**: Must complete before any User Story phase below.
 
-- [ ] T004 Create `tests/cli/cli.test.ts` with a shared helper that spawns `src/cli/main.ts` via `node:child_process.execFile` (or `node:child_process.spawn` if streaming is needed), capturing stdout/stderr/exit code, matching this repo's existing `node --test` + `Effect.runPromise` conventions from `tests/solver/solve.test.ts`
+- [X] T004 Create `tests/cli/cli.test.ts` with a shared helper that spawns `src/cli/main.ts` via `node:child_process.execFile` (or `node:child_process.spawn` if streaming is needed), capturing stdout/stderr/exit code, matching this repo's existing `node --test` + `Effect.runPromise` conventions from `tests/solver/solve.test.ts`
 
 **Checkpoint**: Foundation ready — user story test/implementation work can begin.
 
@@ -59,18 +59,18 @@ Single project (per plan.md's Project Structure): `src/cli/`, `tests/cli/` at re
 
 ### Tests for User Story 1
 
-- [ ] T005 [P] [US1] SC-001 test in `tests/cli/cli.test.ts`: `zebra solve catalog/mzn/PZL-0004-whodunit.mzn` prints the unique solution (Professor Plum/Candlestick/Conservatory) and exits `0`
-- [ ] T006 [P] [US1] SC-002 test in `tests/cli/cli.test.ts`: `zebra solve` against a toy unsatisfiable model (inline `.mzn` fixture, e.g. `var 1..2: x; constraint x > 5; solve satisfy;`) reports unsatisfiable and exits `0`
-- [ ] T007 [P] [US1] SC-003 test in `tests/cli/cli.test.ts`: `zebra solve` against a toy multiply-satisfiable model reports multiple solutions and exits `0`
-- [ ] T008 [P] [US1] SC-005 test in `tests/cli/cli.test.ts`: `zebra solve` against a nonexistent model file path prints an error on stderr and exits `1` (Edge Cases: treated as a solver failure)
+- [X] T005 [P] [US1] SC-001 test in `tests/cli/cli.test.ts`: `zebra solve catalog/mzn/PZL-0004-whodunit.mzn` prints the unique solution (Professor Plum/Candlestick/Conservatory) and exits `0`
+- [X] T006 [P] [US1] SC-002 test in `tests/cli/cli.test.ts`: `zebra solve` against a toy unsatisfiable model (inline `.mzn` fixture, e.g. `var 1..2: x; constraint x > 5; solve satisfy;`) reports unsatisfiable and exits `0`
+- [X] T007 [P] [US1] SC-003 test in `tests/cli/cli.test.ts`: `zebra solve` against a toy multiply-satisfiable model reports multiple solutions and exits `0`
+- [X] T008 [P] [US1] SC-005 test in `tests/cli/cli.test.ts`: `zebra solve` against a nonexistent model file path prints an error on stderr and exits `1` (Edge Cases: treated as a solver failure)
 
 ### Implementation for User Story 1
 
-- [ ] T009 [P] [US1] Refactor `src/solver/solve.ts` (plan.md's revision note, research.md Finding 4): extract the shared "write args, invoke `minizinc`, classify via `classifySolutions`, translate errors via `toSolverError`" logic into a private helper, then add a path-based sibling entrypoint `solveFile(request: SolveFileRequest): Effect.Effect<SolveResult, SolverError>` (new `SolveFileRequest` type in `src/solver/types.ts`: `{ modelPath: string; dataPath?: string; solverId?: string; maxSolutions?: number; timeoutMs?: number }`) that passes the given paths straight to the helper — no temp directory, no content buffering, no cleanup of files it doesn't own. The existing `solve()` keeps its own signature and behavior unchanged, delegating to the same helper after writing its content to a temp dir as it does today; `tests/solver/solve.test.ts` must keep passing unmodified
-- [ ] T010 [US1] Create `src/cli/subcommands/solve.ts`: `buildCommand` with a required `model` positional (file path) and optional `--data <file>`/`--solver <id>` flags (per `contracts/cli-contract.md`'s Invocation shape and FR-002), whose `func` calls `solveFile({ modelPath, dataPath, solverId })` from `../../solver/solve.ts` (T009) directly with the given paths — no file reads in this subcommand itself
-- [ ] T011 [US1] In `src/cli/subcommands/solve.ts`, render the human-readable form of `SolveResult` (FR-004): unsatisfiable, uniquely solvable (with the solution shown), or multiply satisfiable — wording is this task's own choice per spec.md's Assumptions
-- [ ] T012 [US1] In `src/cli/subcommands/solve.ts`, run `solveFile()`'s `Effect` to completion via `Effect.runPromise`, letting a rejected/failed `Effect` (a `SolverError`) propagate as a thrown error from the command's `func` so Stricli maps it to `CommandRunError` → exit `1` (FR-006/FR-007, research.md Finding 3) — every resolved `SolveResult` variant instead completes normally and exits `0`
-- [ ] T013 [US1] Register the `solve` command in `src/cli/main.ts`'s route map (replacing the empty one from T002), per `buildRouteMap`/`buildApplication` (ADR-003 §2.3)
+- [X] T009 [P] [US1] Refactor `src/solver/solve.ts` (plan.md's revision note, research.md Finding 4): extract the shared "write args, invoke `minizinc`, classify via `classifySolutions`, translate errors via `toSolverError`" logic into a private helper, then add a path-based sibling entrypoint `solveFile(request: SolveFileRequest): Effect.Effect<SolveResult, SolverError>` (new `SolveFileRequest` type in `src/solver/types.ts`: `{ modelPath: string; dataPath?: string; solverId?: string; maxSolutions?: number; timeoutMs?: number }`) that passes the given paths straight to the helper — no temp directory, no content buffering, no cleanup of files it doesn't own. The existing `solve()` keeps its own signature and behavior unchanged, delegating to the same helper after writing its content to a temp dir as it does today; `tests/solver/solve.test.ts` must keep passing unmodified
+- [X] T010 [US1] Create `src/cli/subcommands/solve.ts`: `buildCommand` with a required `model` positional (file path) and optional `--data <file>`/`--solver <id>` flags (per `contracts/cli-contract.md`'s Invocation shape and FR-002), whose `func` calls `solveFile({ modelPath, dataPath, solverId })` from `../../solver/solve.ts` (T009) directly with the given paths — no file reads in this subcommand itself
+- [X] T011 [US1] In `src/cli/subcommands/solve.ts`, render the human-readable form of `SolveResult` (FR-004): unsatisfiable, uniquely solvable (with the solution shown), or multiply satisfiable — wording is this task's own choice per spec.md's Assumptions
+- [X] T012 [US1] In `src/cli/subcommands/solve.ts`, run `solveFile()`'s `Effect` to completion via `Effect.runPromise`, letting a rejected/failed `Effect` (a `SolverError`) propagate as a thrown error from the command's `func` so Stricli maps it to `CommandRunError` → exit `1` (FR-006/FR-007, research.md Finding 3) — every resolved `SolveResult` variant instead completes normally and exits `0`
+- [X] T013 [US1] Register the `solve` command in `src/cli/main.ts`'s route map (replacing the empty one from T002), per `buildRouteMap`/`buildApplication` (ADR-003 §2.3)
 
 **Checkpoint**: User Story 1 fully functional and testable independently — `zebra solve` works end-to-end for all four acceptance scenarios.
 
@@ -84,12 +84,12 @@ Single project (per plan.md's Project Structure): `src/cli/`, `tests/cli/` at re
 
 ### Tests for User Story 2
 
-- [ ] T014 [P] [US2] SC-004 test in `tests/cli/cli.test.ts`: `zebra solve <model> --json` for the unique/unsatisfiable/multiply-satisfiable cases each produce valid, parseable JSON matching the underlying `SolveResult` (`JSON.parse` the stdout, assert on `_tag`/`assignment`/`assignments`)
+- [X] T014 [P] [US2] SC-004 test in `tests/cli/cli.test.ts`: `zebra solve <model> --json` for the unique/unsatisfiable/multiply-satisfiable cases each produce valid, parseable JSON matching the underlying `SolveResult` (`JSON.parse` the stdout, assert on `_tag`/`assignment`/`assignments`)
 
 ### Implementation for User Story 2
 
-- [ ] T015 [US2] Add a `--json` boolean flag to `src/cli/subcommands/solve.ts`'s `buildCommand` parameter definitions (FR-005)
-- [ ] T016 [US2] In `src/cli/subcommands/solve.ts`, when `--json` is set, print `JSON.stringify(result)` instead of the human-readable render from T011 — same `SolveResult`, no separate schema (`contracts/cli-contract.md`)
+- [X] T015 [US2] Add a `--json` boolean flag to `src/cli/subcommands/solve.ts`'s `buildCommand` parameter definitions (FR-005)
+- [X] T016 [US2] In `src/cli/subcommands/solve.ts`, when `--json` is set, print `JSON.stringify(result)` instead of the human-readable render from T011 — same `SolveResult`, no separate schema (`contracts/cli-contract.md`)
 
 **Checkpoint**: User Stories 1 and 2 both work independently — `--json` is a pure alternate rendering of the same result.
 
@@ -103,14 +103,14 @@ Single project (per plan.md's Project Structure): `src/cli/`, `tests/cli/` at re
 
 ### Tests for User Story 3
 
-- [ ] T017 [P] [US3] SC-006 test in `tests/cli/cli.test.ts`: `zebra --help` lists `solve` among available subcommands
-- [ ] T018 [P] [US3] SC-006 test in `tests/cli/cli.test.ts`: `zebra solve --help` shows `solve`'s own model/`--data`/`--solver`/`--json` arguments, independent of top-level help
-- [ ] T019 [P] [US3] SC-006 test in `tests/cli/cli.test.ts`: `zebra --version` prints a non-empty version string
-- [ ] T020 [P] [US3] SC-007 test in `tests/cli/cli.test.ts`: `zebra bogus-subcommand` lists available subcommands and exits `251` (`UnknownCommand`, per `contracts/cli-contract.md` — not `1`)
+- [X] T017 [P] [US3] SC-006 test in `tests/cli/cli.test.ts`: `zebra --help` lists `solve` among available subcommands
+- [X] T018 [P] [US3] SC-006 test in `tests/cli/cli.test.ts`: `zebra solve --help` shows `solve`'s own model/`--data`/`--solver`/`--json` arguments, independent of top-level help
+- [X] T019 [P] [US3] SC-006 test in `tests/cli/cli.test.ts`: `zebra --version` prints a non-empty version string
+- [X] T020 [P] [US3] SC-007 test in `tests/cli/cli.test.ts`: `zebra bogus-subcommand` lists available subcommands and exits `251` (`UnknownCommand`, per `contracts/cli-contract.md` — not `1`)
 
 ### Implementation for User Story 3
 
-- [ ] T021 [US3] Set `buildApplication`'s `name`/`version` config in `src/cli/main.ts` from `package.json`'s own `version` field (FR-010) — Stricli's built-in `--help`/`-h`/`--version`/`-v` and unknown-command handling (research.md Finding 2 & 3) require no further hand-written logic once this and the route map (T013) exist
+- [X] T021 [US3] Set `buildApplication`'s `name`/`version` config in `src/cli/main.ts` from `package.json`'s own `version` field (FR-010) — Stricli's built-in `--help`/`-h`/`--version`/`-v` and unknown-command handling (research.md Finding 2 & 3) require no further hand-written logic once this and the route map (T013) exist
 
 **Checkpoint**: All three user stories independently functional — the full spec.md acceptance-scenario set passes.
 
@@ -120,8 +120,8 @@ Single project (per plan.md's Project Structure): `src/cli/`, `tests/cli/` at re
 
 **Purpose**: Final validation against the feature's own quickstart and success criteria.
 
-- [ ] T022 [P] Run `pnpm test` and confirm all `tests/cli/cli.test.ts` cases pass alongside the existing `tests/solver/`/`tests/catalog/` suites
-- [ ] T023 Run `quickstart.md`'s manual checks end-to-end against `catalog/mzn/PZL-0004-whodunit.mzn`
+- [X] T022 [P] Run `pnpm test` and confirm all `tests/cli/cli.test.ts` cases pass alongside the existing `tests/solver/`/`tests/catalog/` suites
+- [X] T023 Run `quickstart.md`'s manual checks end-to-end against `catalog/mzn/PZL-0004-whodunit.mzn`
 
 ---
 
@@ -188,3 +188,8 @@ Task: "Refactor src/solver/solve.ts to add solveFile()"
 - `solve()`'s existing signature and behavior (`src/solver/solve.ts`) are unchanged by this
   feature's additive `solveFile()` refactor (T009) — no solving logic is duplicated between the
   two entrypoints, per FR-003.
+- **Post-implementation fix**: a bare `zebra` (no subcommand at all) silently exited `0` with no
+  output — Stricli's own default for a route map reached with no command. Fixed in
+  `src/cli/main.ts` via the `help` integration's `defaultForRouteMap: true` option, per spec.md's
+  Edge Cases ("showing available subcommands is more useful than a bare error"). Covered by a new
+  test in `tests/cli/cli.test.ts` and documented in `contracts/cli-contract.md`.

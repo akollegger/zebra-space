@@ -9,12 +9,18 @@ straight through rather than reading them into memory first.
 ## Invocation shape
 
 ```
+zebra                       # no subcommand: same as top-level --help, exits 0
 zebra <subcommand> [args...] [flags...]
 zebra --help | -h          # top-level: lists subcommands
 zebra --version             # prints tool version
 zebra <subcommand> --help | -h   # per-subcommand help
-zebra <unknown-subcommand>  # lists subcommands, exits 1
+zebra <unknown-subcommand>  # lists subcommands, exits non-zero
 ```
+
+**Bare invocation** (spec.md Edge Cases: "showing available subcommands is more useful than a
+bare error"): Stricli's own default for reaching a route map with no command is to silently do
+nothing and exit `0` — this project opts into `defaultForRouteMap: true` on the `help`
+integration (`src/cli/main.ts`) so a bare `zebra` instead prints the same output as `zebra --help`.
 
 **Dispatch rule**: only `argv[0]` is ever checked against the global flag set (`--help`, `-h`,
 `--version`) — never scanned anywhere else in `argv`. If it matches, that's handled immediately

@@ -7,6 +7,19 @@ Zebra space is a place for:
 3. Representing constraints as graphs
 4. Solving puzzles with a solver
 
+## Getting Started
+
+```bash
+pnpm install
+brew install minizinc && ./scripts/setup-minizinc-solver.sh   # one-time solver setup
+pnpm link .                                                     # dev-mode: makes `zebra` runnable via pnpm exec
+pnpm exec zebra solve catalog/mzn/PZL-0004-whodunit.mzn
+```
+
+`zebra --help` lists all available subcommands. `pnpm link .` only needs to be run once per
+checkout — it self-links this package so its `bin` (`zebra`) resolves through `pnpm exec` without
+a real global install.
+
 ## Mission
 
 Zebra Space exists to explore how classic, well-understood [constraint

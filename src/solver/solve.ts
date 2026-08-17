@@ -11,6 +11,7 @@ import {
   Timeout,
   ToolchainUnavailable,
   UnexpectedExit,
+  type SolveFileRequest,
   type SolveRequest,
   type SolveResult,
   type SolverError,
@@ -56,9 +57,48 @@ function toSolverError(error: unknown): SolverError {
   })
 }
 
+interface RunMinizincOptions {
+  readonly modelPath: string
+  // `| undefined` (not just `?:`) so callers can pass through an already-optional value as an
+  // explicit key without tripping exactOptionalPropertyTypes.
+  readonly dataPath?: string | undefined
+  readonly solverId?: string | undefined
+  readonly maxSolutions?: number | undefined
+  readonly timeoutMs?: number | undefined
+}
+
 /**
- * Solve a MiniZinc model, classifying the result per data-model.md's SolveResult.
- * contracts/solve-contract.md: never throws, never leaves temp files behind.
+ * Invoke minizinc against already-on-disk model/data files and classify the result.
+ * Shared by solve() (which stages content into a temp dir first) and solveFile() (which
+ * points straight at caller-supplied paths) so neither duplicates the other's solving logic.
+ * Throws on failure — callers are responsible for translating via toSolverError.
+ */
+async function runMinizincAndClassify(options: RunMinizincOptions): Promise<SolveResult> {
+  const args = [
+    "-n",
+    String(options.maxSolutions ?? DEFAULT_MAX_SOLUTIONS),
+    "--output-mode",
+    "json",
+    "--solver",
+    options.solverId ?? DEFAULT_SOLVER_ID,
+  ]
+
+  if (options.dataPath !== undefined) {
+    args.push(options.dataPath)
+  }
+
+  args.push(options.modelPath)
+
+  const { stdout } = await execFile("minizinc", args, {
+    timeout: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+  })
+
+  return classifySolutions(stdout)
+}
+
+/**
+ * Solve a MiniZinc model given as content, classifying the result per data-model.md's
+ * SolveResult. contracts/solve-contract.md: never throws, never leaves temp files behind.
  */
 export function solve(request: SolveRequest): Effect.Effect<SolveResult, SolverError> {
   return Effect.gen(function* () {
@@ -69,28 +109,19 @@ export function solve(request: SolveRequest): Effect.Effect<SolveResult, SolverE
         const modelPath = join(tempDir, "model.mzn")
         await writeFile(modelPath, request.model, "utf8")
 
-        const args = [
-          "-n",
-          String(request.maxSolutions ?? DEFAULT_MAX_SOLUTIONS),
-          "--output-mode",
-          "json",
-          "--solver",
-          request.solverId ?? DEFAULT_SOLVER_ID,
-        ]
-
+        let dataPath: string | undefined
         if (request.data !== undefined) {
-          const dataPath = join(tempDir, "data.dzn")
+          dataPath = join(tempDir, "data.dzn")
           await writeFile(dataPath, request.data, "utf8")
-          args.push(dataPath)
         }
 
-        args.push(modelPath)
-
-        const { stdout } = await execFile("minizinc", args, {
-          timeout: request.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+        return await runMinizincAndClassify({
+          modelPath,
+          dataPath,
+          solverId: request.solverId,
+          maxSolutions: request.maxSolutions,
+          timeoutMs: request.timeoutMs,
         })
-
-        return classifySolutions(stdout)
       },
       catch: toSolverError,
     }).pipe(
@@ -98,5 +129,24 @@ export function solve(request: SolveRequest): Effect.Effect<SolveResult, SolverE
     )
 
     return result
+  })
+}
+
+/**
+ * Solve a MiniZinc model given as an existing file path, per specs/003-cli-interface's
+ * research.md Finding 4 — passes the caller's paths straight to minizinc, with no temp-file
+ * staging or content buffering of its own, since it doesn't own those files.
+ */
+export function solveFile(request: SolveFileRequest): Effect.Effect<SolveResult, SolverError> {
+  return Effect.tryPromise({
+    try: () =>
+      runMinizincAndClassify({
+        modelPath: request.modelPath,
+        dataPath: request.dataPath,
+        solverId: request.solverId,
+        maxSolutions: request.maxSolutions,
+        timeoutMs: request.timeoutMs,
+      }),
+    catch: toSolverError,
   })
 }
