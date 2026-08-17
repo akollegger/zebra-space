@@ -3,7 +3,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { promisify } from "node:util"
-import { Effect } from "effect"
+import { Effect, Option } from "effect"
 import { classifySolutions } from "./parse.ts"
 import {
   FilesystemError,
@@ -159,14 +159,18 @@ export function solve(request: SolveRequest): Effect.Effect<SolveResult, SolverE
         catch: toFilesystemError,
       })
 
-      let dataPath: string | undefined
-      if (request.data !== undefined) {
-        dataPath = join(tempDir, "data.dzn")
-        yield* Effect.tryPromise({
-          try: () => writeFile(dataPath!, request.data!, "utf8"),
-          catch: toFilesystemError,
-        })
-      }
+      const dataPath = yield* Option.fromUndefinedOr(request.data).pipe(
+        Option.match({
+          onNone: () => Effect.succeed(undefined),
+          onSome: (data) => {
+            const path = join(tempDir, "data.dzn")
+            return Effect.tryPromise({
+              try: () => writeFile(path, data, "utf8"),
+              catch: toFilesystemError,
+            }).pipe(Effect.as(path))
+          },
+        }),
+      )
 
       return yield* Effect.tryPromise({
         try: () =>
