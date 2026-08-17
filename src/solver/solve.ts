@@ -6,11 +6,13 @@ import { promisify } from "node:util"
 import { Effect } from "effect"
 import { classifySolutions } from "./parse.ts"
 import {
+  FilesystemError,
   ModelSyntaxError,
   SolverConfigError,
   Timeout,
   ToolchainUnavailable,
   UnexpectedExit,
+  UnexpectedOutput,
   type SolveFileRequest,
   type SolveRequest,
   type SolveResult,
@@ -30,7 +32,15 @@ interface ExecFileError {
   readonly stderr?: string
 }
 
-function toSolverError(error: unknown): SolverError {
+interface ResolvedRunOptions {
+  readonly timeoutMs: number
+  readonly solverId: string
+}
+
+/** Translates an execFile failure into a typed SolverError, using the *actually-resolved*
+ * timeout/solver id (not just their defaults) so the error payload reflects what really ran.
+ */
+function toSolverError(error: unknown, resolved: ResolvedRunOptions): SolverError {
   const err = error as ExecFileError
 
   if (err.code === "ENOENT") {
@@ -38,13 +48,13 @@ function toSolverError(error: unknown): SolverError {
   }
 
   if (err.killed) {
-    return new Timeout({ timeoutMs: DEFAULT_TIMEOUT_MS })
+    return new Timeout({ timeoutMs: resolved.timeoutMs })
   }
 
   const stderr = err.stderr ?? ""
 
   if (stderr.includes("configuration error")) {
-    return new SolverConfigError({ solverId: DEFAULT_SOLVER_ID, stderr })
+    return new SolverConfigError({ solverId: resolved.solverId, stderr })
   }
 
   if (stderr.includes("syntax error") || stderr.includes("type error")) {
@@ -63,7 +73,6 @@ interface RunMinizincOptions {
   // explicit key without tripping exactOptionalPropertyTypes.
   readonly dataPath?: string | undefined
   readonly solverId?: string | undefined
-  readonly maxSolutions?: number | undefined
   readonly timeoutMs?: number | undefined
 }
 
@@ -71,16 +80,28 @@ interface RunMinizincOptions {
  * Invoke minizinc against already-on-disk model/data files and classify the result.
  * Shared by solve() (which stages content into a temp dir first) and solveFile() (which
  * points straight at caller-supplied paths) so neither duplicates the other's solving logic.
- * Throws on failure — callers are responsible for translating via toSolverError.
+ *
+ * Always requests exactly DEFAULT_MAX_SOLUTIONS (2) — per data-model.md, this is fixed, not
+ * caller-configurable (FR-002).
+ *
+ * Throws an already-typed SolverError on failure (never a raw execFile/parse error) — execFile
+ * failures and classifySolutions failures are distinguished and translated at their own call
+ * site, since they're different failure modes (the solver failing to run vs. the solver running
+ * fine but producing output this project doesn't recognize).
  */
 async function runMinizincAndClassify(options: RunMinizincOptions): Promise<SolveResult> {
+  const resolved: ResolvedRunOptions = {
+    timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+    solverId: options.solverId ?? DEFAULT_SOLVER_ID,
+  }
+
   const args = [
     "-n",
-    String(options.maxSolutions ?? DEFAULT_MAX_SOLUTIONS),
+    String(DEFAULT_MAX_SOLUTIONS),
     "--output-mode",
     "json",
     "--solver",
-    options.solverId ?? DEFAULT_SOLVER_ID,
+    resolved.solverId,
   ]
 
   if (options.dataPath !== undefined) {
@@ -89,11 +110,21 @@ async function runMinizincAndClassify(options: RunMinizincOptions): Promise<Solv
 
   args.push(options.modelPath)
 
-  const { stdout } = await execFile("minizinc", args, {
-    timeout: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
-  })
+  let stdout: string
+  try {
+    ;({ stdout } = await execFile("minizinc", args, { timeout: resolved.timeoutMs }))
+  } catch (error) {
+    throw toSolverError(error, resolved)
+  }
 
-  return classifySolutions(stdout)
+  try {
+    return classifySolutions(stdout)
+  } catch (error) {
+    throw new UnexpectedOutput({
+      stdout,
+      message: error instanceof Error ? error.message : String(error),
+    })
+  }
 }
 
 /**
@@ -102,7 +133,13 @@ async function runMinizincAndClassify(options: RunMinizincOptions): Promise<Solv
  */
 export function solve(request: SolveRequest): Effect.Effect<SolveResult, SolverError> {
   return Effect.gen(function* () {
-    const tempDir = yield* Effect.promise(() => mkdtemp(join(tmpdir(), "minizinc-")))
+    const tempDir = yield* Effect.tryPromise({
+      try: () => mkdtemp(join(tmpdir(), "minizinc-")),
+      catch: (error) =>
+        new FilesystemError({
+          message: error instanceof Error ? error.message : String(error),
+        }),
+    })
 
     const result = yield* Effect.tryPromise({
       try: async () => {
@@ -119,12 +156,14 @@ export function solve(request: SolveRequest): Effect.Effect<SolveResult, SolverE
           modelPath,
           dataPath,
           solverId: request.solverId,
-          maxSolutions: request.maxSolutions,
           timeoutMs: request.timeoutMs,
         })
       },
-      catch: toSolverError,
+      catch: (error) => error as SolverError,
     }).pipe(
+      // NOTE: cleanup-failure handling is an open discussion (see PR #4 review) — should a
+      // failed rm() here override an otherwise-successful result? Left as Effect.promise
+      // (best-effort, not yet typed) pending that decision.
       Effect.ensuring(Effect.promise(() => rm(tempDir, { recursive: true, force: true }))),
     )
 
@@ -144,9 +183,8 @@ export function solveFile(request: SolveFileRequest): Effect.Effect<SolveResult,
         modelPath: request.modelPath,
         dataPath: request.dataPath,
         solverId: request.solverId,
-        maxSolutions: request.maxSolutions,
         timeoutMs: request.timeoutMs,
       }),
-    catch: toSolverError,
+    catch: (error) => error as SolverError,
   })
 }

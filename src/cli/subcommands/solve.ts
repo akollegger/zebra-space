@@ -32,6 +32,10 @@ function formatSolverError(error: SolverError): string {
       return `The solver did not finish within ${error.timeoutMs}ms.`
     case "UnexpectedExit":
       return `The solver exited unexpectedly (code ${error.exitCode}):\n${error.stderr}`
+    case "UnexpectedOutput":
+      return `The solver ran, but its output couldn't be understood: ${error.message}`
+    case "FilesystemError":
+      return `A local filesystem operation failed: ${error.message}`
   }
 }
 

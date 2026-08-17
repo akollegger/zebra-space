@@ -15,8 +15,10 @@ disable-model-invocation: false
 $ARGUMENTS
 ```
 
-Treat `$ARGUMENTS` as an optional preferred solver id/name (e.g. `Chuffed`). Default to `Gecode`
-if empty. Passed straight through to the script below as its one positional argument.
+Treat `$ARGUMENTS` as an optional preferred solver id/name. Default to `Gecode` if empty. Passed
+straight through to the script below as its one positional argument — only `Gecode` is currently
+implemented; any other name causes the script to exit non-zero with a clear message rather than
+silently doing nothing.
 
 ## Purpose
 

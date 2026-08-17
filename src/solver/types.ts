@@ -4,7 +4,6 @@ export interface SolveRequest {
   readonly model: string
   readonly data?: string
   readonly solverId?: string
-  readonly maxSolutions?: number
   readonly timeoutMs?: number
 }
 
@@ -14,7 +13,6 @@ export interface SolveFileRequest {
   // `flags.data`) as an explicit key without tripping exactOptionalPropertyTypes.
   readonly dataPath?: string | undefined
   readonly solverId?: string | undefined
-  readonly maxSolutions?: number | undefined
   readonly timeoutMs?: number | undefined
 }
 
@@ -58,9 +56,20 @@ export class UnexpectedExit extends Data.TaggedError("UnexpectedExit")<{
   readonly stderr: string
 }> {}
 
+export class UnexpectedOutput extends Data.TaggedError("UnexpectedOutput")<{
+  readonly stdout: string
+  readonly message: string
+}> {}
+
+export class FilesystemError extends Data.TaggedError("FilesystemError")<{
+  readonly message: string
+}> {}
+
 export type SolverError =
   | ToolchainUnavailable
   | ModelSyntaxError
   | SolverConfigError
   | Timeout
   | UnexpectedExit
+  | UnexpectedOutput
+  | FilesystemError

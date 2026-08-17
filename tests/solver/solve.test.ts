@@ -1,7 +1,8 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { readdirSync } from "node:fs"
+import { mkdtempSync, readdirSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { Effect } from "effect"
 import { solve } from "../../src/solver/solve.ts"
 
@@ -12,10 +13,6 @@ const MULTIPLY_SATISFIABLE_MODEL =
 
 function run<A>(effect: Effect.Effect<A, unknown>): Promise<A> {
   return Effect.runPromise(effect)
-}
-
-function tempDirSnapshot(): string[] {
-  return readdirSync(tmpdir()).filter((name) => name.includes("minizinc"))
 }
 
 test("SC-001: an unsatisfiable model is classified as Unsatisfiable", async () => {
@@ -52,9 +49,24 @@ test("FR-004: a solution's keys are the model's own variable names, not position
 })
 
 test("SC-005: no temp files remain after a solve attempt, success or failure", async () => {
-  const before = tempDirSnapshot()
-  await run(solve({ model: UNIQUELY_SOLVABLE_MODEL }))
-  await run(solve({ model: "not a valid model" })).catch(() => undefined)
-  const after = tempDirSnapshot()
-  assert.deepEqual(after, before)
+  // Scope os.tmpdir() to a dedicated, empty scratch directory for this test only, via the
+  // TMPDIR env var it reads (not cached — re-read on every call). Avoids the flakiness of
+  // scanning the *global* OS tmpdir, which other concurrently-running test files also write
+  // "minizinc-*" entries into (node --test runs test files concurrently by default).
+  const scratchDir = mkdtempSync(join(tmpdir(), "solve-cleanup-test-"))
+  const originalTmpdir = process.env.TMPDIR
+  process.env.TMPDIR = scratchDir
+
+  try {
+    await run(solve({ model: UNIQUELY_SOLVABLE_MODEL }))
+    await run(solve({ model: "not a valid model" })).catch(() => undefined)
+    assert.deepEqual(readdirSync(scratchDir), [])
+  } finally {
+    if (originalTmpdir === undefined) {
+      delete process.env.TMPDIR
+    } else {
+      process.env.TMPDIR = originalTmpdir
+    }
+    rmSync(scratchDir, { recursive: true, force: true })
+  }
 })

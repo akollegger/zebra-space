@@ -9,8 +9,11 @@ The input to a solve attempt.
 | `model` | string | MiniZinc model source (`.mzn` content) |
 | `data` | string \| undefined | Optional `.dzn` data content |
 | `solverId` | string | Defaults to Gecode's solver tag (ADR-002 §2.2) |
-| `maxSolutions` | number | Fixed at 2 per ADR-002 §2.4 — not user-configurable in this feature |
 | `timeoutMs` | number | Reasonable default (tens of seconds, spec.md Assumptions); not pinned by ADR-002 |
+
+The `-n` solution count passed to `minizinc` is fixed at 2 per ADR-002 §2.4 — an internal
+constant (`DEFAULT_MAX_SOLUTIONS`, `src/solver/solve.ts`), not a field on Solve Request at all,
+since FR-002 makes this non-negotiable rather than merely defaulted.
 
 ## Solve Result
 
@@ -37,6 +40,8 @@ resolves to a Solve Result or fails with one of these, modeled as Effect errors,
 | `SolverConfigError` | non-zero exit due to an unresolvable `solverId` |
 | `Timeout` | the subprocess is killed after `timeoutMs` elapses |
 | `UnexpectedExit` | any other non-zero exit not covered above |
+| `UnexpectedOutput` | `minizinc` exited successfully, but its stdout couldn't be classified (`parse.ts`) — a distinct failure mode from a non-zero exit, added after PR #4 review surfaced that this case was being misreported as `UnexpectedExit` with an empty `stderr` |
+| `FilesystemError` | a local filesystem operation (creating or cleaning up the temp directory `solve()` stages content into) failed — unrelated to `minizinc` itself |
 
 ## Example Catalog Entry
 

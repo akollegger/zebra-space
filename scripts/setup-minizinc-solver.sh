@@ -23,7 +23,18 @@ if minizinc --solvers 2>/dev/null | grep -q '\bcp\b'; then
   exit 0
 fi
 
-echo "No CP-tagged solver registered. Looking for an installed-but-unregistered ${PREFERRED_SOLVER}..."
+echo "No CP-tagged solver registered."
+
+case "$PREFERRED_SOLVER" in
+  [Gg][Ee][Cc][Oo][Dd][Ee]) ;;
+  *)
+    echo "Only Gecode auto-registration is currently implemented; got \"$PREFERRED_SOLVER\"." >&2
+    echo "Register $PREFERRED_SOLVER manually, or open an issue to add support for it here." >&2
+    exit 1
+    ;;
+esac
+
+echo "Looking for an installed-but-unregistered Gecode..."
 
 GECODE_PREFIX=""
 if command -v brew >/dev/null 2>&1; then
