@@ -127,63 +127,77 @@ async function runMinizincAndClassify(options: RunMinizincOptions): Promise<Solv
   }
 }
 
+function toFilesystemError(error: unknown): FilesystemError {
+  return new FilesystemError({ message: error instanceof Error ? error.message : String(error) })
+}
+
 /**
  * Solve a MiniZinc model given as content, classifying the result per data-model.md's
  * SolveResult. contracts/solve-contract.md: never throws, never leaves temp files behind.
+ *
+ * Note: NOT built on Effect.acquireRelease/Scope, despite this being a textbook
+ * acquire-use-release shape (effect's own ai-docs/05_resources/10_acquire-release.ts shows the
+ * same pattern for a long-lived resource). acquireRelease's release function is typed
+ * `Effect<unknown, never, R>` — a finalizer is not allowed a typed failure, only a defect — but
+ * this project's design (PR #4 review discussion) requires a cleanup failure to surface as a
+ * normal, formattable SolverError that overrides the result, not an untyped defect. Composed by
+ * hand below instead, using Effect.match to reify the main attempt into a plain value so
+ * cleanup can run and, if it fails, take priority — no raw try/catch bookkeeping.
  */
 export function solve(request: SolveRequest): Effect.Effect<SolveResult, SolverError> {
   return Effect.gen(function* () {
     const tempDir = yield* Effect.tryPromise({
       try: () => mkdtemp(join(tmpdir(), "minizinc-")),
-      catch: (error) =>
-        new FilesystemError({
-          message: error instanceof Error ? error.message : String(error),
-        }),
+      catch: toFilesystemError,
     })
 
-    // Cleanup failure is an operational error, not a solving-semantics concern — it MUST
-    // override an otherwise-successful result (PR #4 review discussion). Made explicit below
-    // rather than relying on a `finally` block's own throw (Biome's noUnsafeFinally rightly
-    // flags that as usually-accidental; here the override is deliberate, so it's spelled out).
-    const result = yield* Effect.tryPromise({
-      try: async () => {
-        let outcome: { readonly ok: true; readonly value: SolveResult } | { readonly ok: false; readonly error: unknown }
-        try {
-          const modelPath = join(tempDir, "model.mzn")
-          await writeFile(modelPath, request.model, "utf8")
+    const modelPath = join(tempDir, "model.mzn")
 
-          let dataPath: string | undefined
-          if (request.data !== undefined) {
-            dataPath = join(tempDir, "data.dzn")
-            await writeFile(dataPath, request.data, "utf8")
-          }
+    const attempt = yield* Effect.gen(function* () {
+      yield* Effect.tryPromise({
+        try: () => writeFile(modelPath, request.model, "utf8"),
+        catch: toFilesystemError,
+      })
 
-          const value = await runMinizincAndClassify({
+      let dataPath: string | undefined
+      if (request.data !== undefined) {
+        dataPath = join(tempDir, "data.dzn")
+        yield* Effect.tryPromise({
+          try: () => writeFile(dataPath!, request.data!, "utf8"),
+          catch: toFilesystemError,
+        })
+      }
+
+      return yield* Effect.tryPromise({
+        try: () =>
+          runMinizincAndClassify({
             modelPath,
             dataPath,
             solverId: request.solverId,
             timeoutMs: request.timeoutMs,
-          })
-          outcome = { ok: true, value }
-        } catch (error) {
-          outcome = { ok: false, error }
-        }
+          }),
+        catch: (error) => error as SolverError,
+      })
+    }).pipe(
+      Effect.match({
+        onFailure: (error) => ({ ok: false as const, error }),
+        onSuccess: (value) => ({ ok: true as const, value }),
+      }),
+    )
 
-        try {
-          await rm(tempDir, { recursive: true, force: true })
-        } catch (error) {
-          throw new FilesystemError({
-            message: error instanceof Error ? error.message : String(error),
-          })
-        }
-
-        if (!outcome.ok) throw outcome.error
-        return outcome.value
-      },
-      catch: (error) => error as SolverError,
+    // Cleanup failure is an operational error, not a solving-semantics concern — it MUST
+    // override an otherwise-successful (or differently-failed) attempt (PR #4 review
+    // discussion). Checked last: a failing yield* here short-circuits the generator before
+    // `attempt` is ever unwrapped below, so cleanup failure always wins.
+    yield* Effect.tryPromise({
+      try: () => rm(tempDir, { recursive: true, force: true }),
+      catch: toFilesystemError,
     })
 
-    return result
+    if (!attempt.ok) {
+      return yield* Effect.fail(attempt.error)
+    }
+    return attempt.value
   })
 }
 
