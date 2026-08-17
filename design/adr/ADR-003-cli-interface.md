@@ -65,15 +65,16 @@ subcommand) prints the available subcommand list and exits non-zero — it never
 zebra solve <model.mzn> [--data <file.dzn>] [--solver <id>] [--json]
 ```
 
-Reads the given `.mzn` (and optional `.dzn`) file(s) from disk and calls `solve()`
-(`src/solver/solve.ts`) with their contents. Default output is human-readable (the classified
-outcome — unsatisfiable / uniquely solvable, with its assignment / multiply satisfiable — printed
-plainly); `--json` prints the same information as JSON, mirroring `solve()`'s own `SolveResult`
-shape (data-model.md, `specs/002-minizinc-integration`) rather than inventing a second output
-schema.
+Passes the given `.mzn` (and optional `.dzn`) file paths straight to the solve capability
+(`src/solver/solve.ts`) — this subcommand doesn't read those files into memory itself or stage
+its own copy; whatever the solve capability needs from disk is its own concern, not duplicated
+here. Default output is human-readable (the classified outcome — unsatisfiable / uniquely
+solvable, with its assignment / multiply satisfiable — printed plainly); `--json` prints the same
+information as JSON, mirroring the solve capability's own `SolveResult` shape (data-model.md,
+`specs/002-minizinc-integration`) rather than inventing a second output schema.
 
 Exit codes are reserved for actual errors, not for the *content* of a valid result: any
-successful `solve()` outcome — `UniquelySolvable`, `Unsatisfiable`, and `MultiplySatisfiable`
+successful outcome — `UniquelySolvable`, `Unsatisfiable`, and `MultiplySatisfiable`
 alike — exits `0`. `Unsatisfiable` and `MultiplySatisfiable` are meaningful, correct answers,
 not failures; `solve` reports what's true about the model, it doesn't judge whether the puzzle
 is "good." Only a `SolverError` (the solver itself couldn't run or complete) exits non-zero,
@@ -108,8 +109,8 @@ version of this ADR did — see 3).
 
 Each subcommand's implementation function (the `func` passed to Stricli's `buildCommand`) is
 still an `Effect` pipeline — typed errors, no thrown exceptions. The `solve` subcommand's
-implementation calls `solve()` directly (already an `Effect`) and only converts to a process
-exit code / stdout output at that function's own boundary
+implementation calls the solve capability directly (already an `Effect`) and only converts to a
+process exit code / stdout output at that function's own boundary
 (`Effect.runPromise`/`Effect.runPromiseExit`) — not scattered through the logic. Stricli itself
 has no opinion about `Effect`; this boundary is entirely this project's own convention, applied
 inside whatever function Stricli calls for a given subcommand.

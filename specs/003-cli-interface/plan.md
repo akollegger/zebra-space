@@ -10,9 +10,22 @@
 
 Build the `zebra` CLI ADR-003 decided: a subcommand-oriented executable (`zebra <subcommand>
 [args] [flags]`) with top-level/per-subcommand `--help` and `--version`, and one subcommand,
-`solve`, wrapping the existing `solve()` capability with human-readable (default) or `--json`
+`solve`, wrapping the existing solve capability with human-readable (default) or `--json`
 output — exit code reserved strictly for actual tool failure, never for a puzzle's own
 unsatisfiable/non-unique outcome.
+
+**Revision note**: initial task drafting (`tasks.md`) surfaced that `solve()`'s
+`SolveRequest.model`/`data` fields are file *contents*, not paths (`src/solver/solve.ts`) — so a
+CLI subcommand handed a file path would have to read it into memory just to satisfy that
+signature, only for `solve()` to immediately write that same content back out to a *new* temp
+file before invoking MiniZinc. That round trip (disk → memory → a different temp file on disk)
+buys nothing: MiniZinc only reads the model/data files, it never mutates them, so the CLI's
+already-stable input file could be passed straight through. Resolved by extracting `solve.ts`'s
+shared "invoke MiniZinc against known file paths, then classify" logic into a private helper and
+adding a path-based sibling entrypoint, `solveFile()`, next to the existing content-based
+`solve()` — the CLI's `solve` subcommand calls `solveFile()` directly, with no `readFile` step of
+its own. `solve()` itself (signature, behavior, its own `tests/solver/solve.test.ts` suite) is
+unchanged.
 
 ## Technical Context
 
@@ -59,7 +72,7 @@ already built to grow — adding a second subcommand is a route-map entry, not a
 | Principle | Status | Notes |
 |---|---|---|
 | I. RFC/ADR-Gated Delivery | PASS | Spec derived from ADR-003 (design/adr/ADR-003-cli-interface.md), parent RFC-002; gated by `speckit-adr-gate`. |
-| II. Effect-Idiomatic Code | PASS | Argument parsing/dispatch is delegated to `@stricli/core` — a library concern, not puzzle logic, nothing to gain by wrapping it in `Effect`. The `solve` subcommand's implementation function calls `solve()` (already an `Effect`) and only unwraps to exit code/stdout at that function's own boundary, per ADR-003 §2.4. |
+| II. Effect-Idiomatic Code | PASS | Argument parsing/dispatch is delegated to `@stricli/core` — a library concern, not puzzle logic, nothing to gain by wrapping it in `Effect`. The `solve` subcommand's implementation function calls `solveFile()` (already an `Effect`) and only unwraps to exit code/stdout at that function's own boundary, per ADR-003 §2.4. |
 | III. Graphs as the Constraint Representation | N/A | This feature touches no `@relateby/pattern` graph — it's a thin CLI layer over an existing capability. |
 | IV. Design-First, Then Test-First | PASS | Design (RFC-002 → ADR-002 → ADR-003 → this spec) precedes implementation. `tests/cli/*.test.ts` (Phase 2, tasks.md) must be written first and fail against the current repo (no `bin` exists yet) before implementation makes them pass. |
 
@@ -87,8 +100,11 @@ src/
 ├── cli/
 │   ├── main.ts                    # bin entrypoint: buildRouteMap + buildApplication + run (FR-001, FR-008–011)
 │   └── subcommands/
-│       └── solve.ts               # `solve` subcommand: buildCommand with typed flags/positional, calls src/solver/solve() (FR-002–007)
-└── solver/                        # existing (specs/002-minizinc-integration), untouched
+│       └── solve.ts               # `solve` subcommand: buildCommand with typed flags/positional, calls src/solver/solve.ts's solveFile() (FR-002–007)
+└── solver/                        # existing (specs/002-minizinc-integration) — solve.ts refactored (not redesigned)
+                                    # to add a path-based solveFile() entrypoint alongside the existing
+                                    # content-based solve(), sharing one internal minizinc-invocation/
+                                    # classification helper (see Summary's revision note above)
 
 tests/
 └── cli/
@@ -99,8 +115,10 @@ package.json                        # adds "bin": { "zebra": "./src/cli/main.ts"
 
 **Structure Decision**: Single-project structure, consistent with prior features. Adds
 `src/cli/` as this repo's first CLI entrypoint (built on `@stricli/core`) and a matching
-`tests/cli/` suite. Does not modify `src/solver/` — `solve` subcommand only calls the existing
-`solve()`, per FR-003.
+`tests/cli/` suite. `src/solver/solve.ts` gets a small, additive refactor — a new path-based
+`solveFile()` entrypoint sharing its core logic with the existing `solve()` — rather than staying
+fully untouched; no solving logic is duplicated or reimplemented (FR-003), and `solve()`'s own
+signature/behavior/tests are unaffected.
 
 ## Complexity Tracking
 

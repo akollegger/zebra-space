@@ -1,7 +1,10 @@
 # Contract: `zebra` CLI
 
 Unlike `specs/002-minizinc-integration`'s `solve()` (a TypeScript function contract), this
-feature's contract *is* the command-line surface itself — what a user or script can rely on.
+feature's contract *is* the command-line surface itself — what a user or script can rely on. The
+`solve` subcommand itself calls a path-based sibling entrypoint, `solveFile()`, added to
+`src/solver/solve.ts` by this feature (plan.md's revision note) — it passes the given file paths
+straight through rather than reading them into memory first.
 
 ## Invocation shape
 
@@ -32,21 +35,21 @@ zebra solve <model.mzn> [--data <file.dzn>] [--solver <id>] [--json]
 |---|---|---|
 | `<model.mzn>` | yes | Path to a MiniZinc model file |
 | `--data <file.dzn>` | no | Path to a MiniZinc data file |
-| `--solver <id>` | no | Defaults to `solve()`'s own default (Gecode, ADR-002 §2.2) |
+| `--solver <id>` | no | Defaults to the solve capability's own default (Gecode, ADR-002 §2.2) |
 | `--json` | no | Machine-readable output instead of human-readable (FR-005) |
 
 **Output (human, default)**: a plain-language description of the outcome — unsatisfiable,
 uniquely solvable (with the solution shown), or multiply satisfiable.
 
-**Output (`--json`)**: the underlying `SolveResult` as JSON — same shape `solve()` itself
-returns (`data-model.md`, `specs/002-minizinc-integration`), not a separate schema.
+**Output (`--json`)**: the underlying `SolveResult` as JSON — same shape the solve capability
+itself returns (`data-model.md`, `specs/002-minizinc-integration`), not a separate schema.
 
 **Exit codes** (research.md Finding 3 — Stricli's own `ExitCode` taxonomy, verified hands-on):
 
 | Code | Meaning |
 |---|---|
-| `0` | `solve()` returned a result — regardless of whether the puzzle was unique, unsatisfiable, or multiply satisfiable (FR-006) |
-| `1` | `solve()` itself failed (`SolverError`) — Stricli's `CommandRunError` (FR-007) |
+| `0` | `solveFile()` returned a result — regardless of whether the puzzle was unique, unsatisfiable, or multiply satisfiable (FR-006) |
+| `1` | `solveFile()` itself failed (`SolverError`) — Stricli's `CommandRunError` (FR-007) |
 | `251` | An unrecognized subcommand was given — Stricli's `UnknownCommand` (FR-011). Non-zero, as FR-011 requires, but not the same code as a `solve` failure. |
 | `252` | An unrecognized or malformed flag was given — Stricli's `InvalidArgument`. |
 

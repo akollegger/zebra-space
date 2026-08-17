@@ -65,8 +65,29 @@ actual code rather than assuming everything non-`solve`-related exits `1`.
 
 Per ADR-003 §2.2 and the finding above: `solve` itself only ever produces `0` (any resolved
 `SolveResult`) or `1` (`SolverError`, via `CommandRunError`) — this project's own code never
-calls `process.exit` directly for these cases, it just lets `solve()`'s success/failure become
-the command implementation's return/throw, and Stricli's `run()` handles the rest. Stricli-level
-usage errors (unknown subcommand, bad flags) use Stricli's own `ExitCode` values (Finding 3) —
-non-zero, but not `1` — which is what FR-011 actually requires ("exit unsuccessfully"), not a
-specific code.
+calls `process.exit` directly for these cases, it just lets `solveFile()`'s success/failure
+become the command implementation's return/throw, and Stricli's `run()` handles the rest.
+Stricli-level usage errors (unknown subcommand, bad flags) use Stricli's own `ExitCode` values
+(Finding 3) — non-zero, but not `1` — which is what FR-011 actually requires ("exit
+unsuccessfully"), not a specific code.
+
+## Finding 4: `solve()`'s content-based signature would force an unnecessary file round trip
+
+Drafting `tasks.md` surfaced that `SolveRequest.model`/`data` (`src/solver/types.ts`) are file
+*contents*, not paths — `solve()` writes whatever string it's given into a fresh temp directory
+before invoking MiniZinc (`src/solver/solve.ts`). That's the right shape for `solve()`'s own unit
+tests (`tests/solver/solve.test.ts` passes inline model strings, no filesystem involved at all),
+but it's the wrong shape for the CLI: the user already has a file on disk at a stable path, and
+MiniZinc only ever reads that file — it never writes to or locks it. Having the `solve` subcommand
+read the file into memory, just so `solve()` could immediately write that same content back out to
+a *different* temp file, would be a pure round trip with no benefit — disk → memory → a new file on
+disk again — solely to satisfy a signature built for a different caller.
+
+**Decision**: extract `solve.ts`'s shared "invoke MiniZinc against known file paths, then
+classify" logic into a private helper, and add a path-based sibling entrypoint, `solveFile()`,
+next to the existing `solve()`. `solve()` keeps writing content to a temp dir and delegating to
+the helper (unchanged signature, unchanged behavior, its own tests untouched); `solveFile()`
+delegates to the same helper directly against the caller-supplied paths — no temp directory, no
+buffering, no cleanup responsibility for files it doesn't own. The `solve` subcommand
+(`src/cli/subcommands/solve.ts`) calls `solveFile()`, not `solve()`. No solving logic is
+duplicated between the two entrypoints (FR-003).
