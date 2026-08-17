@@ -4,7 +4,8 @@ title: CLI Interface Shape
 status: proposed
 rfcs: [RFC-002]
 created: 2026-08-13
-specs: []
+specs:
+  - specs/003-cli-interface
 ---
 
 # ADR-003: CLI Interface Shape
@@ -32,17 +33,31 @@ original ask named) is not usable here. Its latest stable release (0.77.0) peer-
 `effect@^3.22.1` and `@effect/platform@^0.97.1` — the exact same incompatibility ADR-002/spec
 002's T001 already hit and worked around, since this repo is pinned to `effect@4.0.0-beta.107`.
 This ADR's argument-parsing decision (2.3) is a direct consequence of that finding, not a
-stylistic preference.
+stylistic preference. [Tracking issue #5](https://github.com/akollegger/zebra-space/issues/5)
+watches for `@effect/platform`/`@effect/cli` catching up to the Effect 4.0 line — independent of
+that, though: 2.3's actual choice (Stricli) stands on its own merits, not as a placeholder
+waiting for that issue to close.
 
 ## 2. Decision
 
 ### 2.1 Shape
 
 Subcommand-oriented: `zebra <subcommand> [args...] [flags...]` — matching `git`/`gh`/`docker`/
-`kubectl`/`pnpm` convention rather than a single-purpose flat-flag tool. Standard global flags:
-`--help`/`-h` (both top-level, listing available subcommands, and per-subcommand, describing
-that subcommand's own args/flags) and `--version`. An unknown subcommand prints the available
-subcommand list and exits non-zero — it never silently no-ops.
+`kubectl`/`pnpm` convention rather than a single-purpose flat-flag tool.
+
+**Global-flag dispatch is precise, not just "global flags exist"**: `argv[0]` is the *only*
+position that determines global vs. subcommand handling. If `argv[0]` is `--help`, `-h`, or
+`--version`, it's handled globally and the process exits immediately, ignoring everything else
+in `argv`. Otherwise, `argv[0]` is the subcommand name, and everything in `argv.slice(1)`
+belongs entirely to that subcommand — including its own `--help`/`-h`, defined independently
+rather than reusing the top-level handler. Global flags are never recognized once a subcommand
+has been identified: `zebra solve --version` is an unrecognized option for `solve`, not a global
+version print. This is the behavior a user sees; per 2.3, it's provided by Stricli's own
+route-map/command model, not hand-derived dispatch logic — the rule is stated here precisely
+because it's still this ADR's decision about *what* the CLI does, independent of *how* (2.3).
+
+An unknown subcommand (i.e. `argv[0]` matches neither the global flag set nor a registered
+subcommand) prints the available subcommand list and exits non-zero — it never silently no-ops.
 
 ### 2.2 First subcommand: `solve`
 
@@ -68,20 +83,36 @@ non-uniqueness as a warning or failure — and is out of scope for `solve` itsel
 
 ### 2.3 Argument parsing and subcommand dispatch
 
-Node's built-in `node:util.parseArgs` handles flag/positional parsing — zero new dependencies,
-and the only option compatible with this repo's pinned `effect@4.0.0-beta.107` (Context;
-`@effect/cli` is not). Subcommand dispatch (mapping the first positional argument to a handler)
-is hand-rolled — a plain lookup, not a library — consistent with `solve.ts`'s own precedent of
-wrapping Node built-ins by hand in `Effect` rather than reaching for `@effect/platform`/
-`@effect/cli`.
+[`@stricli/core`](https://bloomberg.github.io/stricli/) (Bloomberg's TypeScript-native CLI
+framework) handles flag/positional parsing and subcommand dispatch — `buildCommand` defines the
+`solve` subcommand with typed flag/positional parameter definitions, `buildRouteMap` registers
+it (and any future subcommand) under the top-level dispatcher, and `run` drives the entrypoint.
+
+Verified before drafting: `@stricli/core@1.3.0` has **zero runtime dependencies and zero peer
+dependencies** — no repeat of the `@effect/cli`/`@effect/platform` incompatibility (Context).
+The published package is already-compiled ESM+CJS with a `.d.ts`, so it imports cleanly into
+this repo's no-build-step native-TypeScript setup like any other dependency (its own quick-start
+docs use a `tsup` build step for *its* example template, not a requirement it imposes on
+consumers).
+
+Stricli's defining property, and the reason it's chosen over a more established but
+less-type-safe option (3, commander): flag/positional parameter definitions are declared once
+and their types flow automatically into the command implementation's function signature — no
+restating a separate options interface, no casting a loosely-typed parsed-options object.
+Combined with built-in `--help`/`-h`/`--version`/`-v` generation and native route-map-based
+subcommand dispatch, it implements 2.1's global-vs-subcommand dispatch rule correctly out of the
+box, rather than this project hand-deriving and hand-maintaining it (which is what the original
+version of this ADR did — see 3).
 
 ### 2.4 Effect usage
 
-Each subcommand's handler is still an `Effect` pipeline — typed errors, no thrown exceptions.
-The `solve` subcommand's handler calls `solve()` directly (already an `Effect`) and only
-converts to a process exit code / stdout output at the outermost boundary
-(`Effect.runPromise`/`Effect.runPromiseExit` at the CLI entrypoint) — not scattered through the
-logic.
+Each subcommand's implementation function (the `func` passed to Stricli's `buildCommand`) is
+still an `Effect` pipeline — typed errors, no thrown exceptions. The `solve` subcommand's
+implementation calls `solve()` directly (already an `Effect`) and only converts to a process
+exit code / stdout output at that function's own boundary
+(`Effect.runPromise`/`Effect.runPromiseExit`) — not scattered through the logic. Stricli itself
+has no opinion about `Effect`; this boundary is entirely this project's own convention, applied
+inside whatever function Stricli calls for a given subcommand.
 
 ### 2.5 Package and entrypoint
 
@@ -94,10 +125,23 @@ to *that* a `bin` field and entrypoint are needed, and that `solve` is reachable
 
 - **`@effect/cli`** (the original ask). Rejected: incompatible peer dependencies (Context) — not
   a stylistic rejection, a hard version-compatibility blocker with this repo's pinned `effect`.
-- **A third-party argument-parsing library** (commander, yargs, cac). Rejected: this project has
-  consistently preferred Node built-ins over new dependencies where they're sufficient (native
-  TypeScript execution, the built-in test runner, and now this) — `node:util.parseArgs` covers
-  what a `solve`-sized CLI needs without adding a dependency.
+- **`node:util.parseArgs` + hand-rolled subcommand dispatch** (this ADR's original 2.3 decision).
+  Rejected on reflection, before any implementation existed to migrate away from: real design
+  effort was already spent precisely hand-deriving the exact global-vs-subcommand dispatch
+  semantics 2.1 states (which position global flags are recognized at, how they interact with
+  subcommand-owned flags, who owns `--help` at each level) — exactly what a purpose-built
+  dispatch library exists to standardize. Continuing to hand-roll it, and hand-maintain
+  per-subcommand help text, would have kept paying that cost as more subcommands are added.
+- **`commander`**. A real contender — zero dependencies, extremely mature (~415M weekly
+  downloads at the time of this decision), and the most battle-tested option available. Rejected
+  in favor of Stricli specifically on type safety: commander's parsed options come back as a
+  loosely-typed object, typically requiring a separately-declared interface and a cast to use
+  safely, whereas Stricli's parameter definitions flow their types into the command
+  implementation automatically. Given this project already treats typed correctness as a core
+  value (`Effect` pipelines, typed `SolverError` variants), that structural difference outweighed
+  commander's much larger adoption — accepting Stricli's real (if not alarming) maturity/
+  community-support tradeoff (~584K weekly downloads at the time of this decision, but actively
+  maintained by Bloomberg, not abandoned) in exchange.
 - **A flat, single-purpose tool with no subcommands** (e.g. a bare `zebra-solve` binary).
   Rejected: the entire point of deciding the *shape* now, ahead of every individual capability,
   is that `solve` today, and whatever this project adds next, don't fit one flat command — a
@@ -122,17 +166,21 @@ to *that* a `bin` field and entrypoint are needed, and that `solve` is reachable
   `MultiplySatisfiable` exit `0` alongside `UniquelySolvable` (2.2). This deliberately leaves
   room for a future puzzle-linting subcommand to make non-uniqueness a warning or failure on its
   own terms, without `solve` having pre-judged that question.
-- The hand-rolled subcommand dispatcher (2.3) is a simple lookup adequate for one subcommand; it
-  will need real structure (a registry/table, shared flag-parsing helpers) once a second
-  subcommand is added — that structure isn't designed yet and shouldn't be speculatively built
-  now for a dispatcher with one entry.
-- No shell-completion story yet (bash/zsh/fish completions) — not needed until the subcommand
-  surface is large enough to make tab-completion valuable.
-- `node:util.parseArgs` is less featureful than a CLI library: no auto-generated per-subcommand
-  help text, no built-in validation errors. `--help` output is hand-maintained per subcommand
-  for now, a real (if small) ongoing cost traded for the zero-new-dependency benefit.
+- Adding a second subcommand means registering it in Stricli's route map (2.3) — no bespoke
+  dispatcher structure to design or build, unlike the hand-rolled approach this ADR originally
+  specified.
+- Shell autocomplete (bash/zsh/fish) is available via Stricli's built-in support whenever this
+  project chooses to wire it up — not something to build from scratch, just not turned on yet.
+- Depending on Stricli means depending on a much smaller-adoption library than commander (~700x
+  smaller by weekly downloads at the time of this decision, per 3). It's actively maintained by
+  Bloomberg, not abandoned, but this is a real maturity/community-support tradeoff worth
+  remembering if a rough edge is ever hit that a larger community would already have documented.
+- `--help`/`--version` given *after* a subcommand name are that subcommand's own concern (or an
+  unrecognized-option error, for `--version`) — never the global handler's (2.1). This matches
+  Stricli's own root-command/route-map model; it's stated here as this project's expected
+  behavior, not as a constraint this project had to design.
 
 ## 5. Related
 
 - RFCs: RFC-002
-- Specs: _(populated automatically by the speckit ADR-link hook once `/speckit-specify` references this ADR)_
+- Specs: specs/003-cli-interface
