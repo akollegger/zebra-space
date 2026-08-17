@@ -141,31 +141,47 @@ export function solve(request: SolveRequest): Effect.Effect<SolveResult, SolverE
         }),
     })
 
+    // Cleanup failure is an operational error, not a solving-semantics concern — it MUST
+    // override an otherwise-successful result (PR #4 review discussion). Made explicit below
+    // rather than relying on a `finally` block's own throw (Biome's noUnsafeFinally rightly
+    // flags that as usually-accidental; here the override is deliberate, so it's spelled out).
     const result = yield* Effect.tryPromise({
       try: async () => {
-        const modelPath = join(tempDir, "model.mzn")
-        await writeFile(modelPath, request.model, "utf8")
+        let outcome: { readonly ok: true; readonly value: SolveResult } | { readonly ok: false; readonly error: unknown }
+        try {
+          const modelPath = join(tempDir, "model.mzn")
+          await writeFile(modelPath, request.model, "utf8")
 
-        let dataPath: string | undefined
-        if (request.data !== undefined) {
-          dataPath = join(tempDir, "data.dzn")
-          await writeFile(dataPath, request.data, "utf8")
+          let dataPath: string | undefined
+          if (request.data !== undefined) {
+            dataPath = join(tempDir, "data.dzn")
+            await writeFile(dataPath, request.data, "utf8")
+          }
+
+          const value = await runMinizincAndClassify({
+            modelPath,
+            dataPath,
+            solverId: request.solverId,
+            timeoutMs: request.timeoutMs,
+          })
+          outcome = { ok: true, value }
+        } catch (error) {
+          outcome = { ok: false, error }
         }
 
-        return await runMinizincAndClassify({
-          modelPath,
-          dataPath,
-          solverId: request.solverId,
-          timeoutMs: request.timeoutMs,
-        })
+        try {
+          await rm(tempDir, { recursive: true, force: true })
+        } catch (error) {
+          throw new FilesystemError({
+            message: error instanceof Error ? error.message : String(error),
+          })
+        }
+
+        if (!outcome.ok) throw outcome.error
+        return outcome.value
       },
       catch: (error) => error as SolverError,
-    }).pipe(
-      // NOTE: cleanup-failure handling is an open discussion (see PR #4 review) — should a
-      // failed rm() here override an otherwise-successful result? Left as Effect.promise
-      // (best-effort, not yet typed) pending that decision.
-      Effect.ensuring(Effect.promise(() => rm(tempDir, { recursive: true, force: true }))),
-    )
+    })
 
     return result
   })
