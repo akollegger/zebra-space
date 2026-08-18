@@ -51,5 +51,5 @@ Use `/rfc-review` before moving a draft to `review`/`accepted`.
 | RFC | Title | Status | ADRs |
 |---|---|---|---|
 | [RFC-001](RFC-001-parameterizable-puzzle-generation.md) | Parameterizable Natural-Language Zebra Puzzle Generation | draft | ADR-001 |
-| [RFC-002](RFC-002-constraint-solver-selection.md) | Constraint Solver Selection | draft | ADR-002, ADR-003 |
-| [RFC-003](RFC-003-natural-language-csp-extraction.md) | Natural-Language Puzzle to CSP Extraction | draft | ADR-004 |
+| [RFC-002](RFC-002-constraint-solver-selection.md) | Constraint Solver Selection | draft | ADR-002, ADR-003, ADR-005 |
+| [RFC-003](RFC-003-natural-language-csp-extraction.md) | Natural-Language Puzzle to CSP Extraction | draft | ADR-004, ADR-005 |
