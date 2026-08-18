@@ -25,6 +25,14 @@ const DEFAULT_SOLVER_ID = "Gecode"
 const DEFAULT_MAX_SOLUTIONS = 2
 const DEFAULT_TIMEOUT_MS = 30_000
 
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
+function toFilesystemError(error: unknown): FilesystemError {
+  return new FilesystemError({ message: errorMessage(error) })
+}
+
 interface ExecFileError {
   readonly code?: string | number
   readonly killed?: boolean
@@ -67,13 +75,25 @@ function toSolverError(error: unknown, resolved: ResolvedRunOptions): SolverErro
   })
 }
 
-interface RunMinizincOptions {
+interface MinizincArgsOptions {
   readonly modelPath: string
-  // `| undefined` (not just `?:`) so callers can pass through an already-optional value as an
-  // explicit key without tripping exactOptionalPropertyTypes.
   readonly dataPath?: string | undefined
-  readonly solverId?: string | undefined
-  readonly timeoutMs?: number | undefined
+  readonly solverId: string
+}
+
+/** Pure: the exact `minizinc` CLI arguments for an already-resolved set of options. */
+function buildMinizincArgs(options: MinizincArgsOptions): readonly string[] {
+  const base = [
+    "-n",
+    String(DEFAULT_MAX_SOLUTIONS),
+    "--output-mode",
+    "json",
+    "--solver",
+    options.solverId,
+  ]
+  return options.dataPath !== undefined
+    ? [...base, options.dataPath, options.modelPath]
+    : [...base, options.modelPath]
 }
 
 /**
@@ -83,118 +103,61 @@ interface RunMinizincOptions {
  *
  * Always requests exactly DEFAULT_MAX_SOLUTIONS (2) — per data-model.md, this is fixed, not
  * caller-configurable (FR-002).
- *
- * Throws an already-typed SolverError on failure (never a raw execFile/parse error) — execFile
- * failures and classifySolutions failures are distinguished and translated at their own call
- * site, since they're different failure modes (the solver failing to run vs. the solver running
- * fine but producing output this project doesn't recognize).
  */
-async function runMinizincAndClassify(options: RunMinizincOptions): Promise<SolveResult> {
+function runMinizincAndClassify(options: SolveFileRequest): Effect.Effect<SolveResult, SolverError> {
   const resolved: ResolvedRunOptions = {
     timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
     solverId: options.solverId ?? DEFAULT_SOLVER_ID,
   }
 
-  const args = [
-    "-n",
-    String(DEFAULT_MAX_SOLUTIONS),
-    "--output-mode",
-    "json",
-    "--solver",
-    resolved.solverId,
-  ]
+  const args = buildMinizincArgs({
+    modelPath: options.modelPath,
+    dataPath: options.dataPath,
+    solverId: resolved.solverId,
+  })
 
-  if (options.dataPath !== undefined) {
-    args.push(options.dataPath)
-  }
-
-  args.push(options.modelPath)
-
-  let stdout: string
-  try {
-    ;({ stdout } = await execFile("minizinc", args, { timeout: resolved.timeoutMs }))
-  } catch (error) {
-    throw toSolverError(error, resolved)
-  }
-
-  try {
-    return classifySolutions(stdout)
-  } catch (error) {
-    throw new UnexpectedOutput({
-      stdout,
-      message: error instanceof Error ? error.message : String(error),
-    })
-  }
-}
-
-function toFilesystemError(error: unknown): FilesystemError {
-  return new FilesystemError({ message: error instanceof Error ? error.message : String(error) })
+  return Effect.tryPromise({
+    try: () => execFile("minizinc", args, { timeout: resolved.timeoutMs }),
+    catch: (error) => toSolverError(error, resolved),
+  }).pipe(
+    Effect.flatMap(({ stdout }) => {
+      const classified = classifySolutions(stdout)
+      return classified._tag === "UnrecognizedOutput"
+        ? Effect.fail(new UnexpectedOutput({ stdout: classified.stdout, message: classified.message }))
+        : Effect.succeed(classified)
+    }),
+  )
 }
 
 /**
- * Solve a MiniZinc model given as content, classifying the result per data-model.md's
- * SolveResult. contracts/solve-contract.md: never throws, never leaves temp files behind.
+ * Run `use` with a freshly created temp directory, guaranteeing cleanup. Cleanup failure is
+ * an operational error, not a solving-semantics concern — it MUST override an otherwise-
+ * successful (or differently-failed) `use` outcome (PR #4 review discussion), the same way a
+ * `finally` block's own throw would, made explicit here via Effect.match rather than relying
+ * on that implicit behavior (Biome's noUnsafeFinally rightly flags the implicit version).
  *
- * Note: NOT built on Effect.acquireRelease/Scope, despite this being a textbook
- * acquire-use-release shape (effect's own ai-docs/05_resources/10_acquire-release.ts shows the
- * same pattern for a long-lived resource). acquireRelease's release function is typed
- * `Effect<unknown, never, R>` — a finalizer is not allowed a typed failure, only a defect — but
- * this project's design (PR #4 review discussion) requires a cleanup failure to surface as a
- * normal, formattable SolverError that overrides the result, not an untyped defect. Composed by
- * hand below instead, using Effect.match to reify the main attempt into a plain value so
- * cleanup can run and, if it fails, take priority — no raw try/catch bookkeeping.
+ * Not built on Effect.acquireRelease/Scope, despite this being a textbook acquire-use-release
+ * shape (effect's own ai-docs/05_resources/10_acquire-release.ts shows the same pattern for a
+ * long-lived resource): acquireRelease's release function is typed `Effect<unknown, never, R>`
+ * — a finalizer can't have a typed failure, only a defect — which would silently turn a
+ * cleanup failure back into an untyped defect, undoing the fix this function exists for.
  */
-export function solve(request: SolveRequest): Effect.Effect<SolveResult, SolverError> {
+function withTemporaryDirectory<A>(use: (dir: string) => Effect.Effect<A, SolverError>) {
   return Effect.gen(function* () {
-    const tempDir = yield* Effect.tryPromise({
+    const dir = yield* Effect.tryPromise({
       try: () => mkdtemp(join(tmpdir(), "minizinc-")),
       catch: toFilesystemError,
     })
 
-    const modelPath = join(tempDir, "model.mzn")
-
-    const attempt = yield* Effect.gen(function* () {
-      yield* Effect.tryPromise({
-        try: () => writeFile(modelPath, request.model, "utf8"),
-        catch: toFilesystemError,
-      })
-
-      const dataPath = yield* Option.fromUndefinedOr(request.data).pipe(
-        Option.match({
-          onNone: () => Effect.succeed(undefined),
-          onSome: (data) => {
-            const path = join(tempDir, "data.dzn")
-            return Effect.tryPromise({
-              try: () => writeFile(path, data, "utf8"),
-              catch: toFilesystemError,
-            }).pipe(Effect.as(path))
-          },
-        }),
-      )
-
-      return yield* Effect.tryPromise({
-        try: () =>
-          runMinizincAndClassify({
-            modelPath,
-            dataPath,
-            solverId: request.solverId,
-            timeoutMs: request.timeoutMs,
-          }),
-        catch: (error) => error as SolverError,
-      })
-    }).pipe(
+    const attempt = yield* use(dir).pipe(
       Effect.match({
         onFailure: (error) => ({ ok: false as const, error }),
         onSuccess: (value) => ({ ok: true as const, value }),
       }),
     )
 
-    // Cleanup failure is an operational error, not a solving-semantics concern — it MUST
-    // override an otherwise-successful (or differently-failed) attempt (PR #4 review
-    // discussion). Checked last: a failing yield* here short-circuits the generator before
-    // `attempt` is ever unwrapped below, so cleanup failure always wins.
     yield* Effect.tryPromise({
-      try: () => rm(tempDir, { recursive: true, force: true }),
+      try: () => rm(dir, { recursive: true, force: true }),
       catch: toFilesystemError,
     })
 
@@ -205,20 +168,49 @@ export function solve(request: SolveRequest): Effect.Effect<SolveResult, SolverE
   })
 }
 
+function solveInDirectory(request: SolveRequest, tempDir: string): Effect.Effect<SolveResult, SolverError> {
+  return Effect.gen(function* () {
+    const modelPath = join(tempDir, "model.mzn")
+    yield* Effect.tryPromise({
+      try: () => writeFile(modelPath, request.model, "utf8"),
+      catch: toFilesystemError,
+    })
+
+    const dataPath = yield* Option.fromUndefinedOr(request.data).pipe(
+      Option.match({
+        onNone: () => Effect.succeed(undefined),
+        onSome: (data) => {
+          const path = join(tempDir, "data.dzn")
+          return Effect.tryPromise({
+            try: () => writeFile(path, data, "utf8"),
+            catch: toFilesystemError,
+          }).pipe(Effect.as(path))
+        },
+      }),
+    )
+
+    return yield* runMinizincAndClassify({
+      modelPath,
+      dataPath,
+      solverId: request.solverId,
+      timeoutMs: request.timeoutMs,
+    })
+  })
+}
+
+/**
+ * Solve a MiniZinc model given as content, classifying the result per data-model.md's
+ * SolveResult. contracts/solve-contract.md: never throws, never leaves temp files behind.
+ */
+export function solve(request: SolveRequest): Effect.Effect<SolveResult, SolverError> {
+  return withTemporaryDirectory((tempDir) => solveInDirectory(request, tempDir))
+}
+
 /**
  * Solve a MiniZinc model given as an existing file path, per specs/003-cli-interface's
  * research.md Finding 4 — passes the caller's paths straight to minizinc, with no temp-file
  * staging or content buffering of its own, since it doesn't own those files.
  */
 export function solveFile(request: SolveFileRequest): Effect.Effect<SolveResult, SolverError> {
-  return Effect.tryPromise({
-    try: () =>
-      runMinizincAndClassify({
-        modelPath: request.modelPath,
-        dataPath: request.dataPath,
-        solverId: request.solverId,
-        timeoutMs: request.timeoutMs,
-      }),
-    catch: (error) => error as SolverError,
-  })
+  return runMinizincAndClassify(request)
 }

@@ -1,19 +1,20 @@
 import { Data } from "effect"
 
-export interface SolveRequest {
-  readonly model: string
-  readonly data?: string
-  readonly solverId?: string
-  readonly timeoutMs?: number
-}
-
-export interface SolveFileRequest {
-  readonly modelPath: string
-  // `| undefined` (not just `?:`) so callers can pass through an already-optional value (e.g.
-  // `flags.data`) as an explicit key without tripping exactOptionalPropertyTypes.
-  readonly dataPath?: string | undefined
+// `| undefined` (not just `?:`) on both fields so callers can pass through an already-optional
+// value (e.g. `flags.data`) as an explicit key without tripping exactOptionalPropertyTypes.
+export interface SolverOptions {
   readonly solverId?: string | undefined
   readonly timeoutMs?: number | undefined
+}
+
+export interface SolveRequest extends SolverOptions {
+  readonly model: string
+  readonly data?: string
+}
+
+export interface SolveFileRequest extends SolverOptions {
+  readonly modelPath: string
+  readonly dataPath?: string | undefined
 }
 
 export type Assignment = Record<string, unknown>
@@ -33,6 +34,19 @@ export interface MultiplySatisfiable {
 }
 
 export type SolveResult = Unsatisfiable | UniquelySolvable | MultiplySatisfiable
+
+// Not part of SolveResult — an unrecognized-output classification isn't a valid solving
+// outcome, it's an operational problem (same principle as cleanup failure vs. solving
+// semantics). classifySolutions (parse.ts) returns this instead of throwing, so its own
+// signature is honest about every value it can produce; solve.ts converts it to the typed
+// UnexpectedOutput SolverError.
+export interface UnrecognizedOutput {
+  readonly _tag: "UnrecognizedOutput"
+  readonly stdout: string
+  readonly message: string
+}
+
+export type ClassifiedOutput = SolveResult | UnrecognizedOutput
 
 export class ToolchainUnavailable extends Data.TaggedError("ToolchainUnavailable")<{
   readonly message: string
