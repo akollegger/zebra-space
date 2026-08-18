@@ -31,8 +31,10 @@ function readFrontmatter(filePath: string): Record<string, string> {
   const content = readFileSync(filePath, "utf8")
   const match = content.match(/^---\n([\s\S]*?)\n---/)
   assert.ok(match, `${filePath} has no YAML frontmatter block`)
+  const frontmatter = match[1]
+  assert.ok(frontmatter !== undefined, `${filePath} has an empty frontmatter block`)
   const fields: Record<string, string> = {}
-  for (const line of match![1].split("\n")) {
+  for (const line of frontmatter.split("\n")) {
     const stripped = line.trim()
     if (stripped === "" || stripped.startsWith("#")) continue
     const separator = line.indexOf(":")

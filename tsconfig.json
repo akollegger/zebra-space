@@ -12,8 +12,7 @@
     // "types": [],
     // For nodejs:
     // "lib": ["nodenext"],
-    // "types": ["node"],
-    // and npm install -D @types/node
+    "types": ["node"],
     "target": "ES2022",
     "module": "NodeNext",
     "allowJs": false,

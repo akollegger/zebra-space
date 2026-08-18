@@ -1,7 +1,15 @@
 #!/usr/bin/env node
 import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
-import { buildApplication, buildRouteMap, help, run, text_en, version } from "@stricli/core"
+import {
+  buildApplication,
+  buildRouteMap,
+  help,
+  run,
+  text_en,
+  version,
+  type StricliProcess,
+} from "@stricli/core"
 import { solve } from "./subcommands/solve.ts"
 
 const packageJsonPath = fileURLToPath(new URL("../../package.json", import.meta.url))
@@ -49,4 +57,10 @@ const app = buildApplication(
   },
 )
 
-await run(app, process.argv.slice(2), { process })
+// Node's own `process.exitCode` type (`string | number | null | undefined`) is wider than
+// Stricli's declared `StricliProcess.exitCode` (`string | number | null`) under
+// exactOptionalPropertyTypes — the real process fully satisfies Stricli's runtime contract
+// (it only ever reads/writes those three narrower values), so this is a type-only mismatch,
+// not a behavioral one. Must stay the *real* `process` object, not a substitute — Stricli
+// controls the actual exit code by writing to it.
+await run(app, process.argv.slice(2), { process: process as StricliProcess })
