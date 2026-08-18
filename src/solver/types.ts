@@ -9,7 +9,7 @@ export interface SolverOptions {
 
 export interface SolveRequest extends SolverOptions {
   readonly model: string
-  readonly data?: string
+  readonly data?: string | undefined
 }
 
 export interface SolveFileRequest extends SolverOptions {

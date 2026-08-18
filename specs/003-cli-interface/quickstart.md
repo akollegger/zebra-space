@@ -25,7 +25,8 @@ Exercises, per `contracts/cli-contract.md` and `data-model.md`:
 - `solve` against a nonexistent file → error on stderr, exit `1` (SC-005).
 - `zebra --help`, `zebra solve --help`, `zebra --version` → non-empty, relevant output, no
   solver invoked (SC-006).
-- `zebra bogus-subcommand` → lists subcommands, exit `1` (SC-007).
+- `zebra bogus-subcommand` → lists subcommands, exit `251` (Stricli's `UnknownCommand`, per
+  `contracts/cli-contract.md`) (SC-007).
 
 ## Manual check
 

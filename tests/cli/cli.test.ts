@@ -123,6 +123,8 @@ test("SC-006: --version prints a non-empty version string", async () => {
 
 test("SC-007: an unrecognized subcommand lists available subcommands and exits unsuccessfully", async () => {
   const result = await runCli(["bogus-subcommand"])
-  assert.notEqual(result.exitCode, 0)
+  // Exact code, not just non-zero — contracts/cli-contract.md documents 251 (Stricli's
+  // UnknownCommand) as a stable, meaningful distinction from a solve failure's exit 1.
+  assert.equal(result.exitCode, 251)
   assert.match(result.stdout + result.stderr, /solve/)
 })
