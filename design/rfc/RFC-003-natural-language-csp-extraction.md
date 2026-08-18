@@ -406,10 +406,11 @@ well-intentioned phrasing, not arbitrary/adversarial input), not the catalog's c
   generation costs already implied by [RFC-001](RFC-001-parameterizable-puzzle-generation.md).
   [SPIKE-004](../spikes/SPIKE-004-llm-based-extraction/SPIKE.md) used `@openrouter/sdk` rather
   than `@effect/ai` — the latter (and every `@effect/ai-*` provider package) peer-depends on
-  `effect@^3.22.0`, incompatible with this repo's `effect@4.0.0-beta.107` pin, the same class of
-  incompatibility already documented for `@effect/platform`'s `Command` module. `@openrouter/sdk`
-  has zero peer dependencies and is a thin API client, not an agentic framework, so it doesn't
-  conflict with the pin and doesn't add "another agentic library."
+  `effect@^3.22.0`, incompatible with this repo's `effect` 4.x pin regardless of which 4.x
+  prerelease is in use (the `@effect/*` ecosystem hasn't caught up to `effect` 4.x at all yet),
+  the same class of incompatibility already documented for `@effect/platform`'s `Command` module.
+  `@openrouter/sdk` has zero peer dependencies and is a thin API client, not an agentic
+  framework, so it doesn't conflict with the pin and doesn't add "another agentic library."
 - **Determinism & reproducibility**: Weakest of any tier, now confirmed concretely rather than
   theoretically —
   [SPIKE-004](../spikes/SPIKE-004-llm-based-extraction/SPIKE.md) ran the *identical* combined-clue
