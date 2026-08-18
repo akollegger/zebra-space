@@ -1,4 +1,2 @@
 allowBuilds:
   msgpackr-extract: false
-overrides:
-  zebra-puzzler: 'link:'

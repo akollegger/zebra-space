@@ -16,9 +16,12 @@ pnpm link .                                                     # dev-mode: make
 pnpm exec zebra solve catalog/mzn/PZL-0004-whodunit.mzn
 ```
 
-`zebra --help` lists all available subcommands. `pnpm link .` only needs to be run once per
-checkout — it self-links this package so its `bin` (`zebra`) resolves through `pnpm exec` without
-a real global install.
+`zebra --help` lists all available subcommands. `pnpm link .` self-links this package so its
+`bin` (`zebra`) resolves through `pnpm exec` without a real global install — it's a local,
+per-checkout step (modifies your own `package.json`/`pnpm-lock.yaml`/`pnpm-workspace.yaml`, not
+committed) rather than something baked into the repo, so run it once after cloning and again
+after any fresh `pnpm install` that drops it. Without it, invoke the CLI directly instead:
+`./src/cli/main.ts solve ...` or `node src/cli/main.ts solve ...`.
 
 ## Mission
 
