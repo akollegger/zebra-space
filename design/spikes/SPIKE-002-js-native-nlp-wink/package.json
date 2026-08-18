@@ -1,0 +1,10 @@
+{
+  "name": "spike-002-js-native-nlp-wink",
+  "private": true,
+  "type": "module",
+  "description": "Throwaway spike code for SPIKE-002 (RFC-003 Appendix §9.2). Not part of the zebra-space package tree.",
+  "dependencies": {
+    "wink-nlp": "^2.3.2",
+    "wink-eng-lite-web-model": "^1.8.1"
+  }
+}
