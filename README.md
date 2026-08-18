@@ -7,6 +7,46 @@ Zebra space is a place for:
 3. Representing constraints as graphs
 4. Solving puzzles with a solver
 
+## Getting Started
+
+```bash
+pnpm install
+brew install minizinc && ./scripts/setup-minizinc-solver.sh   # one-time solver setup
+pnpm link .                                                     # dev-mode: makes `zebra` runnable via pnpm exec
+pnpm exec zebra solve catalog/mzn/PZL-0004-whodunit.mzn
+```
+
+`zebra --help` lists all available subcommands. `pnpm link .` self-links this package so its
+`bin` (`zebra`) resolves through `pnpm exec` without a real global install — it's a local,
+per-checkout step (modifies your own `package.json`/`pnpm-lock.yaml`/`pnpm-workspace.yaml`, not
+committed) rather than something baked into the repo, so run it once after cloning and again
+after any fresh `pnpm install` that drops it. Without it, invoke the CLI directly instead:
+`./src/cli/main.ts solve ...` or `node src/cli/main.ts solve ...`.
+
+## Mission
+
+Zebra Space exists to explore how classic, well-understood [constraint
+satisfaction](https://en.wikipedia.org/wiki/Constraint_satisfaction_problem) holds up as a
+foundation for more agentic, LLM-driven reasoning. Zebra puzzles are the vehicle: a small,
+tractable domain spanning strict/explicit clues, vague/contextual clues, and
+subjective/preference-based ones — enough range to build and test real tooling without the
+domain's own complexity getting in the way of the actual questions.
+
+This is a place people (and agents) directly generate, inspect, and solve puzzles through real
+tools — not just a library other code happens to import. That starts with a command-line
+interface.
+
+**Non-goals for now**: a general-purpose CSP framework for arbitrary domains, and a
+hosted/multi-user service. Both are explicitly out of scope until a concrete need justifies
+revisiting them.
+
+## Design Process
+
+Work here follows a double-diamond: an [RFC](design/rfc/README.md) settles what a problem is
+and why it matters, one or more [ADRs](design/adr/README.md) settle the concrete technical
+decision, and only then does a [spec](specs/) turn an ADR into implementation
+(`/speckit-specify` → plan → tasks → implement). See [CLAUDE.md](CLAUDE.md) for how the three
+layers connect and where the tooling that enforces this lives.
 
 ---
 ## References

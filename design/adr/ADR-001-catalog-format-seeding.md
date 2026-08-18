@@ -2,7 +2,7 @@
 id: ADR-001
 title: Puzzle Catalog Format and Seeding
 status: proposed
-rfc: RFC-001
+rfcs: [RFC-001]
 created: 2026-08-11
 specs:
   - specs/001-catalog-seeding
@@ -190,5 +190,5 @@ value (2.1); they're chosen to match RFC-001's Goal of supporting classic-CSP pu
 
 ## 5. Related
 
-- RFC: RFC-001
+- RFCs: RFC-001
 - Specs: specs/001-catalog-seeding
