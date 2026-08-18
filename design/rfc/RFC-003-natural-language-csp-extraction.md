@@ -3,7 +3,7 @@ id: RFC-003
 title: Natural-Language Puzzle to CSP Extraction
 status: draft
 created: 2026-08-18
-adrs: []
+adrs: [ADR-004]
 ---
 
 # RFC-003: Natural-Language Puzzle to CSP Extraction
@@ -209,7 +209,8 @@ its own boundary case before an ADR commits to a representation?
 
 ## 8. ADRs
 
-_(populated automatically as `/adr-create` links ADRs to this RFC)_
+- [ADR-004](../adr/ADR-004-llm-extraction-critic-loop.md) — Adopt LLM-Based Extraction with a
+  Solver-Validated Critic Loop
 
 ## 9. Appendix: Extraction Strategy Evaluation
 

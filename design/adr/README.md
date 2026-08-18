@@ -52,3 +52,4 @@ Use `/adr-review` before moving a draft to `accepted`.
 | [ADR-001](ADR-001-catalog-format-seeding.md) | Puzzle Catalog Format and Seeding | proposed | RFC-001 | specs/001-catalog-seeding |
 | [ADR-002](ADR-002-adopt-minizinc-solver.md) | Adopt MiniZinc as the Constraint-Solver Ecosystem | proposed | RFC-002 | specs/002-minizinc-integration |
 | [ADR-003](ADR-003-cli-interface.md) | CLI Interface Shape | proposed | RFC-002 | specs/003-cli-interface |
+| [ADR-004](ADR-004-llm-extraction-critic-loop.md) | Adopt LLM-Based Extraction with a Solver-Validated Critic Loop | proposed | RFC-003 | _(none yet)_ |
