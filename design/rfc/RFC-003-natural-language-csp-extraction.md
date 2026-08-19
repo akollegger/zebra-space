@@ -424,6 +424,17 @@ well-intentioned phrasing, not arbitrary/adversarial input), not the catalog's c
   the same class of incompatibility already documented for `@effect/platform`'s `Command` module.
   `@openrouter/sdk` has zero peer dependencies and is a thin API client, not an agentic
   framework, so it doesn't conflict with the pin and doesn't add "another agentic library."
+  **This tier's runtime requirement is not just "an API key and network access" — it's a
+  specific structured-output mechanism, and that specificity was not apparent from SPIKE-004
+  alone.** [SPIKE-005](../spikes/SPIKE-005-tool-calling-conventions/SPIKE.md), run after
+  [ADR-004](../adr/ADR-004-llm-extraction-critic-loop.md)'s implementation, tested 13 models x 8
+  schema shapes x 2 mechanisms (208 live probes) and found forced tool calling honored far more
+  consistently than `response_format` JSON-schema structured output — zero hard rejections
+  versus 3, and correctly rescuing `anthropic/claude-sonnet-4.5`, which under `response_format`
+  returned HTTP 200 with prose ignoring the schema entirely rather than failing visibly.
+  Provider-*declared* capability metadata (OpenRouter's `supported_parameters`) was not a
+  reliable proxy for either mechanism: every model that then failed had declared full support.
+  ADR-004 §2.1/§2.7 were revised on this evidence.
 - **Determinism & reproducibility**: Weakest of any tier, now confirmed concretely rather than
   theoretically —
   [SPIKE-004](../spikes/SPIKE-004-llm-based-extraction/SPIKE.md) ran the *identical* combined-clue
@@ -495,14 +506,21 @@ well-intentioned phrasing, not arbitrary/adversarial input), not the catalog's c
 | General-purpose NLP library (Python/spaCy) | Moderate+ (sidecar build cost) | Unmeasured, possibly higher on ambiguous phrasing | Second runtime/sidecar | High | Moderate-good | Full but fragile | No concrete gap found yet ([SPIKE-002](../spikes/SPIKE-002-js-native-nlp-wink/SPIKE.md)) |
 | Small specialized model (GLiNER-scale) | Low integration; accuracy needs per-clue calls, not per-puzzle ([SPIKE-003](../spikes/SPIKE-003-gliner2-capability/SPIKE.md)) | Outperforms JS-native tier on every harder shape tested ([SPIKE-003](../spikes/SPIKE-003-gliner2-capability/SPIKE.md)) | None (vendored model), but real one-time env-pinning cost on platforms without current torch wheels ([SPIKE-003](../spikes/SPIKE-003-gliner2-capability/SPIKE.md)) | Moderate | Good | Full | Done — see 9.3 |
 | Small specialized model (NuExtract/UniNER-scale) | Low-moderate | Unmeasured | Local model runtime | Moderate | Good | Weak-moderate | Yes, alongside GLiNER spike |
-| LLM-based | Low to start, higher for reliability | Highest confirmed — only tier to solve the grid-dimension and embedded-table shapes ([SPIKE-004](../spikes/SPIKE-004-llm-based-extraction/SPIKE.md)) | Network + $ cost; `@openrouter/sdk` avoids the `@effect/ai` incompatibility ([SPIKE-004](../spikes/SPIKE-004-llm-based-extraction/SPIKE.md)) | Weakest, confirmed by a real same-input two-run divergence ([SPIKE-004](../spikes/SPIKE-004-llm-based-extraction/SPIKE.md)) | Best | Weak unless mocked | Done — see 9.4 |
+| LLM-based | Low to start, higher for reliability | Highest confirmed — only tier to solve the grid-dimension and embedded-table shapes ([SPIKE-004](../spikes/SPIKE-004-llm-based-extraction/SPIKE.md)) | Network + $ cost; specific *mechanism* matters as much as provider — forced tool calling far more reliable than `response_format` across models, and declared capability metadata isn't a proxy for either ([SPIKE-005](../spikes/SPIKE-005-tool-calling-conventions/SPIKE.md)) | Weakest, confirmed by a real same-input two-run divergence ([SPIKE-004](../spikes/SPIKE-004-llm-based-extraction/SPIKE.md)) | Best | Weak unless mocked | Done — see 9.4 |
 | Hybrid | Additive + routing logic | Highest achievable in principle | Union of components | Mixed | Good | Only as good as weakest component | No — sequence after component spikes |
 
 This comparison proposes criteria (§9 intro) and organizes what's currently known versus
 genuinely uncertain — it does not resolve which criteria should be weighted most heavily, nor
 does it commit to a tier. All four originally-recommended spikes (9.1-9.4) are now done; only
 NuExtract/UniNER-scale (a variant within 9.3) remains unspiked, and not obviously worth it given
-GLiNER2's results. [SPIKE-004](../spikes/SPIKE-004-llm-based-extraction/SPIKE.md) closed the
+GLiNER2's results. A fifth spike not originally recommended here —
+[SPIKE-005](../spikes/SPIKE-005-tool-calling-conventions/SPIKE.md) — followed once
+[ADR-004](../adr/ADR-004-llm-extraction-critic-loop.md) was actually implemented and its default
+model tiers both failed live: it found the *delivery mechanism* (tool calling vs. `response_format`
+structured output) matters as much as anything in this table, and isn't something a prose-only
+comparison like this one could have surfaced in advance. Worth naming as a category, alongside
+Runtime requirements, for whichever tier a future RFC/ADR evaluates against an LLM-based approach
+again. [SPIKE-004](../spikes/SPIKE-004-llm-based-extraction/SPIKE.md) closed the
 LLM-based tier's Coverage gap and, more importantly, turned Determinism from an abstract concern
 into a concrete, reproduced failure case — the single most decision-relevant finding across all
 four spikes, since it's what motivated [ADR-004](../adr/ADR-004-llm-extraction-critic-loop.md)'s
