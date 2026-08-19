@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@openrouter/sdk':
+        specifier: ^1.2.42
+        version: 1.2.42
       '@relateby/pattern':
         specifier: ^0.6.0
         version: 0.6.0
@@ -116,6 +119,9 @@ packages:
     resolution: {integrity: sha512-CmCXPQrkbwExx3j946/PtHWHbYJiCRBRDl4BlkRQcJB/YOwQxJRTpoo7aTsortjgoJ1x7opzTSxn7C+ASSLVjQ==}
     cpu: [x64]
     os: [win32]
+
+  '@openrouter/sdk@1.2.42':
+    resolution: {integrity: sha512-KBv6ICwzPElLKVJms+mxhEpSJ/YUeY/J2otkesDnlJLNZKwZqP7B6qri0sH5sRC6v0BdPjUonjbA+2PdOB1R3Q==}
 
   '@relateby/pattern@0.6.0':
     resolution: {integrity: sha512-RcIUgvyOZKmwW66c8jHTrhaMSNJaNTr7IaRj1RhfzJdaXeR/S5uMdQsZq99vkubHmhOC2f2Zr/+Gr2bDcVRenA==}
@@ -282,6 +288,9 @@ packages:
   undici-types@8.3.0:
     resolution: {integrity: sha512-j375ScV60dom+YkPFIfTLcOiPxkN/buHz5GobjLhixFuANaNs3C9l4GmrWqejgXWJ7BbJcFYpTEUkS1Ge8bpZQ==}
 
+  zod@4.4.3:
+    resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
+
 snapshots:
 
   '@biomejs/biome@2.5.8':
@@ -336,6 +345,10 @@ snapshots:
 
   '@msgpackr-extract/msgpackr-extract-win32-x64@3.0.4':
     optional: true
+
+  '@openrouter/sdk@1.2.42':
+    dependencies:
+      zod: 4.4.3
 
   '@relateby/pattern@0.6.0': {}
 
@@ -467,3 +480,5 @@ snapshots:
       '@typescript/typescript-win32-x64': 7.0.2
 
   undici-types@8.3.0: {}
+
+  zod@4.4.3: {}

@@ -23,6 +23,25 @@ committed) rather than something baked into the repo, so run it once after cloni
 after any fresh `pnpm install` that drops it. Without it, invoke the CLI directly instead:
 `./src/cli/main.ts solve ...` or `node src/cli/main.ts solve ...`.
 
+### Configuration
+
+`zebra extract` (ADR-004) calls an LLM via [OpenRouter](https://openrouter.ai) and needs a
+credential:
+
+```bash
+cp .env.example .env    # then fill in OPENROUTER_API_KEY
+```
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `OPENROUTER_API_KEY` | Yes, for `zebra extract` | OpenRouter credential — get one at [openrouter.ai/keys](https://openrouter.ai/keys). Not needed for `zebra solve`. |
+| `ZEBRA_MODEL` | No | Overrides the default (cheap-tier) extraction model. |
+| `ZEBRA_FRONTIER_MODEL` | No | Overrides the escalation-tier model used when the cheap tier's extraction can't be validated as faithful. |
+
+`.env` is loaded automatically if present (and is gitignored — never commit real keys); a real
+shell `export` still takes precedence over it. `--model`/`--frontier-model` flags take precedence
+over both — see `zebra extract --help`.
+
 ## Mission
 
 Zebra Space exists to explore how classic, well-understood [constraint

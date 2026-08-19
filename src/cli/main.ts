@@ -10,7 +10,16 @@ import {
   version,
   type StricliProcess,
 } from "@stricli/core"
+import { loadEnvFileIfPresent } from "./load-env.ts"
+import { extractCommand } from "./subcommands/extract.ts"
 import { solve } from "./subcommands/solve.ts"
+
+// Auto-load .env (repo root, resolved from this file's own location — not CWD, since `zebra`
+// may run from anywhere) so ZEBRA_MODEL/ZEBRA_FRONTIER_MODEL/OPENROUTER_API_KEY can live there
+// instead of requiring a manual `export` every session. A real shell export still wins over
+// .env (loadEnvFileIfPresent's own doc comment), matching ADR-003 §2.6's flag > env var >
+// default precedence, with .env just providing that env var's value.
+loadEnvFileIfPresent(fileURLToPath(new URL("../../.env", import.meta.url)))
 
 const packageJsonPath = fileURLToPath(new URL("../../package.json", import.meta.url))
 const { version: currentVersion } = JSON.parse(readFileSync(packageJsonPath, "utf8")) as {
@@ -18,7 +27,7 @@ const { version: currentVersion } = JSON.parse(readFileSync(packageJsonPath, "ut
 }
 
 const routes = buildRouteMap({
-  routes: { solve },
+  routes: { solve, extract: extractCommand },
   docs: { brief: "Tools for working with zebra puzzles" },
 })
 
