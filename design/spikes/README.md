@@ -59,3 +59,4 @@ into the RFC rather than copied verbatim.
 | [SPIKE-002](SPIKE-002-js-native-nlp-wink/SPIKE.md) | JS-Native NLP Library (wink-nlp) Extraction | done | RFC-003 |
 | [SPIKE-003](SPIKE-003-gliner2-capability/SPIKE.md) | GLiNER2 Extraction Capability | done | RFC-003 |
 | [SPIKE-004](SPIKE-004-llm-based-extraction/SPIKE.md) | LLM-Based Extraction (OpenRouter) | done | RFC-003 |
+| [SPIKE-005](SPIKE-005-tool-calling-conventions/SPIKE.md) | Tool-Calling and Structured-Output Conventions Across Providers | planned | RFC-003 |
