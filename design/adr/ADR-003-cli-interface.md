@@ -6,6 +6,7 @@ rfcs: [RFC-002, RFC-003]
 created: 2026-08-13
 specs:
   - specs/003-cli-interface
+  - specs/004-nl-csp-extraction
 ---
 
 # ADR-003: CLI Interface Shape

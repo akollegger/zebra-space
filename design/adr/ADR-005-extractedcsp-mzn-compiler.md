@@ -4,7 +4,8 @@ title: ExtractedCsp to MiniZinc Compiler
 status: proposed
 rfcs: [RFC-002, RFC-003]
 created: 2026-08-18
-specs: []
+specs:
+  - specs/004-nl-csp-extraction
 ---
 
 # ADR-005: ExtractedCsp to MiniZinc Compiler

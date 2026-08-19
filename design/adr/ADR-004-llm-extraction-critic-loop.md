@@ -4,7 +4,8 @@ title: Adopt LLM-Based Extraction with a Fidelity Critic Loop
 status: proposed
 rfcs: [RFC-003]
 created: 2026-08-18
-specs: []
+specs:
+  - specs/004-nl-csp-extraction
 ---
 
 # ADR-004: Adopt LLM-Based Extraction with a Fidelity Critic Loop
@@ -76,11 +77,16 @@ consequence of this design (§4) but not something this ADR commits to building 
 
 ### 2.1 Extraction strategy: schema-constrained LLM extraction
 
-Adopt LLM-based extraction (RFC-003 §5.2/§9.4) as the primary strategy: an LLM call constrained
-to a JSON Schema response format (tool/structured-output mode, `strict: true`), not free-form
-prompting. Rule-based, JS-native-NLP, and small-model tiers are not adopted as the primary
-strategy (§3) — GLiNER2 (9.3) remains the leading candidate for a future local-first tier (§4),
-not rejected outright.
+Adopt LLM-based extraction (RFC-003 §5.2/§9.4) as the primary strategy: a single LLM request,
+constrained to a JSON Schema response format (OpenRouter/OpenAI-style structured output,
+`strict: true`), that returns the entire `ExtractedCsp` object in one response — not an agentic
+tool-calling loop that incrementally constructs it via separate `addEntity`/`addDomain`/
+`addConstraint`-style calls, and not free-form prompting either. (An earlier draft of this section
+described this as "tool/structured-output mode," which read ambiguously as if tool-calling were
+in play — it isn't; see §2.3 for why, and for why that's a starting-point scoping choice, not a
+permanent rejection of agentic techniques generally.) Rule-based, JS-native-NLP, and small-model
+tiers are not adopted as the primary strategy (§3) — GLiNER2 (9.3) remains the leading candidate
+for a future local-first tier (§4), not rejected outright.
 
 This also resolves Open Question 7.5 in the LLM tier's favor: RFC-003 Appendix §9's
 Extensibility criterion (criterion 6) already scored LLM-based extraction "Best" on reach toward
@@ -140,24 +146,35 @@ addressed by this schema directly — per SPIKE-004, the LLM tier parses them di
 schema fields above (e.g. a table row's columns become `assignment` facts) without needing a
 dedicated pre-parser, unlike every other tier.
 
-### 2.3 Workflow architecture: pure Effect, no agentic framework
+### 2.3 Workflow architecture: pure Effect, single-shot LLM calls — an MVP scoping choice
 
 The extraction workflow — extract, critique, revise, escalate — is implemented as a composed
-`Effect` pipeline, not an agentic framework (Mastra, Vercel AI SDK) and not `@effect/ai`. Three
-reasons converge on this:
+`Effect` pipeline, with each individual LLM call (extraction, critique) a single-shot,
+schema-constrained request, not a multi-step agent with tool access, and not built on an agentic
+framework (Mastra, Vercel AI SDK) or `@effect/ai`.
+
+**This is a starting-point scoping choice for this MVP, not a general position that agentic
+techniques don't belong in this project.** "Hard-code a fixed workflow" and "let one monolithic
+agent do everything" are not the only two options — established agentic-workflow patterns mix
+techniques (tool-using subagents inside an otherwise-authored pipeline, multi-agent critique
+panels, retrieval-augmented prompting, and more), and nothing here forecloses adopting one of
+those later (§4). For now, three reasons converge on the simpler shape:
 
 1. The workflow's control flow (§2.4/§2.5) is authored upfront by this ADR, not decided
-   dynamically by an LLM at runtime — a workflow-orchestration problem, which `Effect` already
-   solves generally (typed errors, retries, concurrent fan-out), not an agentic problem that
-   would justify a framework built for dynamic, LLM-driven control flow.
+   dynamically by an LLM at runtime, for *this* design — a workflow-orchestration problem, which
+   `Effect` already solves generally (typed errors, retries, concurrent fan-out) without needing
+   an agentic framework's help to implement the specific loop this ADR specifies.
 2. `@effect/ai` (and every `@effect/ai-*` provider package) peer-depends on `effect@^3.22.x`,
    incompatible with this repo's `effect` 4.x pin regardless of which 4.x prerelease is in use —
    confirmed by [SPIKE-004](../spikes/SPIKE-004-llm-based-extraction/SPIKE.md) and generalized in
    `CLAUDE.md`'s dependency notes into a standing pattern to check for any `@effect/*` package.
+   This is the main reason richer, `Effect`-idiomatic agentic composition isn't adopted now —
+   not a judgment that it wouldn't be useful (§4).
 3. A full agentic framework would still need hand-wrapping to reach `@openrouter/sdk` the way
    this project already hand-wraps external capabilities (`src/solver/solve.ts`'s treatment of
    `node:child_process`) — trading "wrap a thin client" for "wrap a bigger, more opinionated
-   surface," without eliminating the wrapping work.
+   surface," without eliminating the wrapping work, for whatever benefit that framework would add
+   today.
 
 Concretely: `@openrouter/sdk` (zero peer dependencies, a thin API client — confirmed by
 SPIKE-004) is hand-wrapped in `Effect.tryPromise`, the same pattern `src/solver/solve.ts` already
@@ -304,10 +321,13 @@ failure.
   self-critique is insufficient — tier escalation already provides a materially different model's
   perspective when same-tier revision doesn't converge, without paying for cross-model critique
   on every attempt.
-- **An agentic framework (Mastra, Vercel AI SDK) for the workflow.** Rejected (2.3): the
-  workflow's control flow is authored upfront, not LLM-driven — a workflow-orchestration problem,
-  not an agentic one — and either framework would still need hand-wrapping to reach
-  `@openrouter/sdk`, trading one integration surface for a larger one.
+- **An agentic framework (Mastra, Vercel AI SDK), or a richer agentic pattern generally (tool-
+  using subagents, multi-agent critique panels), for the workflow.** Deferred, not rejected
+  outright (2.3): this ADR's workflow's control flow is authored upfront for its own specific
+  loop, and either named framework would still need hand-wrapping to reach `@openrouter/sdk`
+  today, trading one integration surface for a larger one — but the real blocker is `@effect/ai`'s
+  incompatibility with this repo's `effect` 4.x pin, not a belief that agentic techniques are the
+  wrong tool here. Revisit once that's resolved (§4).
 - **`@effect/ai`.** Rejected (2.3): peer-depends on `effect@^3.22.x`, incompatible with this
   repo's `effect` 4.x pin regardless of prerelease (confirmed by SPIKE-004).
 - **Always use the frontier model; skip cost-tiering.** Rejected (2.5): SPIKE-004 found the cheap
@@ -319,6 +339,15 @@ failure.
 
 ## 4. Consequences
 
+- This ADR's single-shot, pure-`Effect`, no-agentic-framework shape (§2.3) is a starting point
+  scoped to this MVP, not a permanent architectural stance. Richer agentic patterns — tool-using
+  extraction subagents, multi-agent critique panels, retrieval-augmented few-shot prompting drawn
+  from the validated-example corpus this section already motivates, or some mix of these — remain
+  a live option this ADR deliberately doesn't foreclose. The concrete trigger to reassess is
+  `@effect/ai` (or an equivalent `Effect`-idiomatic agent framework) landing support for `effect`
+  4.x, removing the peer-dependency blocker (§2.3 point 2) that's the actual reason this ADR
+  doesn't adopt one now — not evidence that the simpler shape is wrong, just that it's what's
+  buildable today without hand-wrapping a framework this project doesn't otherwise need.
 - Every extraction this pipeline accepts has been independently fidelity-checked by a second LLM
   call against the source prose — a meaningful second opinion, but not a formal guarantee the way
   solver validation would have been: the critic is itself an LLM and can share blind spots with

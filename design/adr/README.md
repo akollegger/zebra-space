@@ -51,6 +51,6 @@ Use `/adr-review` before moving a draft to `accepted`.
 |---|---|---|---|---|
 | [ADR-001](ADR-001-catalog-format-seeding.md) | Puzzle Catalog Format and Seeding | proposed | RFC-001 | specs/001-catalog-seeding |
 | [ADR-002](ADR-002-adopt-minizinc-solver.md) | Adopt MiniZinc as the Constraint-Solver Ecosystem | proposed | RFC-002 | specs/002-minizinc-integration |
-| [ADR-003](ADR-003-cli-interface.md) | CLI Interface Shape | proposed | RFC-002, RFC-003 | specs/003-cli-interface |
-| [ADR-004](ADR-004-llm-extraction-critic-loop.md) | Adopt LLM-Based Extraction with a Fidelity Critic Loop | proposed | RFC-003 | _(none yet)_ |
-| [ADR-005](ADR-005-extractedcsp-mzn-compiler.md) | ExtractedCsp to MiniZinc Compiler | proposed | RFC-002, RFC-003 | _(none yet)_ |
+| [ADR-003](ADR-003-cli-interface.md) | CLI Interface Shape | proposed | RFC-002, RFC-003 | specs/003-cli-interface, specs/004-nl-csp-extraction |
+| [ADR-004](ADR-004-llm-extraction-critic-loop.md) | Adopt LLM-Based Extraction with a Fidelity Critic Loop | proposed | RFC-003 | specs/004-nl-csp-extraction |
+| [ADR-005](ADR-005-extractedcsp-mzn-compiler.md) | ExtractedCsp to MiniZinc Compiler | proposed | RFC-002, RFC-003 | specs/004-nl-csp-extraction |
