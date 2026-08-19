@@ -192,8 +192,20 @@ explicitly left open there.
   first concrete refinement of that representation, which future work should treat as current.
 - `catalog/mzn/`'s existing hand-written examples become a natural validation corpus for this
   compiler (Context) — comparing compiled output's solve behavior against the hand-written
-  reference for the same puzzle is a cheap correctness check, though building that comparison
-  harness is not itself decided here.
+  reference for the same puzzle is a cheap correctness check. That comparison harness is now
+  built (`scripts/eval-extraction.ts`, `eval/README.md`) — running it against the full catalog
+  surfaced several real gaps in `ExtractedCsp`/this compiler's 2.5 arithmetic handling, since
+  fixed: `variableRef` had no way to name one specific entity's value within an expression
+  (needed for e.g. comparing two entities' values directly), `arithmetic.target` could only be a
+  plain scalar (blocking clues comparing two computed quantities, like a digit-substitution
+  puzzle's equation), only `+`/`-`/`min`/`max`/`abs` were supported with `+` forced to exactly 2
+  operands (blocking multi-term sums and any weighted/percentage clue needing `*`/`/`), the
+  adjacency-relation registry (2.3) matched relation-name strings exactly (an LLM's
+  underscore/hyphen formatting variant of an already-registered name failed to match), and
+  MiniZinc enum member identifiers collided when two different domains happened to share a value
+  vocabulary (e.g. two independent "Yes"/"No" criteria). All fixed in `src/compiler/compile.ts`/
+  `src/extraction/types.ts`; residual failures after these fixes are either the still-open gaps
+  named elsewhere in this ADR/ADR-004, or ordinary LLM non-determinism (ADR-004 §2.6).
 - The graph-to-`.mzn` compiler RFC-002/[ADR-002](ADR-002-adopt-minizinc-solver.md) originally
   anticipated remains undesigned — this ADR doesn't resolve it, though a future graph
   representation built from `ExtractedCsp` could plausibly reuse this compiler's per-kind

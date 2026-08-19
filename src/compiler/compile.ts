@@ -49,7 +49,13 @@ function analyzeDomains(csp: ExtractedCsp): readonly CompiledDomain[] {
       isScalar: entityIds.length <= 1,
       isNumeric: domain.values.length > 0 && domain.values.every(isIntegerLiteral),
       entityTypeEnumName: sanitizeIdentifier(domain.entityType),
-      valuesEnumName: `${sanitizeIdentifier(domain.variable)}Values`,
+      // Named by VALUE CONTENT, not by the owning domain's variable name: MiniZinc enum member
+      // identifiers share one global namespace, so two domains with the same vocabulary (e.g.
+      // two independent "Yes"/"No" criteria) must resolve to the SAME enum declaration, or the
+      // second declaration's members collide with the first's ("identifier `Yes' already
+      // defined"). Sharing one enum for an identical value set is correct MiniZinc practice, not
+      // a workaround.
+      valuesEnumName: `Values_${domain.values.map(sanitizeIdentifier).join("_")}`,
     }
   })
 }
@@ -61,14 +67,16 @@ function findDomain(compiled: readonly CompiledDomain[], variable: string): Comp
 function renderDeclarations(compiled: readonly CompiledDomain[]): string {
   const lines: string[] = []
   const declaredEntityEnums = new Set<string>()
+  const declaredValueEnums = new Set<string>()
 
   for (const c of compiled) {
     if (!c.isScalar && !declaredEntityEnums.has(c.entityTypeEnumName)) {
       lines.push(`enum ${c.entityTypeEnumName} = {${c.entityIds.map(sanitizeIdentifier).join(", ")}};`)
       declaredEntityEnums.add(c.entityTypeEnumName)
     }
-    if (!c.isNumeric) {
+    if (!c.isNumeric && !declaredValueEnums.has(c.valuesEnumName)) {
       lines.push(`enum ${c.valuesEnumName} = {${c.domain.values.map(sanitizeIdentifier).join(", ")}};`)
+      declaredValueEnums.add(c.valuesEnumName)
     }
   }
 
@@ -107,44 +115,74 @@ function renderVariableRef(
   return Effect.succeed(`${name}[${sanitizeIdentifier(entity)}]`)
 }
 
+/**
+ * Arity is checked here rather than in the schema: JSON Schema could express it with
+ * minItems/maxItems, but the required count depends on `op`, and a per-operator schema branch
+ * would multiply the union's size for no gain. A wrong count is a loud CompileError. `abs` takes
+ * exactly 1; `-`/`/` take exactly 2 (order-sensitive, ambiguous for more); `+`/`*`/`min`/`max`
+ * are associative and take 2 or more — a multi-term sum is one node with every term as an
+ * operand, not a deeply nested binary tree.
+ */
 function renderArithmeticExpr(
   compiled: readonly CompiledDomain[],
   expr: ArithmeticExpression,
 ): Effect.Effect<string, CompileError> {
   switch (expr.kind) {
     case "variableRef":
-      return renderVariableRef(compiled, expr.variable)
+      return renderVariableRef(compiled, expr.variable, expr.entity ?? undefined)
     case "literal":
       return Effect.succeed(String(expr.value))
     case "binaryOp": {
-      // Arity is checked here rather than in the schema: JSON Schema could express it with
-      // minItems/maxItems, but the required count depends on `op`, and a per-operator schema
-      // branch would multiply the union's size for no gain. A wrong count is a loud CompileError.
-      const expected = expr.op === "abs" ? 1 : 2
-      if (expr.operands.length !== expected) {
+      if (expr.op === "abs") {
+        if (expr.operands.length !== 1) {
+          return Effect.fail(
+            new CompileError({ reason: `Operator "abs" takes exactly 1 operand, got ${expr.operands.length}.` }),
+          )
+        }
+        return renderArithmeticExpr(compiled, expr.operands[0]!).pipe(Effect.map((operand) => `abs(${operand})`))
+      }
+      if (expr.op === "-" || expr.op === "/") {
+        if (expr.operands.length !== 2) {
+          return Effect.fail(
+            new CompileError({
+              reason: `Operator "${expr.op}" takes exactly 2 operands, got ${expr.operands.length}.`,
+            }),
+          )
+        }
+        return Effect.all([
+          renderArithmeticExpr(compiled, expr.operands[0]!),
+          renderArithmeticExpr(compiled, expr.operands[1]!),
+        ]).pipe(Effect.map(([left, right]) => `(${left} ${expr.op} ${right})`))
+      }
+      // "+" | "*" | "min" | "max" — associative, 2 or more operands.
+      if (expr.operands.length < 2) {
         return Effect.fail(
           new CompileError({
-            reason: `Operator "${expr.op}" takes exactly ${expected} operand${expected === 1 ? "" : "s"}, got ${expr.operands.length}.`,
+            reason: `Operator "${expr.op}" takes at least 2 operands, got ${expr.operands.length}.`,
           }),
         )
       }
-      if (expr.op === "abs") {
-        return renderArithmeticExpr(compiled, expr.operands[0]!).pipe(
-          Effect.map((operand) => `abs(${operand})`),
-        )
-      }
-      return Effect.all([
-        renderArithmeticExpr(compiled, expr.operands[0]!),
-        renderArithmeticExpr(compiled, expr.operands[1]!),
-      ]).pipe(
-        Effect.map(([left, right]) =>
-          expr.op === "min" || expr.op === "max"
-            ? `${expr.op}(${left}, ${right})`
-            : `${left} ${expr.op} ${right}`,
+      return Effect.all(expr.operands.map((operand) => renderArithmeticExpr(compiled, operand))).pipe(
+        Effect.map((rendered) =>
+          expr.op === "min" || expr.op === "max" ? `${expr.op}([${rendered.join(", ")}])` : `(${rendered.join(` ${expr.op} `)})`,
         ),
       )
     }
   }
+}
+
+function isArithmeticExpressionTarget(
+  target: string | number | ArithmeticExpression,
+): target is ArithmeticExpression {
+  return typeof target === "object"
+}
+
+/** `target` is usually a plain scalar, but may itself be a structured expression (ADR-005 §2.5). */
+function renderTarget(
+  compiled: readonly CompiledDomain[],
+  target: string | number | ArithmeticExpression,
+): Effect.Effect<string, CompileError> {
+  return isArithmeticExpressionTarget(target) ? renderArithmeticExpr(compiled, target) : Effect.succeed(renderScalar(target))
 }
 
 function compileAssignment(
@@ -248,11 +286,18 @@ const ADJACENCY_TEMPLATES: Record<string, (a: string, b: string) => string> = {
   "adjacent to": (a, b) => `abs(${a} - ${b}) = 1`,
 }
 
+// Relation names come from an LLM, which varies formatting (spaces vs. underscores/hyphens) for
+// the same phrasing (e.g. "immediately before" vs. "immediately_before") — normalize before
+// registry lookup rather than growing the registry with every formatting variant.
+function normalizeRelationName(name: string): string {
+  return name.toLowerCase().replace(/[_-]+/g, " ").trim()
+}
+
 function compileAdjacency(
   compiled: readonly CompiledDomain[],
   c: Extract<ExtractedConstraint, { kind: "adjacency" }>,
 ): Effect.Effect<string, CompileError> {
-  const template = ADJACENCY_TEMPLATES[c.relation.toLowerCase()]
+  const template = ADJACENCY_TEMPLATES[normalizeRelationName(c.relation)]
   if (template === undefined) {
     return Effect.fail(new CompileError({ reason: `Unrecognized adjacency relation "${c.relation}".` }))
   }
@@ -318,7 +363,7 @@ function compileFactDrivenThen(
   const rightEffect =
     target === "$a" || target === "$b"
       ? renderVariableRef(compiled, variable, target === "$a" ? fact.a : fact.b)
-      : Effect.succeed(renderScalar(target))
+      : renderTarget(compiled, target)
 
   return Effect.all([renderVariableRef(compiled, variable, fact.a), rightEffect]).pipe(
     Effect.map(([left, right]) => `constraint ${left} ${thenConstraint.comparator} ${right};`),
@@ -356,8 +401,8 @@ function compileConstraintBody(
         Effect.map((ref) => `${ref} = ${renderScalar(c.value)}`),
       )
     case "arithmetic":
-      return renderArithmeticExpr(compiled, c.expression).pipe(
-        Effect.map((expr) => `${expr} ${c.comparator} ${renderScalar(c.target)}`),
+      return Effect.all([renderArithmeticExpr(compiled, c.expression), renderTarget(compiled, c.target)]).pipe(
+        Effect.map(([expr, target]) => `${expr} ${c.comparator} ${target}`),
       )
     case "allDifferent":
       return Effect.succeed(`all_different(${sanitizeIdentifier(c.variable)})`)
@@ -386,8 +431,8 @@ function compileArithmeticTopLevel(
   compiled: readonly CompiledDomain[],
   c: Extract<ExtractedConstraint, { kind: "arithmetic" }>,
 ): Effect.Effect<string, CompileError> {
-  return renderArithmeticExpr(compiled, c.expression).pipe(
-    Effect.map((expr) => `constraint ${expr} ${c.comparator} ${renderScalar(c.target)};`),
+  return Effect.all([renderArithmeticExpr(compiled, c.expression), renderTarget(compiled, c.target)]).pipe(
+    Effect.map(([expr, target]) => `constraint ${expr} ${c.comparator} ${target};`),
   )
 }
 

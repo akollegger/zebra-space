@@ -15,7 +15,7 @@ test("SC-004/FR-009: PZL-0004 (Whodunit) solves uniquely, matching its recorded 
 
   assert.equal(result._tag, "UniquelySolvable")
   if (result._tag === "UniquelySolvable") {
-    // specs/001-catalog-seeding/answer-keys.md: Professor Plum, Candlestick, Conservatory.
+    // eval/answer-keys.json: Professor Plum, Candlestick, Conservatory.
     // Enum-typed variables come back wrapped as { e: "Name" } — research.md Finding 6.
     assert.deepEqual(result.assignment.culprit, { e: "Plum" })
     assert.deepEqual(result.assignment.weapon, { e: "Candlestick" })

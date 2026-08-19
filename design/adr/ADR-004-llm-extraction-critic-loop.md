@@ -524,6 +524,13 @@ an LLM provider is unaffected.
   `adjacency`, not one entity's attributes bound to each other via `linkedAttributes`. Whether
   this needs a seventh constraint kind or a generalization of `linkedAttributes`/`adjacency` is
   not decided here.
+- **No constraint kind represents a static, entity-independent rule table.** Found running
+  `eval/`'s extraction harness (see `eval/README.md`) against PZL-0003 (Rock-Paper-Scissors):
+  clues like "paper beats rock, rock beats scissors, scissors beats paper" are a small closed set
+  of facts about *values*, not about specific entities — `relation` facts exist but are only
+  consumed by `derivedRule`'s fact-driven expansion, which expands per matching *entity pair*, not
+  per free-variable assignment checked against a static table. A sibling gap to relational
+  chaining above, not resolved by it and not resolved here.
 - This ADR's single-shot, pure-`Effect`, no-agentic-framework shape (§2.3) is a starting point
   scoped to this MVP, not a permanent architectural stance. Richer agentic patterns — tool-using
   extraction subagents, multi-agent critique panels, retrieval-augmented few-shot prompting drawn

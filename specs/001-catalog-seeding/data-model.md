@@ -42,7 +42,7 @@ Body: unstructured natural-language prose (the clues + framing), no prescribed l
 ## Verification Answer Key
 
 One private artifact per Puzzle Catalog Entry (FR-009), kept under
-`specs/001-catalog-seeding/answer-keys.md` — **not** part of the public catalog schema, not
+`eval/answer-keys.json` — **not** part of the public catalog schema, not
 linked from `catalog/README.md`, and not referenced by any puzzle's frontmatter.
 
 | Field | Notes |

@@ -75,7 +75,7 @@ known answer.
 
 - [X] T010 [P] [US1] Test in `tests/extraction/extract.test.ts`: with T009's stub configured to accept on the first attempt, `extract()` resolves to the stub's `ExtractedCsp` and model tier (SC-001, Acceptance Scenario 1)
 - [X] T011 [P] [US1] Tests in `tests/compiler/compile.test.ts`: `compile()` renders each `ExtractedConstraint` kind to the expected `.mzn` fragment — `assignment`/`allDifferent` declarations, the `adjacency` relation registry, `relation`+`derivedRule` fact-driven expansion, `derivedRule` variable-conditioned reified implication, and `arithmetic` expressions (ADR-005 §2.2-2.5)
-- [X] T012 [P] [US1] Test in `tests/cli/cli.test.ts`: with T009's stub configured to return `PZL-0004-whodunit`'s known-correct `ExtractedCsp`, `zebra extract catalog/puzzles/PZL-0004-whodunit.md` prints a `%`-comment header plus valid `.mzn`, exits `0`, and piping that output to `zebra solve` reproduces the known answer from `specs/001-catalog-seeding/answer-keys.md` (Acceptance Scenario 1 & 2, SC-001)
+- [X] T012 [P] [US1] Test in `tests/cli/cli.test.ts`: with T009's stub configured to return `PZL-0004-whodunit`'s known-correct `ExtractedCsp`, `zebra extract catalog/puzzles/PZL-0004-whodunit.md` prints a `%`-comment header plus valid `.mzn`, exits `0`, and piping that output to `zebra solve` reproduces the known answer from `eval/answer-keys.json` (Acceptance Scenario 1 & 2, SC-001)
 
 ### Implementation for User Story 1
 

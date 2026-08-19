@@ -19,7 +19,7 @@ test("ADR-005 §2.2/§2.3: assignment on a scalar (single-entity) domain compile
     constraints: [{ kind: "assignment", entity: "Murder", variable: "culprit", value: "Plum" }],
   }
   const mzn = await run(csp)
-  assert.match(mzn, /var culpritValues: culprit;/)
+  assert.match(mzn, /var Values_Scarlett_Mustard_Plum: culprit;/)
   assert.match(mzn, /constraint culprit = Plum;/)
 })
 
@@ -98,7 +98,7 @@ test("ADR-005 §2.4 mode 1 (fact-driven): relation facts expand derivedRule.then
         thenConstraints: [
           {
             kind: "arithmetic",
-            expression: { kind: "variableRef", variable: "color" },
+            expression: { kind: "variableRef", variable: "color", entity: null },
             comparator: "!=",
             target: "$b",
           },
@@ -152,7 +152,7 @@ test("ADR-005 §2.5: arithmetic expressions render structured binary operations,
               kind: "binaryOp",
               op: "-",
               operands: [
-                { kind: "variableRef", variable: "position" },
+                { kind: "variableRef", variable: "position", entity: null },
                 { kind: "literal", value: 1 },
               ],
             },

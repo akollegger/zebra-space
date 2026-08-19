@@ -61,7 +61,15 @@ function extractionSystemPrompt(): string {
     "unspecified entity. Do not use this for exclusion/negation clues, and do not use it to " +
     "represent an entity ruling out a value.\n" +
     '- A specific, already-known entity ("the first house", or one named directly): use ' +
-    "`assignment`."
+    "`assignment`.\n\n" +
+    "A clue comparing two computed quantities, or one entity's value against another's " +
+    '("the sum of these three cells equals the sum of those three", "Drug B is at least 4 ' +
+    'hours after Drug A", "the color of house A differs from house B\'s"): use `arithmetic` ' +
+    "with a structured `target` (an `ArithmeticExpression`, not just a plain value). Never " +
+    'invent a compound variable name like "houseA.color" or "time(DrugB)" to smuggle an ' +
+    "entity reference into a plain string — `variableRef` has its own `variable` (the domain " +
+    "name) and `entity` (null for a scalar domain, or the specific entity id) fields for " +
+    "exactly this."
   )
 }
 

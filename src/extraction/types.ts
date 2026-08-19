@@ -70,21 +70,32 @@ export type DerivedCondition = Schema.Schema.Type<typeof DerivedCondition>
 // anything the schema admits satisfies the type. Exceeding the bound fails loudly at decode
 // time rather than being silently truncated (ADR-004 §2.7).
 export type ArithmeticExpression =
-  | { readonly kind: "variableRef"; readonly variable: string }
+  | { readonly kind: "variableRef"; readonly variable: string; readonly entity: string | null }
   | { readonly kind: "literal"; readonly value: number }
   | {
       readonly kind: "binaryOp"
-      readonly op: "+" | "-" | "min" | "max" | "abs"
+      readonly op: "+" | "-" | "*" | "/" | "min" | "max" | "abs"
       // An operand *array*, not `left`/`right` with a nullable `right`. Two reasons, and the
       // second is why the earlier shape had to go: arity is expressed honestly (1 operand for
-      // the unary `abs`, 2 for the rest, validated by the compiler), and — per ADR-004 §2.7 —
-      // `anyOf: [<object>, null]` is one of the two shapes providers silently degrade to a bare
-      // string. A possibly-empty array is the encoding that survives.
+      // the unary `abs`, 2 for `-`/`/`, 2 or more for the associative `+`/`*`/`min`/`max` —
+      // validated by the compiler), and — per ADR-004 §2.7 — `anyOf: [<object>, null]` is one of
+      // the two shapes providers silently degrade to a bare string. A possibly-empty array is
+      // the encoding that survives.
       readonly operands: readonly ArithmeticExpression[]
     }
 
 const ARITHMETIC_LEAVES = [
-  Schema.Struct({ kind: Schema.Literal("variableRef"), variable: Schema.String }),
+  Schema.Struct({
+    kind: Schema.Literal("variableRef"),
+    variable: Schema.String,
+    entity: Schema.NullOr(Schema.String),
+  }).annotate({
+    description:
+      "References a domain variable. `entity` is null when the domain is scalar " +
+      "(non-entity-indexed), or the specific entity id when the domain is entity-indexed and " +
+      "this expression needs one particular entity's value (e.g. this cell's or this item's " +
+      "own value) — mirrors the `assignment` constraint's `entity` field.",
+  }),
   Schema.Struct({ kind: Schema.Literal("literal"), value: Schema.Number }),
 ] as const
 
@@ -96,15 +107,17 @@ function makeArithmeticExpression(depth: number): Schema.Codec<ArithmeticExpress
           ...ARITHMETIC_LEAVES,
           Schema.Struct({
             kind: Schema.Literal("binaryOp"),
-            op: Schema.Literals(["+", "-", "min", "max", "abs"]),
+            op: Schema.Literals(["+", "-", "*", "/", "min", "max", "abs"]),
             operands: Schema.Array(makeArithmeticExpression(depth - 1)),
           }),
         ]
   return Schema.Union(members).annotate({
     description:
       "A structured arithmetic expression (variable reference, numeric literal, or an operation " +
-      "over 1-2 operands) — never a raw string to interpolate into generated MiniZinc source. " +
-      "`abs` takes exactly one operand; every other operator takes exactly two.",
+      "over its operands) — never a raw string to interpolate into generated MiniZinc source. " +
+      "`abs` takes exactly one operand; `-`/`/` take exactly two; `+`/`*`/`min`/`max` are " +
+      "associative and take two or more (e.g. a sum of several weighted terms is one `+` node " +
+      "with all the terms as operands, not a deeply nested binary tree).",
   }) as Schema.Codec<ArithmeticExpression>
 }
 
@@ -130,7 +143,7 @@ export type ExtractedConstraint =
       readonly kind: "arithmetic"
       readonly expression: ArithmeticExpression
       readonly comparator: string
-      readonly target: string | number
+      readonly target: string | number | ArithmeticExpression
     }
 
 function nonRecursiveConstraints() {
@@ -185,11 +198,14 @@ function nonRecursiveConstraints() {
       kind: Schema.Literal("arithmetic"),
       expression: ArithmeticExpression,
       comparator: Schema.String,
-      target: Schema.Union([Schema.String, Schema.Number]),
+      target: Schema.Union([Schema.String, Schema.Number, ArithmeticExpression]),
     }).annotate({
       description:
         "A numeric or enum-valued comparison (e.g. equality, inequality, threshold) between an " +
-        "expression and a target value.",
+        "expression and a target. `target` is usually a plain value (string/number), but may " +
+        "itself be a structured expression when the clue compares two computed quantities " +
+        '(e.g. "the sum of these three cells equals the sum of those three cells", or one ' +
+        "entity's value against another's).",
     }),
   ]
 }

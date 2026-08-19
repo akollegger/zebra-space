@@ -37,7 +37,7 @@ zebra solve catalog/mzn/PZL-0004-whodunit.mzn
 ```
 
 Expected: a plain-language statement that Professor Plum, with the Candlestick, in the
-Conservatory, is the unique solution — matching `specs/001-catalog-seeding/answer-keys.md`'s
+Conservatory, is the unique solution — matching `eval/answer-keys.json`'s
 `PZL-0004` entry — and a successful exit.
 
 ```bash

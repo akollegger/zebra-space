@@ -33,7 +33,7 @@ that). Instead:
 1. Open each file under `catalog/puzzles/`.
 2. Solve it by hand from its prose clues alone.
 3. Compare your solution against the matching entry in
-   `specs/001-catalog-seeding/answer-keys.md` (the private verification artifact, FR-009).
+   `eval/answer-keys.json` (the private verification artifact, FR-009).
 4. Confirm exactly one assignment satisfies every clue for every entry.
 
 ## Browse the result

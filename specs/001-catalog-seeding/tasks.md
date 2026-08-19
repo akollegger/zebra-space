@@ -88,7 +88,7 @@ with complete metadata, independent of the index (US2) or solvability re-verific
   whenever there's an appetite to grow the catalog further (not required for this feature's
   completion).
 - [X] T009 [US1] Record the confirmed solution for PZL-0001, PZL-0002, PZL-0003, and PZL-0004 in
-  `specs/001-catalog-seeding/answer-keys.md`, one section per puzzle id, per data-model.md's
+  `eval/answer-keys.json`, one section per puzzle id, per data-model.md's
   Verification Answer Key entity (FR-009). Depends on T005-T008.
 - [X] T010 [US1] Run `pnpm test`; confirm `tests/catalog/catalog.test.ts`'s SC-001 and SC-002
   assertions now pass (SC-003 is still expected to fail — no index yet).
@@ -128,7 +128,7 @@ assignment satisfies every clue.
 
 - [X] T014 [US3] Independently re-solve each of PZL-0001, PZL-0002, PZL-0003, and PZL-0004 from
   their prose bodies alone (without consulting T009's answer key first), then compare your
-  result against `specs/001-catalog-seeding/answer-keys.md`. If any puzzle yields zero or more
+  result against `eval/answer-keys.json`. If any puzzle yields zero or more
   than one solution, revise that puzzle file (and its answer-key entry) until exactly one holds
   (FR-008, SC-004, spec.md Edge Cases).
 
@@ -168,7 +168,7 @@ assignment satisfies every clue.
   T007/T008's "collaborative with the user" nature makes them naturally sequential in a live
   session, but they have no file-level dependency on each other.
 - T009 is NOT parallel with T005-T008 (depends on all four) and touches a single shared file
-  (`answer-keys.md`), so its sections should be added sequentially even though they cover
+  (`answer-keys.json`), so its sections should be added sequentially even though they cover
   independent puzzles.
 - T015 (Phase 6) can run in parallel with T016.
 

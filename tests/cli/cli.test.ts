@@ -43,7 +43,7 @@ async function runCli(args: readonly string[], env?: NodeJS.ProcessEnv): Promise
   }
 }
 
-// PZL-0004-whodunit.md's known-correct extraction (specs/001-catalog-seeding/answer-keys.md) —
+// PZL-0004-whodunit.md's known-correct extraction (eval/answer-keys.json) —
 // shared across `extract` tests as the stub's canned response.
 const WHODUNIT_EXTRACTED_CSP = {
   entities: [{ id: "Murder", type: "Event" }],
@@ -53,12 +53,12 @@ const WHODUNIT_EXTRACTED_CSP = {
     { variable: "room", entityType: "Event", values: ["Kitchen", "Library", "Conservatory"] },
   ],
   constraints: [
-    { kind: "arithmetic", expression: { kind: "variableRef", variable: "culprit" }, comparator: "!=", target: "Mustard" },
-    { kind: "arithmetic", expression: { kind: "variableRef", variable: "culprit" }, comparator: "!=", target: "Scarlett" },
-    { kind: "arithmetic", expression: { kind: "variableRef", variable: "weapon" }, comparator: "!=", target: "Revolver" },
-    { kind: "arithmetic", expression: { kind: "variableRef", variable: "weapon" }, comparator: "!=", target: "Rope" },
-    { kind: "arithmetic", expression: { kind: "variableRef", variable: "room" }, comparator: "!=", target: "Kitchen" },
-    { kind: "arithmetic", expression: { kind: "variableRef", variable: "room" }, comparator: "!=", target: "Library" },
+    { kind: "arithmetic", expression: { kind: "variableRef", variable: "culprit", entity: null }, comparator: "!=", target: "Mustard" },
+    { kind: "arithmetic", expression: { kind: "variableRef", variable: "culprit", entity: null }, comparator: "!=", target: "Scarlett" },
+    { kind: "arithmetic", expression: { kind: "variableRef", variable: "weapon", entity: null }, comparator: "!=", target: "Revolver" },
+    { kind: "arithmetic", expression: { kind: "variableRef", variable: "weapon", entity: null }, comparator: "!=", target: "Rope" },
+    { kind: "arithmetic", expression: { kind: "variableRef", variable: "room", entity: null }, comparator: "!=", target: "Kitchen" },
+    { kind: "arithmetic", expression: { kind: "variableRef", variable: "room", entity: null }, comparator: "!=", target: "Library" },
   ],
 }
 
@@ -213,8 +213,8 @@ test("FR-004/Acceptance Scenario 2: a faithful extraction of an unsatisfiable pu
     entities: [{ id: "E1", type: "Thing" }],
     domains: [{ variable: "x", entityType: "Thing", values: ["1", "2"] }],
     constraints: [
-      { kind: "arithmetic", expression: { kind: "variableRef", variable: "x" }, comparator: "=", target: 1 },
-      { kind: "arithmetic", expression: { kind: "variableRef", variable: "x" }, comparator: "=", target: 2 },
+      { kind: "arithmetic", expression: { kind: "variableRef", variable: "x", entity: null }, comparator: "=", target: 1 },
+      { kind: "arithmetic", expression: { kind: "variableRef", variable: "x", entity: null }, comparator: "=", target: 2 },
     ],
   }
   await withExtractStub(
