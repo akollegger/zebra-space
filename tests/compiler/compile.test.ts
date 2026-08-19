@@ -179,3 +179,118 @@ test("ADR-005 §2.1: output is one self-contained model ending in `solve satisfy
   const mzn = await run(csp)
   assert.match(mzn.trim(), /solve satisfy;$/)
 })
+
+test("ADR-004 §2.2: linkedAttributes binds an unnamed entity via an existential forall/iff", async () => {
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "H1", type: "House" },
+      { id: "H2", type: "House" },
+      { id: "H3", type: "House" },
+    ],
+    domains: [
+      { variable: "nationality", entityType: "House", values: ["A", "B", "C"] },
+      { variable: "color", entityType: "House", values: ["Red", "Green", "Blue"] },
+    ],
+    constraints: [
+      { kind: "allDifferent", variable: "nationality" },
+      { kind: "allDifferent", variable: "color" },
+      {
+        kind: "linkedAttributes",
+        entityType: "House",
+        attributes: [
+          { variable: "nationality", value: "A" },
+          { variable: "color", value: "Red" },
+        ],
+      },
+    ],
+  }
+  const mzn = await run(csp)
+  assert.match(mzn, /constraint forall\(e in House\)\(nationality\[e\] = A <-> color\[e\] = Red\);/)
+})
+
+test("ADR-004 §2.2: linkedAttributes with 3+ attributes links the first to a conjunction of the rest", async () => {
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "H1", type: "House" },
+      { id: "H2", type: "House" },
+    ],
+    domains: [
+      { variable: "nationality", entityType: "House", values: ["A"] },
+      { variable: "color", entityType: "House", values: ["Red"] },
+      { variable: "drink", entityType: "House", values: ["Tea"] },
+    ],
+    constraints: [
+      {
+        kind: "linkedAttributes",
+        entityType: "House",
+        attributes: [
+          { variable: "nationality", value: "A" },
+          { variable: "color", value: "Red" },
+          { variable: "drink", value: "Tea" },
+        ],
+      },
+    ],
+  }
+  const mzn = await run(csp)
+  assert.match(mzn, /nationality\[e\] = A <-> \(color\[e\] = Red \/\\ drink\[e\] = Tea\)/)
+})
+
+test("ADR-004 §2.2: linkedAttributes needs at least 2 attributes", async () => {
+  const csp: ExtractedCsp = {
+    entities: [{ id: "H1", type: "House" }],
+    domains: [{ variable: "color", entityType: "House", values: ["Red"] }],
+    constraints: [
+      { kind: "linkedAttributes", entityType: "House", attributes: [{ variable: "color", value: "Red" }] },
+    ],
+  }
+  const reason = await runFails(csp)
+  assert.match(reason, /needs at least 2 attributes/)
+})
+
+test("ADR-004 §2.2: linkedAttributes rejects a variable from a mismatched entityType", async () => {
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "H1", type: "House" },
+      { id: "H2", type: "House" },
+      { id: "W1", type: "Weapon" },
+    ],
+    domains: [
+      { variable: "color", entityType: "House", values: ["Red"] },
+      { variable: "material", entityType: "Weapon", values: ["Metal"] },
+    ],
+    constraints: [
+      {
+        kind: "linkedAttributes",
+        entityType: "House",
+        attributes: [
+          { variable: "color", value: "Red" },
+          { variable: "material", value: "Metal" },
+        ],
+      },
+    ],
+  }
+  const reason = await runFails(csp)
+  assert.match(reason, /doesn't match variable "material"/)
+})
+
+test("ADR-004 §2.2: linkedAttributes rejects a scalar (single-entity) domain", async () => {
+  const csp: ExtractedCsp = {
+    entities: [{ id: "Murder", type: "Event" }],
+    domains: [
+      { variable: "culprit", entityType: "Event", values: ["Plum"] },
+      { variable: "weapon", entityType: "Event", values: ["Rope"] },
+    ],
+    constraints: [
+      {
+        kind: "linkedAttributes",
+        entityType: "Event",
+        attributes: [
+          { variable: "culprit", value: "Plum" },
+          { variable: "weapon", value: "Rope" },
+        ],
+      },
+    ],
+  }
+  const reason = await runFails(csp)
+  assert.match(reason, /requires entity-indexed variables/)
+})

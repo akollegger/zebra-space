@@ -61,14 +61,19 @@ that as a referential-integrity check — ADR-004 §3 rejected a self-consistenc
 on purpose; a genuinely inconsistent reference surfaces downstream as MiniZinc's own
 `ModelSyntaxError` (`src/solver/types.ts`) if and when the extraction is compiled and solved.
 
-## `ExtractedConstraint` (ADR-004 §2.2, six-kind taxonomy)
+## `ExtractedConstraint` (ADR-004 §2.2, seven-kind taxonomy)
 
-A `Schema.Union` of six tagged `Schema.Struct`s, built by a depth-parameterized constructor so
+A `Schema.Union` of seven tagged `Schema.Struct`s, built by a depth-parameterized constructor so
 the recursive `derivedRule` member is expanded inline rather than via `$ref` (ADR-004 §2.7):
 
 ```ts
 const ExtractedConstraint = Schema.Union([
   Schema.Struct({ kind: Schema.Literal("assignment"), entity: Schema.String, variable: Schema.String, value: Schema.String }),
+  Schema.Struct({
+    kind: Schema.Literal("linkedAttributes"),
+    entityType: Schema.String,
+    attributes: Schema.Array(Schema.Struct({ variable: Schema.String, value: Schema.String })),
+  }),
   Schema.Struct({ kind: Schema.Literal("allDifferent"), variable: Schema.String }),
   Schema.Struct({ kind: Schema.Literal("adjacency"), relation: Schema.String, a: Schema.String, b: Schema.String }),
   Schema.Struct({ kind: Schema.Literal("relation"), name: Schema.String, a: Schema.String, b: Schema.String }),
@@ -87,6 +92,7 @@ Decodes to (illustrative):
 ```ts
 type ExtractedConstraint =
   | { readonly kind: "assignment"; readonly entity: string; readonly variable: string; readonly value: string }
+  | { readonly kind: "linkedAttributes"; readonly entityType: string; readonly attributes: readonly { readonly variable: string; readonly value: string }[] }
   | { readonly kind: "allDifferent"; readonly variable: string }
   | { readonly kind: "adjacency"; readonly relation: string; readonly a: string; readonly b: string }
   | { readonly kind: "relation"; readonly name: string; readonly a: string; readonly b: string }
@@ -102,6 +108,15 @@ itself, and states future work should treat it as current. There is deliberately
 rather than ADR-004 §2.2's illustrative `then`: a bare `then` key makes the object a "thenable"
 that `await` and dynamic `import()` can mistake for a promise, which Biome's `noThenProperty`
 rightly flags.
+
+**`linkedAttributes` was added after the original six-kind taxonomy shipped** (ADR-004 §2.2,
+§4 Consequences) — running the pipeline against real catalog puzzles, not just SPIKE-004's small
+structural sample, found that no kind could express "some entity of a type has several
+attributes simultaneously" without that entity already being named, which is how most classic
+zebra-style clues ("The Englishman lives in the red house") actually read. It compiles to a
+solver-time existential (`forall(e in T)(pivot <-> rest)`), verified directly against a real
+`minizinc` install — no entity resolution happens in `src/compiler`; the solver performs the
+binding as a side effect of solving.
 
 ## `DerivedCondition` (ADR-005 §2.4)
 

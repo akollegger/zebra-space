@@ -174,6 +174,66 @@ function compileAllDifferent(
   return Effect.succeed(`constraint all_different(${sanitizeIdentifier(c.variable)});`)
 }
 
+/**
+ * ADR-004 §2.2: some entity of `entityType` has every listed attribute simultaneously, with no
+ * entity ever named. Compiles to a solver-time existential rather than anything resolved here —
+ * `forall(e in T)(pivot <-> rest)` binds whichever entity satisfies the first attribute to every
+ * other one, since each domain here is a bijection (all-different) over the same entity set.
+ * Verified directly against a real `minizinc` install (design/adr/ADR-004 §2.2).
+ */
+function compileLinkedAttributesBody(
+  compiled: readonly CompiledDomain[],
+  c: Extract<ExtractedConstraint, { kind: "linkedAttributes" }>,
+): Effect.Effect<string, CompileError> {
+  if (c.attributes.length < 2) {
+    return Effect.fail(
+      new CompileError({
+        reason: `linkedAttributes needs at least 2 attributes to link; got ${c.attributes.length}.`,
+      }),
+    )
+  }
+
+  const infos: CompiledDomain[] = []
+  for (const attribute of c.attributes) {
+    const domainInfo = findDomain(compiled, attribute.variable)
+    if (domainInfo === undefined) {
+      return Effect.fail(new CompileError({ reason: `Unknown variable "${attribute.variable}".` }))
+    }
+    if (domainInfo.domain.entityType !== c.entityType) {
+      return Effect.fail(
+        new CompileError({
+          reason:
+            `linkedAttributes entityType "${c.entityType}" doesn't match variable ` +
+            `"${attribute.variable}"'s entityType "${domainInfo.domain.entityType}".`,
+        }),
+      )
+    }
+    if (domainInfo.isScalar) {
+      return Effect.fail(
+        new CompileError({
+          reason: `linkedAttributes requires entity-indexed variables; entityType "${c.entityType}" has only one entity.`,
+        }),
+      )
+    }
+    infos.push(domainInfo)
+  }
+
+  const loopVar = "e"
+  const exprs = c.attributes.map(
+    (attribute) => `${sanitizeIdentifier(attribute.variable)}[${loopVar}] = ${renderScalar(attribute.value)}`,
+  )
+  const [pivot, ...rest] = exprs
+  const body = rest.length === 1 ? `${pivot} <-> ${rest[0]}` : `${pivot} <-> (${rest.join(" /\\ ")})`
+  return Effect.succeed(`forall(${loopVar} in ${infos[0]!.entityTypeEnumName})(${body})`)
+}
+
+function compileLinkedAttributes(
+  compiled: readonly CompiledDomain[],
+  c: Extract<ExtractedConstraint, { kind: "linkedAttributes" }>,
+): Effect.Effect<string, CompileError> {
+  return compileLinkedAttributesBody(compiled, c).pipe(Effect.map((body) => `constraint ${body};`))
+}
+
 // ADR-005 §2.3: relation names map to a positional arithmetic template via a small, explicit
 // registry, not string-matching/inference — expected to grow as new phrasings are encountered
 // (matching ADR-004 §2.2's own taxonomy growth expectation).
@@ -301,6 +361,8 @@ function compileConstraintBody(
       )
     case "allDifferent":
       return Effect.succeed(`all_different(${sanitizeIdentifier(c.variable)})`)
+    case "linkedAttributes":
+      return compileLinkedAttributesBody(compiled, c)
     default:
       return Effect.fail(
         new CompileError({
@@ -337,6 +399,8 @@ function compileTopLevelConstraint(
   switch (c.kind) {
     case "assignment":
       return compileAssignment(compiled, c)
+    case "linkedAttributes":
+      return compileLinkedAttributes(compiled, c)
     case "allDifferent":
       return compileAllDifferent(compiled, c)
     case "adjacency":

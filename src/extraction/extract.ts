@@ -15,7 +15,10 @@ import {
 
 // ADR-004 §2.5 defaults — overridable via ExtractOptions (ADR-003 §2.6's --model/--frontier-model
 // and ZEBRA_MODEL/ZEBRA_FRONTIER_MODEL, resolved by the CLI layer before calling extract()).
-const DEFAULT_MODEL = "google/gemini-2.5-flash-lite"
+// Cheap tier was google/gemini-2.5-flash-lite; switched after live measurement showed it failing
+// 2 of 4 identical requests (one timeout, one 18.9s) against gpt-4o-mini's 4/4 at ~1.5s — see
+// ADR-004 §2.5's Consequences for the full comparison and why this stays a cross-vendor pair.
+const DEFAULT_MODEL = "openai/gpt-4o-mini"
 const DEFAULT_FRONTIER_MODEL = "anthropic/claude-sonnet-4.5"
 
 // ADR-004 §2.4: up to 2 informed revisions per tier — 3 total attempts per tier (1 initial + 2
@@ -47,7 +50,18 @@ function extractionSystemPrompt(): string {
     "You are extracting a constraint-satisfaction-problem representation from a " +
     "natural-language logic puzzle. Produce the entities, decision-variable domains, and " +
     "constraints exactly as described by the prose — represent every clue, invent nothing, " +
-    "and never guess at a clue you can't confidently translate."
+    "and never guess at a clue you can't confidently translate.\n\n" +
+    "Three easily-confused clue shapes need different constraint kinds — pick by what the " +
+    "clue actually asserts, not by superficial similarity:\n" +
+    '- Exclusion/negation ("The culprit is not Colonel Mustard", "not the Revolver"): use ' +
+    '`arithmetic` with comparator "!=" against the excluded value. This is NOT ' +
+    "`linkedAttributes` — the clue rules one value out, it does not link two values together.\n" +
+    '- Attribute co-occurrence with NO entity ever named ("The Englishman lives in the red ' +
+    'house"): use `linkedAttributes` — it links two-or-more attribute values on some ' +
+    "unspecified entity. Do not use this for exclusion/negation clues, and do not use it to " +
+    "represent an entity ruling out a value.\n" +
+    '- A specific, already-known entity ("the first house", or one named directly): use ' +
+    "`assignment`."
   )
 }
 
@@ -71,7 +85,18 @@ function critiqueSystemPrompt(): string {
     "translation of a natural-language logic puzzle's prose — every clue represented, nothing " +
     "invented, nothing misinterpreted. Solvability is irrelevant to this judgment: a faithful " +
     "translation of a puzzle that is genuinely unsatisfiable, or that has more than one " +
-    "solution, is still a faithful translation and must be accepted."
+    "solution, is still a faithful translation and must be accepted.\n\n" +
+    "Judge fidelity to the prose, not house style: `arithmetic` with comparator \"!=\" against " +
+    'a named value (not just a number) is this schema\'s correct, intended way to express ' +
+    'exclusion/negation ("X is not Y") — reject a translation for what it actually gets wrong ' +
+    "against the prose, not for using a constraint kind whose name sounds unfamiliar for the " +
+    "job. Do not require a specific naming/kind convention the schema doesn't define.\n\n" +
+    "Represent only what is stated, not what a solver would infer from it. If three clues " +
+    'say "not A", "not B", leave it there — do not require the extraction to also assert "is ' +
+    'C" for the remaining option; that conclusion follows from solving the constraints, which ' +
+    "is a downstream step this extraction is not responsible for and must not pre-compute. " +
+    "Reject only for clues the extraction dropped, contradicted, or invented — never for " +
+    "declining to state an unstated inference."
   )
 }
 

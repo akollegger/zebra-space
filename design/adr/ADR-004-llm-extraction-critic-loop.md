@@ -290,10 +290,10 @@ self-correction nor an immediate reject-only policy.
 ### 2.5 Model routing: cheap-first, escalate on critic rejection
 
 Resolves the cost-control goal from the RFC-003 discussion that led to this ADR. Extraction
-attempts start on a cheap model tier (`google/gemini-2.5-flash-lite` per SPIKE-004's pricing);
-exhausting that tier's revision rounds (§2.4) without an accepted critique triggers escalation to
-a frontier tier (`anthropic/claude-sonnet-4.5`), which gets its own full extract-critique-revise
-cycle. SPIKE-004 found both models performed similarly well on the tested sample, so escalation
+attempts start on a cheap model tier (`openai/gpt-4o-mini`); exhausting that tier's revision
+rounds (§2.4) without an accepted critique triggers escalation to a frontier tier
+(`anthropic/claude-sonnet-4.5`), which gets its own full extract-critique-revise cycle. SPIKE-004
+found both models performed similarly well on the tested sample, so escalation
 is expected to be the exception path, keeping average cost low — a testable expectation once real
 usage volume exists, not a guarantee (§4). Model identifiers are configuration reachable through
 `@openrouter/sdk`'s single client, not hard-coded architecture — swapping either tier's specific
@@ -305,23 +305,30 @@ implementation detail from a CLI user's perspective, not something this project'
 should require knowing about. No third escalation tier is decided here; that's future work if
 two tiers prove insufficient.
 
-**The specific default models warrant review, and the cross-vendor shape is itself a cost.**
-[SPIKE-005](../spikes/SPIKE-005-tool-calling-conventions/SPIKE.md) found that *provider identity,
-not model size, dominates* structured-output reliability: `openai/gpt-4o-mini` ($0.15/M) scored
-8/8 on both mechanisms while `google/gemini-2.5-pro` ($1.25/M) scored 5/8 on one of them. Two
-consequences for this section, neither decided here:
+**The default cheap tier was changed from `google/gemini-2.5-flash-lite`, on measured
+reliability, not on [SPIKE-005](../spikes/SPIKE-005-tool-calling-conventions/SPIKE.md)'s own
+sample.** SPIKE-005 found that *provider identity, not model size, dominates* structured-output
+reliability (`openai/gpt-4o-mini` at $0.15/M scored 8/8 on both mechanisms tested;
+`google/gemini-2.5-pro` at $1.25/M scored 5/8 on one) — but that was a schema-conformance sample,
+not a decision to switch tiers on its own. The switch itself came from a second, live measurement
+specifically targeting the current default: 4 identical extraction requests each. Gemini
+2.5 Flash Lite returned 2 timeouts, one 18.9s response, and one 1.1s response; `openai/gpt-4o-mini`
+returned 4 successes at ~1.5s each. `openai/gpt-4o-mini` is now the default cheap tier.
 
-- Cheap-first tiering is **not** invalidated — a cheap tier is clearly viable, and
-  `gemini-2.5-flash-lite` specifically is salvageable under §2.1/§2.7's revised mechanism and
-  encoding. But it was chosen (SPIKE-004) on price and extraction quality, before
-  structured-output reliability was known to vary this much; that criterion should now be part of
-  the choice.
-- Escalating *across vendors* is what creates the provider-compatibility surface this ADR has now
-  paid for twice. A same-vendor cheap→frontier pair would eliminate it rather than manage it —
-  but that trades directly against §2.4's rationale for escalation, which wants a **materially
-  different, less-correlated** model as the second opinion. Same-vendor tiering would weaken
-  exactly the property escalation exists to provide. This tension is real and unresolved; it
-  needs deciding before the model defaults change, not as a side effect of changing them.
+This resolves one of the two open questions this section previously carried and leaves the other
+open on purpose:
+
+- Cheap-first tiering itself is **not** invalidated — a cheap tier is clearly viable, just not the
+  original choice of *which* one. Reliability under load is now part of what "cheap tier" needs to
+  mean, alongside price and extraction quality (SPIKE-004's original criteria).
+- Escalating *across vendors* remains a real, deliberate choice, not an oversight: a same-vendor
+  cheap→frontier pair (e.g. `openai/gpt-4o-mini` → an OpenAI frontier model) would eliminate the
+  provider-compatibility surface this ADR has now paid for twice (§2.7, this section) — but it
+  trades directly against §2.4's rationale for escalation, which wants a **materially different,
+  less-correlated** model as the second opinion. `openai/gpt-4o-mini` → `anthropic/claude-sonnet-4.5`
+  keeps that property. This tension is unresolved by construction, not by omission: nothing here
+  forces same-vendor tiering, and nothing here rules it out later if the compatibility surface
+  proves costlier than the correlation risk.
 
 ### 2.6 Error model
 

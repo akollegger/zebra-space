@@ -179,7 +179,7 @@ test("FR-010: extract() uses the model identifiers it's given instead of the bui
       )
       assert.equal(result.model, "custom/cheap-model")
       assert.ok(stub.requests.every((r) => r.model === "custom/cheap-model"))
-      assert.ok(!stub.requests.some((r) => r.model === "google/gemini-2.5-flash-lite"))
+      assert.ok(!stub.requests.some((r) => r.model === "openai/gpt-4o-mini"))
     },
   )
 })

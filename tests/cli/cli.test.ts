@@ -287,7 +287,7 @@ test("SC-004/contracts/cli-contract.md: --json prints the raw ExtractedCsp and n
       assert.equal(result.exitCode, 0)
       const parsed = JSON.parse(result.stdout)
       assert.deepEqual(parsed.extractedCsp, uncompilableCsp)
-      assert.equal(parsed.model, "google/gemini-2.5-flash-lite")
+      assert.equal(parsed.model, "openai/gpt-4o-mini")
     },
   )
 })

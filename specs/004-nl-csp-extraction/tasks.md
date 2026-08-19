@@ -192,14 +192,14 @@ follow-through.
 - [X] T047 Teach `tests/extraction/support/stub-server.ts` to speak tool calls (`respondWithJson` → tool call, new `respondWithProse` for the ignored-tool case) and record the schema actually sent
 - [X] T048 Add regression tests: emitted schema carries no `$ref`/`$defs`; request is a forced tool call; `SchemaRejected` vs `ProviderError`; prose-instead-of-tool → `SchemaViolation`; and two CLI tests asserting actionable text with no `node_modules` stack frames
 - [X] T049 Realign `research.md` (Findings 3/4 + SPIKE-004 confirmations), `data-model.md`, and `contracts/cli-contract.md` with the revised mechanism — including recording where the original research was *wrong*, not just replacing it
-- [ ] T050 Revisit ADR-004 §2.5's default cheap tier — **evidence gathered, decision deliberately deferred.** The schema and mechanism now work, but the default path is unreliable end-to-end because the default cheap model is. Identical request, 4 consecutive attempts each, 30s timeout:
+- [X] T050 Revisit ADR-004 §2.5's default cheap tier — **decided: switched to `openai/gpt-4o-mini`.** Identical request, 4 consecutive attempts each, 30s timeout:
 
   | Model | Results |
   |---|---|
-  | `google/gemini-2.5-flash-lite` (current default) | timeout(30s), ok(1.1s), ok(18.9s), timeout(30s) — **2/4 failed** |
-  | `openai/gpt-4o-mini` | ok(1.9s), ok(1.6s), ok(1.5s), ok(1.5s) — **4/4, consistently ~1.5s** |
+  | `google/gemini-2.5-flash-lite` (previous default) | timeout(30s), ok(1.1s), ok(18.9s), timeout(30s) — **2/4 failed** |
+  | `openai/gpt-4o-mini` (new default) | ok(1.9s), ok(1.6s), ok(1.5s), ok(1.5s) — **4/4, consistently ~1.5s** |
 
-  Consistent with SPIKE-005's finding that provider identity dominates model size. Not changed here because ADR-004 §2.5 states the choice "needs deciding before the model defaults change, not as a side effect of changing them" — switching the cheap tier to OpenAI would also make both tiers... no, it would leave a cross-vendor pair (OpenAI cheap → Anthropic frontier), which actually *preserves* §2.4's less-correlated-critic property. That makes it a cheap, low-risk change, but still one for a person to confirm rather than a side effect of this realignment.
+  Consistent with SPIKE-005's finding that provider identity dominates model size. `src/extraction/extract.ts`'s `DEFAULT_MODEL`, ADR-004 §2.5, and `.env.example` all updated. Stays a cross-vendor pair (OpenAI cheap → Anthropic frontier), preserving §2.4's less-correlated-critic property — same-vendor tiering remains a live, undecided option per ADR-004 §2.5's own text, not ruled out here.
 
 ---
 

@@ -16,7 +16,7 @@ zebra extract <puzzle.md> [--json] [--model <id>] [--frontier-model <id>]
 |---|---|---|
 | `<puzzle.md>` | yes | Path to a `catalog/puzzles/PZL-NNNN-*.md`-shaped file, passed straight through — not re-read/re-validated by the CLI layer itself (ADR-003 §2.6, mirrors `solve`'s file-path convention). |
 | `--json` | no | Print the raw `ExtractedCsp` plus the model tier that produced it; **bypasses compilation entirely** (ADR-003 §2.6). |
-| `--model <id>` | no | OpenRouter `provider/model-name` string for the default (cheap) tier. Precedence: flag > `ZEBRA_MODEL` env var > built-in default (`google/gemini-2.5-flash-lite`, ADR-004 §2.5). |
+| `--model <id>` | no | OpenRouter `provider/model-name` string for the default (cheap) tier. Precedence: flag > `ZEBRA_MODEL` env var > built-in default (`openai/gpt-4o-mini`, ADR-004 §2.5). |
 | `--frontier-model <id>` | no | OpenRouter `provider/model-name` string for the escalation tier. Precedence: flag > `ZEBRA_FRONTIER_MODEL` env var > built-in default (`anthropic/claude-sonnet-4.5`, ADR-004 §2.5). |
 
 No alias/registry layer over model identifiers — full OpenRouter strings only (ADR-003 §2.6).

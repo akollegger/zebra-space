@@ -112,6 +112,11 @@ export const ArithmeticExpression = makeArithmeticExpression(MAX_NESTING_DEPTH)
 
 export type ExtractedConstraint =
   | { readonly kind: "assignment"; readonly entity: string; readonly variable: string; readonly value: string }
+  | {
+      readonly kind: "linkedAttributes"
+      readonly entityType: string
+      readonly attributes: readonly { readonly variable: string; readonly value: string }[]
+    }
   | { readonly kind: "allDifferent"; readonly variable: string }
   | { readonly kind: "adjacency"; readonly relation: string; readonly a: string; readonly b: string }
   | { readonly kind: "relation"; readonly name: string; readonly a: string; readonly b: string }
@@ -136,6 +141,22 @@ function nonRecursiveConstraints() {
       variable: Schema.String,
       value: Schema.String,
     }).annotate({ description: "A single entity's variable is fixed to a specific value." }),
+    Schema.Struct({
+      kind: Schema.Literal("linkedAttributes"),
+      entityType: Schema.String,
+      attributes: Schema.Array(
+        Schema.Struct({ variable: Schema.String, value: Schema.String }),
+      ),
+    }).annotate({
+      description:
+        "Some entity of entityType has every listed variable=value simultaneously — no entity " +
+        'is ever named; the solver determines which one. Use this for POSITIVE co-occurrence ' +
+        'clues like "The Englishman lives in the red house" — never for exclusion/negation ' +
+        '("X is not Y"), which is `arithmetic` with comparator "!=" instead — and instead of ' +
+        '`assignment`, which requires a specific, already-known entity (e.g. an ordinal like ' +
+        '"the first house", or a house ' +
+        "identified by an earlier clue).",
+    }),
     Schema.Struct({
       kind: Schema.Literal("allDifferent"),
       variable: Schema.String,
