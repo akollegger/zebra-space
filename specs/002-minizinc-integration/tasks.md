@@ -131,7 +131,7 @@ against that puzzle's existing recorded answer.
   no `all_different` needed, per research.md Finding 4) (FR-007, FR-008).
 - [X] T013 [US3] Write `tests/solver/catalog-examples.test.ts`: run
   `catalog/mzn/PZL-0004-whodunit.mzn` through `solve()` and assert the result is
-  `UniquelySolvable` with an assignment matching `specs/001-catalog-seeding/answer-keys.md`'s
+  `UniquelySolvable` with an assignment matching `eval/answer-keys.json`'s
   `PZL-0004` entry (Professor Plum, Candlestick, Conservatory) exactly — accounting for
   research.md Finding 6's `{ e: "Name" }` enum-wrapping in the JSON output (FR-009, SC-004).
 - [X] T014 [US3] Run `pnpm test`; confirm this new test passes.
@@ -204,7 +204,7 @@ Task: "Create tests/solver/ directory (T003)"
 2. User Story 1 → classification capability (MVP).
 3. User Story 2 → the classification's usability guarantee made explicit and tested.
 4. User Story 3 → proof against a real catalog puzzle, closing the loop back to
-   `specs/001-catalog-seeding/answer-keys.md`.
+   `eval/answer-keys.json`.
 5. Polish → docs and a full quickstart run.
 
 ## Notes

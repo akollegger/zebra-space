@@ -1,0 +1,9 @@
+{
+  "name": "spike-004-llm-based-extraction",
+  "private": true,
+  "type": "module",
+  "description": "Throwaway spike code for SPIKE-004 (RFC-003 Appendix §9.4). Not part of the zebra-space package tree.",
+  "dependencies": {
+    "@openrouter/sdk": "^1.2.42"
+  }
+}

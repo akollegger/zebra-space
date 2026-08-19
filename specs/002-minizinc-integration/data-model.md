@@ -62,4 +62,4 @@ exactly one (`PZL-0004`, per research.md); further entries are follow-up work (A
   one Solver Error, never both.
 - An Example Catalog Entry's content, when submitted as a Solve Request's `model`, must produce
   a `UniquelySolvable` Solve Result whose `assignment` matches the corresponding catalog puzzle's
-  entry in `specs/001-catalog-seeding/answer-keys.md` (FR-009, SC-004).
+  entry in `eval/answer-keys.json` (FR-009, SC-004).

@@ -48,6 +48,6 @@ spec for each addition. To add one:
    structure.
 4. Solve it yourself first and confirm it has **exactly one** valid solution — no puzzle should
    be added without this check.
-5. Record that solution in `specs/001-catalog-seeding/answer-keys.md` (a private file, not part
+5. Record that solution in `eval/answer-keys.json` (a private file, not part
    of this public index — see that feature's spec for why).
 6. Add a row to the Index table above.

@@ -32,4 +32,4 @@ solve: (request: SolveRequest) => Effect<SolveResult, SolverError>
 - Does not translate a puzzle's prose or graph representation into a model — the caller supplies
   already-written MiniZinc source (RFC-002 Non-Goal 2; ADR-002 Context).
 - Does not persist results anywhere — a caller that wants to record a result (e.g. into
-  `specs/001-catalog-seeding/answer-keys.md`-style records) does so itself.
+  `eval/answer-keys.json`-style records) does so itself.

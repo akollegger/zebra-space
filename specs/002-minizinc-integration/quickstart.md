@@ -24,7 +24,7 @@ Exercises, per `contracts/solve-contract.md` and `data-model.md`:
 - A known-uniquely-solvable toy model → `UniquelySolvable` with the correct assignment (SC-002).
 - A known-multiply-satisfiable toy model → `MultiplySatisfiable`, without over-searching (SC-003).
 - The seeded `catalog/mzn/PZL-0004-whodunit.mzn` → `UniquelySolvable`, matching
-  `specs/001-catalog-seeding/answer-keys.md`'s recorded answer for `PZL-0004` exactly (SC-004).
+  `eval/answer-keys.json`'s recorded answer for `PZL-0004` exactly (SC-004).
 - No leftover files in the OS temp directory after each attempt, success or failure (SC-005).
 
 ## Manual check
@@ -36,4 +36,4 @@ minizinc --output-mode json catalog/mzn/PZL-0004-whodunit.mzn
 ```
 
 Expected: a single JSON object naming Professor Plum, the Candlestick, and the Conservatory —
-matching `specs/001-catalog-seeding/answer-keys.md`'s `PZL-0004` entry.
+matching `eval/answer-keys.json`'s `PZL-0004` entry.

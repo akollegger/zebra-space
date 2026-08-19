@@ -23,7 +23,7 @@ type-stripping (same toolchain `src/index.ts` already uses; no build step).
 **Primary Dependencies**: None new. No npm package is added for this feature.
 
 **Storage**: Flat files on disk — `catalog/puzzles/*.md` (public), `catalog/README.md` (public
-index), `specs/001-catalog-seeding/answer-keys.md` (private, FR-009). No database.
+index), `eval/answer-keys.json` (private, FR-009). No database.
 
 **Testing**: Node's built-in test runner (`node --test`, wired to `pnpm test`) checking SC-001
 (file count), SC-002 (frontmatter completeness), SC-003 (index/file parity). SC-004 (unique
@@ -66,9 +66,12 @@ specs/001-catalog-seeding/
 ├── research.md          # Phase 0 output (/speckit-plan command)
 ├── data-model.md        # Phase 1 output (/speckit-plan command)
 ├── quickstart.md        # Phase 1 output (/speckit-plan command)
-├── answer-keys.md       # Private verification artifact (FR-009) — authored during implementation
 └── tasks.md             # Phase 2 output (/speckit-tasks command - NOT created by /speckit-plan)
 ```
+
+The private verification artifact (FR-009) was originally authored here as `answer-keys.md`
+during implementation, then later relocated to `eval/answer-keys.json` (moved, and reformatted
+from Markdown to JSON) so it could double as the extraction eval's machine-readable ground truth.
 
 No `contracts/` directory: this feature exposes no API, CLI, or other interface to document —
 it's content plus a test file, purely internal to the repo.

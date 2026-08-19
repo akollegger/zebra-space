@@ -1,0 +1,190 @@
+{
+  "generatedFrom": "phase2-matrix.mjs",
+  "models": [
+    "openai/gpt-5.1",
+    "openai/gpt-4o-mini",
+    "anthropic/claude-sonnet-4.5",
+    "anthropic/claude-haiku-4.5",
+    "google/gemini-2.5-pro",
+    "google/gemini-2.5-flash",
+    "google/gemini-2.5-flash-lite",
+    "meta-llama/llama-3.3-70b-instruct",
+    "mistralai/mistral-small-3.2-24b-instruct",
+    "qwen/qwen3-32b",
+    "deepseek/deepseek-chat-v3.1",
+    "z-ai/glm-4.6",
+    "amazon/nova-lite-v1"
+  ],
+  "schemaIds": [
+    "S6"
+  ],
+  "mechanisms": [
+    "M1",
+    "M2"
+  ],
+  "results": [
+    {
+      "model": "openai/gpt-4o-mini",
+      "schemaId": "S6",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "openai/gpt-5.1",
+      "schemaId": "S6",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "openai/gpt-5.1",
+      "schemaId": "S6",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "anthropic/claude-haiku-4.5",
+      "schemaId": "S6",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "anthropic/claude-sonnet-4.5",
+      "schemaId": "S6",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-flash",
+      "schemaId": "S6",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-flash",
+      "schemaId": "S6",
+      "mechanism": "M2",
+      "outcome": "UNENFORCED",
+      "detail": "tool args non-conforming: {\"root\":{\"child\":{\"name\":\"child0\",\"child\":{\"child\":{\"child\":\"leaf\",\"name\":\"child0\"},\"name\":\"child0\"}},\"name\":\"root\"}}"
+    },
+    {
+      "model": "anthropic/claude-haiku-4.5",
+      "schemaId": "S6",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "openai/gpt-4o-mini",
+      "schemaId": "S6",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-flash-lite",
+      "schemaId": "S6",
+      "mechanism": "M1",
+      "outcome": "UNENFORCED",
+      "detail": "parsed but non-conforming: {\n  \"root\": {\n    \"name\": \"level1\",\n    \"child\": {\n      \"name\": \"level2\",\n      \"child\": {\n        \"name\": \"level3\",\n        \"child\": {\n          \"na"
+    },
+    {
+      "model": "anthropic/claude-sonnet-4.5",
+      "schemaId": "S6",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-pro",
+      "schemaId": "S6",
+      "mechanism": "M2",
+      "outcome": "UNENFORCED",
+      "detail": "tool args non-conforming: {\"root\":{\"name\":\"root\",\"child\":\"child\"}}"
+    },
+    {
+      "model": "google/gemini-2.5-flash-lite",
+      "schemaId": "S6",
+      "mechanism": "M2",
+      "outcome": "UNENFORCED",
+      "detail": "tool args non-conforming: {\"root\":{\"name\":\"root\",\"child\":{\"child\":{\"name\":\"child\",\"child\":{\"child\":\"Hello World!\",\"name\":\"grandchild\"}},\"name\":\"child\"}}}"
+    },
+    {
+      "model": "google/gemini-2.5-pro",
+      "schemaId": "S6",
+      "mechanism": "M1",
+      "outcome": "UNENFORCED",
+      "detail": "not JSON: {\n  \"root\": {\n    \""
+    },
+    {
+      "model": "meta-llama/llama-3.3-70b-instruct",
+      "schemaId": "S6",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "meta-llama/llama-3.3-70b-instruct",
+      "schemaId": "S6",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "mistralai/mistral-small-3.2-24b-instruct",
+      "schemaId": "S6",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "qwen/qwen3-32b",
+      "schemaId": "S6",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "mistralai/mistral-small-3.2-24b-instruct",
+      "schemaId": "S6",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "z-ai/glm-4.6",
+      "schemaId": "S6",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "amazon/nova-lite-v1",
+      "schemaId": "S6",
+      "mechanism": "M1",
+      "outcome": "UNENFORCED",
+      "detail": "not JSON: Sure, I'll create a small example object that conforms to a required structure. Let's assume the required structure is a simple employee object with t"
+    },
+    {
+      "model": "qwen/qwen3-32b",
+      "schemaId": "S6",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "amazon/nova-lite-v1",
+      "schemaId": "S6",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "deepseek/deepseek-chat-v3.1",
+      "schemaId": "S6",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "deepseek/deepseek-chat-v3.1",
+      "schemaId": "S6",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "z-ai/glm-4.6",
+      "schemaId": "S6",
+      "mechanism": "M1",
+      "outcome": "UNENFORCED",
+      "detail": "no text content"
+    }
+  ]
+}

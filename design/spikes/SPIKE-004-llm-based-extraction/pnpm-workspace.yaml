@@ -1,0 +1,2 @@
+minimumReleaseAgeExclude:
+  - '@openrouter/sdk@1.2.42'
