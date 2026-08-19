@@ -1,7 +1,7 @@
 ---
 id: SPIKE-005
 title: Tool-Calling and Structured-Output Conventions Across Providers
-status: planned
+status: done
 rfcs: [RFC-003]
 created: 2026-08-19
 ---
@@ -122,15 +122,127 @@ front. If the matrix can't be completed in the time-box, report partial results 
 
 ## 4. Findings
 
-_(filled in once the spike concludes)_
+Two schema shapes were added mid-spike (S6-S8) once S1-S5 localized the failure; the ladder grew
+from 5 shapes to 8. Scripts and raw per-cell results are in `scripts/` and `results/`.
+
+### 4.1 Phase 1 — declared support is broad, and unreliable
+
+Of **415** catalog models: `tools` 348 (83.9%), `tool_choice` 344 (82.9%), `response_format` 359
+(86.5%), `structured_outputs` 336 (81.0%). Declared support is roughly comparable between the two
+mechanisms, and does **not** degrade at the low end — `tools` is declared by 84-85% of models in
+every price tier from free to frontier.
+
+The decisive Phase 1 result is negative: **both of ADR-004 §2.5's default tiers declare all four
+parameters**, including `structured_outputs`. Both fail in practice (4.2). OpenRouter's
+`supported_parameters` metadata therefore cannot be used to route safely, which rules out the
+cheapest imaginable fix ("just check the catalog before calling").
+
+### 4.2 Phase 2 — the empirical matrix
+
+13 models x 8 schema shapes x 2 mechanisms, 208 cells, one sample per cell. `OK` = request
+accepted **and** output conformed; `REJ` = HTTP 4xx; `UNEN` = HTTP 200 but non-conforming output.
+
+Per-schema `OK` rate (out of 13 models):
+
+| Schema | Shape | M1 `response_format` | M2 tool calling |
+|---|---|---|---|
+| S1 | flat primitives | 10/13 | **13/13** |
+| S2 | nested + array of objects | 11/13 | 12/13 |
+| S3 | discriminated union, inlined | 11/13 | **13/13** |
+| S4 | shared `$ref`, non-recursive | 10/13 | 9/13 |
+| S5 | recursive `$ref` (today's `ExtractedCsp`) | **5/13** | 10/13 |
+| S6 | recursive, inlined depth 3 | 9/13 | 10/13 |
+| S7 | recursive `$ref`, array edge | 8/13 | 10/13 |
+| S8 | inlined depth 3 **+** array edge | 10/13 | **12/13** |
+
+Aggregate: **M1 74/104 `OK` with 3 hard rejections; M2 89/104 `OK` with zero rejections.**
+
+**Both baseline observations confirmed.**
+
+1. *Gemini rejects recursive `$ref`* — reproduced on all three Gemini models under M1 (S5), same
+   `ref loops are only supported…` 400 each time. Not a one-off.
+2. *Anthropic accepts but does not enforce* — confirmed on **both** Sonnet and Haiku, under M1,
+   returning conversational prose with an invented object (`id`/`name`/`email`/`created_at`) that
+   ignores the requested schema entirely. Under M2 both Anthropic models are **8/8**. So this is a
+   mechanism failure, not a model-capability one — the strongest single result in the spike.
+
+**One of my own earlier conclusions was refuted.** During implementation I concluded `$ref`/`$defs`
+was "unsupported generally" by Gemini. S4 disproves that: non-recursive `$ref` passes on all three
+Gemini models under M1. The real constraints are narrower and **mechanism-dependent**:
+
+- **M1 + Google**: recursive `$ref` → hard `REJECT`; non-recursive `$ref` → fine.
+- **M2 + Google**: *any* `$ref` (S4, S5, S7) → silently rendered as a **bare string**
+  (`{"a":"foo","b":"bar"}` where two `Point` objects were required; `{"root":""}` for S7).
+- **Either mechanism + Google**: `anyOf: [<object>, null]` → also rendered as a string
+  (S6: `{"root":{"name":"root","child":"child"}}`). S3 proves `anyOf` *of objects* is fine, so it
+  is nullability of a nested object specifically, not unions.
+
+**S8 is the shape that works**: no `$ref` anywhere, bounded inline depth, recursive edge as a
+possibly-empty array, no nullable nested objects. Under M2 it is 12/13 — including **all three
+Google models**, which failed every other recursive shape. Google's own S5 error message had named
+this escape hatch ("*or a potentially-zero-length array items*").
+
+**Model size is not the dominant factor — provider identity is.** `openai/gpt-4o-mini` ($0.15/M)
+scores 8/8 on *both* mechanisms, beating `google/gemini-2.5-pro` ($1.25/M, 5/8 on M1). `qwen3-32b`
+($0.08/M) is 8/8 under M2. Failures cluster by provider (Google, z-ai, Amazon), not by price.
+
+Two useful outliers: `z-ai/glm-4.6` declares `structured_outputs` yet returned **empty content on
+all 8 M1 probes** while scoring 8/8 under M2 — the starkest declared-vs-actual gap found.
+`amazon/nova-lite-v1` is the honest control: it declares `tools` but *not* `structured_outputs`,
+and indeed failed all 8 M1 probes — the only model whose declaration matched its behavior.
+
+### 4.3 Caveats
+
+- **One sample per cell.** SPIKE-004 already established run-to-run non-determinism, so individual
+  `UNEN` cells are suggestive, not conclusive. The headline results (Anthropic M1 vs. M2, Google
+  `$ref`) each reproduced across multiple models and shapes, so those are solid; borderline
+  single-model cells are not.
+- **The prompt was deliberately generic** ("Produce a small example object conforming to the
+  required structure"), which arguably handicaps M1. That's the point: under a working mechanism
+  the schema itself conveys the requirement, and the identical prompt produced conforming output
+  under M2 — so the M1-vs-M2 comparison is controlled even though the absolute M1 numbers may be
+  pessimistic.
+- **Shape handling only**, not extraction accuracy on real puzzle prose. A model that emits a
+  well-formed `ExtractedCsp` may still emit a *wrong* one; that is what ADR-004's critic loop is
+  for, and is unaffected by this spike.
+- **M3 (`provider.require_parameters`) was never run** — M2's zero rejections made it moot for the
+  immediate decision. Still worth testing if multi-provider routing is retained.
+- **Tested through OpenRouter only.** Direct-to-provider APIs may differ; some failures here may be
+  OpenRouter's translation layer rather than the provider's own API.
 
 ## 5. Conclusion
 
-_(filled in once the spike concludes)_ — should state explicitly:
+**The mechanism, not the target format, was the problem.** Neither "JSON is the wrong target" nor
+"the schema's content is wrong" is supported — the same `ExtractedCsp`-shaped payload succeeds
+once it is requested via tool calling and expressed without `$ref` or nullable objects. This
+weakens the case for the more drastic pivots that were on the table (emitting MiniZinc or gram
+text directly): those remain interesting on their own merits, but should not be adopted as a fix
+for this, since this is fixed.
 
-- Whether ADR-004 §2.1's `response_format` choice should be replaced by tool calling, and whether
-  that's a mechanism swap or a genuine ADR revision.
-- What JSON Schema subset is safe to emit (specifically: is `$ref` usable at all, or must
-  `src/extraction/types.ts` emit fully-inlined schemas?).
-- Whether ADR-004 §2.5's cheap-first tiering is still viable, or whether cross-vendor escalation
-  is itself the source of the compatibility surface and should be reconsidered.
+Concretely, for [ADR-004](../../adr/ADR-004-llm-extraction-critic-loop.md):
+
+1. **§2.1 should be revised to tool calling.** This is a genuine ADR revision, not just an
+   implementation swap: §2.1 currently names `response_format` explicitly and — after the
+   correction made last session — explicitly rules tool calling *out*. The evidence now says the
+   opposite. M2 never once produced a hard rejection, and rescued Anthropic completely (0/2 → 2/2
+   on the recursive shapes) and z-ai entirely (0/8 → 8/8).
+2. **The emitted schema must avoid `$ref` and nullable nested objects.** This constrains
+   `src/extraction/types.ts`: `Schema.toJsonSchemaDocument` emits `$defs`/`$ref` by default for
+   both unions and `Schema.suspend` recursion, so its output needs a dereferencing/inlining pass
+   before it is sent, and the recursive edges need re-modelling as possibly-empty arrays rather
+   than `Schema.NullOr`. Note `ArithmeticExpression.left`'s nullability — added *specifically* to
+   appease Gemini — is now shown to be both insufficient and unnecessary; an array-of-operands
+   encoding would be more faithful to the domain *and* compatible.
+3. **§2.5's cheap-first tiering survives, but its model choices deserve review.**
+   `gemini-2.5-flash-lite` is salvageable (S8 + M2 passes), so the tiering need not be abandoned.
+   But the deeper point is that cross-vendor escalation is what *creates* the compatibility
+   surface: `openai/gpt-4o-mini` at $0.15/M scored 8/8 on both mechanisms, so a same-vendor
+   cheap→frontier pair would eliminate the surface rather than manage it. Worth weighing against
+   the value of vendor diversity in the critic loop (§2.4 relies on tier escalation for a
+   *less-correlated* second opinion — which same-vendor tiering would weaken).
+
+Suggested text for RFC-003 §9.4's "Runtime requirements" (manual step — this skill does not edit
+the RFC): *the LLM tier's runtime requirement is not merely "an API key and network access" but a
+specific structured-output mechanism; tool calling is honored far more consistently across
+providers and model sizes than `response_format`, and provider-declared capability metadata is not
+a reliable proxy for either.*

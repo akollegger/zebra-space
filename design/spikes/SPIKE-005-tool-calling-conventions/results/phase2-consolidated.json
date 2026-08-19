@@ -1,0 +1,1300 @@
+{
+  "results": [
+    {
+      "model": "openai/gpt-5.1",
+      "schemaId": "S3",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "openai/gpt-5.1",
+      "schemaId": "S1",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "openai/gpt-5.1",
+      "schemaId": "S1",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "openai/gpt-5.1",
+      "schemaId": "S3",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "openai/gpt-5.1",
+      "schemaId": "S2",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "openai/gpt-5.1",
+      "schemaId": "S2",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "openai/gpt-4o-mini",
+      "schemaId": "S1",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "openai/gpt-4o-mini",
+      "schemaId": "S1",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "openai/gpt-5.1",
+      "schemaId": "S5",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "openai/gpt-5.1",
+      "schemaId": "S5",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "openai/gpt-5.1",
+      "schemaId": "S4",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "openai/gpt-5.1",
+      "schemaId": "S4",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "openai/gpt-4o-mini",
+      "schemaId": "S2",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "openai/gpt-4o-mini",
+      "schemaId": "S3",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "openai/gpt-4o-mini",
+      "schemaId": "S3",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "openai/gpt-4o-mini",
+      "schemaId": "S4",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "openai/gpt-4o-mini",
+      "schemaId": "S2",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "openai/gpt-4o-mini",
+      "schemaId": "S5",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "openai/gpt-4o-mini",
+      "schemaId": "S5",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "openai/gpt-4o-mini",
+      "schemaId": "S4",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "anthropic/claude-sonnet-4.5",
+      "schemaId": "S1",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "anthropic/claude-sonnet-4.5",
+      "schemaId": "S1",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "anthropic/claude-sonnet-4.5",
+      "schemaId": "S3",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "anthropic/claude-sonnet-4.5",
+      "schemaId": "S2",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "anthropic/claude-sonnet-4.5",
+      "schemaId": "S2",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "anthropic/claude-sonnet-4.5",
+      "schemaId": "S3",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "anthropic/claude-haiku-4.5",
+      "schemaId": "S1",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "anthropic/claude-haiku-4.5",
+      "schemaId": "S1",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "anthropic/claude-sonnet-4.5",
+      "schemaId": "S5",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "anthropic/claude-sonnet-4.5",
+      "schemaId": "S4",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "anthropic/claude-sonnet-4.5",
+      "schemaId": "S4",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "anthropic/claude-haiku-4.5",
+      "schemaId": "S2",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "anthropic/claude-haiku-4.5",
+      "schemaId": "S3",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "anthropic/claude-sonnet-4.5",
+      "schemaId": "S5",
+      "mechanism": "M1",
+      "outcome": "UNENFORCED",
+      "detail": "not JSON: ```json\n{\n  \"id\": \"ex-001\",\n  \"name\": \"Sample Object\",\n  \"type\": \"example\",\n  \"attributes\": {\n    \"color\": \"blue\",\n    \"size\": \"medium\",\n    \"active\":"
+    },
+    {
+      "model": "anthropic/claude-haiku-4.5",
+      "schemaId": "S2",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "anthropic/claude-haiku-4.5",
+      "schemaId": "S3",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "anthropic/claude-haiku-4.5",
+      "schemaId": "S4",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "anthropic/claude-haiku-4.5",
+      "schemaId": "S4",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "anthropic/claude-haiku-4.5",
+      "schemaId": "S5",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "anthropic/claude-haiku-4.5",
+      "schemaId": "S5",
+      "mechanism": "M1",
+      "outcome": "UNENFORCED",
+      "detail": "not JSON: # Example Object\n\nHere's a small example object conforming to a standard structure:\n\n```json\n{\n  \"id\": \"user_001\",\n  \"name\": \"Alice Johnson\",\n  \"email"
+    },
+    {
+      "model": "google/gemini-2.5-pro",
+      "schemaId": "S1",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-pro",
+      "schemaId": "S2",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-pro",
+      "schemaId": "S2",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-pro",
+      "schemaId": "S5",
+      "mechanism": "M1",
+      "outcome": "REJECT",
+      "status": 400,
+      "detail": "{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"ref loops are only supported if they include optional or nullable property values, or a potentially-zero-length array items, but a ref loop of required fields was found at $defs.Node.properties.child.anyOf.0\",\n    \"status\": \"INVALID_ARGUMENT\"\n  }\n}\n"
+    },
+    {
+      "model": "google/gemini-2.5-pro",
+      "schemaId": "S1",
+      "mechanism": "M1",
+      "outcome": "UNENFORCED",
+      "detail": "not JSON: {\n  \"name\": \"example\",\n  \""
+    },
+    {
+      "model": "google/gemini-2.5-pro",
+      "schemaId": "S3",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-flash",
+      "schemaId": "S1",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-flash",
+      "schemaId": "S1",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-pro",
+      "schemaId": "S4",
+      "mechanism": "M2",
+      "outcome": "UNENFORCED",
+      "detail": "tool args non-conforming: {\"a\":\"foo\",\"b\":\"bar\"}"
+    },
+    {
+      "model": "google/gemini-2.5-flash",
+      "schemaId": "S2",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-pro",
+      "schemaId": "S5",
+      "mechanism": "M2",
+      "outcome": "UNENFORCED",
+      "detail": "tool args non-conforming: {\"root\":\"\"}"
+    },
+    {
+      "model": "google/gemini-2.5-flash",
+      "schemaId": "S2",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-flash",
+      "schemaId": "S3",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-flash",
+      "schemaId": "S3",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-flash",
+      "schemaId": "S4",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-flash",
+      "schemaId": "S5",
+      "mechanism": "M1",
+      "outcome": "REJECT",
+      "status": 400,
+      "detail": "{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"ref loops are only supported if they include optional or nullable property values, or a potentially-zero-length array items, but a ref loop of required fields was found at $defs.Node.properties.child.anyOf.0\",\n    \"status\": \"INVALID_ARGUMENT\"\n  }\n}\n"
+    },
+    {
+      "model": "google/gemini-2.5-flash",
+      "schemaId": "S4",
+      "mechanism": "M2",
+      "outcome": "UNENFORCED",
+      "detail": "tool args non-conforming: {\"b\":\"value_b\",\"a\":\"value_a\"}"
+    },
+    {
+      "model": "google/gemini-2.5-pro",
+      "schemaId": "S3",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-pro",
+      "schemaId": "S4",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-flash-lite",
+      "schemaId": "S1",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-flash-lite",
+      "schemaId": "S2",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-flash-lite",
+      "schemaId": "S2",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-flash-lite",
+      "schemaId": "S1",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-flash-lite",
+      "schemaId": "S3",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-flash-lite",
+      "schemaId": "S4",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-flash-lite",
+      "schemaId": "S3",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-flash-lite",
+      "schemaId": "S4",
+      "mechanism": "M2",
+      "outcome": "UNENFORCED",
+      "detail": "tool args non-conforming: {\"b\":\"string\",\"a\":\"string\"}"
+    },
+    {
+      "model": "google/gemini-2.5-flash-lite",
+      "schemaId": "S5",
+      "mechanism": "M1",
+      "outcome": "REJECT",
+      "status": 400,
+      "detail": "{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"ref loops are only supported if they include optional or nullable property values, or a potentially-zero-length array items, but a ref loop of required fields was found at $defs.Node.properties.child.anyOf.0\",\n    \"status\": \"INVALID_ARGUMENT\"\n  }\n}\n"
+    },
+    {
+      "model": "meta-llama/llama-3.3-70b-instruct",
+      "schemaId": "S1",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "meta-llama/llama-3.3-70b-instruct",
+      "schemaId": "S1",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "meta-llama/llama-3.3-70b-instruct",
+      "schemaId": "S2",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "meta-llama/llama-3.3-70b-instruct",
+      "schemaId": "S3",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-flash-lite",
+      "schemaId": "S5",
+      "mechanism": "M2",
+      "outcome": "UNENFORCED",
+      "detail": "tool args non-conforming: {\"root\":\"true\"}"
+    },
+    {
+      "model": "meta-llama/llama-3.3-70b-instruct",
+      "schemaId": "S2",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "meta-llama/llama-3.3-70b-instruct",
+      "schemaId": "S3",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "meta-llama/llama-3.3-70b-instruct",
+      "schemaId": "S4",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "meta-llama/llama-3.3-70b-instruct",
+      "schemaId": "S5",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "meta-llama/llama-3.3-70b-instruct",
+      "schemaId": "S4",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "meta-llama/llama-3.3-70b-instruct",
+      "schemaId": "S5",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "mistralai/mistral-small-3.2-24b-instruct",
+      "schemaId": "S1",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "mistralai/mistral-small-3.2-24b-instruct",
+      "schemaId": "S3",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "mistralai/mistral-small-3.2-24b-instruct",
+      "schemaId": "S2",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "mistralai/mistral-small-3.2-24b-instruct",
+      "schemaId": "S3",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "mistralai/mistral-small-3.2-24b-instruct",
+      "schemaId": "S2",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "mistralai/mistral-small-3.2-24b-instruct",
+      "schemaId": "S4",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "mistralai/mistral-small-3.2-24b-instruct",
+      "schemaId": "S5",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "mistralai/mistral-small-3.2-24b-instruct",
+      "schemaId": "S5",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "qwen/qwen3-32b",
+      "schemaId": "S1",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "qwen/qwen3-32b",
+      "schemaId": "S2",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "mistralai/mistral-small-3.2-24b-instruct",
+      "schemaId": "S1",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "qwen/qwen3-32b",
+      "schemaId": "S2",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "qwen/qwen3-32b",
+      "schemaId": "S3",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-flash",
+      "schemaId": "S5",
+      "mechanism": "M2",
+      "outcome": "UNENFORCED",
+      "detail": "tool args non-conforming: {\"root\":\"example\"}"
+    },
+    {
+      "model": "qwen/qwen3-32b",
+      "schemaId": "S1",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "qwen/qwen3-32b",
+      "schemaId": "S4",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "qwen/qwen3-32b",
+      "schemaId": "S3",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "qwen/qwen3-32b",
+      "schemaId": "S5",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "qwen/qwen3-32b",
+      "schemaId": "S5",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "deepseek/deepseek-chat-v3.1",
+      "schemaId": "S2",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "deepseek/deepseek-chat-v3.1",
+      "schemaId": "S1",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "deepseek/deepseek-chat-v3.1",
+      "schemaId": "S3",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "deepseek/deepseek-chat-v3.1",
+      "schemaId": "S1",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "deepseek/deepseek-chat-v3.1",
+      "schemaId": "S2",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "deepseek/deepseek-chat-v3.1",
+      "schemaId": "S4",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "deepseek/deepseek-chat-v3.1",
+      "schemaId": "S3",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "qwen/qwen3-32b",
+      "schemaId": "S4",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "deepseek/deepseek-chat-v3.1",
+      "schemaId": "S5",
+      "mechanism": "M1",
+      "outcome": "UNENFORCED",
+      "detail": "not JSON: {\n    \"root\": {\n        \"child\": {\n            \"child\": {\n                \"child\": {\n                    \"child\": {\n                        \"child\": {"
+    },
+    {
+      "model": "deepseek/deepseek-chat-v3.1",
+      "schemaId": "S4",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "deepseek/deepseek-chat-v3.1",
+      "schemaId": "S5",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "mistralai/mistral-small-3.2-24b-instruct",
+      "schemaId": "S4",
+      "mechanism": "M1",
+      "outcome": "UNENFORCED",
+      "detail": "not JSON: { \"a\":                                                                                                                                                "
+    },
+    {
+      "model": "z-ai/glm-4.6",
+      "schemaId": "S1",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "z-ai/glm-4.6",
+      "schemaId": "S2",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "z-ai/glm-4.6",
+      "schemaId": "S3",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "z-ai/glm-4.6",
+      "schemaId": "S4",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "z-ai/glm-4.6",
+      "schemaId": "S1",
+      "mechanism": "M1",
+      "outcome": "UNENFORCED",
+      "detail": "no text content"
+    },
+    {
+      "model": "amazon/nova-lite-v1",
+      "schemaId": "S1",
+      "mechanism": "M1",
+      "outcome": "UNENFORCED",
+      "detail": "not JSON: Certainly! To provide a small example object conforming to a required structure, I'll first need to define what that required structure looks like. Le"
+    },
+    {
+      "model": "z-ai/glm-4.6",
+      "schemaId": "S2",
+      "mechanism": "M1",
+      "outcome": "UNENFORCED",
+      "detail": "no text content"
+    },
+    {
+      "model": "z-ai/glm-4.6",
+      "schemaId": "S3",
+      "mechanism": "M1",
+      "outcome": "UNENFORCED",
+      "detail": "no text content"
+    },
+    {
+      "model": "amazon/nova-lite-v1",
+      "schemaId": "S1",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "z-ai/glm-4.6",
+      "schemaId": "S5",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "amazon/nova-lite-v1",
+      "schemaId": "S3",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "amazon/nova-lite-v1",
+      "schemaId": "S2",
+      "mechanism": "M2",
+      "outcome": "UNENFORCED",
+      "detail": "no tool_call; content: <thinking>The User has asked for an example object that conforms to a given structure. I need to create a simple example object that meets the require"
+    },
+    {
+      "model": "amazon/nova-lite-v1",
+      "schemaId": "S2",
+      "mechanism": "M1",
+      "outcome": "UNENFORCED",
+      "detail": "not JSON: Certainly! To provide a concrete example, I'll assume you're referring to a common data structure like a JSON object. Let's say you need an example ob"
+    },
+    {
+      "model": "amazon/nova-lite-v1",
+      "schemaId": "S4",
+      "mechanism": "M2",
+      "outcome": "UNENFORCED",
+      "detail": "tool args non-conforming: {}"
+    },
+    {
+      "model": "amazon/nova-lite-v1",
+      "schemaId": "S3",
+      "mechanism": "M1",
+      "outcome": "UNENFORCED",
+      "detail": "not JSON: To provide a small example of an object conforming to a required structure, I'll need more context about the specific structure you're referring to. S"
+    },
+    {
+      "model": "amazon/nova-lite-v1",
+      "schemaId": "S5",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "amazon/nova-lite-v1",
+      "schemaId": "S4",
+      "mechanism": "M1",
+      "outcome": "UNENFORCED",
+      "detail": "not JSON: Certainly! To provide a concrete example, let's define a simple structure for an object that represents a \"Book\". Here's a basic structure for a book "
+    },
+    {
+      "model": "z-ai/glm-4.6",
+      "schemaId": "S4",
+      "mechanism": "M1",
+      "outcome": "UNENFORCED",
+      "detail": "no text content"
+    },
+    {
+      "model": "amazon/nova-lite-v1",
+      "schemaId": "S5",
+      "mechanism": "M1",
+      "outcome": "UNENFORCED",
+      "detail": "not JSON: Certainly! To provide a small example object conforming to a required structure, I'll first need to understand the structure you're referring to. Howe"
+    },
+    {
+      "model": "z-ai/glm-4.6",
+      "schemaId": "S5",
+      "mechanism": "M1",
+      "outcome": "UNENFORCED",
+      "detail": "no text content"
+    },
+    {
+      "model": "openai/gpt-4o-mini",
+      "schemaId": "S6",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "openai/gpt-5.1",
+      "schemaId": "S6",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "openai/gpt-5.1",
+      "schemaId": "S6",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "anthropic/claude-haiku-4.5",
+      "schemaId": "S6",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "anthropic/claude-sonnet-4.5",
+      "schemaId": "S6",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-flash",
+      "schemaId": "S6",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-flash",
+      "schemaId": "S6",
+      "mechanism": "M2",
+      "outcome": "UNENFORCED",
+      "detail": "tool args non-conforming: {\"root\":{\"child\":{\"name\":\"child0\",\"child\":{\"child\":{\"child\":\"leaf\",\"name\":\"child0\"},\"name\":\"child0\"}},\"name\":\"root\"}}"
+    },
+    {
+      "model": "anthropic/claude-haiku-4.5",
+      "schemaId": "S6",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "openai/gpt-4o-mini",
+      "schemaId": "S6",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-flash-lite",
+      "schemaId": "S6",
+      "mechanism": "M1",
+      "outcome": "UNENFORCED",
+      "detail": "parsed but non-conforming: {\n  \"root\": {\n    \"name\": \"level1\",\n    \"child\": {\n      \"name\": \"level2\",\n      \"child\": {\n        \"name\": \"level3\",\n        \"child\": {\n          \"na"
+    },
+    {
+      "model": "anthropic/claude-sonnet-4.5",
+      "schemaId": "S6",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-pro",
+      "schemaId": "S6",
+      "mechanism": "M2",
+      "outcome": "UNENFORCED",
+      "detail": "tool args non-conforming: {\"root\":{\"name\":\"root\",\"child\":\"child\"}}"
+    },
+    {
+      "model": "google/gemini-2.5-flash-lite",
+      "schemaId": "S6",
+      "mechanism": "M2",
+      "outcome": "UNENFORCED",
+      "detail": "tool args non-conforming: {\"root\":{\"name\":\"root\",\"child\":{\"child\":{\"name\":\"child\",\"child\":{\"child\":\"Hello World!\",\"name\":\"grandchild\"}},\"name\":\"child\"}}}"
+    },
+    {
+      "model": "google/gemini-2.5-pro",
+      "schemaId": "S6",
+      "mechanism": "M1",
+      "outcome": "UNENFORCED",
+      "detail": "not JSON: {\n  \"root\": {\n    \""
+    },
+    {
+      "model": "meta-llama/llama-3.3-70b-instruct",
+      "schemaId": "S6",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "meta-llama/llama-3.3-70b-instruct",
+      "schemaId": "S6",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "mistralai/mistral-small-3.2-24b-instruct",
+      "schemaId": "S6",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "qwen/qwen3-32b",
+      "schemaId": "S6",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "mistralai/mistral-small-3.2-24b-instruct",
+      "schemaId": "S6",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "z-ai/glm-4.6",
+      "schemaId": "S6",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "amazon/nova-lite-v1",
+      "schemaId": "S6",
+      "mechanism": "M1",
+      "outcome": "UNENFORCED",
+      "detail": "not JSON: Sure, I'll create a small example object that conforms to a required structure. Let's assume the required structure is a simple employee object with t"
+    },
+    {
+      "model": "qwen/qwen3-32b",
+      "schemaId": "S6",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "amazon/nova-lite-v1",
+      "schemaId": "S6",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "deepseek/deepseek-chat-v3.1",
+      "schemaId": "S6",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "deepseek/deepseek-chat-v3.1",
+      "schemaId": "S6",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "z-ai/glm-4.6",
+      "schemaId": "S6",
+      "mechanism": "M1",
+      "outcome": "UNENFORCED",
+      "detail": "no text content"
+    },
+    {
+      "model": "openai/gpt-4o-mini",
+      "schemaId": "S7",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "openai/gpt-5.1",
+      "schemaId": "S7",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "openai/gpt-5.1",
+      "schemaId": "S7",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "openai/gpt-4o-mini",
+      "schemaId": "S7",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "anthropic/claude-sonnet-4.5",
+      "schemaId": "S7",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "anthropic/claude-haiku-4.5",
+      "schemaId": "S7",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "anthropic/claude-sonnet-4.5",
+      "schemaId": "S7",
+      "mechanism": "M1",
+      "outcome": "UNENFORCED",
+      "detail": "not JSON: ```json\n{\n  \"id\": \"12345\",\n  \"name\": \"Sample Item\",\n  \"isActive\": true,\n  \"count\": 42,\n  \"tags\": [\"example\", \"demo\", \"sample\"]\n}\n```"
+    },
+    {
+      "model": "google/gemini-2.5-flash-lite",
+      "schemaId": "S7",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "anthropic/claude-haiku-4.5",
+      "schemaId": "S7",
+      "mechanism": "M1",
+      "outcome": "UNENFORCED",
+      "detail": "not JSON: # Example Object\n\n```json\n{\n  \"id\": \"user_123\",\n  \"name\": \"Alice Johnson\",\n  \"email\": \"alice@example.com\",\n  \"role\": \"admin\",\n  \"created_at\": \"2024-01"
+    },
+    {
+      "model": "google/gemini-2.5-flash",
+      "schemaId": "S7",
+      "mechanism": "M2",
+      "outcome": "UNENFORCED",
+      "detail": "tool args non-conforming: {\"root\":\"example\"}"
+    },
+    {
+      "model": "google/gemini-2.5-flash",
+      "schemaId": "S7",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-flash-lite",
+      "schemaId": "S7",
+      "mechanism": "M2",
+      "outcome": "UNENFORCED",
+      "detail": "tool args non-conforming: {\"root\":\"an example string\"}"
+    },
+    {
+      "model": "meta-llama/llama-3.3-70b-instruct",
+      "schemaId": "S7",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "meta-llama/llama-3.3-70b-instruct",
+      "schemaId": "S7",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-pro",
+      "schemaId": "S7",
+      "mechanism": "M2",
+      "outcome": "UNENFORCED",
+      "detail": "tool args non-conforming: {\"root\":\"\"}"
+    },
+    {
+      "model": "qwen/qwen3-32b",
+      "schemaId": "S7",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "mistralai/mistral-small-3.2-24b-instruct",
+      "schemaId": "S7",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-pro",
+      "schemaId": "S7",
+      "mechanism": "M1",
+      "outcome": "UNENFORCED",
+      "detail": "not JSON: {\n  \"root\": {\n"
+    },
+    {
+      "model": "mistralai/mistral-small-3.2-24b-instruct",
+      "schemaId": "S7",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "qwen/qwen3-32b",
+      "schemaId": "S7",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "amazon/nova-lite-v1",
+      "schemaId": "S7",
+      "mechanism": "M1",
+      "outcome": "UNENFORCED",
+      "detail": "not JSON: Certainly! To provide a small example of an object conforming to a specific structure, I'll need to know the exact structure you're referring to. Howe"
+    },
+    {
+      "model": "amazon/nova-lite-v1",
+      "schemaId": "S7",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "z-ai/glm-4.6",
+      "schemaId": "S7",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "deepseek/deepseek-chat-v3.1",
+      "schemaId": "S7",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "deepseek/deepseek-chat-v3.1",
+      "schemaId": "S7",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "z-ai/glm-4.6",
+      "schemaId": "S7",
+      "mechanism": "M1",
+      "outcome": "UNENFORCED",
+      "detail": "no text content"
+    },
+    {
+      "model": "openai/gpt-4o-mini",
+      "schemaId": "S8",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "openai/gpt-5.1",
+      "schemaId": "S8",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "openai/gpt-5.1",
+      "schemaId": "S8",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "anthropic/claude-haiku-4.5",
+      "schemaId": "S8",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "anthropic/claude-sonnet-4.5",
+      "schemaId": "S8",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-flash",
+      "schemaId": "S8",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "anthropic/claude-haiku-4.5",
+      "schemaId": "S8",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-flash",
+      "schemaId": "S8",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-flash-lite",
+      "schemaId": "S8",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-flash-lite",
+      "schemaId": "S8",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "anthropic/claude-sonnet-4.5",
+      "schemaId": "S8",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "openai/gpt-4o-mini",
+      "schemaId": "S8",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-pro",
+      "schemaId": "S8",
+      "mechanism": "M1",
+      "outcome": "UNENFORCED",
+      "detail": "not JSON: {\n  \"root\": {\n"
+    },
+    {
+      "model": "meta-llama/llama-3.3-70b-instruct",
+      "schemaId": "S8",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "meta-llama/llama-3.3-70b-instruct",
+      "schemaId": "S8",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "google/gemini-2.5-pro",
+      "schemaId": "S8",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "mistralai/mistral-small-3.2-24b-instruct",
+      "schemaId": "S8",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "mistralai/mistral-small-3.2-24b-instruct",
+      "schemaId": "S8",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "qwen/qwen3-32b",
+      "schemaId": "S8",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "deepseek/deepseek-chat-v3.1",
+      "schemaId": "S8",
+      "mechanism": "M1",
+      "outcome": "OK"
+    },
+    {
+      "model": "amazon/nova-lite-v1",
+      "schemaId": "S8",
+      "mechanism": "M2",
+      "outcome": "UNENFORCED",
+      "detail": "tool args non-conforming: {}"
+    },
+    {
+      "model": "qwen/qwen3-32b",
+      "schemaId": "S8",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "amazon/nova-lite-v1",
+      "schemaId": "S8",
+      "mechanism": "M1",
+      "outcome": "UNENFORCED",
+      "detail": "not JSON: Sure, I'll provide a small example object that conforms to a specific structure. Let's assume we're dealing with a structure for a simple product cata"
+    },
+    {
+      "model": "z-ai/glm-4.6",
+      "schemaId": "S8",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "deepseek/deepseek-chat-v3.1",
+      "schemaId": "S8",
+      "mechanism": "M2",
+      "outcome": "OK"
+    },
+    {
+      "model": "z-ai/glm-4.6",
+      "schemaId": "S8",
+      "mechanism": "M1",
+      "outcome": "UNENFORCED",
+      "detail": "no text content"
+    }
+  ]
+}
