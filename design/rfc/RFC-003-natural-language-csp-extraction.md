@@ -3,7 +3,7 @@ id: RFC-003
 title: Natural-Language Puzzle to CSP Extraction
 status: draft
 created: 2026-08-18
-adrs: [ADR-004, ADR-005]
+adrs: [ADR-004, ADR-005, ADR-003]
 ---
 
 # RFC-003: Natural-Language Puzzle to CSP Extraction
@@ -116,11 +116,12 @@ inferred:
   but not semantic correctness (e.g. confusing "left of" with "right of").
 - **Hybrid** — a cascade across any of the above (e.g. rule-based fast path, falling back to a
   small model or LLM only for clues the rules don't recognize), or one tier producing a candidate
-  extraction that another validates (e.g. LLM extraction checked by round-tripping through
-  `src/solver/`). Adds routing/fallback-boundary complexity but can combine determinism where
-  possible with graceful degradation elsewhere, and this project's puzzles have an unusually
-  strong validator already available for free: an extraction can be checked by attempting to
-  solve it and comparing against the puzzle's expected solution/uniqueness.
+  extraction that another validates (e.g. a second LLM call judging the first extraction's
+  fidelity to the source prose). Adds routing/fallback-boundary complexity but can combine
+  determinism where possible with graceful degradation elsewhere. Note: solving the extracted
+  model is *not* a reliable validator on its own — a faithful extraction of a genuinely
+  unsatisfiable or under-constrained prose should legitimately fail to solve uniquely, so
+  solvability and translation correctness are orthogonal, not substitutes for each other (§7.3).
 
 Which tier(s) an ADR should actually commit to isn't resolved here — see the comparative
 evaluation in the Appendix (section 9), which scores each tier against a set of selection
@@ -128,10 +129,12 @@ criteria and flags which are uncertain enough to warrant a time-boxed spike firs
 
 ### 5.3 Cross-cutting concerns (apply to any strategy)
 
-- **Validation** — how an extraction is checked before being trusted: round-tripping (solve the
-  extracted model and confirm a unique or expected solution), cross-checking against the puzzle's
-  declared `variables`/`domains`/`constraints` front-matter counts (see `catalog/puzzles/` format),
-  or manual review.
+- **Validation** — how an extraction is checked before being trusted: a fidelity check against
+  the source prose (by another extraction pass, a dedicated critic, or manual review) — not
+  solving the extracted model, which answers a different question (is this *puzzle* solvable) than
+  whether the *translation* was faithful (§7.3). Cross-checking against the puzzle's declared
+  `variables`/`domains`/`constraints` front-matter counts (see `catalog/puzzles/` format) is a
+  cheap, complementary sanity check, not a substitute for a fidelity check either.
 - **Dependency footprint** — ranges from a pure-npm parsing/pattern-matching library (rule-based,
   JS-native NLP libraries, in-process ONNX-scale small models) to a second-language subprocess/
   sidecar (Python-ecosystem NLP libraries, locally-hosted LLM-scale models) to a network-calling
@@ -172,18 +175,24 @@ one solver's syntax to also serve the future graph representation?
 
 7.2. For an LLM-based or hybrid strategy, what's the acceptable failure mode when extraction is
 wrong — reject and flag for manual review, attempt self-correction via re-prompting, or something
-else?
+else? Resolved by [ADR-004](../adr/ADR-004-llm-extraction-critic-loop.md) §2.4 for the LLM tier:
+neither blind self-correction (re-prompting with no new information) nor an immediate reject —
+informed revision using a critic's specific feedback, escalating to a different model tier if
+revision doesn't converge.
 
 7.3. Should validation require round-tripping through the solver (extract → solve → compare
 against the puzzle's expected solution/uniqueness) as a hard gate before an extraction is
-accepted, given `src/solver/` already exists to make that check possible?
-[SPIKE-004](../spikes/SPIKE-004-llm-based-extraction/SPIKE.md) found a concrete case (not just a
-theoretical risk) where the identical LLM extraction call produced a correct result once and a
-schema-valid-but-semantically-wrong result on a second, identical run — schema validation alone
-did not and structurally cannot catch this. That evidence weighs this question toward "yes, a
-hard gate" if the LLM tier (or a hybrid including it) is chosen, though the answer may differ for
-tiers with different determinism profiles (9.1's rule-based tier is perfectly deterministic by
-construction and may not need the same gate).
+accepted, given `src/solver/` already exists to make that check possible? **Resolved: no.**
+[ADR-004](../adr/ADR-004-llm-extraction-critic-loop.md) §2.4 found this framing itself was
+mistaken, not just unproven — solvability and translation correctness are orthogonal. A faithful
+extraction of a genuinely unsatisfiable or under-constrained prose should legitimately fail to
+solve uniquely; gating trust on solve outcome would reject correct extractions of ill-posed
+prose. The solver also never sees the source prose, so it structurally cannot detect
+misinterpretation. [SPIKE-004](../spikes/SPIKE-004-llm-based-extraction/SPIKE.md)'s
+non-determinism finding (the identical extraction call producing a correct result once and a
+schema-valid-but-semantically-wrong result on a second run) still stands as evidence that schema
+validation alone is insufficient — but the fix ADR-004 adopts is a **fidelity critic** (a second
+LLM call judging the extraction against the source prose directly), not a solver round-trip.
 
 7.4. Does extraction need to run offline/deterministically for CI (`tests/`, `pnpm test`), and if
 an LLM-based strategy is chosen, how would that be tested without a live model dependency in CI?
@@ -210,8 +219,10 @@ its own boundary case before an ADR commits to a representation?
 ## 8. ADRs
 
 - [ADR-004](../adr/ADR-004-llm-extraction-critic-loop.md) — Adopt LLM-Based Extraction with a
-  Solver-Validated Critic Loop
+  Fidelity Critic Loop
 - [ADR-005](../adr/ADR-005-extractedcsp-mzn-compiler.md) — ExtractedCsp to MiniZinc Compiler
+- [ADR-003](../adr/ADR-003-cli-interface.md) — CLI Interface Shape (extended with the `extract`
+  subcommand)
 
 ## 9. Appendix: Extraction Strategy Evaluation
 
@@ -439,9 +450,11 @@ well-intentioned phrasing, not arbitrary/adversarial input), not the catalog's c
 - **Spike?**: Done — [SPIKE-004](../spikes/SPIKE-004-llm-based-extraction/SPIKE.md) measured
   accuracy against the full stratified sample on both a frontier and a cheap model, confirming
   this tier's structured-output extraction genuinely handles cases every other tier failed —
-  and, more importantly, produced a concrete non-determinism failure case that makes RFC-003
-  §7.3's round-trip solver-validation question look closer to a requirement than an optional
-  gate if this tier is chosen (see §7.3).
+  and, more importantly, produced a concrete non-determinism failure case establishing that
+  schema validation alone is not a sufficient trust signal for this tier (see §7.3). The fix that
+  finding motivated is a fidelity critic judging the extraction against the source prose
+  directly ([ADR-004](../adr/ADR-004-llm-extraction-critic-loop.md) §2.4) — not round-trip
+  solver validation, which §7.3 now resolves against.
 
 ### 9.5 Hybrid
 
@@ -458,8 +471,9 @@ well-intentioned phrasing, not arbitrary/adversarial input), not the catalog's c
   inherits the fallback tier's non-determinism otherwise; whether that's acceptable depends on
   what share of clues actually need the fallback (unknown until component tiers are measured).
 - **Failure legibility**: Potentially the best of any approach — the routing decision itself
-  (which tier handled this clue) is a natural place to surface confidence, and this project's
-  solver-based round-trip validation (§5.2, §7.3) is itself a hybrid pattern.
+  (which tier handled this clue) is a natural place to surface confidence, and the fidelity-critic
+  pattern adopted for the LLM tier ([ADR-004](../adr/ADR-004-llm-extraction-critic-loop.md) §2.4)
+  is itself a hybrid pattern — one LLM call producing a candidate, a second judging it.
 - **Extensibility to novel phrasing**: Good — new phrasing simply falls through to the fallback
   tier without requiring the fast path to be extended immediately, and inherits whichever
   fallback tier's reach toward RFC-001's future clue-strictness tiers — a rule-based + LLM hybrid
@@ -491,8 +505,9 @@ NuExtract/UniNER-scale (a variant within 9.3) remains unspiked, and not obviousl
 GLiNER2's results. [SPIKE-004](../spikes/SPIKE-004-llm-based-extraction/SPIKE.md) closed the
 LLM-based tier's Coverage gap and, more importantly, turned Determinism from an abstract concern
 into a concrete, reproduced failure case — the single most decision-relevant finding across all
-four spikes, since it makes Open Question 7.3's round-trip solver-validation gate look closer to
-a requirement than an optional nice-to-have if this tier (or a hybrid including it) is chosen.
+four spikes, since it's what motivated [ADR-004](../adr/ADR-004-llm-extraction-critic-loop.md)'s
+fidelity critic loop as this tier's validation mechanism (§7.3 — notably *not* round-trip solver
+validation, which turned out to be the wrong fix for this exact finding).
 [SPIKE-001](../spikes/SPIKE-001-catalog-clue-audit/SPIKE.md) closed this gap for the rule-based
 tier (9.1) and produced the shape taxonomy the other spikes test against: two of the twelve
 shapes it found (an ASCII-diagram arithmetic layout, and requirements matched against an embedded

@@ -11,12 +11,15 @@ specs: []
 
 ## 1. Context
 
-[ADR-004](ADR-004-llm-extraction-critic-loop.md) §2.4's critic loop round-trips an extraction
-through this project's solver to catch semantically-wrong-but-schema-valid output — but step 2 of
-that loop ("compile `ExtractedCsp` to a MiniZinc model") was explicitly deferred there as
-follow-up work, and flagged as a genuine sequencing dependency, not just a nice-to-have: without
-it, ADR-004's critic loop cannot run at all. This ADR is that follow-up: it designs the compiler
-from [ADR-004](ADR-004-llm-extraction-critic-loop.md) §2.2's `ExtractedCsp` representation to the
+[ADR-004](ADR-004-llm-extraction-critic-loop.md) §2.2 introduced `ExtractedCsp`, a solver-agnostic
+intermediate representation extraction produces. ADR-004's own critic loop (§2.4) validates an
+extraction's *fidelity* to the source prose directly — a second LLM call, not a solver round-trip
+— so it has no dependency on this ADR. Compiling `ExtractedCsp` to MiniZinc remains a genuinely
+needed, independent capability regardless: it's what actually lets a validated extraction be
+rendered as a solvable model at all — [ADR-003](ADR-003-cli-interface.md) §2.6's `extract` CLI
+compiles by default before printing, and the same compiled output can be piped to `solve`. This
+ADR designs that compiler, from
+[ADR-004](ADR-004-llm-extraction-critic-loop.md) §2.2's `ExtractedCsp` representation to the
 MiniZinc target [ADR-002](ADR-002-adopt-minizinc-solver.md) §2.5 already committed to (decision
 variables as `array of var`, one per domain/attribute-category; constraints built from
 `alldifferent`, comparison/arithmetic operators, and `if-then-else`) — directly completing RFC-003
@@ -163,15 +166,19 @@ explicitly left open there.
   extractions detectable, not silently wrong) — this compiler is squarely in the path that goal
   is about.
 - **Have the compiler itself call an LLM to interpret an unrecognized relation or condition
-  shape**, rather than failing at compile time. Rejected: this compiler is meant to be a
-  deterministic translation stage (unlike extraction itself) — introducing a second, independent
-  LLM dependency into it would undermine the very determinism the critic loop
-  ([ADR-004](ADR-004-llm-extraction-critic-loop.md) §2.4) relies on this stage having.
+  shape**, rather than failing at compile time. Rejected: this compiler is meant to be a fast,
+  free, deterministic translation stage — introducing a second, independent LLM dependency into
+  it would add cost and non-determinism to a step that should have neither, for no benefit this
+  compiler's own scope needs; extraction ([ADR-004](ADR-004-llm-extraction-critic-loop.md)) is
+  where LLM interpretation belongs.
 
 ## 4. Consequences
 
-- [ADR-004](ADR-004-llm-extraction-critic-loop.md)'s critic loop is now fully buildable — this
-  was the missing, blocking piece named in that ADR's Context.
+- This compiler is a genuinely independent capability, not a dependency of
+  [ADR-004](ADR-004-llm-extraction-critic-loop.md)'s critic loop (which validates fidelity
+  directly against the source prose, not via a solver round-trip) — it's a dependency of
+  [ADR-003](ADR-003-cli-interface.md) §2.6's `extract` CLI instead, which compiles by default
+  before printing. Rendering and trust are decided by two different ADRs on purpose.
 - The adjacency-relation registry (2.3) and the fact-driven/variable-conditioned distinction
   (2.4) both start covering only the relation names and condition shapes already evidenced by
   [SPIKE-001](../spikes/SPIKE-001-catalog-clue-audit/SPIKE.md)'s 12 catalog shapes — expected to
