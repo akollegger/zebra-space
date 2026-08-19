@@ -129,9 +129,10 @@ text directly, not a free-form blob — designed to map cleanly onto both known 
 variables, `alldifferent`/comparison/arithmetic/`if-then-else` constraints) and a future graph
 representation (entities/constraints as candidate nodes/edges).
 
-The decision is the six-kind constraint taxonomy below (drawn from SPIKE-001's shapes, per the
-rationale after the listing) — not the exact TypeScript syntax. The shape illustrates that
-taxonomy; field names and precise typing are implementation's call, not fixed by this ADR:
+The decision is the constraint taxonomy below (drawn from SPIKE-001's shapes, per the rationale
+after the listing — originally six kinds, seven since `linkedAttributes` was added) — not the
+exact TypeScript syntax. The shape illustrates that taxonomy; field names and precise typing are
+implementation's call, not fixed by this ADR:
 
 ```ts
 interface ExtractedCsp {
@@ -146,6 +147,7 @@ interface ExtractedCsp {
 
 type ExtractedConstraint =
   | { readonly kind: "assignment"; readonly entity: string; readonly variable: string; readonly value: string }
+  | { readonly kind: "linkedAttributes"; readonly entityType: string; readonly attributes: readonly { readonly variable: string; readonly value: string }[] }
   | { readonly kind: "allDifferent"; readonly variable: string }
   | { readonly kind: "adjacency"; readonly relation: string; readonly a: string; readonly b: string }
   | { readonly kind: "relation"; readonly name: string; readonly a: string; readonly b: string }
@@ -164,6 +166,31 @@ deferring the compiler that produces it, this ADR commits to *this* representati
 constraint taxonomy while deferring the `ExtractedCsp` → `.mzn` compiler to
 [ADR-005](ADR-005-extractedcsp-mzn-compiler.md) — expected to grow as new constraint shapes are
 encountered, the same way ADR-003 names itself "deliberately incomplete by design."
+
+**`linkedAttributes` is a correction, added after implementation testing exposed a gap in the
+original six-kind taxonomy — this ADR's own motivating example for `assignment` doesn't actually
+fit `assignment`'s shape.** [SPIKE-001](../spikes/SPIKE-001-catalog-clue-audit/SPIKE.md)'s shape A
+("Attribute-assignment") is literally "The Englishman lives in the red house" — but that clue
+never names *which* house. `assignment`'s `entity` field requires a known entity id, which this
+clue doesn't supply; running the full pipeline against real catalog puzzles (not SPIKE-004's
+small structural sample) surfaced this as an actual extraction failure, not a theoretical gap —
+`arithmetic` and `derivedRule` have the same problem, since every kind that touches a domain
+variable assumes a resolvable entity.
+
+The fix is not entity resolution (recognizing which house "the green house" refers to across
+clues) — that work turns out to be unnecessary, not just hard. `linkedAttributes` states that
+*some* entity of `entityType` has every listed `variable = value` simultaneously, existentially
+quantified, with no entity ever named — the solver performs the binding as a side effect of
+solving, not extraction. Verified directly against a real `minizinc` install: for two
+already-declared domain arrays that are each bijections over the same entity set (as `allDifferent`
+domains are), `constraint forall(e in EntityType)(var1[e] = val1 <-> var2[e] = val2);` correctly
+binds an unnamed shared entity and solves to the expected assignment. This is the general form
+shape A actually needs; `assignment`'s entity-indexed form remains correct for clues that *do*
+supply a resolvable entity (an ordinal — "the first house" — or a previously-bound one).
+`linkedAttributes` does not address relational chaining ("the Chesterfields smoker lives next to
+the fox owner," which binds two *different*, both-unnamed entities via `adjacency` rather than
+direct co-occurrence) — a harder, related case this ADR does not resolve, left as a follow-up
+(§4).
 
 Shapes G (an ASCII-art arithmetic diagram) and K's raw markdown table (SPIKE-001) are not
 addressed by this schema directly — per SPIKE-004, the LLM tier parses them directly into the
@@ -346,7 +373,7 @@ both Google-specific but neither detectable without testing:
   under the mechanism §2.1 adopts, which is why this section exists alongside it.
 - **Nullable nested objects**: `anyOf: [<object>, null]` is likewise degraded to a string.
   Discriminated unions of *objects* are fine, so this is nullability specifically, not unions —
-  meaning §2.2's six-kind `ExtractedConstraint` union is safe as such.
+  meaning §2.2's `ExtractedConstraint` union is safe as such regardless of how many kinds it has.
 
 The combined encoding (inlined, depth-bounded, array edges, no nullable objects) scored 12/13
 across the sampled models under tool calling, including all three Google models that failed every
@@ -361,6 +388,18 @@ an LLM provider is unaffected.
 
 ## 3. Alternatives Considered
 
+- **Sentence chunking + entity resolution** (extract each clue independently, then stitch the
+  per-clue facts into one `ExtractedCsp` by resolving which anonymous entity each fact refers
+  to). Rejected: the "resolution" step this needs is exactly `linkedAttributes`'s existential
+  semantics (§2.2) done by hand instead of left to the solver — chunking would have application
+  code reimplement, as an ad hoc algorithm, what `forall`/`<->` already does declaratively and
+  correctly. It also doesn't touch this ADR's other real gaps (missing arithmetic operators, a
+  small adjacency registry) and introduces a harder unaddressed case of its own (§2.2's closing
+  note on relational chaining, which needs binding *two* anonymous entities, not one). Chunking
+  may still be worth its own investigation for a different reason — whether per-clue extraction
+  accuracy meaningfully beats whole-puzzle accuracy on longer puzzles — but that's a claim about
+  accuracy under load, not expressiveness, and doesn't follow from this ADR's representational
+  gap.
 - **Rule-based/grammar (9.1) as the primary tier.** Rejected (Context): SPIKE-001's 29% simple-
   pattern coverage means the other 71% needs several distinct engineering efforts, not grammar
   extensions — disproportionate given the LLM tier solves the hardest of those shapes natively.
@@ -460,6 +499,24 @@ an LLM provider is unaffected.
   recorded here because it will recur — is that provider capability *declarations* are not
   evidence, and that a mechanism which can fail with HTTP 200 (Anthropic ignoring
   `response_format`) is materially worse than one that fails loudly, independent of success rates.
+- **`linkedAttributes` (§2.2) is a decided taxonomy addition, not yet implemented.** It hasn't
+  reached `src/extraction/types.ts`, `src/compiler/compile.ts`, or the extraction prompt. Until it
+  does, the pipeline cannot faithfully extract shape A's actual common form (co-occurring
+  attributes with no named entity) — which is most of what a classic zebra puzzle's clue list is
+  made of, not an edge case.
+- **The gap `linkedAttributes` fixes was found by running real catalog puzzles through the live
+  pipeline, not by the test suite.** `tests/extraction/*.test.ts` stubs the provider, so it
+  validates the critic-loop *mechanism* — revision, escalation, error taxonomy — against
+  whatever `ExtractedCsp` the stub is told to return; it cannot catch a representational gap in
+  the taxonomy itself, since the stub never has to actually solve the extraction problem.
+  `tests/extraction/live.test.ts` (SC-002, §2.5) checks aggregate accuracy against a 5-puzzle
+  sample but wasn't run as part of finding this. Neither test tier is a substitute for
+  occasionally running the real pipeline against a real puzzle end to end.
+- **Relational chaining remains open.** §2.2 names it directly: a clue like "the Chesterfields
+  smoker lives next to the fox owner" needs two anonymous entities bound to each other via
+  `adjacency`, not one entity's attributes bound to each other via `linkedAttributes`. Whether
+  this needs a seventh constraint kind or a generalization of `linkedAttributes`/`adjacency` is
+  not decided here.
 - This ADR's single-shot, pure-`Effect`, no-agentic-framework shape (§2.3) is a starting point
   scoped to this MVP, not a permanent architectural stance. Richer agentic patterns — tool-using
   extraction subagents, multi-agent critique panels, retrieval-augmented few-shot prompting drawn
