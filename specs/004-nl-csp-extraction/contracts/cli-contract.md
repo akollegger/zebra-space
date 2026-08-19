@@ -41,7 +41,7 @@ Reuses Stricli's exact taxonomy `specs/003-cli-interface/research.md` Finding 3 
 | Code | Meaning |
 |---|---|
 | `0` | A rendered result was reached: a critic-accepted `ExtractedCsp` (`--json`), or a critic-accepted **and** successfully compiled `.mzn` model (default). |
-| `1` | `CriticRejected` (escalation exhausted without acceptance), `ProviderError`, `SchemaViolation` (ADR-004 §2.6), or — default output only — `CompileError` (ADR-005) — Stricli's `CommandRunError`. Printed to stderr. |
+| `1` | `CriticRejected` (escalation exhausted without acceptance), `ProviderError`, `SchemaRejected`, `SchemaViolation` (ADR-004 §2.6), or — default output only — `CompileError` (ADR-005) — Stricli's `CommandRunError`. Printed to stderr. |
 | `251` | Unrecognized subcommand — shared with `solve`'s contract, unaffected by this feature. |
 | `252` | Unrecognized/malformed flag. |
 
@@ -58,6 +58,20 @@ Reuses Stricli's exact taxonomy `specs/003-cli-interface/research.md` Finding 3 
   and `FidelityCritique`) is available on `CriticRejected`, not just the final attempt
   (data-model.md) — printed to stderr in a form suitable for manual review, exact formatting is
   implementation's call.
+- **Every failure names its cause and a next action, with no JS stack trace appended** (spec.md
+  SC-003). The four extraction failures are deliberately distinguishable from each other in the
+  printed text, because their remedies differ:
+
+  | Failure | What the user is told to do |
+  |---|---|
+  | `ProviderError` | Service unreachable/failed — check connectivity or credentials; retry. |
+  | `SchemaRejected` | The provider refused the schema shape itself. Retrying won't help; use a different `--model`. |
+  | `SchemaViolation` | The model replied outside the schema (or ignored the tool call). Retrying may help; a stronger model more so. |
+  | `CriticRejected` | The translation couldn't be validated as faithful — shows every attempt's specific issues. |
+
+  Stack-trace suppression is a contract detail, not cosmetics: an error whose message is buried
+  under frames from `node_modules/effect` fails SC-003's "without needing to inspect internal
+  logs or source code". Enforced by test, not convention.
 - `--model`/`--frontier-model`/`ZEBRA_MODEL`/`ZEBRA_FRONTIER_MODEL` accept any string; an
   unrecognized identifier surfaces as `ProviderError` at request time, not validated upfront
   (ADR-003 §4).

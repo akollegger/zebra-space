@@ -9,6 +9,7 @@ import {
   FidelityCritique,
   fidelityCritiqueJsonSchema,
   type ProviderError,
+  type SchemaRejected,
   type SchemaViolation,
 } from "./types.ts"
 
@@ -82,7 +83,7 @@ function extractOnce(
   model: string,
   prose: string,
   context?: RevisionContext,
-): Effect.Effect<ExtractedCsp, ProviderError | SchemaViolation> {
+): Effect.Effect<ExtractedCsp, ProviderError | SchemaRejected | SchemaViolation> {
   return requestStructuredCompletion({
     model,
     systemPrompt: extractionSystemPrompt(),
@@ -97,7 +98,7 @@ function critiqueOnce(
   model: string,
   prose: string,
   candidate: ExtractedCsp,
-): Effect.Effect<FidelityCritique, ProviderError | SchemaViolation> {
+): Effect.Effect<FidelityCritique, ProviderError | SchemaRejected | SchemaViolation> {
   return requestStructuredCompletion({
     model,
     systemPrompt: critiqueSystemPrompt(),
@@ -115,7 +116,10 @@ function critiqueOnce(
  * can escalate to another tier and still report the full attempt history if that tier also fails
  * (ADR-004 §2.6's CriticRejected carries attempts from every tier, not just the last).
  */
-function runTier(model: string, prose: string): Effect.Effect<TierOutcome, ProviderError | SchemaViolation> {
+function runTier(
+  model: string,
+  prose: string,
+): Effect.Effect<TierOutcome, ProviderError | SchemaRejected | SchemaViolation> {
   return Effect.gen(function* () {
     const attempts: ExtractionAttempt[] = []
     let context: RevisionContext | undefined

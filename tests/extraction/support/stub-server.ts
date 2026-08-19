@@ -11,11 +11,16 @@ export interface StubRequest {
   readonly schemaName: string
   readonly systemPrompt: string
   readonly userPrompt: string
+  /** The JSON Schema actually sent as the forced tool's `parameters` (ADR-004 §2.1/§2.7). */
+  readonly toolParameters: unknown
 }
 
 export interface StubExchange {
   readonly request: StubRequest
+  /** Reply as the model calling the forced tool with `payload` as its arguments. */
   respondWithJson(payload: unknown): void
+  /** Reply with prose and no tool call at all — the SchemaViolation path SPIKE-005 observed. */
+  respondWithProse(text: string): void
   respondWithError(statusCode: number, message: string): void
 }
 
@@ -30,11 +35,10 @@ export interface StubServer {
 interface RawChatBody {
   readonly model?: string
   readonly messages?: ReadonlyArray<{ readonly role: string; readonly content: string }>
-  readonly response_format?: {
-    readonly json_schema?: {
-      readonly name?: string
-    }
-  }
+  readonly tools?: ReadonlyArray<{
+    readonly function?: { readonly name?: string; readonly parameters?: unknown }
+  }>
+  readonly tool_choice?: { readonly function?: { readonly name?: string } }
 }
 
 function readBody(req: import("node:http").IncomingMessage): Promise<string> {
@@ -46,7 +50,7 @@ function readBody(req: import("node:http").IncomingMessage): Promise<string> {
   })
 }
 
-function chatCompletionResponse(model: string, content: string): unknown {
+function toolCallResponse(model: string, toolName: string, args: string): unknown {
   return {
     id: "stub-completion",
     object: "chat.completion",
@@ -56,10 +60,27 @@ function chatCompletionResponse(model: string, content: string): unknown {
     choices: [
       {
         index: 0,
-        finish_reason: "stop",
-        message: { role: "assistant", content },
+        finish_reason: "tool_calls",
+        message: {
+          role: "assistant",
+          content: null,
+          tool_calls: [
+            { id: "call_stub", type: "function", function: { name: toolName, arguments: args } },
+          ],
+        },
       },
     ],
+  }
+}
+
+function proseResponse(model: string, content: string): unknown {
+  return {
+    id: "stub-completion",
+    object: "chat.completion",
+    created: 0,
+    model,
+    system_fingerprint: null,
+    choices: [{ index: 0, finish_reason: "stop", message: { role: "assistant", content } }],
   }
 }
 
@@ -75,20 +96,32 @@ export function startStubServer(handler: StubHandler): Promise<StubServer> {
           const body = JSON.parse(raw) as RawChatBody
           const systemMessage = body.messages?.find((m) => m.role === "system")
           const userMessage = body.messages?.find((m) => m.role === "user")
+          const tool = body.tools?.[0]?.function
           const request: StubRequest = {
             model: body.model ?? "",
-            schemaName: body.response_format?.json_schema?.name ?? "",
+            // The forced tool's name carries what response_format's json_schema.name used to
+            // (ADR-004 §2.1) — tests still discriminate extraction vs. critique by this.
+            schemaName: body.tool_choice?.function?.name ?? tool?.name ?? "",
             systemPrompt: systemMessage?.content ?? "",
             userPrompt: userMessage?.content ?? "",
+            toolParameters: tool?.parameters,
           }
           requests.push(request)
 
           const exchange: StubExchange = {
             request,
             respondWithJson(payload) {
-              const responseBody = chatCompletionResponse(request.model, JSON.stringify(payload))
+              const responseBody = toolCallResponse(
+                request.model,
+                request.schemaName,
+                JSON.stringify(payload),
+              )
               res.writeHead(200, { "content-type": "application/json" })
               res.end(JSON.stringify(responseBody))
+            },
+            respondWithProse(text) {
+              res.writeHead(200, { "content-type": "application/json" })
+              res.end(JSON.stringify(proseResponse(request.model, text)))
             },
             respondWithError(statusCode, message) {
               res.writeHead(statusCode, { "content-type": "application/json" })

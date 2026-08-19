@@ -2,6 +2,7 @@ import { buildCommand } from "@stricli/core"
 import { Effect } from "effect"
 import { solveFile } from "../../solver/solve.ts"
 import type { SolverError, SolveResult } from "../../solver/types.ts"
+import { UserFacingError } from "../user-facing-error.ts"
 
 interface SolveFlags {
   readonly data?: string
@@ -42,7 +43,7 @@ function formatSolverError(error: SolverError): string {
 async function solveCommandFunc(flags: SolveFlags, modelPath: string): Promise<void> {
   const result = await Effect.runPromise(
     solveFile({ modelPath, dataPath: flags.data, solverId: flags.solver }).pipe(
-      Effect.mapError((error) => new Error(formatSolverError(error))),
+      Effect.mapError((error) => new UserFacingError(formatSolverError(error))),
     ),
   )
 

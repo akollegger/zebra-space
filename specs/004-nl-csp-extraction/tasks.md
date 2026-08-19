@@ -175,6 +175,34 @@ lint/type-safety and offline-testability constraints.
 
 ---
 
+## Phase 8: Realignment after SPIKE-005 (ADR-004 revision)
+
+**Purpose**: T004/T007 above were completed against ADR-004's *original* mechanism
+(`response_format` structured output). SPIKE-005 then measured that mechanism as unreliable
+across providers and ADR-004 §2.1/§2.7 were revised. Those tasks are left as-completed rather
+than rewritten — they record what was actually built at the time — and this phase records the
+follow-through.
+
+- [X] T041 Switch `src/extraction/provider.ts` from `responseFormat` to a forced tool call (`tools` + `toolChoice`, reading `choices[0].message.toolCalls[0].function.arguments`) per revised ADR-004 §2.1
+- [X] T042 Rebuild `ExtractedConstraint`/`ArithmeticExpression` in `src/extraction/types.ts` with depth-bounded constructors instead of `Schema.suspend`, so the emitted schema is cycle-free (ADR-004 §2.7); `MAX_NESTING_DEPTH = 2`
+- [X] T043 Replace `ArithmeticExpression`'s `left`/nullable-`right` with an `operands` array (ADR-004 §4) and enforce operator arity in `src/compiler/compile.ts`
+- [X] T044 Add `toProviderSchema`/`assertProviderSafeSchema` to `src/extraction/types.ts` — inline any residual `$ref`/`$defs` and **refuse to send** a schema containing `$ref`, `$defs`, or a nullable nested object (ADR-004 §2.7), so this failure mode cannot ship silently
+- [X] T045 Add `SchemaRejected` to the error taxonomy, distinct from `ProviderError`, with provider-message signature matching in `src/extraction/provider.ts` — the remedy differs (different model vs. retry), so the error must too
+- [X] T046 Give every extraction failure an actionable CLI message naming cause + next action (`src/cli/subcommands/extract.ts`), and add `src/cli/user-facing-error.ts` so no JS stack trace is appended (spec.md SC-003); applied to `solve` too, which had the same wart
+- [X] T047 Teach `tests/extraction/support/stub-server.ts` to speak tool calls (`respondWithJson` → tool call, new `respondWithProse` for the ignored-tool case) and record the schema actually sent
+- [X] T048 Add regression tests: emitted schema carries no `$ref`/`$defs`; request is a forced tool call; `SchemaRejected` vs `ProviderError`; prose-instead-of-tool → `SchemaViolation`; and two CLI tests asserting actionable text with no `node_modules` stack frames
+- [X] T049 Realign `research.md` (Findings 3/4 + SPIKE-004 confirmations), `data-model.md`, and `contracts/cli-contract.md` with the revised mechanism — including recording where the original research was *wrong*, not just replacing it
+- [ ] T050 Revisit ADR-004 §2.5's default cheap tier — **evidence gathered, decision deliberately deferred.** The schema and mechanism now work, but the default path is unreliable end-to-end because the default cheap model is. Identical request, 4 consecutive attempts each, 30s timeout:
+
+  | Model | Results |
+  |---|---|
+  | `google/gemini-2.5-flash-lite` (current default) | timeout(30s), ok(1.1s), ok(18.9s), timeout(30s) — **2/4 failed** |
+  | `openai/gpt-4o-mini` | ok(1.9s), ok(1.6s), ok(1.5s), ok(1.5s) — **4/4, consistently ~1.5s** |
+
+  Consistent with SPIKE-005's finding that provider identity dominates model size. Not changed here because ADR-004 §2.5 states the choice "needs deciding before the model defaults change, not as a side effect of changing them" — switching the cheap tier to OpenAI would also make both tiers... no, it would leave a cross-vendor pair (OpenAI cheap → Anthropic frontier), which actually *preserves* §2.4's less-correlated-critic property. That makes it a cheap, low-risk change, but still one for a person to confirm rather than a side effect of this realignment.
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies

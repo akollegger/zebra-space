@@ -5,6 +5,7 @@ import { compile } from "../../compiler/compile.ts"
 import type { CompileError } from "../../compiler/types.ts"
 import { extract } from "../../extraction/extract.ts"
 import type { ExtractionError } from "../../extraction/types.ts"
+import { UserFacingError } from "../user-facing-error.ts"
 
 // Stricli's default caseStyle ("original") does not auto-convert camelCase flag keys to
 // kebab-case CLI tokens — the flag key IS the CLI flag name. ADR-003 §2.6 commits to
@@ -20,15 +21,44 @@ function resolveModel(flag: string | undefined, envVar: string): string | undefi
   return flag ?? process.env[envVar]
 }
 
+/**
+ * Every message here names what happened, why, and what the user can actually do about it —
+ * these are the only diagnosis a CLI user gets (spec.md SC-003). The `SchemaRejected` case in
+ * particular exists because SPIKE-005 found provider schema incompatibilities are real, silent,
+ * and completely opaque from the raw upstream error text.
+ */
 function formatExtractionError(error: ExtractionError): string {
   switch (error._tag) {
     case "ProviderError":
       return `The extraction service could not be reached or failed unexpectedly: ${error.message}`
+    case "SchemaRejected":
+      return [
+        `The model "${error.model}" rejected the extraction schema itself, so no extraction was attempted.`,
+        "",
+        "This is a provider compatibility problem, not a problem with your puzzle: the model's",
+        "provider does not accept some part of the schema shape this tool sends. It is not fixed",
+        "by retrying.",
+        "",
+        "What to try:",
+        `  - Use a different model, e.g. --model openai/gpt-4o-mini (or set ZEBRA_MODEL).`,
+        "  - If this model previously worked, its provider's schema support may have changed;",
+        "    please report it, including the provider message below.",
+        "",
+        `Provider said: ${error.providerMessage.slice(0, 600)}`,
+      ].join("\n")
     case "SchemaViolation":
-      return (
-        `The model's response did not match the expected structure: ${error.schemaError.message}\n` +
-        `Raw response: ${error.raw}`
-      )
+      return [
+        `The model "${error.model}" replied, but not in the required structure — ${error.detail}.`,
+        "",
+        "This usually means the model is too weak to follow the schema reliably rather than that",
+        "anything is misconfigured. Retrying may succeed; a stronger model is more likely to.",
+        "",
+        "What to try:",
+        "  - Re-run the command (responses vary between attempts).",
+        `  - Use a stronger model, e.g. --model anthropic/claude-sonnet-4.5 (or set ZEBRA_MODEL).`,
+        "",
+        `Raw response: ${error.raw.slice(0, 600)}`,
+      ].join("\n")
     case "CriticRejected":
       return [
         "The extraction could not be validated as a faithful translation after every attempt:",
@@ -51,7 +81,7 @@ async function extractCommandFunc(flags: ExtractFlags, puzzlePath: string): Prom
 
   const result = await Effect.runPromise(
     extract(prose, { model, frontierModel }).pipe(
-      Effect.mapError((error) => new Error(formatExtractionError(error))),
+      Effect.mapError((error) => new UserFacingError(formatExtractionError(error))),
     ),
   )
 
@@ -61,7 +91,7 @@ async function extractCommandFunc(flags: ExtractFlags, puzzlePath: string): Prom
   }
 
   const mzn = await Effect.runPromise(
-    compile(result.extractedCsp).pipe(Effect.mapError((error) => new Error(formatCompileError(error)))),
+    compile(result.extractedCsp).pipe(Effect.mapError((error) => new UserFacingError(formatCompileError(error)))),
   )
 
   console.log(`% Extracted from ${puzzlePath} using ${result.model}\n${mzn}`)

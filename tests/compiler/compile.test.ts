@@ -147,13 +147,16 @@ test("ADR-005 §2.5: arithmetic expressions render structured binary operations,
         expression: {
           kind: "binaryOp",
           op: "abs",
-          left: {
-            kind: "binaryOp",
-            op: "-",
-            left: { kind: "variableRef", variable: "position" },
-            right: { kind: "literal", value: 1 },
-          },
-          right: null,
+          operands: [
+            {
+              kind: "binaryOp",
+              op: "-",
+              operands: [
+                { kind: "variableRef", variable: "position" },
+                { kind: "literal", value: 1 },
+              ],
+            },
+          ],
         },
         comparator: "=",
         target: 0,

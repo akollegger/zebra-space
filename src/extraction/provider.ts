@@ -1,7 +1,7 @@
 import { OpenRouter } from "@openrouter/sdk"
 import { OpenRouterError } from "@openrouter/sdk/models/errors"
 import { Effect, Schema } from "effect"
-import { ProviderError, SchemaViolation } from "./types.ts"
+import { ProviderError, SchemaRejected, SchemaViolation } from "./types.ts"
 
 const DEFAULT_TIMEOUT_MS = 60_000
 
@@ -33,6 +33,28 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
+// Signatures of a provider refusing the *schema* rather than the prompt or the credential. Matched
+// on the response body because OpenRouter forwards the upstream provider's message rather than
+// classifying it — these are the phrasings SPIKE-005 actually observed from Google, plus the
+// generic JSON-Schema vocabulary a different provider would most plausibly use.
+const SCHEMA_REJECTION_SIGNATURES = [
+  "ref loop",
+  "reference to undefined schema",
+  "invalid response_json_schema",
+  "invalid json schema",
+  "invalid schema",
+  "$ref",
+  "unsupported schema",
+  "schema is invalid",
+]
+
+function looksLikeSchemaRejection(error: unknown): boolean {
+  if (!(error instanceof OpenRouterError)) return false
+  if (error.statusCode !== 400 && error.statusCode !== 422) return false
+  const haystack = `${error.message} ${error.body ?? ""}`.toLowerCase()
+  return SCHEMA_REJECTION_SIGNATURES.some((signature) => haystack.includes(signature))
+}
+
 /**
  * A fresh client per call, not a module-level singleton: `ZEBRA_OPENROUTER_BASE_URL_OVERRIDE`
  * (test-only, not part of ADR-003's public flag surface) must be read at call time so tests can
@@ -47,13 +69,18 @@ function client(): OpenRouter {
 }
 
 /**
- * A single schema-constrained, non-streaming chat completion (ADR-004 §2.1/§2.3): one request,
- * one response, the whole payload decoded and validated against `request.schema` in that same
- * turn — not an agentic tool-calling loop (§2.3's MVP scoping note).
+ * A single schema-constrained, non-streaming completion delivered as a **forced tool call**
+ * (ADR-004 §2.1): one request declaring exactly one function whose `parameters` is the schema,
+ * with `tool_choice` naming it, and the payload read back from that call's arguments.
+ *
+ * This is a delivery mechanism, not an agentic loop — the model never chooses whether or which
+ * tool to call, and never gets a second turn (ADR-004 §2.3). SPIKE-005 measured this convention
+ * as far more reliably honored than `response_format`, which some providers accept and then
+ * silently ignore.
  */
 export function requestStructuredCompletion<A>(
   request: StructuredCompletionRequest<A>,
-): Effect.Effect<A, ProviderError | SchemaViolation> {
+): Effect.Effect<A, ProviderError | SchemaRejected | SchemaViolation> {
   const timeoutMs = request.timeoutMs ?? DEFAULT_TIMEOUT_MS
 
   return Effect.tryPromise({
@@ -66,10 +93,17 @@ export function requestStructuredCompletion<A>(
               { role: "system", content: request.systemPrompt },
               { role: "user", content: request.userPrompt },
             ],
-            responseFormat: {
-              type: "json_schema",
-              jsonSchema: { name: request.schemaName, schema: request.jsonSchema, strict: true },
-            },
+            tools: [
+              {
+                type: "function",
+                function: {
+                  name: request.schemaName,
+                  description: `Return the ${request.schemaName} for the given input.`,
+                  parameters: request.jsonSchema,
+                },
+              },
+            ],
+            toolChoice: { type: "function", function: { name: request.schemaName } },
           },
         },
         // ADR-004 §2.3: retries/timeouts are this pipeline's own Effect.retry/Effect.timeout —
@@ -79,7 +113,13 @@ export function requestStructuredCompletion<A>(
         // full external timeout to surface, because the SDK kept retrying in the background).
         { retries: { strategy: "none" }, timeoutMs },
       ),
-    catch: (error) => new ProviderError({ message: errorMessage(error) }),
+    catch: (error) =>
+      looksLikeSchemaRejection(error)
+        ? new SchemaRejected({
+            model: request.model,
+            providerMessage: (error as OpenRouterError).body || errorMessage(error),
+          })
+        : new ProviderError({ message: errorMessage(error) }),
   }).pipe(
     Effect.timeout(timeoutMs),
     Effect.catchTag("TimeoutError", () =>
@@ -96,19 +136,38 @@ export function requestStructuredCompletion<A>(
         )
       }
 
-      const content = response.choices[0]?.message.content
-      if (typeof content !== "string") {
-        return Effect.fail(new ProviderError({ message: "Response contained no text content to decode." }))
+      const message = response.choices[0]?.message
+      const call = message?.toolCalls?.[0]
+      if (call === undefined) {
+        // The model answered in prose instead of calling the forced tool. SPIKE-005 saw this from
+        // weaker models; it's a schema-conformance failure, not a transport failure, so it's
+        // reported as one.
+        return Effect.fail(
+          new SchemaViolation({
+            model: request.model,
+            raw: String(message?.content ?? "").slice(0, 2000),
+            detail: "the model replied in prose instead of calling the required tool",
+          }),
+        )
       }
 
       return Effect.try({
-        try: () => JSON.parse(content) as unknown,
-        catch: () => new ProviderError({ message: `Response content was not valid JSON: ${content}` }),
+        try: () => JSON.parse(call.function.arguments) as unknown,
+        catch: () =>
+          new ProviderError({
+            message: `Tool-call arguments were not valid JSON: ${call.function.arguments.slice(0, 500)}`,
+          }),
       }).pipe(
         Effect.flatMap((json) =>
           Schema.decodeUnknownEffect(request.schema)(json).pipe(
             Effect.catchTag("SchemaError", (schemaError) =>
-              Effect.fail(new SchemaViolation({ raw: content, schemaError })),
+              Effect.fail(
+                new SchemaViolation({
+                  model: request.model,
+                  raw: call.function.arguments,
+                  detail: schemaError.message,
+                }),
+              ),
             ),
           ),
         ),

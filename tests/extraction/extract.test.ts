@@ -183,3 +183,77 @@ test("FR-010: extract() uses the model identifiers it's given instead of the bui
     },
   )
 })
+
+test("ADR-004 §2.7: the schema actually sent to the provider contains no $ref/$defs", async () => {
+  await withStub(
+    (exchange) => {
+      exchange.respondWithJson(
+        exchange.request.schemaName === "FidelityCritique" ? { accepted: true, issues: [] } : SAMPLE_CSP,
+      )
+    },
+    async (stub) => {
+      await runExtract()
+      assert.ok(stub.requests.length > 0)
+      for (const request of stub.requests) {
+        const serialized = JSON.stringify(request.toolParameters)
+        assert.ok(serialized !== undefined, "the forced tool must carry a parameters schema")
+        assert.doesNotMatch(serialized, /\$ref/, `${request.schemaName} schema leaked a $ref`)
+        assert.doesNotMatch(serialized, /\$defs/, `${request.schemaName} schema leaked $defs`)
+      }
+    },
+  )
+})
+
+test("ADR-004 §2.1: the request is a forced single tool call, not response_format", async () => {
+  await withStub(
+    (exchange) => {
+      exchange.respondWithJson(
+        exchange.request.schemaName === "FidelityCritique" ? { accepted: true, issues: [] } : SAMPLE_CSP,
+      )
+    },
+    async (stub) => {
+      await runExtract()
+      // The stub derives schemaName from tool_choice, so a non-empty value here proves the
+      // forced-tool shape reached the wire at all.
+      assert.deepEqual(
+        stub.requests.map((r) => r.schemaName),
+        ["ExtractedCsp", "FidelityCritique"],
+      )
+    },
+  )
+})
+
+test("A provider rejecting the schema fails with SchemaRejected, distinct from ProviderError", async () => {
+  await withStub(
+    (exchange) => {
+      exchange.respondWithError(
+        400,
+        "ref loops are only supported if they include optional or nullable property values",
+      )
+    },
+    async () => {
+      const error = await runExtractFails()
+      assert.equal(error._tag, "SchemaRejected")
+      if (error._tag === "SchemaRejected") {
+        assert.equal(error.model, CHEAP_MODEL)
+        assert.match(error.providerMessage, /ref loop/)
+      }
+    },
+  )
+})
+
+test("A model replying in prose instead of calling the tool fails with SchemaViolation", async () => {
+  await withStub(
+    (exchange) => {
+      exchange.respondWithProse("Sure! Here is an example object: { \"id\": 1 }")
+    },
+    async () => {
+      const error = await runExtractFails()
+      assert.equal(error._tag, "SchemaViolation")
+      if (error._tag === "SchemaViolation") {
+        assert.match(error.detail, /prose instead of calling the required tool/)
+        assert.equal(error.model, CHEAP_MODEL)
+      }
+    },
+  )
+})

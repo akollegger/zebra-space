@@ -8,13 +8,18 @@ that call, made once, not forked between an extraction-only and a compiler-only 
 
 **Defined as `effect`'s own `Schema.Struct`/`Schema.Union` values, not plain TypeScript
 interfaces** (research.md Finding 3) — one definition per shape yields the inferred TypeScript
-type (`Schema.Schema.Type<typeof X>`), the JSON Schema sent to OpenRouter's structured-output
-`responseFormat` (via `Schema.toJsonSchemaDocument`), and the runtime decoder that validates the
-LLM's response (via `Schema.decodeUnknownEffect`, surfacing a `ParseError` on mismatch) — all from
-the same source of truth, and `effect`-idiomatic (Principle II) rather than a bolted-on
-validation library. The illustrative `interface`/`type` blocks below show the shape each `Schema`
-value decodes to; the actual declarations in `src/extraction/types.ts` are the `Schema` values
-themselves.
+type, the JSON Schema sent as the forced tool call's `parameters` (ADR-004 §2.1, via
+`toProviderSchema`), and the runtime decoder that validates the response (via
+`Schema.decodeUnknownEffect`) — all from the same source of truth, and `effect`-idiomatic
+(Principle II) rather than a bolted-on validation library.
+
+**Recursion is depth-bounded, not `Schema.suspend`-based** (ADR-004 §2.7, SPIKE-005). A suspended
+schema necessarily emits `$defs`/`$ref`, which some providers silently mangle into bare strings
+under tool calling. `src/extraction/types.ts` therefore builds the recursive shapes with
+depth-parameterized constructors (`MAX_NESTING_DEPTH`, currently 2), producing a cycle-free schema
+that inlines cleanly, and `assertProviderSafeSchema` fails loudly if a `$ref`, `$defs`, or nullable
+nested object ever reaches the emitted payload. The TypeScript types stay fully recursive — only
+the schema is bounded, which is the safe direction.
 
 ## `ExtractedCsp` (ADR-004 §2.2)
 
@@ -58,9 +63,8 @@ on purpose; a genuinely inconsistent reference surfaces downstream as MiniZinc's
 
 ## `ExtractedConstraint` (ADR-004 §2.2, six-kind taxonomy)
 
-A `Schema.Union` of six tagged `Schema.Struct`s, matching this taxonomy exactly (verified
-directly, research.md Finding 3: unions of tagged structs and the `then` self-reference below
-both produce correct JSON Schema — `anyOf` for the union, `$defs`/`$ref` for the recursion):
+A `Schema.Union` of six tagged `Schema.Struct`s, built by a depth-parameterized constructor so
+the recursive `derivedRule` member is expanded inline rather than via `$ref` (ADR-004 §2.7):
 
 ```ts
 const ExtractedConstraint = Schema.Union([
@@ -72,7 +76,7 @@ const ExtractedConstraint = Schema.Union([
     kind: Schema.Literal("derivedRule"),
     appliesTo: Schema.String,
     condition: DerivedCondition,
-    then: Schema.Array(Schema.suspend((): typeof ExtractedConstraint => ExtractedConstraint))
+    thenConstraints: Schema.Array(makeExtractedConstraint(depth - 1))
   }),
   Schema.Struct({ kind: Schema.Literal("arithmetic"), expression: ArithmeticExpression, comparator: Schema.String, target: Schema.Union([Schema.String, Schema.Number]) })
 ])
@@ -86,7 +90,7 @@ type ExtractedConstraint =
   | { readonly kind: "allDifferent"; readonly variable: string }
   | { readonly kind: "adjacency"; readonly relation: string; readonly a: string; readonly b: string }
   | { readonly kind: "relation"; readonly name: string; readonly a: string; readonly b: string }
-  | { readonly kind: "derivedRule"; readonly appliesTo: string; readonly condition: DerivedCondition; readonly then: readonly ExtractedConstraint[] }
+  | { readonly kind: "derivedRule"; readonly appliesTo: string; readonly condition: DerivedCondition; readonly thenConstraints: readonly ExtractedConstraint[] }
   | { readonly kind: "arithmetic"; readonly expression: ArithmeticExpression; readonly comparator: string; readonly target: string | number }
 ```
 
@@ -94,9 +98,10 @@ type ExtractedConstraint =
 (§2.4/§2.5) rather than ADR-004 §2.2's original free-text/loose placeholders — ADR-005 §4
 explicitly names this as the first concrete refinement of `ExtractedCsp`, licensed by ADR-004 §2.2
 itself, and states future work should treat it as current. There is deliberately no separate
-"extraction-era" loose type kept alongside it. The `then` field's `Schema.suspend` is required
-because `ExtractedConstraint` refers to itself — a plain `Schema.Array(ExtractedConstraint)`
-reference would throw at module-evaluation time before the `const` binding exists.
+"extraction-era" loose type kept alongside it. The recursive member is named `thenConstraints`
+rather than ADR-004 §2.2's illustrative `then`: a bare `then` key makes the object a "thenable"
+that `await` and dynamic `import()` can mistake for a promise, which Biome's `noThenProperty`
+rightly flags.
 
 ## `DerivedCondition` (ADR-005 §2.4)
 
@@ -123,38 +128,29 @@ unrecognized/ambiguous shape is a compiler-time error (ADR-005 §2.3/§2.4), nev
 guess — this is enforced in `src/compiler/compile.ts`, not in this type itself, which only needs
 to make the two modes representable.
 
-## `ArithmeticExpression` (ADR-005 §2.5)
-
-```ts
-const ArithmeticExpression = Schema.Union([
-  Schema.Struct({ kind: Schema.Literal("variableRef"), variable: Schema.String }),
-  Schema.Struct({ kind: Schema.Literal("literal"), value: Schema.Number }),
-  Schema.Struct({
-    kind: Schema.Literal("binaryOp"),
-    op: Schema.Literals(["+", "-", "min", "max", "abs"]),
-    left: Schema.suspend((): typeof ArithmeticExpression => ArithmeticExpression),
-    right: Schema.NullOr(Schema.suspend((): typeof ArithmeticExpression => ArithmeticExpression))
-  })
-])
-```
-
-Decodes to (illustrative):
+## `ArithmeticExpression` (ADR-005 §2.5, encoding per ADR-004 §2.7)
 
 ```ts
 type ArithmeticExpression =
   | { readonly kind: "variableRef"; readonly variable: string }
   | { readonly kind: "literal"; readonly value: number }
-  | { readonly kind: "binaryOp"; readonly op: "+" | "-" | "min" | "max" | "abs"; readonly left: ArithmeticExpression; readonly right: ArithmeticExpression | null }
+  | {
+      readonly kind: "binaryOp"
+      readonly op: "+" | "-" | "min" | "max" | "abs"
+      readonly operands: readonly ArithmeticExpression[]
+    }
 ```
 
+Built by a depth-parameterized constructor (`makeArithmeticExpression`), not `Schema.suspend`.
+
 A structured sub-shape, not a raw string interpolated into generated MiniZinc source (ADR-005
-§2.5/§3) — `abs` is unary (`right` is `null`), the rest binary. `right` is `Schema.NullOr`, not
-`Schema.optional`, per research.md Finding 3's caveat: OpenAI-style strict structured output
-requires every field to appear in `required`, expressing "not present" as `null` rather than
-omitting the key — an `optional` field's default JSON Schema output doesn't satisfy that
-constraint. This is the one place this ADR's original `right?` (optional) syntax doesn't carry
-over unchanged into the `Schema` encoding; `src/compiler/compile.ts` treats `right: null` the same
-way ADR-005 §2.5's `right` (absent) was always meant to be read for a unary `abs`.
+§2.5/§3). **Operands are an array, not `left`/`right` with a nullable `right`.** An earlier
+revision used `left`/`right: Schema.NullOr(...)`, and even made `left` nullable too, specifically
+to satisfy Gemini; SPIKE-005 showed that was both insufficient (nullable *nested objects* are
+degraded to bare strings independently of `$ref`) and unnecessary (an array edge is the encoding
+that survives — ADR-004 §2.7). The array is also the more honest model: `abs` takes exactly one
+operand and every other operator exactly two, with `src/compiler/compile.ts` raising a
+`CompileError` on a wrong count rather than the schema silently permitting a missing operand.
 
 ## `FidelityCritique` (ADR-004 §2.4)
 
@@ -184,18 +180,30 @@ informed-revision attempt (ADR-004 §2.4 step 4) when `false`.
 
 Mirrors `src/solver/types.ts`'s tagged-error convention; independent of `SolverError`. These are
 `Data.TaggedError` classes, not `Schema` values — they model *this pipeline's own* control-flow
-failures, not LLM response shapes to decode, so `SchemaViolation` (below) is a thin wrapper around
-the `ParseError` `Schema.decodeUnknownEffect` itself already produces (research.md Finding 3),
-not a rebuild of what that decoder already reports:
+failures, not LLM response shapes to decode. Four cases rather than three: SPIKE-005 showed that
+"the provider refused our schema" and "the provider answered but not in our schema" have
+completely different remedies, so they are separate errors rather than one `ProviderError`:
 
 ```ts
 class ProviderError extends Data.TaggedError("ProviderError")<{
   readonly message: string
 }> {}
 
+/** The provider refused the *schema itself* — a provider-compatibility problem, not a transient
+ *  one. Retrying cannot help; choosing another model can (ADR-004 §2.7, SPIKE-005). */
+class SchemaRejected extends Data.TaggedError("SchemaRejected")<{
+  readonly model: string
+  readonly providerMessage: string
+}> {}
+
+/** The provider answered, but not in the schema. Covers both "called the tool with
+ *  non-conforming arguments" and "ignored the forced tool call and replied in prose" — `detail`
+ *  says which. Carried as a string rather than a `Schema.SchemaError` so the prose case doesn't
+ *  need a fabricated decode error. */
 class SchemaViolation extends Data.TaggedError("SchemaViolation")<{
+  readonly model: string
   readonly raw: string
-  readonly parseError: ParseResult.ParseError
+  readonly detail: string
 }> {}
 
 class CriticRejected extends Data.TaggedError("CriticRejected")<{
@@ -208,7 +216,7 @@ interface ExtractionAttempt {
   readonly critique: FidelityCritique
 }
 
-type ExtractionError = ProviderError | SchemaViolation | CriticRejected
+type ExtractionError = ProviderError | SchemaRejected | SchemaViolation | CriticRejected
 ```
 
 `CriticRejected.attempts` carries every attempt across both tiers and all revision rounds (ADR-004
@@ -235,3 +243,7 @@ Raised for an unrecognized `adjacency.relation` name (§2.3) or an unrecognized/
 | Extraction | `ExtractedCsp`, plus (once accepted) the `model: string` tier that produced it — the pair returned by a successful `extract` Effect run. |
 | Solvable Model | The compiled `.mzn` string `src/compiler/compile.ts` produces from an accepted `ExtractedCsp` (ADR-005 §2.1) — consumable by `src/solver/solve.ts`'s existing `SolveRequest.model`, unchanged. |
 | Validation Outcome | `FidelityCritique`, and — on exhausted escalation — the full `CriticRejected` error's `attempts` list. |
+
+Every error above is rendered to a CLI user by `src/cli/subcommands/extract.ts` as a message that
+names the cause *and* what to do about it, wrapped in `UserFacingError` so no JS stack trace is
+appended (spec.md SC-003 requires the reported message alone to suffice).

@@ -60,7 +60,7 @@ but building a fixture-recording harness now, before that corpus exists, is prem
 what this feature actually needs to ship.
 
 ## Finding 3: `effect`'s own `Schema`/`JsonSchema` modules replace what `@effect/ai` would have
-given us — no new dependency needed for structured-output schema or validation
+given us — no new dependency needed for schema generation or validation
 
 `@effect/ai` is ruled out (incompatible peer dependency on `effect@^3.22.x`, CLAUDE.md), but two
 of the things it would have provided — generating the JSON Schema for a structured-output
@@ -76,8 +76,9 @@ confirmed present and exercised directly, not assumed from documentation):
   ExtractedConstraint[]` needs, being self-referential) — the recursive case correctly emits
   `$defs`/`$ref` rather than infinitely inlining. Every case produced `additionalProperties:
   false` and all fields listed in `required` by default — exactly what OpenAI-style strict
-  structured output (`strict: true`, which `@openrouter/sdk`'s `responseFormat.jsonSchema` uses,
-  per SPIKE-004) requires.
+  structured output requires. (The delivery *mechanism* changed later — ADR-004 §2.1 now sends
+  the schema as a forced tool call's `parameters` rather than via `responseFormat` — but the
+  generated schema is the same artifact either way.)
 - **Response validation**: `Schema.decodeUnknownEffect(mySchema)` returns an `Effect` that
   succeeds with the decoded, typed value or fails with a `ParseError` — directly realizing
   ADR-004 §2.6's `SchemaViolation` case as an actual typed Effect failure, not a hand-rolled
@@ -90,14 +91,21 @@ separate hand-written JSON Schema and a separate hand-written validator. One def
 the inferred TypeScript type, the JSON Schema sent to OpenRouter, and the runtime decoder — and
 it's `effect`-idiomatic (Principle II) by construction, not a bolted-on validation library.
 
-**Caveats, not yet resolved by this research pass**: this was verified against the schema shapes
-in isolation, not round-tripped through a real OpenRouter structured-output call yet — that
-remains `tests/extraction/live.test.ts`'s job (Finding 2). And OpenAI-style strict mode requires
-*every* field to appear in `required` (optional fields are expressed as nullable, not omitted) —
-`ArithmeticExpression.right` (optional, since `abs` is unary) will need `Schema.NullOr`/an
-explicit encoding decision rather than `Schema.optional` used unreflectively, since the latter's
-default JSON Schema output may not satisfy a strict-mode provider's requirement. Left as an
-implementation-time decision, not resolved here.
+**These caveats were later resolved — badly at first — and are worth reading with the outcome
+attached.** The pass above verified schema *generation* in isolation, never round-tripping through
+a real provider call. That gap mattered: [SPIKE-005](../../design/spikes/SPIKE-005-tool-calling-conventions/SPIKE.md)
+later found that `Schema.toJsonSchemaDocument`'s `$defs`/`$ref` output — perfectly valid JSON
+Schema — is *rejected outright* by Gemini and *silently mangled into bare strings* by several
+providers under tool calling. The remedy is in ADR-004 §2.7 and is now implemented: recursion is
+built depth-bounded (no `Schema.suspend`), any residual `$ref` is inlined, and
+`assertProviderSafeSchema` refuses to send a violating payload.
+
+The specific note about `ArithmeticExpression.right` needing `Schema.NullOr` was also wrong in the
+end. Nullable *nested objects* turn out to be the second shape providers degrade to a string, so
+`NullOr` was itself part of the problem; the shipped encoding uses an operand **array** instead.
+Recorded rather than deleted because the mistake is instructive: "valid JSON Schema" and
+"a schema this provider will honor" are different properties, and only the second one can be
+established by testing against the provider.
 
 **Alternatives considered**: `zod` + `zod-to-json-schema`. Rejected: would be a second schema/
 validation library alongside `effect`'s own, when `effect`'s already covers the same need and is
@@ -110,8 +118,8 @@ Verified directly: calling `.annotate({ description: "..." })` on a `Schema.Stru
 fields propagates that text into the corresponding `description` key of the JSON Schema
 `Schema.toJsonSchemaDocument` produces (e.g. annotating `Domain`'s `variable` field surfaces
 `"description": "..."` on that exact property in the emitted schema). Since this `description`
-travels inside the `responseFormat.jsonSchema.schema` payload OpenRouter/OpenAI-style structured
-output already sends to the model (Finding 3), it's a legitimate, low-effort place to explain
+travels inside the schema payload sent to the model — today as a forced tool call's
+`function.parameters` (ADR-004 §2.1) — it's a legitimate, low-effort place to explain
 taxonomy-specific meaning the field/kind names alone don't carry — e.g. what a `derivedRule`
 represents, or what shape an `adjacency.relation` name should take — without needing a longer
 hand-written system prompt to carry that same explanation. Actual prompt content (system/user
@@ -123,11 +131,17 @@ prompt text versus the schema itself.
 ## Confirmed from SPIKE-004 (not re-verified, cited directly)
 
 - `@openrouter/sdk`'s `chat.send()` requires its arguments nested under a `chatRequest` key
-  (`chat.send({ chatRequest: { model, messages, responseFormat } })`) — the package's own README
-  example is flat and wrong for the installed version. A real, easy-to-repeat mistake worth
-  flagging again here for whoever writes `src/extraction/extract.ts`.
-- Schema-constrained structured output uses
-  `responseFormat: { type: "json_schema", jsonSchema: { name, schema, strict: true } }`.
+  (`chat.send({ chatRequest: { model, messages, ... } })`) — the package's own README example is
+  flat and wrong for the installed version. A real, easy-to-repeat mistake worth flagging again
+  here for whoever writes `src/extraction/extract.ts`.
+- SPIKE-004 used `responseFormat: { type: "json_schema", jsonSchema: { name, schema, strict: true } }`.
+  **This is no longer the mechanism** — ADR-004 §2.1 was revised to a forced tool call after
+  SPIKE-005 measured `responseFormat` as unreliable across providers (Anthropic accepts the
+  request and ignores the schema entirely). The shipped call sends
+  `tools: [{ type: "function", function: { name, parameters } }]` with
+  `toolChoice: { type: "function", function: { name } }`, and reads the result from
+  `choices[0].message.toolCalls[0].function.arguments`. Note the SDK's camelCase (`toolChoice`,
+  `toolCalls`) versus the wire format's snake_case.
 - `@openrouter/sdk` has zero peer dependencies — confirmed safe to add as a real root
   `package.json` dependency now (SPIKE-004 verified it in an isolated sub-package; this feature
   is what promotes it to the actual dependency tree).

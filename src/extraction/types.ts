@@ -1,8 +1,32 @@
 import { Data, Schema } from "effect"
 
 // data-model.md / ADR-004 §2.2 / ADR-005 §2.4 & §2.5. Defined as effect Schema values, not plain
-// TS interfaces — one definition yields the inferred type, the JSON Schema sent to OpenRouter's
-// structured-output responseFormat, and the runtime decoder (research.md Finding 3).
+// TS interfaces — one definition yields the inferred type, the JSON Schema sent to the provider
+// as a forced tool call's `parameters` (ADR-004 §2.1), and the runtime decoder.
+//
+// ADR-004 §2.7 constrains what that emitted schema may contain: no `$ref`/`$defs`, and no
+// nullable nested objects. Recursion is therefore built *depth-bounded* here rather than via
+// `Schema.suspend` — a suspended schema necessarily emits `$defs`/`$ref`, which SPIKE-005 found
+// is silently mangled into bare strings by some providers under tool calling. Bounded
+// construction produces a cycle-free schema that inlines cleanly. `assertProviderSafeSchema`
+// (below) enforces the rule so a regression can't ship quietly.
+
+/**
+ * How deep `derivedRule.thenConstraints` / `arithmetic` operand nesting may go in the *emitted*
+ * schema (ADR-004 §2.7). Inlining trades `$ref` compatibility for schema size, and size is not
+ * free: this schema is ~16k characters at depth 2 and ~25k at depth 3.
+ *
+ * 2 is chosen because SPIKE-001 found the catalog's actual nesting is shallow, so it is
+ * sufficient, and it is the smaller payload. That is the whole rationale.
+ *
+ * It is explicitly NOT chosen on latency grounds. An earlier version of this comment claimed a
+ * latency signal (depth 2 fast, depth 3 slow/timing out); further observation refuted it —
+ * `gemini-2.5-flash-lite` has since both answered a depth-2 request in ~770ms and timed out on
+ * one entirely. The variance is the model/provider's, not the schema size's, and that
+ * unreliability is tracked against ADR-004 §2.5's default-model choice rather than worked around
+ * here.
+ */
+export const MAX_NESTING_DEPTH = 2
 
 export const Entity = Schema.Struct({
   id: Schema.String,
@@ -41,46 +65,50 @@ export const DerivedCondition = Schema.Union([
 ])
 export type DerivedCondition = Schema.Schema.Type<typeof DerivedCondition>
 
-// Recursive schemas need their public type declared by hand first (not derived via
-// `Schema.Schema.Type<typeof X>`), and the const annotated with that type explicitly — otherwise
-// TS can't resolve `typeof X` while `X`'s own initializer is still being checked. This is the
-// documented `Schema.suspend` pattern (effect's own Schema.d.ts `Tree` example), not a workaround.
+// The TypeScript types stay fully recursive — consumers (notably src/compiler) reason about
+// arbitrarily nested values. Only the *schema* is depth-bounded, which is the safe direction:
+// anything the schema admits satisfies the type. Exceeding the bound fails loudly at decode
+// time rather than being silently truncated (ADR-004 §2.7).
 export type ArithmeticExpression =
   | { readonly kind: "variableRef"; readonly variable: string }
   | { readonly kind: "literal"; readonly value: number }
   | {
       readonly kind: "binaryOp"
       readonly op: "+" | "-" | "min" | "max" | "abs"
-      // Both null, not optional, and — for `left` — null despite always being populated in
-      // valid data: OpenAI/OpenRouter strict structured output requires every field in
-      // `required` — "absent" is expressed as null, not by omitting the key (research.md
-      // Finding 3). `left` additionally *must* be nullable (not just `right`) for a structural
-      // reason confirmed against the real Gemini backend, not just OpenAI's docs: a required,
-      // non-nullable self-reference in a recursive schema is a "ref loop of required fields",
-      // which Gemini's structured-output validator rejects outright ("ref loops are only
-      // supported if they include optional or nullable property values, or a potentially-
-      // zero-length array items") — `right`'s existing nullability doesn't cover `left`'s own,
-      // separate recursive edge. `compile.ts` still fails loudly with a CompileError if `left`
-      // is ever actually null, since that's not a valid `binaryOp` regardless of what the
-      // schema must permit to satisfy this validator.
-      readonly left: ArithmeticExpression | null
-      readonly right: ArithmeticExpression | null
+      // An operand *array*, not `left`/`right` with a nullable `right`. Two reasons, and the
+      // second is why the earlier shape had to go: arity is expressed honestly (1 operand for
+      // the unary `abs`, 2 for the rest, validated by the compiler), and — per ADR-004 §2.7 —
+      // `anyOf: [<object>, null]` is one of the two shapes providers silently degrade to a bare
+      // string. A possibly-empty array is the encoding that survives.
+      readonly operands: readonly ArithmeticExpression[]
     }
 
-export const ArithmeticExpression: Schema.Codec<ArithmeticExpression> = Schema.Union([
+const ARITHMETIC_LEAVES = [
   Schema.Struct({ kind: Schema.Literal("variableRef"), variable: Schema.String }),
   Schema.Struct({ kind: Schema.Literal("literal"), value: Schema.Number }),
-  Schema.Struct({
-    kind: Schema.Literal("binaryOp"),
-    op: Schema.Literals(["+", "-", "min", "max", "abs"]),
-    left: Schema.NullOr(Schema.suspend((): Schema.Codec<ArithmeticExpression> => ArithmeticExpression)),
-    right: Schema.NullOr(Schema.suspend((): Schema.Codec<ArithmeticExpression> => ArithmeticExpression)),
-  }),
-]).annotate({
-  description:
-    "A structured arithmetic expression (variable reference, numeric literal, or binary " +
-    "operation) — never a raw string to interpolate into generated MiniZinc source.",
-})
+] as const
+
+function makeArithmeticExpression(depth: number): Schema.Codec<ArithmeticExpression> {
+  const members =
+    depth <= 0
+      ? [...ARITHMETIC_LEAVES]
+      : [
+          ...ARITHMETIC_LEAVES,
+          Schema.Struct({
+            kind: Schema.Literal("binaryOp"),
+            op: Schema.Literals(["+", "-", "min", "max", "abs"]),
+            operands: Schema.Array(makeArithmeticExpression(depth - 1)),
+          }),
+        ]
+  return Schema.Union(members).annotate({
+    description:
+      "A structured arithmetic expression (variable reference, numeric literal, or an operation " +
+      "over 1-2 operands) — never a raw string to interpolate into generated MiniZinc source. " +
+      "`abs` takes exactly one operand; every other operator takes exactly two.",
+  }) as Schema.Codec<ArithmeticExpression>
+}
+
+export const ArithmeticExpression = makeArithmeticExpression(MAX_NESTING_DEPTH)
 
 export type ExtractedConstraint =
   | { readonly kind: "assignment"; readonly entity: string; readonly variable: string; readonly value: string }
@@ -91,9 +119,6 @@ export type ExtractedConstraint =
       readonly kind: "derivedRule"
       readonly appliesTo: string
       readonly condition: DerivedCondition
-      // Named `thenConstraints`, not `then` (ADR-004 §2.2's illustrative field name) — a bare
-      // `then` key trips Biome's noThenProperty (thenable-duck-typing risk), and the ADR itself
-      // says exact field names are implementation's call, not fixed by the decision.
       readonly thenConstraints: readonly ExtractedConstraint[]
     }
   | {
@@ -103,58 +128,73 @@ export type ExtractedConstraint =
       readonly target: string | number
     }
 
-export const ExtractedConstraint: Schema.Codec<ExtractedConstraint> = Schema.Union([
-  Schema.Struct({
-    kind: Schema.Literal("assignment"),
-    entity: Schema.String,
-    variable: Schema.String,
-    value: Schema.String,
-  }).annotate({ description: "A single entity's variable is fixed to a specific value." }),
-  Schema.Struct({
-    kind: Schema.Literal("allDifferent"),
-    variable: Schema.String,
-  }).annotate({ description: "Every entity's value for this variable must be distinct." }),
-  Schema.Struct({
-    kind: Schema.Literal("adjacency"),
-    relation: Schema.String,
-    a: Schema.String,
-    b: Schema.String,
-  }).annotate({
-    description:
-      "An ordering/positional relation between two entities (e.g. \"immediately right of\", " +
-      "\"next to\") over an ordered/numeric domain.",
-  }),
-  Schema.Struct({
-    kind: Schema.Literal("relation"),
-    name: Schema.String,
-    a: Schema.String,
-    b: Schema.String,
-  }).annotate({
-    description:
-      "A named fact between two entities (e.g. \"shares a border with\"), consumed by a " +
-      "paired derivedRule rather than producing a constraint by itself.",
-  }),
-  Schema.Struct({
-    kind: Schema.Literal("derivedRule"),
-    appliesTo: Schema.String,
-    condition: DerivedCondition,
-    thenConstraints: Schema.Array(Schema.suspend((): Schema.Codec<ExtractedConstraint> => ExtractedConstraint)),
-  }).annotate({
-    description:
-      "A rule applied when its condition holds: either expanded at compile time over " +
-      "`relation` facts, or compiled to a solver-time reified implication over domain variables.",
-  }),
-  Schema.Struct({
-    kind: Schema.Literal("arithmetic"),
-    expression: ArithmeticExpression,
-    comparator: Schema.String,
-    target: Schema.Union([Schema.String, Schema.Number]),
-  }).annotate({
-    description:
-      "A numeric or enum-valued comparison (e.g. equality, inequality, threshold) between an " +
-      "expression and a target value.",
-  }),
-])
+function nonRecursiveConstraints() {
+  return [
+    Schema.Struct({
+      kind: Schema.Literal("assignment"),
+      entity: Schema.String,
+      variable: Schema.String,
+      value: Schema.String,
+    }).annotate({ description: "A single entity's variable is fixed to a specific value." }),
+    Schema.Struct({
+      kind: Schema.Literal("allDifferent"),
+      variable: Schema.String,
+    }).annotate({ description: "Every entity's value for this variable must be distinct." }),
+    Schema.Struct({
+      kind: Schema.Literal("adjacency"),
+      relation: Schema.String,
+      a: Schema.String,
+      b: Schema.String,
+    }).annotate({
+      description:
+        'An ordering/positional relation between two entities (e.g. "immediately right of", ' +
+        '"next to") over an ordered/numeric domain.',
+    }),
+    Schema.Struct({
+      kind: Schema.Literal("relation"),
+      name: Schema.String,
+      a: Schema.String,
+      b: Schema.String,
+    }).annotate({
+      description:
+        'A named fact between two entities (e.g. "shares a border with"), consumed by a paired ' +
+        "derivedRule rather than producing a constraint by itself.",
+    }),
+    Schema.Struct({
+      kind: Schema.Literal("arithmetic"),
+      expression: ArithmeticExpression,
+      comparator: Schema.String,
+      target: Schema.Union([Schema.String, Schema.Number]),
+    }).annotate({
+      description:
+        "A numeric or enum-valued comparison (e.g. equality, inequality, threshold) between an " +
+        "expression and a target value.",
+    }),
+  ]
+}
+
+function makeExtractedConstraint(depth: number): Schema.Codec<ExtractedConstraint> {
+  const members =
+    depth <= 0
+      ? nonRecursiveConstraints()
+      : [
+          ...nonRecursiveConstraints(),
+          Schema.Struct({
+            kind: Schema.Literal("derivedRule"),
+            appliesTo: Schema.String,
+            condition: DerivedCondition,
+            thenConstraints: Schema.Array(makeExtractedConstraint(depth - 1)),
+          }).annotate({
+            description:
+              "A rule applied when its condition holds: either expanded at compile time over " +
+              "`relation` facts, or compiled to a solver-time reified implication over domain " +
+              "variables.",
+          }),
+        ]
+  return Schema.Union(members) as Schema.Codec<ExtractedConstraint>
+}
+
+export const ExtractedConstraint = makeExtractedConstraint(MAX_NESTING_DEPTH)
 
 export const ExtractedCsp = Schema.Struct({
   entities: Schema.Array(Entity),
@@ -178,21 +218,99 @@ export const FidelityCritique = Schema.Struct({
 })
 export type FidelityCritique = Schema.Schema.Type<typeof FidelityCritique>
 
-/**
- * The JSON Schema payload for OpenRouter's `responseFormat.jsonSchema.schema` (draft-2020-12,
- * with `$defs` inlined for recursive shapes like `derivedRule.then`) — research.md Finding 3.
- */
-export function toResponseFormatSchema(schema: Schema.Schema<unknown>): Record<string, unknown> {
-  const document = Schema.toJsonSchemaDocument(schema)
-  const result: Record<string, unknown> = { ...document.schema }
-  if (Object.keys(document.definitions).length > 0) {
-    result.$defs = document.definitions
+// --- Provider-safe JSON Schema emission (ADR-004 §2.7) ---------------------------------------
+
+/** Raised when a schema we were about to send violates ADR-004 §2.7's encoding rules. */
+export class UnsafeSchemaError extends Error {
+  // Declared explicitly rather than as a constructor parameter property — tsconfig's
+  // `erasableSyntaxOnly` (which is what lets this repo run TS directly under node) forbids those.
+  readonly violations: readonly string[]
+
+  constructor(violations: readonly string[]) {
+    super(
+      `Refusing to send a JSON Schema that violates ADR-004 §2.7: ${violations.join("; ")}. ` +
+        "Some providers silently mangle these shapes into bare strings rather than rejecting " +
+        "them, so this is caught before the request rather than after.",
+    )
+    this.violations = violations
+    this.name = "UnsafeSchemaError"
   }
-  return result
 }
 
-export const extractedCspJsonSchema = toResponseFormatSchema(ExtractedCsp)
-export const fidelityCritiqueJsonSchema = toResponseFormatSchema(FidelityCritique)
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+/**
+ * Resolves any `$ref`/`$defs` a schema still contains. Safe to run to completion because the
+ * schemas above are depth-bounded rather than `suspend`-recursive, so the reference graph is
+ * acyclic — this would not terminate on a genuinely cyclic schema, which is precisely the shape
+ * ADR-004 §2.7 forbids.
+ */
+function inlineRefs(node: unknown, defs: Record<string, unknown>): unknown {
+  if (Array.isArray(node)) return node.map((item) => inlineRefs(item, defs))
+  if (!isRecord(node)) return node
+
+  const ref = node.$ref
+  if (typeof ref === "string") {
+    const name = ref.replace(/^#\/\$defs\//, "")
+    const target = defs[name]
+    if (target === undefined) throw new UnsafeSchemaError([`unresolvable $ref "${ref}"`])
+    const { $ref: _dropped, ...siblings } = node
+    return { ...(inlineRefs(target, defs) as Record<string, unknown>), ...inlineRefs(siblings, defs) as Record<string, unknown> }
+  }
+
+  const out: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(node)) {
+    if (key === "$defs") continue
+    out[key] = inlineRefs(value, defs)
+  }
+  return out
+}
+
+/** Collects ADR-004 §2.7 violations, described by JSON-pointer-ish path for actionable errors. */
+function findViolations(node: unknown, path = "#"): string[] {
+  if (Array.isArray(node)) return node.flatMap((item, i) => findViolations(item, `${path}/${i}`))
+  if (!isRecord(node)) return []
+
+  const found: string[] = []
+  if (typeof node.$ref === "string") found.push(`$ref at ${path}`)
+  if (node.$defs !== undefined) found.push(`$defs at ${path}`)
+
+  // A nullable *object* — `anyOf: [{type:"object"...}, {type:"null"}]` — is the second shape
+  // providers degrade to a string. A nullable scalar is fine, so check the union's members.
+  if (Array.isArray(node.anyOf)) {
+    const members = node.anyOf.filter(isRecord)
+    const hasNull = members.some((m) => m.type === "null")
+    const hasObject = members.some((m) => m.type === "object" || m.properties !== undefined)
+    if (hasNull && hasObject) found.push(`nullable object (anyOf with null + object) at ${path}`)
+  }
+
+  for (const [key, value] of Object.entries(node)) {
+    found.push(...findViolations(value, `${path}/${key}`))
+  }
+  return found
+}
+
+/** Throws `UnsafeSchemaError` if `schema` violates ADR-004 §2.7. Exported for direct testing. */
+export function assertProviderSafeSchema(schema: unknown): void {
+  const violations = findViolations(schema)
+  if (violations.length > 0) throw new UnsafeSchemaError(violations)
+}
+
+/**
+ * The JSON Schema payload for a forced tool call's `function.parameters` (ADR-004 §2.1),
+ * dereferenced and then verified against §2.7's encoding rules.
+ */
+export function toProviderSchema(schema: Schema.Schema<unknown>): Record<string, unknown> {
+  const document = Schema.toJsonSchemaDocument(schema)
+  const inlined = inlineRefs(document.schema, document.definitions) as Record<string, unknown>
+  assertProviderSafeSchema(inlined)
+  return inlined
+}
+
+export const extractedCspJsonSchema = toProviderSchema(ExtractedCsp)
+export const fidelityCritiqueJsonSchema = toProviderSchema(FidelityCritique)
 
 // ADR-004 §2.6 error taxonomy, mirroring src/solver/types.ts's tagged-error convention.
 // Independent of SolverError — this pipeline's errors are about extraction and critique, not
@@ -202,9 +320,29 @@ export class ProviderError extends Data.TaggedError("ProviderError")<{
   readonly message: string
 }> {}
 
+/**
+ * The provider refused the request because of the *schema* we sent, rather than the prompt or
+ * credentials. Distinct from ProviderError because the remedy is completely different — the user
+ * can't fix it by retrying or checking their key, but they can by choosing another model
+ * (ADR-004 §2.7 / SPIKE-005).
+ */
+export class SchemaRejected extends Data.TaggedError("SchemaRejected")<{
+  readonly model: string
+  readonly providerMessage: string
+}> {}
+
+/**
+ * The provider returned successfully but its payload doesn't match the schema. Two distinct
+ * causes share this error because the remedy is the same (retry, or use a different model):
+ * the model called the tool with non-conforming arguments, or it ignored the forced tool call
+ * and answered in prose. `detail` says which — carried as a formatted string rather than a
+ * `Schema.SchemaError` so both causes are representable without a fake value for the one that
+ * has no decode error to report.
+ */
 export class SchemaViolation extends Data.TaggedError("SchemaViolation")<{
+  readonly model: string
   readonly raw: string
-  readonly schemaError: Schema.SchemaError
+  readonly detail: string
 }> {}
 
 export interface ExtractionAttempt {
@@ -217,4 +355,4 @@ export class CriticRejected extends Data.TaggedError("CriticRejected")<{
   readonly attempts: readonly ExtractionAttempt[]
 }> {}
 
-export type ExtractionError = ProviderError | SchemaViolation | CriticRejected
+export type ExtractionError = ProviderError | SchemaRejected | SchemaViolation | CriticRejected

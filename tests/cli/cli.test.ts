@@ -335,3 +335,38 @@ test("ADR-003 §2.6: ZEBRA_MODEL/ZEBRA_FRONTIER_MODEL env vars take effect, and 
     },
   )
 })
+
+test("SC-003: a schema rejection is reported actionably, with no JS stack trace to wade through", async () => {
+  await withExtractStub(
+    (exchange) => {
+      exchange.respondWithError(400, "Invalid response_json_schema: ref loops are only supported...")
+    },
+    async (stub) => {
+      const result = await runCli(["extract", WHODUNIT_PUZZLE], extractEnv(stub))
+      assert.equal(result.exitCode, 1)
+      // Names the cause, and tells the user what to do about it.
+      assert.match(result.stderr, /rejected the extraction schema itself/)
+      assert.match(result.stderr, /provider compatibility problem/)
+      assert.match(result.stderr, /--model/)
+      // SC-003: the message alone must suffice — no stack frames pointing into node_modules.
+      assert.doesNotMatch(result.stderr, /\s+at .*node_modules/)
+      assert.doesNotMatch(result.stderr, /effect\/dist/)
+    },
+  )
+})
+
+test("SC-003: a model ignoring the forced tool call is reported as a structure problem, not a transport one", async () => {
+  await withExtractStub(
+    (exchange) => {
+      exchange.respondWithProse("Sure! Here is an example object: { \"id\": 1 }")
+    },
+    async (stub) => {
+      const result = await runCli(["extract", WHODUNIT_PUZZLE], extractEnv(stub))
+      assert.equal(result.exitCode, 1)
+      assert.match(result.stderr, /not in the required structure/)
+      assert.match(result.stderr, /prose instead of calling the required tool/)
+      assert.doesNotMatch(result.stderr, /could not be reached/)
+      assert.doesNotMatch(result.stderr, /\s+at .*node_modules/)
+    },
+  )
+})

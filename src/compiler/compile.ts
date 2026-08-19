@@ -117,25 +117,30 @@ function renderArithmeticExpr(
     case "literal":
       return Effect.succeed(String(expr.value))
     case "binaryOp": {
-      // `left` is nullable in the schema only to satisfy Gemini's structured-output validator
-      // (types.ts's comment on ArithmeticExpression) — a binaryOp with no left operand is never
-      // valid data, regardless of what the schema must permit.
-      if (expr.left === null) {
-        return Effect.fail(new CompileError({ reason: `Binary operator "${expr.op}" requires a left operand.` }))
+      // Arity is checked here rather than in the schema: JSON Schema could express it with
+      // minItems/maxItems, but the required count depends on `op`, and a per-operator schema
+      // branch would multiply the union's size for no gain. A wrong count is a loud CompileError.
+      const expected = expr.op === "abs" ? 1 : 2
+      if (expr.operands.length !== expected) {
+        return Effect.fail(
+          new CompileError({
+            reason: `Operator "${expr.op}" takes exactly ${expected} operand${expected === 1 ? "" : "s"}, got ${expr.operands.length}.`,
+          }),
+        )
       }
-      const left = expr.left
       if (expr.op === "abs") {
-        return renderArithmeticExpr(compiled, left).pipe(Effect.map((renderedLeft) => `abs(${renderedLeft})`))
+        return renderArithmeticExpr(compiled, expr.operands[0]!).pipe(
+          Effect.map((operand) => `abs(${operand})`),
+        )
       }
-      if (expr.right === null) {
-        return Effect.fail(new CompileError({ reason: `Binary operator "${expr.op}" requires a right operand.` }))
-      }
-      const right = expr.right
-      return Effect.all([renderArithmeticExpr(compiled, left), renderArithmeticExpr(compiled, right)]).pipe(
-        Effect.map(([left, rightRendered]) =>
+      return Effect.all([
+        renderArithmeticExpr(compiled, expr.operands[0]!),
+        renderArithmeticExpr(compiled, expr.operands[1]!),
+      ]).pipe(
+        Effect.map(([left, right]) =>
           expr.op === "min" || expr.op === "max"
-            ? `${expr.op}(${left}, ${rightRendered})`
-            : `${left} ${expr.op} ${rightRendered}`,
+            ? `${expr.op}(${left}, ${right})`
+            : `${left} ${expr.op} ${right}`,
         ),
       )
     }
