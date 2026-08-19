@@ -75,18 +75,42 @@ consequence of this design (§4) but not something this ADR commits to building 
 
 ## 2. Decision
 
-### 2.1 Extraction strategy: schema-constrained LLM extraction
+### 2.1 Extraction strategy: schema-constrained LLM extraction via a forced tool call
 
-Adopt LLM-based extraction (RFC-003 §5.2/§9.4) as the primary strategy: a single LLM request,
-constrained to a JSON Schema response format (OpenRouter/OpenAI-style structured output,
-`strict: true`), that returns the entire `ExtractedCsp` object in one response — not an agentic
-tool-calling loop that incrementally constructs it via separate `addEntity`/`addDomain`/
-`addConstraint`-style calls, and not free-form prompting either. (An earlier draft of this section
-described this as "tool/structured-output mode," which read ambiguously as if tool-calling were
-in play — it isn't; see §2.3 for why, and for why that's a starting-point scoping choice, not a
-permanent rejection of agentic techniques generally.) Rule-based, JS-native-NLP, and small-model
-tiers are not adopted as the primary strategy (§3) — GLiNER2 (9.3) remains the leading candidate
-for a future local-first tier (§4), not rejected outright.
+Adopt LLM-based extraction (RFC-003 §5.2/§9.4) as the primary strategy: a **single** LLM request
+that returns the entire `ExtractedCsp` in one response, structurally constrained by a JSON Schema.
+That schema is delivered as a **forced function/tool call** — `tools` declaring exactly one
+function whose `parameters` is the schema, plus `tool_choice` naming that function — and the
+extraction is read from the resulting tool call's arguments. Not a `response_format`
+structured-output request, and not free-form prompting.
+
+**Tool calling here is a delivery mechanism, not an agentic loop**, and the difference is the
+whole point: the model is forced to make exactly one call to one function, in one turn, and the
+pipeline reads its arguments. It never chooses *whether* or *which* tool to call, never makes a
+second call, and never incrementally constructs the CSP via separate
+`addEntity`/`addDomain`/`addConstraint`-style calls. §2.3's "control flow is authored upfront"
+property is fully preserved.
+
+**This revises the mechanism this ADR originally chose, on evidence.** The history is worth
+stating plainly, because this section has now moved twice: it first said "tool/structured-output
+mode" (ambiguous); it was then clarified to mean `response_format` specifically, explicitly ruling
+tool calling *out*; that clarification is now **wrong** and is what this revision corrects.
+[SPIKE-005](../spikes/SPIKE-005-tool-calling-conventions/SPIKE.md) tested both mechanisms across
+13 models x 8 schema shapes (208 probes against the live API) and found:
+
+- `response_format` produced **3 hard rejections and 74/104 conforming results**; forced tool
+  calling produced **zero rejections and 89/104**.
+- Both of this ADR's own §2.5 default tiers failed under `response_format`, in two different ways:
+  Gemini rejects a recursive-`$ref` schema outright (reproduced on all three Gemini models), and
+  Anthropic returns HTTP 200 with conversational prose that ignores the schema entirely
+  (reproduced on both Sonnet and Haiku). Under tool calling both Anthropic models score 8/8 — so
+  this was a mechanism failure, not a model-capability one.
+- Provider-declared capability metadata is not a usable substitute for testing: all 13 sampled
+  models except one declare `structured_outputs`, including every model that then failed.
+
+Rule-based, JS-native-NLP, and small-model tiers are not adopted as the primary strategy (§3) —
+GLiNER2 (9.3) remains the leading candidate for a future local-first tier (§4), not rejected
+outright.
 
 This also resolves Open Question 7.5 in the LLM tier's favor: RFC-003 Appendix §9's
 Extensibility criterion (criterion 6) already scored LLM-based extraction "Best" on reach toward
@@ -150,8 +174,14 @@ dedicated pre-parser, unlike every other tier.
 
 The extraction workflow — extract, critique, revise, escalate — is implemented as a composed
 `Effect` pipeline, with each individual LLM call (extraction, critique) a single-shot,
-schema-constrained request, not a multi-step agent with tool access, and not built on an agentic
-framework (Mastra, Vercel AI SDK) or `@effect/ai`.
+schema-constrained request, not a multi-step agent that chooses its own control flow, and not
+built on an agentic framework (Mastra, Vercel AI SDK) or `@effect/ai`.
+
+(Note the wording care since §2.1's revision: "not agentic" here means the *model* never decides
+what happens next — it does **not** mean "no tool calls." §2.1 now uses a forced single tool call
+as its delivery mechanism precisely because that is the more reliably supported convention, while
+leaving every control-flow decision in this pipeline's hands. "Uses tools" and "is an agent" are
+independent properties, and an earlier version of this ADR conflated them.)
 
 **This is a starting-point scoping choice for this MVP, not a general position that agentic
 techniques don't belong in this project.** "Hard-code a fixed workflow" and "let one monolithic
@@ -248,6 +278,24 @@ implementation detail from a CLI user's perspective, not something this project'
 should require knowing about. No third escalation tier is decided here; that's future work if
 two tiers prove insufficient.
 
+**The specific default models warrant review, and the cross-vendor shape is itself a cost.**
+[SPIKE-005](../spikes/SPIKE-005-tool-calling-conventions/SPIKE.md) found that *provider identity,
+not model size, dominates* structured-output reliability: `openai/gpt-4o-mini` ($0.15/M) scored
+8/8 on both mechanisms while `google/gemini-2.5-pro` ($1.25/M) scored 5/8 on one of them. Two
+consequences for this section, neither decided here:
+
+- Cheap-first tiering is **not** invalidated — a cheap tier is clearly viable, and
+  `gemini-2.5-flash-lite` specifically is salvageable under §2.1/§2.7's revised mechanism and
+  encoding. But it was chosen (SPIKE-004) on price and extraction quality, before
+  structured-output reliability was known to vary this much; that criterion should now be part of
+  the choice.
+- Escalating *across vendors* is what creates the provider-compatibility surface this ADR has now
+  paid for twice. A same-vendor cheap→frontier pair would eliminate it rather than manage it —
+  but that trades directly against §2.4's rationale for escalation, which wants a **materially
+  different, less-correlated** model as the second opinion. Same-vendor tiering would weaken
+  exactly the property escalation exists to provide. This tension is real and unresolved; it
+  needs deciding before the model defaults change, not as a side effect of changing them.
+
 ### 2.6 Error model
 
 Mirrors `src/solver/types.ts`'s tagged-error convention (same idiom), independent of
@@ -267,11 +315,49 @@ class CriticRejected extends Data.TaggedError("CriticRejected")<{
 type ExtractionError = ProviderError | SchemaViolation | CriticRejected
 ```
 
-`SchemaViolation` is a safety net, not an expected path — `strict: true` structured output should
-prevent it, but the pipeline models it honestly rather than assuming it can't happen.
+`SchemaViolation` was originally described here as "a safety net, not an expected path," on the
+assumption that a `strict: true` schema request essentially guarantees conformance.
+[SPIKE-005](../spikes/SPIKE-005-tool-calling-conventions/SPIKE.md) shows that assumption was
+wrong: even under §2.1's revised mechanism and §2.7's encoding, non-conforming responses arrived
+with HTTP 200 in a meaningful minority of probes (15 of 104 under the old mechanism, 8 of 104
+under the new one). **`SchemaViolation` is a live, expected path** — the pipeline was right to
+model it, and it should be treated as a normal outcome to report clearly rather than an
+assertion-style "can't happen." Retrying a `SchemaViolation` is not decided here; today it
+propagates, which is honest but likely worth revisiting once real usage shows how often it fires.
 `CriticRejected` carries every attempt's model, `ExtractedCsp`, and `FidelityCritique` (not just
 the last), so a rejected extraction is genuinely diagnosable for manual review, not a bare
 failure.
+
+### 2.7 Provider-compatible schema encoding
+
+The JSON Schema sent to the provider (§2.1) **must avoid `$ref`/`$defs` entirely and must not use
+a nullable nested object** (`anyOf: [<object>, null]`). Recursive structures are encoded by
+inlining to a bounded depth, with the recursive edge as a possibly-empty **array** rather than a
+nullable reference — `[]` denotes "no children" where `null` otherwise would.
+
+This is a decision, not an implementation note, because it constrains what §2.2's representation
+may look like *on the wire* and because getting it wrong fails silently.
+[SPIKE-005](../spikes/SPIKE-005-tool-calling-conventions/SPIKE.md) isolated two independent traps,
+both Google-specific but neither detectable without testing:
+
+- **`$ref`**: under `response_format` a *recursive* `$ref` is rejected outright (HTTP 400) while a
+  non-recursive one is fine; under tool calling **any** `$ref` is silently rendered as a bare
+  string (`{"a":"foo","b":"bar"}` where two objects were required). The failure mode is worse
+  under the mechanism §2.1 adopts, which is why this section exists alongside it.
+- **Nullable nested objects**: `anyOf: [<object>, null]` is likewise degraded to a string.
+  Discriminated unions of *objects* are fine, so this is nullability specifically, not unions —
+  meaning §2.2's six-kind `ExtractedConstraint` union is safe as such.
+
+The combined encoding (inlined, depth-bounded, array edges, no nullable objects) scored 12/13
+across the sampled models under tool calling, including all three Google models that failed every
+other recursive shape tested. Bounding the depth is acceptable rather than merely expedient:
+`derivedRule`'s nested constraint list and `arithmetic`'s operand nesting are both shallow in the
+catalog's actual puzzles (SPIKE-001), and a depth overflow is a loud failure (the extraction
+simply won't validate), not a silent truncation.
+
+Note what this does **not** constrain: `ExtractedCsp`'s own logical shape (§2.2) is unchanged.
+This is purely about its encoding for transmission, and a future consumer that doesn't go through
+an LLM provider is unaffected.
 
 ## 3. Alternatives Considered
 
@@ -321,9 +407,25 @@ failure.
   self-critique is insufficient — tier escalation already provides a materially different model's
   perspective when same-tier revision doesn't converge, without paying for cross-model critique
   on every attempt.
-- **An agentic framework (Mastra, Vercel AI SDK), or a richer agentic pattern generally (tool-
-  using subagents, multi-agent critique panels), for the workflow.** Deferred, not rejected
-  outright (2.3): this ADR's workflow's control flow is authored upfront for its own specific
+- **`response_format` JSON-Schema structured output as the delivery mechanism** — this ADR's own
+  original choice. Rejected on evidence (2.1):
+  [SPIKE-005](../spikes/SPIKE-005-tool-calling-conventions/SPIKE.md) measured 3 hard rejections
+  and 74/104 conforming results against forced tool calling's 0 and 89/104, and found it failing
+  on *both* of this ADR's own default model tiers, in two different ways. Its worst property isn't
+  the lower success rate but the failure *mode*: Anthropic returns HTTP 200 with prose that
+  ignores the schema, so the mechanism can fail without any error to catch.
+- **Emitting MiniZinc or gram text directly from the LLM, skipping a JSON schema entirely** —
+  raised as a candidate response to the schema-compatibility failures. Rejected *as a fix for
+  those failures* (2.1/2.7): SPIKE-005 showed the mechanism and the schema encoding were the
+  problem and that both are fixable, so a text target would be discarding
+  `ExtractedCsp`'s solver-agnostic value (2.2) to solve a problem that no longer needs solving
+  that way. Emitting gram specifically remains genuinely interesting on its own merits — it would
+  address the constitution's graph-representation principle — but that is undesigned work
+  deserving its own RFC/ADR, not a reactive substitution made under bug pressure.
+- **An agentic framework (Mastra, Vercel AI SDK), or a richer agentic pattern generally
+  (multi-step tool-using subagents, multi-agent critique panels), for the workflow.** Deferred,
+  not rejected outright (2.3) — and note this is a distinct question from §2.1's forced single
+  tool call, which is a delivery mechanism rather than an agentic pattern: this ADR's workflow's control flow is authored upfront for its own specific
   loop, and either named framework would still need hand-wrapping to reach `@openrouter/sdk`
   today, trading one integration surface for a larger one — but the real blocker is `@effect/ai`'s
   incompatibility with this repo's `effect` 4.x pin, not a belief that agentic techniques are the
@@ -339,6 +441,25 @@ failure.
 
 ## 4. Consequences
 
+- **`src/extraction/types.ts` needs a schema post-processing step it doesn't have.**
+  `Schema.toJsonSchemaDocument` emits `$defs`/`$ref` by default for both unions and
+  `Schema.suspend` recursion, which §2.7 now forbids on the wire. The `effect` `Schema` values
+  stay the source of truth for the TypeScript type *and* the runtime decoder; only the emitted
+  JSON Schema needs dereferencing/inlining before it is sent. This is real follow-up work, and it
+  reduces (but does not eliminate) the appeal of a library owning the provider-compatibility layer
+  — the alternative to writing that pass is adopting something that already has one.
+- **`ArithmeticExpression`'s nullable `left` should be reverted and re-modelled.** It was added
+  during implementation specifically to appease Gemini's ref-loop rejection; SPIKE-005 shows it is
+  both insufficient (nullable nested objects fail on their own) and unnecessary (the array
+  encoding solves it). An operand *array* — length 1 for the unary `abs`, 2 for binary operators —
+  is both §2.7-compatible and a more honest model of the domain than "a second operand that is
+  sometimes null." A pleasant outcome worth noting: the compatibility constraint pushed toward a
+  better representation rather than away from one.
+- **The compatibility surface was self-inflicted, and is now understood rather than merely
+  patched.** Two failures were paid for before either was diagnosed. The generalizable lesson —
+  recorded here because it will recur — is that provider capability *declarations* are not
+  evidence, and that a mechanism which can fail with HTTP 200 (Anthropic ignoring
+  `response_format`) is materially worse than one that fails loudly, independent of success rates.
 - This ADR's single-shot, pure-`Effect`, no-agentic-framework shape (§2.3) is a starting point
   scoped to this MVP, not a permanent architectural stance. Richer agentic patterns — tool-using
   extraction subagents, multi-agent critique panels, retrieval-augmented few-shot prompting drawn
