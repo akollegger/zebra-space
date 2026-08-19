@@ -370,3 +370,12 @@ test("SC-003: a model ignoring the forced tool call is reported as a structure p
     },
   )
 })
+
+test("SC-003: extract against a nonexistent puzzle file reports the path, not a JS stack trace", async () => {
+  const result = await runCli(["extract", "/nonexistent/puzzle.md"])
+  assert.equal(result.exitCode, 1)
+  assert.match(result.stderr, /Could not read puzzle file/)
+  assert.match(result.stderr, /\/nonexistent\/puzzle\.md/)
+  assert.doesNotMatch(result.stderr, /\s+at .*node_modules/)
+  assert.doesNotMatch(result.stderr, /at async open/)
+})

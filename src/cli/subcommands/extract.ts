@@ -75,7 +75,12 @@ function formatCompileError(error: CompileError): string {
 }
 
 async function extractCommandFunc(flags: ExtractFlags, puzzlePath: string): Promise<void> {
-  const prose = await readFile(puzzlePath, "utf8")
+  let prose: string
+  try {
+    prose = await readFile(puzzlePath, "utf8")
+  } catch (error) {
+    throw new UserFacingError(`Could not read puzzle file "${puzzlePath}": ${(error as Error).message}`)
+  }
   const model = resolveModel(flags.model, "ZEBRA_MODEL")
   const frontierModel = resolveModel(flags["frontier-model"], "ZEBRA_FRONTIER_MODEL")
 

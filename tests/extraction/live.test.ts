@@ -28,13 +28,16 @@ test(
   "SC-002: at least 80% of the stratified sample produces a validated, faithful translation",
   { skip: !hasApiKey && "OPENROUTER_API_KEY is not set — skipping live extraction test" },
   async () => {
-    const outcomes = await Promise.all(
-      SAMPLE_PUZZLES.map(async (filename) => {
-        const prose = await readFile(puzzlePath(filename), "utf8")
-        const exit = await Effect.runPromiseExit(extract(prose))
-        return { filename, succeeded: exit._tag === "Success" }
-      }),
-    )
+    // Sequential, not Promise.all: this hits a real, billed, rate-limited API, and running the
+    // sample concurrently risks 429s/timeouts that fail the assertion below for reasons unrelated
+    // to extraction fidelity (same "stay easy on rate limits/cost" practice as eval/README.md's
+    // harness).
+    const outcomes: { filename: string; succeeded: boolean }[] = []
+    for (const filename of SAMPLE_PUZZLES) {
+      const prose = await readFile(puzzlePath(filename), "utf8")
+      const exit = await Effect.runPromiseExit(extract(prose))
+      outcomes.push({ filename, succeeded: exit._tag === "Success" })
+    }
 
     const succeeded = outcomes.filter((o) => o.succeeded).length
     const rate = succeeded / outcomes.length
