@@ -23,6 +23,63 @@ test("ADR-005 §2.2/§2.3: assignment on a scalar (single-entity) domain compile
   assert.match(mzn, /constraint culprit = Plum;/)
 })
 
+test('an entity id matching its own entityType name (e.g. entity "player" of type "player") disambiguates the enum, never emits a self-colliding `enum player = {player, ...};`', async () => {
+  // Exactly the shape a live eval run produced (PZL-0003): two entities of type "player", one of
+  // them also named "player" — `enum player = {player, opponent};` is rejected by `minizinc` as
+  // "identifier `player' already defined" (the enum type and one of its own members).
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "player", type: "player" },
+      { id: "opponent", type: "player" },
+    ],
+    domains: [{ variable: "move", entityType: "player", values: ["Paper", "Rock", "Scissors"] }],
+    constraints: [{ kind: "assignment", entity: "opponent", variable: "move", value: "Rock" }],
+  }
+  const mzn = await run(csp)
+  assert.doesNotMatch(mzn, /enum player = /)
+  assert.match(mzn, /enum player_Type = \{player, opponent\};/)
+  assert.match(mzn, /array\[player_Type\] of var Values_Paper_Rock_Scissors: move;/)
+  assert.match(mzn, /constraint move\[opponent\] = Rock;/)
+})
+
+test('a variable named identically to its own entityType (e.g. variable/entityType both "position") disambiguates the enum, never emits self-colliding `array[position] of var ...: position;`', async () => {
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "A", type: "position" },
+      { id: "B", type: "position" },
+    ],
+    domains: [{ variable: "position", entityType: "position", values: ["1", "2"] }],
+    constraints: [{ kind: "assignment", entity: "A", variable: "position", value: "1" }],
+  }
+  const mzn = await run(csp)
+  assert.doesNotMatch(mzn, /enum position = /)
+  assert.match(mzn, /enum position_Type = \{A, B\};/)
+  assert.match(mzn, /array\[position_Type\] of var 1\.\.2: position;/)
+})
+
+test("two domains sharing an entityType still resolve to the SAME (disambiguated) enum name, even if only one domain's variable collides", async () => {
+  // "color" doesn't collide with entityType "house", but "house" (the second domain's own
+  // variable) does — both domains share entityType "house", so both must end up pointing at the
+  // SAME enum name, or the entity ids would be declared as members of two different enums (a
+  // fresh collision of its own).
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "H1", type: "house" },
+      { id: "H2", type: "house" },
+    ],
+    domains: [
+      { variable: "color", entityType: "house", values: ["Red", "Blue"] },
+      { variable: "house", entityType: "house", values: ["Yes", "No"] },
+    ],
+    constraints: [{ kind: "assignment", entity: "H1", variable: "color", value: "Red" }],
+  }
+  const mzn = await run(csp)
+  const enumDeclarations = mzn.match(/enum house\w* = /g) ?? []
+  assert.equal(new Set(enumDeclarations).size, 1, `expected one consistent entity enum, got: ${enumDeclarations}`)
+  assert.match(mzn, /array\[house_Type\] of var Values_Red_Blue: color;/)
+  assert.match(mzn, /array\[house_Type\] of var Values_Yes_No: house;/)
+})
+
 test("ADR-005 §2.3: allDifferent renders all_different (with include \"globals.mzn\";), not the invalid bare `alldifferent`", async () => {
   const csp: ExtractedCsp = {
     entities: [

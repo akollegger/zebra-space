@@ -38,7 +38,40 @@ interface CompiledDomain {
   readonly valuesEnumName: string
 }
 
+/**
+ * One entityType enum name per distinct `entityType` string — computed once, up front, rather
+ * than per domain, because two domains can share an entityType (e.g. "color" and "position" both
+ * over "house") and must resolve to the exact same enum name (`renderDeclarations` dedupes by
+ * this name; if two domains sharing an entityType computed it independently and only one
+ * happened to collide with its own variable name, they'd disagree and the entity ids would end
+ * up declared as members of two different enums — itself a fresh "identifier already defined").
+ *
+ * MiniZinc's enum-type names, member names, and top-level variable names all share one
+ * identifier namespace — a type can't also be one of its own members, and can't be the same
+ * identifier as an array variable indexed by it. An LLM will readily name an entity the same as
+ * its own type (e.g. an entity "player" of type "player", observed live on PZL-0003), or name a
+ * variable the same as its entityType, either of which would otherwise emit `enum player =
+ * {player, ...};` or `array[position] of var ...: position;` — both rejected by `minizinc` as
+ * "identifier already defined". Disambiguate only when a real collision is detected, so the
+ * common (non-colliding) case keeps its plain, readable name.
+ */
+function computeEntityTypeEnumNames(csp: ExtractedCsp): ReadonlyMap<string, string> {
+  const names = new Map<string, string>()
+  for (const entityType of new Set(csp.domains.map((d) => d.entityType))) {
+    const base = sanitizeIdentifier(entityType)
+    const sanitizedEntityIds = csp.entities
+      .filter((entity) => entity.type === entityType)
+      .map((entity) => sanitizeIdentifier(entity.id))
+    const collidesWithAnyVariable = csp.domains.some(
+      (d) => d.entityType === entityType && sanitizeIdentifier(d.variable) === base,
+    )
+    names.set(entityType, sanitizedEntityIds.includes(base) || collidesWithAnyVariable ? `${base}_Type` : base)
+  }
+  return names
+}
+
 function analyzeDomains(csp: ExtractedCsp): readonly CompiledDomain[] {
+  const entityTypeEnumNames = computeEntityTypeEnumNames(csp)
   return csp.domains.map((domain) => {
     const entityIds = csp.entities.filter((entity) => entity.type === domain.entityType).map((entity) => entity.id)
     return {
@@ -49,7 +82,7 @@ function analyzeDomains(csp: ExtractedCsp): readonly CompiledDomain[] {
       // (catalog/mzn/PZL-0004-whodunit.mzn's `var Suspect: culprit;`, not an array).
       isScalar: entityIds.length <= 1,
       isNumeric: domain.values.length > 0 && domain.values.every(isIntegerLiteral),
-      entityTypeEnumName: sanitizeIdentifier(domain.entityType),
+      entityTypeEnumName: entityTypeEnumNames.get(domain.entityType)!,
       // Named by VALUE CONTENT, not by the owning domain's variable name: MiniZinc enum member
       // identifiers share one global namespace, so two domains with the same vocabulary (e.g.
       // two independent "Yes"/"No" criteria) must resolve to the SAME enum declaration, or the
