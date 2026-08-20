@@ -65,6 +65,21 @@ export const DerivedCondition = Schema.Union([
 ])
 export type DerivedCondition = Schema.Schema.Type<typeof DerivedCondition>
 
+const RuleTableOperandSchema = Schema.Union([
+  Schema.Struct({
+    kind: Schema.Literal("variableRef"),
+    variable: Schema.String,
+    entity: Schema.NullOr(Schema.String),
+  }).annotate({ description: "References a domain variable — see `ArithmeticExpression`'s `variableRef`." }),
+  Schema.Struct({ kind: Schema.Literal("literal"), value: Schema.String }).annotate({
+    description: "A known constant value (e.g. the opponent's fixed move), not a variable.",
+  }),
+]).annotate({
+  description:
+    "Either side of a `ruleTableConstraint` — a variable's value, or a known constant. Values " +
+    "are strings, matching a domain's own value vocabulary.",
+})
+
 // The TypeScript types stay fully recursive — consumers (notably src/compiler) reason about
 // arbitrarily nested values. Only the *schema* is depth-bounded, which is the safe direction:
 // anything the schema admits satisfies the type. Exceeding the bound fails loudly at decode
@@ -123,6 +138,13 @@ function makeArithmeticExpression(depth: number): Schema.Codec<ArithmeticExpress
 
 export const ArithmeticExpression = makeArithmeticExpression(MAX_NESTING_DEPTH)
 
+/** Either side of a `ruleTableConstraint` — a variable's value, or a known constant. Values are
+ * strings (rule tables relate domain values, e.g. "Paper"/"Rock", not numbers), so this is its
+ * own small union rather than reusing `ArithmeticExpression` (whose `literal` is number-only). */
+export type RuleTableOperand =
+  | { readonly kind: "variableRef"; readonly variable: string; readonly entity: string | null }
+  | { readonly kind: "literal"; readonly value: string }
+
 export type ExtractedConstraint =
   | { readonly kind: "assignment"; readonly entity: string; readonly variable: string; readonly value: string }
   | {
@@ -144,6 +166,13 @@ export type ExtractedConstraint =
       readonly expression: ArithmeticExpression
       readonly comparator: string
       readonly target: string | number | ArithmeticExpression
+    }
+  | { readonly kind: "ruleTable"; readonly name: string; readonly a: string; readonly b: string }
+  | {
+      readonly kind: "ruleTableConstraint"
+      readonly table: string
+      readonly a: RuleTableOperand
+      readonly b: RuleTableOperand
     }
 
 function nonRecursiveConstraints() {
@@ -206,6 +235,34 @@ function nonRecursiveConstraints() {
         "itself be a structured expression when the clue compares two computed quantities " +
         '(e.g. "the sum of these three cells equals the sum of those three cells", or one ' +
         "entity's value against another's).",
+    }),
+    Schema.Struct({
+      kind: Schema.Literal("ruleTable"),
+      name: Schema.String,
+      a: Schema.String,
+      b: Schema.String,
+    }).annotate({
+      description:
+        "One fact in a static, entity-independent rule table over domain VALUES, not entities — " +
+        'e.g. "paper beats rock" is {name: "beats", a: "Paper", b: "Rock"}. Structurally the same ' +
+        "shape as `relation`, but `a`/`b` are values from a domain's `values`, never entity ids. " +
+        'Declare one `ruleTable` entry per clue, all sharing the same `name`, to build up the ' +
+        "full table (e.g. rock-paper-scissors' three \"beats\" clues). Consumed by a paired " +
+        "`ruleTableConstraint`; produces no output by itself.",
+    }),
+    Schema.Struct({
+      kind: Schema.Literal("ruleTableConstraint"),
+      table: Schema.String,
+      a: RuleTableOperandSchema,
+      b: RuleTableOperandSchema,
+    }).annotate({
+      description:
+        "Requires two values — each either a variable's value (`variableRef`) or a known " +
+        "constant (`literal`) — to be related by the named `ruleTable`: some declared tuple " +
+        '`{a, b}` in that table must match them. Use this when a clue depends on a small, ' +
+        'closed, static rule between VALUES (e.g. "you should play a move that beats the ' +
+        'opponent\'s Rock" against a "beats" ruleTable) — never `relation`/`derivedRule`\'s ' +
+        "fact-driven mode, which expands per matching ENTITY pair, not per value.",
     }),
   ]
 }

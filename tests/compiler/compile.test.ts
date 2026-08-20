@@ -146,6 +146,49 @@ test('a leaked, unresolved entity placeholder (e.g. "$outer" misused in a mode-1
   assert.doesNotMatch(reason, /_outer/)
 })
 
+test('ADR-004 §2.2/eval gap: ruleTable + ruleTableConstraint model a static, entity-independent rule (rock-paper-scissors)', async () => {
+  const csp: ExtractedCsp = {
+    entities: [{ id: "You", type: "Player" }],
+    domains: [{ variable: "move", entityType: "Player", values: ["Paper", "Rock", "Scissors"] }],
+    constraints: [
+      { kind: "ruleTable", name: "beats", a: "Paper", b: "Rock" },
+      { kind: "ruleTable", name: "beats", a: "Rock", b: "Scissors" },
+      { kind: "ruleTable", name: "beats", a: "Scissors", b: "Paper" },
+      {
+        kind: "ruleTableConstraint",
+        table: "beats",
+        a: { kind: "variableRef", variable: "move", entity: null },
+        b: { kind: "literal", value: "Rock" },
+      },
+    ],
+  }
+  const mzn = await run(csp)
+  assert.ok(
+    mzn.includes(
+      "constraint (move = Paper /\\ Rock = Rock) \\/ (move = Rock /\\ Rock = Scissors) \\/ (move = Scissors /\\ Rock = Paper);",
+    ),
+  )
+  // The rule table's own facts produce no direct constraint output.
+  assert.doesNotMatch(mzn, /constraint beats/)
+})
+
+test("ADR-004 §2.2/eval gap: ruleTableConstraint referencing an undeclared table is a CompileError", async () => {
+  const csp: ExtractedCsp = {
+    entities: [{ id: "You", type: "Player" }],
+    domains: [{ variable: "move", entityType: "Player", values: ["Paper", "Rock", "Scissors"] }],
+    constraints: [
+      {
+        kind: "ruleTableConstraint",
+        table: "beats",
+        a: { kind: "variableRef", variable: "move", entity: null },
+        b: { kind: "literal", value: "Rock" },
+      },
+    ],
+  }
+  const reason = await runFails(csp)
+  assert.match(reason, /Unknown rule table "beats"/)
+})
+
 test("ADR-005 §2.4 mode 2 (variable-conditioned): a comparison condition compiles to a reified implication", async () => {
   const csp: ExtractedCsp = {
     entities: [{ id: "App1", type: "Application" }],

@@ -5,6 +5,7 @@ import type {
   Domain,
   ExtractedConstraint,
   ExtractedCsp,
+  RuleTableOperand,
 } from "../extraction/types.ts"
 import { CompileError } from "./types.ts"
 
@@ -615,6 +616,48 @@ function compileArithmeticTopLevel(
   )
 }
 
+/** Renders one side of a `ruleTableConstraint`: a variable's value, or a known constant. */
+function renderRuleTableOperand(
+  compiled: readonly CompiledDomain[],
+  operand: RuleTableOperand,
+): Effect.Effect<string, CompileError> {
+  return operand.kind === "literal"
+    ? Effect.succeed(renderScalar(operand.value))
+    : renderVariableRef(compiled, operand.variable, operand.entity ?? undefined)
+}
+
+/**
+ * A static, entity-independent rule table (ADR-004 §2.2/eval's previously-unaddressed "no
+ * universal rule table" gap) — e.g. rock-paper-scissors' "paper beats rock, rock beats scissors,
+ * scissors beats paper". `ruleTable` facts (one tuple per clue, sharing `name`) declare the table;
+ * this compiles the paired `ruleTableConstraint` into a disjunction over the declared tuples: the
+ * two rendered operands must match SOME tuple's `a`/`b` values. Each disjunct's own `aRef`/`bRef`
+ * are the same rendered expression across every tuple — only the tuple's literal values change —
+ * so exactly the tuples that are actually true for the current assignment select it.
+ */
+function compileRuleTableConstraint(
+  compiled: readonly CompiledDomain[],
+  csp: ExtractedCsp,
+  c: Extract<ExtractedConstraint, { kind: "ruleTableConstraint" }>,
+): Effect.Effect<string, CompileError> {
+  const tuples = csp.constraints.filter(
+    (x): x is Extract<ExtractedConstraint, { kind: "ruleTable" }> => x.kind === "ruleTable" && x.name === c.table,
+  )
+  if (tuples.length === 0) {
+    return Effect.fail(
+      new CompileError({ reason: `Unknown rule table "${c.table}" — no matching "ruleTable" facts declared.` }),
+    )
+  }
+  return Effect.all([renderRuleTableOperand(compiled, c.a), renderRuleTableOperand(compiled, c.b)]).pipe(
+    Effect.map(
+      ([aRef, bRef]) =>
+        `constraint ${tuples
+          .map((t) => `(${aRef} = ${renderScalar(t.a)} /\\ ${bRef} = ${renderScalar(t.b)})`)
+          .join(" \\/ ")};`,
+    ),
+  )
+}
+
 function compileTopLevelConstraint(
   compiled: readonly CompiledDomain[],
   csp: ExtractedCsp,
@@ -636,6 +679,11 @@ function compileTopLevelConstraint(
       return compileDerivedRule(compiled, csp, c)
     case "arithmetic":
       return compileArithmeticTopLevel(compiled, c)
+    case "ruleTable":
+      // Consumed by a paired ruleTableConstraint — produces no output itself.
+      return Effect.succeed("")
+    case "ruleTableConstraint":
+      return compileRuleTableConstraint(compiled, csp, c)
   }
 }
 

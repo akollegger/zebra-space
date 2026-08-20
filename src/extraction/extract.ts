@@ -115,7 +115,20 @@ function extractionSystemPrompt(): string {
     '("cigarette == Chesterfields"), the inner nested derivedRule\'s condition picks out the ' +
     'second ("pet == fox"). Inside the INNER rule\'s own `thenConstraints`, use `"$this"` for ' +
     'the inner entity (the one satisfying the inner condition) and `"$outer"` for the outer ' +
-    "entity (the one satisfying the outer condition) — never reuse `\"$this\"` for both."
+    "entity (the one satisfying the outer condition) — never reuse `\"$this\"` for both.\n\n" +
+    'Some puzzles depend on a small, closed, static rule between VALUES rather than between ' +
+    'specific entities ("paper beats rock, rock beats scissors, scissors beats paper" — a fixed ' +
+    "fact about the values themselves, true no matter which entity holds them; contrast with " +
+    '`relation`, which is a fact about specific entities like "France shares a border with ' +
+    'Spain"). Represent each such fact as one `ruleTable` entry — `{kind: "ruleTable", name, a, ' +
+    'b}`, e.g. `{name: "beats", a: "Paper", b: "Rock"}` — with every entry for the same table ' +
+    'sharing `name`. Then use exactly one `ruleTableConstraint` — `{kind: ' +
+    '"ruleTableConstraint", table, a, b}`, where `a`/`b` are each either `{kind: "variableRef", ' +
+    'variable, entity}` or `{kind: "literal", value}` — to require the ACTUAL values satisfy ' +
+    'the table, e.g. "you should play a move that beats the opponent\'s Rock" becomes `{table: ' +
+    '"beats", a: {kind: "variableRef", variable: "move", entity: null}, b: {kind: "literal", ' +
+    'value: "Rock"}}`. Never use `derivedRule`\'s fact-driven mode for this — that expands per ' +
+    "matching ENTITY pair, not per value."
   )
 }
 
@@ -253,7 +266,7 @@ function runTier(
       context = { extractedCsp: attempt.extractedCsp, issues: critique.issues }
     }
 
-    return { attempts, lastSchemaViolation }
+    return lastSchemaViolation === undefined ? { attempts } : { attempts, lastSchemaViolation }
   })
 }
 
