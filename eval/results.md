@@ -162,3 +162,28 @@ Model: `openai/gpt-4o-mini (default)` (frontier: `anthropic/claude-sonnet-4.5 (d
 | PZL-0002 | MATCH |
 
 Full detail: `eval/results/2026-08-20T13-33-11-333Z.json`
+
+---
+
+## 2026-08-20T21:16:29Z — commit `e9d1206`
+
+Model: `openai/gpt-4o-mini (default)` (frontier: `anthropic/claude-sonnet-4.5 (default)`) · 14 puzzles · pass rate **5/14 (36%)**
+
+| Puzzle | Outcome |
+|---|---|
+| PZL-0001 | EXTRACT_FAILED (CriticRejected, 6 attempts) |
+| PZL-0002 | MATCH |
+| PZL-0003 | EXTRACT_FAILED (CriticRejected, 5 attempts) |
+| PZL-0004 | MATCH |
+| PZL-0005 | MATCH |
+| PZL-0006 | MISMATCH |
+| PZL-0007 | MATCH |
+| PZL-0008 | EXTRACT_FAILED (ProviderError) |
+| PZL-0009 | SOLVE_MULTIPLY_SATISFIABLE |
+| PZL-0010 | EXTRACT_FAILED (CriticRejected, 6 attempts) |
+| PZL-0011 | COMPILE_FAILED (Unknown variable "priya_credit_score" — no matching domain declared.) |
+| PZL-0012 | MATCH |
+| PZL-0013 | COMPILE_FAILED (linkedAttributes requires entity-indexed variables; entityType "decision" has on) |
+| PZL-0014 | MISMATCH |
+
+Full detail: `eval/results/2026-08-20T21-16-29-386Z.json`
