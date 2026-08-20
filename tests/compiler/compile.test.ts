@@ -119,6 +119,28 @@ test('sanitizeIdentifier: a digit-leading value (e.g. "9am") gets a LETTER prefi
   assert.match(mzn, /constraint time = v9am;/)
 })
 
+test('sanitizeIdentifier: a value colliding with a MiniZinc reserved word (e.g. "true") is disambiguated, never emitted verbatim', async () => {
+  // Exactly the shape a live eval run produced (PZL-0013): a boolean-flavored ruleTable fact
+  // literally valued "true" — verified directly against a real minizinc install that a bare
+  // `enum X = {true};` is rejected ("unexpected bool literal").
+  const csp: ExtractedCsp = {
+    entities: [{ id: "Group", type: "Group" }],
+    domains: [{ variable: "restaurant", entityType: "Group", values: ["Thai Palace", "Wheat & Co"] }],
+    constraints: [
+      { kind: "ruleTable", name: "vegan_friendly", a: "Wheat & Co", b: "true" },
+      {
+        kind: "ruleTableConstraint",
+        table: "vegan_friendly",
+        a: { kind: "variableRef", variable: "restaurant", entity: "Group" },
+        b: { kind: "literal", value: "true" },
+      },
+    ],
+  }
+  const mzn = await run(csp)
+  assert.doesNotMatch(mzn, /\{true\}|= true[ ;)]/)
+  assert.match(mzn, /enum RuleTableValues_true_ = \{true_\};/)
+})
+
 test("ADR-005 §2.3: adjacency compiles via the relation-name registry over a shared numeric domain", async () => {
   const csp: ExtractedCsp = {
     entities: [

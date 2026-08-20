@@ -14,13 +14,27 @@ import { CompileError } from "./types.ts"
 // enum-valued vars use `enum X = {...}; var X: v;`; reified implication is plain
 // `constraint (cond) -> (then);`; `abs`/enum `!=` work as expected.
 
+// Every MiniZinc reserved word, verified individually against a real `minizinc` install (each
+// one rejected as an enum member on its own) rather than copied from a spec that may not match
+// this pinned version's actual parser. A domain value colliding with one of these (e.g. a
+// boolean-flavored ruleTable fact literally valued "true") would otherwise silently produce an
+// invalid identifier — observed live for "true" specifically.
+const MINIZINC_RESERVED_WORDS = new Set([
+  "ann", "annotation", "any", "array", "bool", "case", "constraint", "default", "diff", "div",
+  "else", "elseif", "endif", "enum", "false", "float", "function", "if", "in", "include", "int",
+  "intersect", "let", "list", "maximize", "minimize", "mod", "not", "of", "opt", "output", "par",
+  "predicate", "record", "satisfy", "set", "solve", "string", "subset", "superset", "symdiff",
+  "test", "then", "true", "tuple", "type", "union", "var", "where", "xor",
+])
+
 function sanitizeIdentifier(name: string): string {
   const cleaned = name.replace(/[^A-Za-z0-9_]/g, "_")
   // A bare leading underscore is valid MiniZinc (`_a` parses fine), but only when a letter
   // immediately follows it — `_9am` is a syntax error ("unexpected _"), verified against a real
   // `minizinc` install (a value starting with a digit, e.g. a time like "9am", would otherwise
   // hit exactly this). A digit-leading value needs a LETTER prefix instead.
-  return /^([A-Za-z]|_[A-Za-z])/.test(cleaned) ? cleaned : `v${cleaned}`
+  const based = /^([A-Za-z]|_[A-Za-z])/.test(cleaned) ? cleaned : `v${cleaned}`
+  return MINIZINC_RESERVED_WORDS.has(based) ? `${based}_` : based
 }
 
 function isIntegerLiteral(value: string): boolean {
