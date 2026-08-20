@@ -113,11 +113,13 @@ function isFlatScalarRecord(value: unknown): value is Record<string, Scalar> {
 // renders a string constant as a MiniZinc enum member (non-alphanumerics -> "_"), so the answer
 // key's natural-language values ("Professor Plum") must go through the same transform as the
 // solved assignment's values ("Professor_Plum") before comparing, or every non-identifier-safe
-// value falsely mismatches.
+// value falsely mismatches. Must stay byte-for-byte in sync with sanitizeIdentifier() — e.g. a
+// digit-leading value ("9am") needs a LETTER prefix ("v9am"), not "_9am", which real `minizinc`
+// rejects as a syntax error (a bare leading underscore is valid only when a letter follows it).
 function normalizeToken(raw: string): string {
   if (/^-?\d+$/.test(raw)) return raw
   const cleaned = raw.replace(/[^A-Za-z0-9_]/g, "_")
-  return /^[A-Za-z_]/.test(cleaned) ? cleaned : `_${cleaned}`
+  return /^([A-Za-z]|_[A-Za-z])/.test(cleaned) ? cleaned : `v${cleaned}`
 }
 
 /**
