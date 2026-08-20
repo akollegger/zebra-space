@@ -127,6 +127,15 @@ function extractionSystemPrompt(): string {
     'for the inner entity (the one satisfying the inner condition) and `"$outer"` for the ' +
     'outer entity (the one satisfying the outer condition) — never reuse `"$this"` for ' +
     "both.\n\n" +
+    'When that relation is DIRECTIONAL rather than symmetric ("whichever entity has attr1=val1 ' +
+    'is immediately AFTER whichever entity has attr2=val2" — not just "adjacent to"), the ' +
+    "arithmetic's operand order must match the prose's stated direction exactly, not just its " +
+    'entities: nest val1 as the outer condition and val2 as the inner (as above), then "val1 ' +
+    'is immediately after val2" becomes `position[$outer] - position[$this] == 1` — $outer ' +
+    "(val1, the entity stated to come after) MINUS \$this (val2, the entity it comes after), " +
+    'never the reverse. Getting this backwards ($this - $outer instead) is NOT a compile error ' +
+    "— it silently produces the mirror-image (wrong) solution instead of the correct one, so " +
+    "double-check which side of the subtraction is which before finishing.\n\n" +
     'Some puzzles depend on a small, closed, static rule between VALUES rather than between ' +
     'specific entities ("val1 beats val2, val2 beats val3, val3 beats val1" — a fixed fact ' +
     "about the values themselves, true no matter which entity holds them; contrast with " +
