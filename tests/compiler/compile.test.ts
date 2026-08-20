@@ -124,6 +124,41 @@ test("ADR-005 §2.3: adjacency compiles via the relation-name registry over a sh
   assert.match(mzn, /constraint position\[H2\] = position\[H1\] \+ 1;/)
 })
 
+test('ADR-005 §2.3: adjacency works over an ordered-but-non-integer domain (e.g. time slots) via enum2int, when it is the ONLY domain shared', async () => {
+  // Exactly the shape a live eval run produced (PZL-0009): "immediately before" over a
+  // "9am"/"10am"/"11am" time-slot domain — ordered by declaration, not literal integers.
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "Chen", type: "candidate" },
+      { id: "Deepak", type: "candidate" },
+      { id: "Aisha", type: "candidate" },
+    ],
+    domains: [{ variable: "time_slot", entityType: "candidate", values: ["9am", "10am", "11am"] }],
+    constraints: [{ kind: "adjacency", relation: "immediately_before", a: "Chen", b: "Deepak" }],
+  }
+  const mzn = await run(csp)
+  assert.match(mzn, /constraint enum2int\(time_slot\[Chen\]\) = enum2int\(time_slot\[Deepak\]\) - 1;/)
+})
+
+test("ADR-005 §2.3: adjacency over multiple shared (non-numeric) domains still fails as ambiguous, not a silent guess", async () => {
+  // With more than one domain shared by both entities, numeric-ness is the only positional
+  // signal available (no explicit "ordered" flag on Domain) — so this must still fail, not
+  // silently pick one of two categorical domains (e.g. color vs. drink).
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "H1", type: "House" },
+      { id: "H2", type: "House" },
+    ],
+    domains: [
+      { variable: "color", entityType: "House", values: ["Red", "Blue"] },
+      { variable: "drink", entityType: "House", values: ["Tea", "Coffee"] },
+    ],
+    constraints: [{ kind: "adjacency", relation: "next to", a: "H1", b: "H2" }],
+  }
+  const reason = await runFails(csp)
+  assert.match(reason, /Could not find a single positional domain/)
+})
+
 test("ADR-005 §2.3: an unrecognized adjacency relation name is a CompileError, never a silent guess", async () => {
   const csp: ExtractedCsp = {
     entities: [

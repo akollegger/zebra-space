@@ -351,23 +351,32 @@ function compileAdjacency(
   if (template === undefined) {
     return Effect.fail(new CompileError({ reason: `Unrecognized adjacency relation "${c.relation}".` }))
   }
-  // Adjacency needs a single, numeric, ordered domain shared by both entities (ADR-005 §2.3) —
-  // there's no `variable` field on this constraint kind, so the positional domain is inferred as
-  // the entities' one shared numeric domain.
-  const positional = compiled.filter(
-    (d) => d.isNumeric && d.entityIds.includes(c.a) && d.entityIds.includes(c.b),
-  )
+  // Adjacency needs a single ordered domain shared by both entities (ADR-005 §2.3) — there's no
+  // `variable` field on this constraint kind, so the positional domain is inferred from what's
+  // shared. `Domain` carries no explicit "this one is ordered" flag, so when more than one domain
+  // is shared (the common multi-attribute zebra-puzzle shape, e.g. color/drink/position all over
+  // "house") numeric-ness is the only signal available to disambiguate the positional one from
+  // categorical ones. But when exactly one domain is shared, there's nothing to disambiguate
+  // against — accept it even if non-numeric (e.g. ordered-but-non-integer values like time slots
+  // "9am"/"10am"/"11am", declared in their natural order).
+  const shared = compiled.filter((d) => d.entityIds.includes(c.a) && d.entityIds.includes(c.b))
+  const positional = shared.length === 1 ? shared : shared.filter((d) => d.isNumeric)
   if (positional.length !== 1) {
     return Effect.fail(
       new CompileError({
-        reason: `Could not find a single numeric positional domain shared by "${c.a}" and "${c.b}" for adjacency relation "${c.relation}".`,
+        reason: `Could not find a single positional domain shared by "${c.a}" and "${c.b}" for adjacency relation "${c.relation}".`,
       }),
     )
   }
   const domainInfo = positional[0]!
   const varName = sanitizeIdentifier(domainInfo.domain.variable)
-  const refA = `${varName}[${sanitizeIdentifier(c.a)}]`
-  const refB = `${varName}[${sanitizeIdentifier(c.b)}]`
+  const rawRefA = `${varName}[${sanitizeIdentifier(c.a)}]`
+  const rawRefB = `${varName}[${sanitizeIdentifier(c.b)}]`
+  // A non-numeric domain renders as a MiniZinc enum, which doesn't support the templates' direct
+  // arithmetic (+/-/abs) — cast to each value's ordinal position (its index within the domain's
+  // own declared order) via `enum2int` so the arithmetic operates on plain integers instead.
+  const refA = domainInfo.isNumeric ? rawRefA : `enum2int(${rawRefA})`
+  const refB = domainInfo.isNumeric ? rawRefB : `enum2int(${rawRefB})`
   return Effect.succeed(`constraint ${template(refA, refB)};`)
 }
 
