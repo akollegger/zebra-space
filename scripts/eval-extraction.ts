@@ -12,6 +12,16 @@
  * UniquelySolvable, so a false MATCH there requires both the structure and the vocabulary to
  * align by accident. Every eval/results.md entry's legend names the affected puzzle ids.
  *
+ * recoverEntityKeyedArrays() closes one specific hole in that vocabulary check, found live on
+ * PZL-0010: MiniZinc's own JSON output for an entity-indexed array variable is purely positional
+ * (no entity-id keys at all), so an answer key phrased as a flat list of entity names (e.g.
+ * `["South", "Pedestrian", ...]`) could never match even a fully correct solve — the vocabulary
+ * itself was structurally absent, not just unpaired. Re-zipping the solved array against the
+ * SAME entities/order `compile.ts` itself used to index it recovers that vocabulary. This does
+ * NOT add ordinal-pairing verification (the limitation above still stands) — it only fixes cases
+ * where the entity vocabulary was missing entirely, not cases like PZL-0006 (a mapping keyed by
+ * row numbers, not entity ids), which remain a genuine, unaddressed blind spot.
+ *
  * Usage:
  *   node scripts/eval-extraction.ts                  # all 14 catalog puzzles
  *   node scripts/eval-extraction.ts PZL-0004 PZL-0007 # just these
@@ -25,7 +35,7 @@ import { Effect } from "effect"
 import { compile } from "../src/compiler/compile.ts"
 import type { CompileError } from "../src/compiler/types.ts"
 import { extract } from "../src/extraction/extract.ts"
-import type { ExtractionAttempt, ExtractionError } from "../src/extraction/types.ts"
+import type { ExtractedCsp, ExtractionAttempt, ExtractionError } from "../src/extraction/types.ts"
 import { loadEnvFileIfPresent } from "../src/cli/load-env.ts"
 import { solve } from "../src/solver/solve.ts"
 import type { Assignment, SolverError } from "../src/solver/types.ts"
@@ -176,6 +186,31 @@ interface Comparison {
   readonly missing: readonly string[]
   readonly expectedTokenCount: number
   readonly actualTokenCount: number
+}
+
+/**
+ * Recovers entity-name vocabulary for an array-typed (entity-indexed) domain variable's solved
+ * value — MiniZinc's own `--output-mode json` never carries it, an array is purely positional,
+ * not keyed by the enum that indexes it. Confirmed live on PZL-0010: the solved assignment
+ * (`{"order": [4,1,3,5,2]}`) never mentions "North"/"South"/etc. anywhere, even though the answer
+ * key is exactly that vocabulary in declared order, and the puzzle solved correctly. Zips each
+ * array against the SAME entities, in the SAME declared order, `src/compiler/compile.ts` itself
+ * indexes that array by (`csp.entities` filtered by the domain's `entityType`), so those ids
+ * appear in the flattened comparison. This recovers VOCABULARY only — it does not verify ordinal
+ * pairing (`compareAnswer`'s existing known limitation, this file's header) — so it fixes cases
+ * like PZL-0010 (a flat array of entity names) but not PZL-0006 (a mapping keyed by row NUMBERS
+ * that don't match any entity id), which stays a genuine remaining blind spot.
+ */
+function recoverEntityKeyedArrays(assignment: Assignment, extractedCsp: ExtractedCsp): Assignment {
+  const recovered: Record<string, unknown> = { ...assignment }
+  for (const domain of extractedCsp.domains) {
+    const value = recovered[domain.variable]
+    if (!Array.isArray(value)) continue
+    const entityIds = extractedCsp.entities.filter((e) => e.type === domain.entityType).map((e) => e.id)
+    if (entityIds.length !== value.length) continue
+    recovered[domain.variable] = Object.fromEntries(entityIds.map((id, i) => [id, value[i]]))
+  }
+  return recovered
 }
 
 function compareAnswer(expected: unknown, actualAssignment: Assignment): Comparison {
@@ -377,7 +412,10 @@ async function runOnePuzzle(
     )
   }
 
-  const comparison = compareAnswer(answerKeyEntry.answer, solveResult.assignment)
+  const comparison = compareAnswer(
+    answerKeyEntry.answer,
+    recoverEntityKeyedArrays(solveResult.assignment, extractedCsp),
+  )
   return record(
     puzzle,
     comparison.verdict,

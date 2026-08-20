@@ -54,6 +54,13 @@ shape without per-puzzle logic — but it has real, documented blind spots:
   Building full ordinal-correspondence matching was judged disproportionate for a first-pass
   eval; `solve()` already independently confirms `UniquelySolvable`, so a false `MATCH` here needs
   both the structure and the vocabulary to align by accident.
+  `recoverEntityKeyedArrays()` (`scripts/eval-extraction.ts`) closes one specific instance of this
+  found live on PZL-0010: MiniZinc's own JSON output for an entity-indexed array is purely
+  positional, so an answer key phrased as a flat list of entity names could never match at all —
+  the vocabulary was structurally missing, not just unpaired. Re-zipping the solved array against
+  the same entities `compile.ts` itself indexed it by recovers that vocabulary, without adding
+  real ordinal-pairing verification — PZL-0006 (a mapping keyed by row numbers, not entity ids)
+  remains a genuine, unaddressed instance of this same limitation.
 - **Exact string matching only, no fuzzy/semantic matching.** If the LLM's chosen entity name
   differs from the answer key's phrasing (e.g. `book_set` vs. the answer key's "hardcover book
   set"), a genuinely correct solve can register as `MISMATCH`.
