@@ -118,6 +118,29 @@ function makeArithmeticExpression(depth: number): Schema.Codec<ArithmeticExpress
 
 export const ArithmeticExpression = makeArithmeticExpression(MAX_NESTING_DEPTH)
 
+const ComparisonCondition = Schema.Struct({
+  kind: Schema.Literal("comparison"),
+  variable: Schema.String,
+  operator: Schema.String,
+  value: Schema.Union([Schema.String, Schema.Number]),
+}).annotate({
+  description: "Variable-conditioned condition: compares an extracted domain variable against a value.",
+})
+
+const ExpressionComparisonCondition = Schema.Struct({
+  kind: Schema.Literal("expressionComparison"),
+  expression: ArithmeticExpression,
+  operator: Schema.String,
+  value: Schema.Union([Schema.String, Schema.Number]),
+}).annotate({
+  description:
+    "Computed-quantity condition: compares a COMPUTED expression (e.g. a ratio, a sum, the " +
+    'lower of two values) against a threshold — e.g. "if their debt-to-income ratio exceeds ' +
+    '43%" or "if the lower of their two credit scores is below 600". Use this instead of ' +
+    '`comparison` whenever the condition itself is derived from more than one plain declared ' +
+    "variable, rather than testing a single declared variable directly.",
+})
+
 export const DerivedCondition = Schema.Union([
   Schema.Struct({
     kind: Schema.Literal("relation"),
@@ -126,27 +149,19 @@ export const DerivedCondition = Schema.Union([
     description:
       "Fact-driven condition: true for entity pairs where the named `relation` constraint holds.",
   }),
+  ComparisonCondition,
+  ExpressionComparisonCondition,
   Schema.Struct({
-    kind: Schema.Literal("comparison"),
-    variable: Schema.String,
-    operator: Schema.String,
-    value: Schema.Union([Schema.String, Schema.Number]),
+    kind: Schema.Literal("and"),
+    conditions: Schema.Array(Schema.Union([ComparisonCondition, ExpressionComparisonCondition])),
   }).annotate({
     description:
-      "Variable-conditioned condition: compares an extracted domain variable against a value.",
-  }),
-  Schema.Struct({
-    kind: Schema.Literal("expressionComparison"),
-    expression: ArithmeticExpression,
-    operator: Schema.String,
-    value: Schema.Union([Schema.String, Schema.Number]),
-  }).annotate({
-    description:
-      "Computed-quantity condition: compares a COMPUTED expression (e.g. a ratio, a sum, the " +
-      'lower of two values) against a threshold — e.g. "if their debt-to-income ratio exceeds ' +
-      '43%" or "if the lower of their two credit scores is below 600". Use this instead of ' +
-      '`comparison` whenever the condition itself is derived from more than one plain declared ' +
-      "variable, rather than testing a single declared variable directly.",
+      'Conjunction of two-or-more SIMPLE conditions ("comparison"/"expressionComparison" only, ' +
+      'not "relation" or another "and") — ALL must hold. Use when a derivedRule\'s condition ' +
+      'combines multiple independent checks with "and" ("if not denied by the earlier rules AND ' +
+      'the amount is within policy limits") rather than a single test. Each condition here must ' +
+      "reference a scalar (non-entity-indexed) variable — combining per-entity conditions this " +
+      "way isn't supported.",
   }),
 ])
 export type DerivedCondition = Schema.Schema.Type<typeof DerivedCondition>

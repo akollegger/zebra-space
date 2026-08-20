@@ -705,14 +705,77 @@ function compileVariableConditionedRule(
  * `entity` field), so this always compiles to exactly one global implication, the same shape as
  * `compileVariableConditionedRule`'s scalar branch.
  */
+/**
+ * Renders a single SIMPLE condition (`comparison` or `expressionComparison`) to a boolean MiniZinc
+ * expression — no `then`-list or reification wrapping. Shared by the standalone modes below and
+ * by `and`'s conjunction of them. `comparison` here is always the SCALAR case; a non-scalar
+ * (entity-indexed) `comparison` needs per-entity reification and is handled separately by
+ * `compileVariableConditionedRule`, which this helper deliberately doesn't replace.
+ */
+function renderSimpleCondition(
+  compiled: readonly CompiledDomain[],
+  condition: Extract<DerivedCondition, { kind: "comparison" | "expressionComparison" }>,
+): Effect.Effect<string, CompileError> {
+  if (condition.kind === "expressionComparison") {
+    return renderArithmeticExpr(compiled, condition.expression).pipe(
+      Effect.map((ref) => `${ref} ${condition.operator} ${renderScalar(condition.value)}`),
+    )
+  }
+  const domainInfo = findDomain(compiled, condition.variable)
+  if (domainInfo === undefined) {
+    return Effect.fail(
+      new CompileError({ reason: `Unknown variable "${condition.variable}" — no matching domain declared.` }),
+    )
+  }
+  if (!domainInfo.isScalar) {
+    return Effect.fail(
+      new CompileError({
+        reason:
+          `Condition variable "${condition.variable}" is entity-indexed — combining an ` +
+          `entity-indexed condition inside "and" isn't supported; only scalar conditions can be ` +
+          "conjoined this way.",
+      }),
+    )
+  }
+  return renderVariableRef(compiled, condition.variable).pipe(
+    Effect.map((ref) => `${ref} ${condition.operator} ${renderScalar(condition.value)}`),
+  )
+}
+
 function compileExpressionConditionedRule(
   compiled: readonly CompiledDomain[],
   rule: Extract<ExtractedConstraint, { kind: "derivedRule" }>,
   condition: Extract<DerivedCondition, { kind: "expressionComparison" }>,
 ): Effect.Effect<string, CompileError> {
-  return renderArithmeticExpr(compiled, condition.expression).pipe(
-    Effect.flatMap((conditionRef) => {
-      const conditionExpr = `${conditionRef} ${condition.operator} ${renderScalar(condition.value)}`
+  return renderSimpleCondition(compiled, condition).pipe(
+    Effect.flatMap((conditionExpr) =>
+      Effect.forEach(rule.thenConstraints, (thenConstraint) =>
+        compileThenConstraint(compiled, thenConstraint, undefined),
+      ).pipe(
+        Effect.map((thenBodies) => thenBodies.map((body) => `constraint (${conditionExpr}) -> (${body});`).join("\n")),
+      ),
+    ),
+  )
+}
+
+/**
+ * `and`: conjunction of two-or-more simple conditions (ADR-004 §2.2/§4's compound-condition gap,
+ * found blocking PZL-0011 — "if not denied by rules 1-2 AND the amount is within policy limits").
+ * Scoped to `comparison`/`expressionComparison` sub-conditions only (relation-conditioned
+ * conjunction isn't supported); each renders independently via `renderSimpleCondition` and the
+ * results are ANDed together in one reified implication.
+ */
+function compileConjunctionConditionedRule(
+  compiled: readonly CompiledDomain[],
+  rule: Extract<ExtractedConstraint, { kind: "derivedRule" }>,
+  condition: Extract<DerivedCondition, { kind: "and" }>,
+): Effect.Effect<string, CompileError> {
+  if (condition.conditions.length === 0) {
+    return Effect.fail(new CompileError({ reason: 'A derivedRule\'s "and" condition needs at least one condition.' }))
+  }
+  return Effect.all(condition.conditions.map((c) => renderSimpleCondition(compiled, c))).pipe(
+    Effect.flatMap((parts) => {
+      const conditionExpr = parts.map((p) => `(${p})`).join(" /\\ ")
       return Effect.forEach(rule.thenConstraints, (thenConstraint) =>
         compileThenConstraint(compiled, thenConstraint, undefined),
       ).pipe(
@@ -763,6 +826,8 @@ function compileDerivedRule(
       return compileVariableConditionedRule(compiled, rule, rule.condition)
     case "expressionComparison":
       return compileExpressionConditionedRule(compiled, rule, rule.condition)
+    case "and":
+      return compileConjunctionConditionedRule(compiled, rule, rule.condition)
   }
 }
 

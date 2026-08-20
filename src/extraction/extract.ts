@@ -149,7 +149,15 @@ function extractionSystemPrompt(): string {
     '`arithmetic` constraints use, e.g. `{kind: "binaryOp", op: "/", operands: [attr1, ' +
     'attr2]}` for a ratio, or `{kind: "binaryOp", op: "min", operands: [attr1@X, attr1@Y]}` ' +
     'for "the lower of two values") — never `"comparison"`, whose `variable` field can only ' +
-    "name a single plain declared variable, not a computed one."
+    "name a single plain declared variable, not a computed one.\n\n" +
+    'A derivedRule normally has ONE condition — but some clues combine multiple independent ' +
+    'checks with "and" ("if not denied by the earlier rules AND the amount is within policy ' +
+    'limits, Approved"). For these, use `condition.kind: "and"` — `{kind: "and", conditions: ' +
+    '[...]}`, where each entry in `conditions` is itself a `"comparison"` or ' +
+    '`"expressionComparison"` (never `"relation"`, and never another `"and"` — no nesting). Do ' +
+    "NOT try to express this as nested `derivedRule`s (that changes which entity a rule applies " +
+    'to, it does not combine two conditions into one gate) or as a single condition with an ' +
+    '"AND"-like operator string — there is no such operator; `"and"` is its own `condition.kind`.'
   )
 }
 

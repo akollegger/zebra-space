@@ -423,6 +423,61 @@ test('ADR-005 §2.4 mode 2, expressionComparison: a computed quantity (e.g. a de
   assert.match(mzn, /constraint \(\(debt \/ income\) > 0\.43\) -> \(outcome = Denied\);/)
 })
 
+test('ADR-004 §2.2/eval gap: "and" conjoins multiple simple conditions into one derivedRule gate', async () => {
+  // Mirrors PZL-0011's rules 3-4: "if not denied by rules 1-2, AND the requested amount is
+  // within policy limits, Approved" — a derivedRule conditioned on TWO independent checks, not
+  // one. `comparison`/`expressionComparison` can each only carry a single condition.
+  const csp: ExtractedCsp = {
+    entities: [{ id: "App1", type: "Application" }],
+    domains: [
+      { variable: "score", entityType: "Application", values: ["0", "1000"] },
+      { variable: "withinLimits", entityType: "Application", values: ["Yes", "No"] },
+      { variable: "outcome", entityType: "Application", values: ["Approved", "Denied"] },
+    ],
+    constraints: [
+      { kind: "assignment", entity: "App1", variable: "score", value: "680" },
+      { kind: "assignment", entity: "App1", variable: "withinLimits", value: "Yes" },
+      {
+        kind: "derivedRule",
+        appliesTo: "outcome",
+        condition: {
+          kind: "and",
+          conditions: [
+            { kind: "comparison", variable: "score", operator: ">=", value: 600 },
+            { kind: "comparison", variable: "withinLimits", operator: "=", value: "Yes" },
+          ],
+        },
+        thenConstraints: [{ kind: "assignment", entity: "App1", variable: "outcome", value: "Approved" }],
+      },
+    ],
+  }
+  const mzn = await run(csp)
+  assert.match(mzn, /constraint \(\(score >= 600\) \/\\ \(withinLimits = Yes\)\) -> \(outcome = Approved\);/)
+})
+
+test('"and" over an entity-indexed condition variable is a clear CompileError, not silently ignored', async () => {
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "H1", type: "House" },
+      { id: "H2", type: "House" },
+    ],
+    domains: [{ variable: "color", entityType: "House", values: ["Red", "Blue"] }],
+    constraints: [
+      {
+        kind: "derivedRule",
+        appliesTo: "House",
+        condition: {
+          kind: "and",
+          conditions: [{ kind: "comparison", variable: "color", operator: "==", value: "Red" }],
+        },
+        thenConstraints: [],
+      },
+    ],
+  }
+  const reason = await runFails(csp)
+  assert.match(reason, /entity-indexed.*"and".*isn't supported/)
+})
+
 test('ADR-005 §2.4 mode 2, entity-indexed condition: "$this" reifies per entity (self-referential zebra clue)', async () => {
   const csp: ExtractedCsp = {
     entities: [
