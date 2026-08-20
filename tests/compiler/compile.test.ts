@@ -295,6 +295,39 @@ test("ADR-004 §2.2/eval gap: ruleTableConstraint referencing an undeclared tabl
   assert.match(reason, /Unknown rule table "beats"/)
 })
 
+test('ADR-004 §2.2/eval gap: ruleTable values not belonging to any declared Domain (e.g. a boolean "Yes"/"No" fact) get their own synthetic enum', async () => {
+  // Exactly the shape a live eval run produced (PZL-0013, Picking a Restaurant): a ruleTable
+  // attaching a boolean fact to existing domain values ("Wheat & Co is vegan-friendly: Yes") —
+  // "Wheat & Co" is the restaurant domain's own value, but "Yes" is never declared anywhere,
+  // and multiple ruleTables reuse it. Before this fix, "Yes" compiled to an undeclared MiniZinc
+  // identifier.
+  const csp: ExtractedCsp = {
+    entities: [{ id: "Group", type: "group" }],
+    domains: [
+      { variable: "restaurant", entityType: "group", values: ["Thai Palace", "Wheat & Co", "Garden Table"] },
+    ],
+    constraints: [
+      { kind: "ruleTable", name: "vegan_friendly", a: "Wheat & Co", b: "Yes" },
+      { kind: "ruleTable", name: "vegan_friendly", a: "Garden Table", b: "Yes" },
+      { kind: "ruleTable", name: "gluten_free", a: "Thai Palace", b: "Yes" },
+      {
+        kind: "ruleTableConstraint",
+        table: "vegan_friendly",
+        a: { kind: "variableRef", variable: "restaurant", entity: "Group" },
+        b: { kind: "literal", value: "Yes" },
+      },
+    ],
+  }
+  const mzn = await run(csp)
+  assert.match(mzn, /enum RuleTableValues_Yes = \{Yes\};/)
+  // Only ONE enum declares "Yes", shared across both ruleTables that use it — not redeclared.
+  assert.equal((mzn.match(/enum RuleTableValues_Yes/g) ?? []).length, 1)
+  assert.match(
+    mzn,
+    /constraint \(restaurant = Wheat___Co \/\\ Yes = Yes\) \\\/ \(restaurant = Garden_Table \/\\ Yes = Yes\);/,
+  )
+})
+
 test("ADR-005 §2.4 mode 2 (variable-conditioned): a comparison condition compiles to a reified implication", async () => {
   const csp: ExtractedCsp = {
     entities: [{ id: "App1", type: "Application" }],

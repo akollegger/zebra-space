@@ -102,7 +102,28 @@ function findDomain(compiled: readonly CompiledDomain[], variable: string): Comp
   return compiled.find((c) => c.domain.variable === variable)
 }
 
-function renderDeclarations(compiled: readonly CompiledDomain[]): string {
+/**
+ * `ruleTable` facts relate VALUES, not necessarily values already declared by any `Domain` — a
+ * puzzle can use a ruleTable to attach a synthetic boolean/categorical fact to existing domain
+ * values (e.g. "Restaurant X is vegan-friendly: Yes" — "Wheat & Co"/"Garden Table" are the
+ * `restaurant` domain's own values, but "Yes" is never declared anywhere as a domain). Those
+ * orphan values still need an enum to belong to, or `minizinc` rejects them as an undefined
+ * identifier — collected once, across every ruleTable fact in the whole CSP, since MiniZinc's
+ * enum-member namespace is global (the same "Yes" used across multiple ruleTables must be the
+ * SAME declared identifier, not redeclared per table).
+ */
+function collectRuleTableOrphanValues(csp: ExtractedCsp): readonly string[] {
+  const declaredValues = new Set(csp.domains.flatMap((d) => d.values))
+  const orphans = new Set<string>()
+  for (const c of csp.constraints) {
+    if (c.kind !== "ruleTable") continue
+    if (!declaredValues.has(c.a)) orphans.add(c.a)
+    if (!declaredValues.has(c.b)) orphans.add(c.b)
+  }
+  return [...orphans]
+}
+
+function renderDeclarations(compiled: readonly CompiledDomain[], csp: ExtractedCsp): string {
   const lines: string[] = []
   const declaredEntityEnums = new Set<string>()
   const declaredValueEnums = new Set<string>()
@@ -116,6 +137,11 @@ function renderDeclarations(compiled: readonly CompiledDomain[]): string {
       lines.push(`enum ${c.valuesEnumName} = {${c.domain.values.map(sanitizeIdentifier).join(", ")}};`)
       declaredValueEnums.add(c.valuesEnumName)
     }
+  }
+
+  const orphans = collectRuleTableOrphanValues(csp)
+  if (orphans.length > 0) {
+    lines.push(`enum RuleTableValues_${orphans.map(sanitizeIdentifier).join("_")} = {${orphans.map(sanitizeIdentifier).join(", ")}};`)
   }
 
   for (const c of compiled) {
@@ -776,7 +802,7 @@ function compileTopLevelConstraint(
  */
 export function compile(csp: ExtractedCsp): Effect.Effect<string, CompileError> {
   const compiled = analyzeDomains(csp)
-  const declarations = renderDeclarations(compiled)
+  const declarations = renderDeclarations(compiled, csp)
   const needsGlobals = csp.constraints.some((c) => c.kind === "allDifferent")
 
   return Effect.forEach(csp.constraints, (c) => compileTopLevelConstraint(compiled, csp, c)).pipe(
