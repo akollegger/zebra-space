@@ -62,83 +62,87 @@ function extractionSystemPrompt(): string {
     "natural-language logic puzzle. Produce the entities, decision-variable domains, and " +
     "constraints exactly as described by the prose — represent every clue, invent nothing, " +
     "and never guess at a clue you can't confidently translate.\n\n" +
+    "The examples below use placeholder names (X/Y for entities, attr1/attr2 for variables, " +
+    'val1/val2 for values, N for a number) to illustrate SCHEMA STRUCTURE, not puzzle content ' +
+    "— map them onto whatever the actual puzzle's entities, attributes, and values are.\n\n" +
     "Three easily-confused clue shapes need different constraint kinds — pick by what the " +
     "clue actually asserts, not by superficial similarity:\n" +
-    '- Exclusion/negation ("The culprit is not Colonel Mustard", "not the Revolver"): use ' +
-    '`arithmetic` with comparator "!=" against the excluded value. This is NOT ' +
-    "`linkedAttributes` — the clue rules one value out, it does not link two values together.\n" +
-    '- Attribute co-occurrence with NO entity ever named ("The Englishman lives in the red ' +
-    'house"): use `linkedAttributes` — it links two-or-more attribute values on some ' +
-    "unspecified entity. Do not use this for exclusion/negation clues, and do not use it to " +
-    "represent an entity ruling out a value.\n" +
-    '- A specific, already-known entity ("the first house", or one named directly): use ' +
+    '- Exclusion/negation ("X is not val1", "not val2"): use `arithmetic` with comparator ' +
+    '"!=" against the excluded value. This is NOT `linkedAttributes` — the clue rules one ' +
+    "value out, it does not link two values together.\n" +
+    '- Attribute co-occurrence with NO entity ever named ("some entity has attr1=val1 and ' +
+    'attr2=val2 at the same time"): use `linkedAttributes` — it links two-or-more attribute ' +
+    "values on some unspecified entity. Do not use this for exclusion/negation clues, and do " +
+    "not use it to represent an entity ruling out a value.\n" +
+    '- A specific, already-known entity ("the first one", or one named directly): use ' +
     "`assignment`.\n\n" +
     "A clue comparing two computed quantities, or one entity's value against another's " +
-    '("the sum of these three cells equals the sum of those three", "Drug B is at least 4 ' +
-    'hours after Drug A", "the color of house A differs from house B\'s"): use `arithmetic` ' +
-    "with a structured `target` (an `ArithmeticExpression`, not just a plain value). Never " +
-    'invent a compound variable name like "houseA.color" or "time(DrugB)" to smuggle an ' +
-    "entity reference into a plain string — `variableRef` has its own `variable` (the domain " +
-    "name) and `entity` (null for a scalar domain, or the specific entity id) fields for " +
-    "exactly this.\n\n" +
+    '("the total of these three equals the total of those three", "X\'s attr1 is at least N ' +
+    'units more than Y\'s", "X\'s attr1 differs from Y\'s"): use `arithmetic` with a ' +
+    "structured `target` (an `ArithmeticExpression`, not just a plain value). Never invent a " +
+    'compound variable name like "X.attr1" or "attr1(Y)" to smuggle an entity reference into ' +
+    "a plain string — `variableRef` has its own `variable` (the domain name) and `entity` " +
+    "(null for a scalar domain, or the specific entity id) fields for exactly this.\n\n" +
     "`arithmetic`'s `comparator` field (e.g. \"=\", \"!=\", \">=\") is ALWAYS separate from " +
     "`expression`'s `op` — `op` is only ever one of the arithmetic operators " +
-    '(+ - * / min max abs), never a comparator. For "Drug B is at least 4 hours after Drug ' +
-    'A": `expression` is `{kind: "binaryOp", op: "-", operands: [timeB, timeA]}`, ' +
-    '`comparator` is ">=", `target` is `{kind: "literal", value: 4}` — do NOT put ">=" inside ' +
-    "`expression.op`. For a symmetric \"at least N (hours/units) away from\" clue, wrap the " +
-    'difference in `abs`: `expression` is `{kind: "binaryOp", op: "abs", operands: [{kind: ' +
-    '"binaryOp", op: "-", operands: [a, b]}]}`, with the threshold still in the top-level ' +
-    "`comparator`/`target`.\n\n" +
+    '(+ - * / min max abs), never a comparator. For "X\'s attr1 is at least N units more than ' +
+    'Y\'s attr1": `expression` is `{kind: "binaryOp", op: "-", operands: [attr1@X, attr1@Y]}`, ' +
+    '`comparator` is ">=", `target` is `{kind: "literal", value: N}` — do NOT put ">=" inside ' +
+    "`expression.op`. For a symmetric \"at least N units apart\" clue, wrap the difference in " +
+    '`abs`: `expression` is `{kind: "binaryOp", op: "abs", operands: [{kind: "binaryOp", op: ' +
+    '"-", operands: [a, b]}]}`, with the threshold still in the top-level `comparator`/' +
+    "`target`.\n\n" +
     "A derivedRule's two condition shapes each have their OWN entity-reference convention in " +
     "thenConstraints — don't mix them up:\n" +
-    '- `condition: {kind: "relation", name: ...}` (fact-driven — paired with separate `relation` ' +
-    'facts elsewhere, e.g. "France shares a border with Spain"): thenConstraints reference the ' +
-    'matched fact\'s two entities via `target: "$a"` or `target: "$b"` — a literal STRING value, ' +
-    "not a `variableRef` object. Leave `expression`'s own `variableRef.entity` as `null`.\n" +
+    '- `condition: {kind: "relation", name: ...}` (fact-driven — paired with separate ' +
+    '`relation` facts elsewhere, e.g. "X relates to Y via someRelation"): thenConstraints ' +
+    'reference the matched fact\'s two entities via `target: "$a"` or `target: "$b"` — a ' +
+    "literal STRING value, not a `variableRef` object. Leave `expression`'s own " +
+    "`variableRef.entity` as `null`.\n" +
     '- `condition: {kind: "comparison", variable, operator, value}` (variable-conditioned, ' +
     'evaluated per entity — see below): use `"$this"`/`"$outer"` inside `variableRef.entity` ' +
     "instead. Never use `\"$a\"`/`\"$b\"` here, and never use `\"$this\"`/`\"$outer\"` as a bare " +
     "`target` string for a relation-conditioned rule.\n\n" +
-    'A derivedRule\'s condition is evaluated per entity ("if THIS entity\'s attribute has ' +
-    'some value, then..."), e.g. "the green house\'s owner drinks milk" or "if a house is ' +
-    'green, its position is one more than the ivory house\'s". Inside that derivedRule\'s ' +
-    '`thenConstraints`, use the literal entity id `"$this"` for `variableRef.entity` (or ' +
-    "`assignment.entity`) wherever you mean \"the entity currently satisfying this rule's " +
-    'condition" — never invent another placeholder name or the entity\'s attribute value ' +
-    'itself (e.g. not `entity: "green"`). Reference a different, already-named entity by its ' +
-    "real id as usual.\n\n" +
+    'A derivedRule\'s condition is evaluated per entity ("if THIS entity\'s attr1 is val1, ' +
+    'then..."), e.g. "whichever entity has attr1=val1 also has attr2=val2" or "if an entity\'s ' +
+    'attr1 is val1, its attr3 is one more than the entity whose attr1 is val2". Inside that ' +
+    'derivedRule\'s `thenConstraints`, use the literal entity id `"$this"` for ' +
+    '`variableRef.entity` (or `assignment.entity`) wherever you mean "the entity currently ' +
+    'satisfying this rule\'s condition" — never invent another placeholder name or the ' +
+    'entity\'s attribute value itself (e.g. not `entity: "val1"`). Reference a different, ' +
+    "already-named entity by its real id as usual.\n\n" +
     'When a clue relates TWO entities that are BOTH unnamed, each identified only by its own ' +
-    'attribute ("whoever smokes Chesterfields lives next to whoever owns the fox" — neither ' +
-    'house is ever named directly), nest a second derivedRule inside the first one\'s ' +
-    '`thenConstraints`: the outer derivedRule\'s condition picks out the first entity ' +
-    '("cigarette == Chesterfields"), the inner nested derivedRule\'s condition picks out the ' +
-    'second ("pet == fox"). Inside the INNER rule\'s own `thenConstraints`, use `"$this"` for ' +
-    'the inner entity (the one satisfying the inner condition) and `"$outer"` for the outer ' +
-    "entity (the one satisfying the outer condition) — never reuse `\"$this\"` for both.\n\n" +
+    'attribute ("whichever entity has attr1=val1 is adjacent to whichever entity has ' +
+    'attr2=val2" — neither entity is ever named directly), nest a second derivedRule inside ' +
+    "the first one's `thenConstraints`: the outer derivedRule's condition picks out the " +
+    'first entity ("attr1 == val1"), the inner nested derivedRule\'s condition picks out the ' +
+    'second ("attr2 == val2"). Inside the INNER rule\'s own `thenConstraints`, use `"$this"` ' +
+    'for the inner entity (the one satisfying the inner condition) and `"$outer"` for the ' +
+    'outer entity (the one satisfying the outer condition) — never reuse `"$this"` for ' +
+    "both.\n\n" +
     'Some puzzles depend on a small, closed, static rule between VALUES rather than between ' +
-    'specific entities ("paper beats rock, rock beats scissors, scissors beats paper" — a fixed ' +
-    "fact about the values themselves, true no matter which entity holds them; contrast with " +
-    '`relation`, which is a fact about specific entities like "France shares a border with ' +
-    'Spain"). Represent each such fact as one `ruleTable` entry — `{kind: "ruleTable", name, a, ' +
-    'b}`, e.g. `{name: "beats", a: "Paper", b: "Rock"}` — with every entry for the same table ' +
-    'sharing `name`. Then use exactly one `ruleTableConstraint` — `{kind: ' +
-    '"ruleTableConstraint", table, a, b}`, where `a`/`b` are each either `{kind: "variableRef", ' +
-    'variable, entity}` or `{kind: "literal", value}` — to require the ACTUAL values satisfy ' +
-    'the table, e.g. "you should play a move that beats the opponent\'s Rock" becomes `{table: ' +
-    '"beats", a: {kind: "variableRef", variable: "move", entity: null}, b: {kind: "literal", ' +
-    'value: "Rock"}}`. Never use `derivedRule`\'s fact-driven mode for this — that expands per ' +
-    "matching ENTITY pair, not per value.\n\n" +
+    'specific entities ("val1 beats val2, val2 beats val3, val3 beats val1" — a fixed fact ' +
+    "about the values themselves, true no matter which entity holds them; contrast with " +
+    '`relation`, which is a fact about specific entities like "X relates to Y via ' +
+    'someRelation"). Represent each such fact as one `ruleTable` entry — `{kind: ' +
+    '"ruleTable", name, a, b}`, e.g. `{name: "beats", a: "val1", b: "val2"}` — with every ' +
+    'entry for the same table sharing `name`. Then use exactly one `ruleTableConstraint` — ' +
+    '`{kind: "ruleTableConstraint", table, a, b}`, where `a`/`b` are each either `{kind: ' +
+    '"variableRef", variable, entity}` or `{kind: "literal", value}` — to require the ACTUAL ' +
+    'values satisfy the table, e.g. "X\'s attr1 must beat the known constant val2" becomes ' +
+    '`{table: "beats", a: {kind: "variableRef", variable: "attr1", entity: "X"}, b: {kind: ' +
+    '"literal", value: "val2"}}`. Never use `derivedRule`\'s fact-driven mode for this — that ' +
+    "expands per matching ENTITY pair, not per value.\n\n" +
     "A derivedRule's condition normally tests a single plain declared variable directly " +
     '(`condition.kind: "comparison"`) — but some clues condition on a COMPUTED quantity ' +
-    'instead ("if their debt-to-income ratio exceeds 43%", "if the lower of their two credit ' +
-    'scores is below 600"). For these, use `condition.kind: "expressionComparison"` — ' +
-    "`{kind: \"expressionComparison\", expression, operator, value}`, where `expression` is a " +
-    'full `ArithmeticExpression` (the same structured shape `arithmetic` constraints use, e.g. ' +
-    '`{kind: "binaryOp", op: "/", operands: [debt, income]}` for a ratio, or `{kind: "binaryOp", ' +
-    'op: "min", operands: [scoreA, scoreB]}` for "the lower of two values") — never ' +
-    '`"comparison"`, whose `variable` field can only name a single plain declared variable, not ' +
-    "a computed one."
+    'instead ("if the ratio of two declared quantities exceeds N%", "if the lower of two ' +
+    'declared quantities is below N"). For these, use `condition.kind: ' +
+    '"expressionComparison"` — `{kind: "expressionComparison", expression, operator, value}`, ' +
+    "where `expression` is a full `ArithmeticExpression` (the same structured shape " +
+    '`arithmetic` constraints use, e.g. `{kind: "binaryOp", op: "/", operands: [attr1, ' +
+    'attr2]}` for a ratio, or `{kind: "binaryOp", op: "min", operands: [attr1@X, attr1@Y]}` ' +
+    'for "the lower of two values") — never `"comparison"`, whose `variable` field can only ' +
+    "name a single plain declared variable, not a computed one."
   )
 }
 
