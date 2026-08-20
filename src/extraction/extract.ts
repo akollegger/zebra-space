@@ -92,6 +92,12 @@ function extractionSystemPrompt(): string {
     '`abs`: `expression` is `{kind: "binaryOp", op: "abs", operands: [{kind: "binaryOp", op: ' +
     '"-", operands: [a, b]}]}`, with the threshold still in the top-level `comparator`/' +
     "`target`.\n\n" +
+    'Nesting depth is bounded — for "at least N units away from EACH of several fixed ' +
+    'references" (e.g. "away from any of these two reference points"), do NOT wrap multiple ' +
+    'distances in one combined `min`/`max` expression; that nests one level deeper than this ' +
+    "schema allows. Instead emit ONE separate `arithmetic` constraint per reference (`abs(X - " +
+    'ref1) >= N`, `abs(X - ref2) >= N`, ...) — every top-level constraint is implicitly ANDed, ' +
+    "so this is logically identical and keeps each expression shallow.\n\n" +
     "A derivedRule's two condition shapes each have their OWN entity-placeholder tokens in " +
     "thenConstraints, always used the SAME way — as the `entity` field of a `variableRef` (or " +
     "`assignment`), never as a bare, freestanding string value — don't mix the two token " +
