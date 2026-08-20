@@ -609,17 +609,16 @@ an LLM provider is unaffected.
 - This ADR does not decide CLI exposure — implemented separately in
   [ADR-003](ADR-003-cli-interface.md) §2.6.
 - Open Question 7.6 is addressed at the representation level (`derivedRule`'s nested `then`,
-  admitting derived variables and non-boolean outcomes) but running the live pipeline against
-  PZL-0011 specifically found a further, more precise gap than "not yet validated": PZL-0011's
-  rules 3-4 ("if not denied by rules 1-2, **and** the requested amount is within policy limits,
-  Approved") need a `derivedRule` conditioned on the **conjunction** of multiple prior conditions,
-  and `DerivedCondition` (ADR-005 §2.4) admits exactly one condition per `derivedRule`. Nesting (as
-  used for relational chaining, above) doesn't substitute for conjunction — nesting narrows which
-  entity a rule applies to, it doesn't combine two independent boolean conditions into one gate.
-  Unlike this ADR's other representational gaps, PZL-0011's critic-rejection detail also shows the
-  model getting facts wrong ("states scores are below 600, which contradicts the provided
-  information") independent of any schema limitation — so this is a case where representation and
-  raw prose comprehension are both live, not a single clean gap to close.
+  admitting derived variables and non-boolean outcomes), and the more precise gap running the live
+  pipeline against PZL-0011 actually found — a `derivedRule` conditioned on the **conjunction** of
+  multiple prior conditions ("if not denied by rules 1-2, **and** the requested amount is within
+  policy limits, Approved"), which nesting (used for relational chaining, above) doesn't
+  substitute for — is now resolved by a new `"and"` `DerivedCondition` variant (ADR-005 §2.4),
+  live-verified against a real `minizinc` install with PZL-0011's full three-rule cascade solving
+  to its true answer. What Open Question 7.6 does **not** resolve, and this ADR doesn't claim to:
+  PZL-0011's critic-rejection detail also showed the model getting facts wrong ("states scores are
+  below 600, which contradicts the provided information") independent of any schema limitation —
+  raw prose comprehension, not representation, and outside what a schema/compiler fix can address.
 
 ## 5. Related
 

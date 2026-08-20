@@ -128,6 +128,10 @@ type DerivedCondition =
   | { readonly kind: "relation"; readonly name: string }
   | { readonly kind: "comparison"; readonly variable: string; readonly operator: string; readonly value: string | number }
   | { readonly kind: "expressionComparison"; readonly expression: ArithmeticExpression; readonly operator: string; readonly value: string | number }
+  | { readonly kind: "and"; readonly conditions: readonly (
+      | { readonly kind: "comparison"; readonly variable: string; readonly operator: string; readonly value: string | number }
+      | { readonly kind: "expressionComparison"; readonly expression: ArithmeticExpression; readonly operator: string; readonly value: string | number }
+    )[] }
 ```
 
 An unrecognized/ambiguous condition shape is a compile-time error (2.3's same fail-loud
@@ -179,6 +183,20 @@ shape that binds it — e.g. `"$outer"` in a fact-driven rule) is a loud compile
 than a silently-sanitized invalid identifier, per 2.3's same fail-loud principle: no real entity id
 is ever `$`-prefixed, so this is unconditionally safe to detect generically at the point a
 placeholder would otherwise be rendered as an array index.
+
+**A fourth `DerivedCondition` variant, `"and"`, was added after the live pipeline found no way to
+express a `derivedRule` conditioned on more than one independent check.** PZL-0011's "if not
+denied by rules 1-2, **and** the requested amount is within policy limits, Approved" needs a
+conjunction, and nesting `derivedRule`s (used for relational chaining, above) doesn't substitute:
+nesting narrows which entity a rule applies to, it doesn't combine two boolean conditions into one
+gate. `{kind: "and", conditions: [...]}` carries two-or-more `"comparison"`/`"expressionComparison"`
+sub-conditions — deliberately not `"relation"` or a nested `"and"`, scoped to the evidenced need
+rather than maximal generality — each rendered independently and joined with MiniZinc `/\`. Each
+sub-condition's variable must be scalar (non-entity-indexed); combining per-entity conditions this
+way is a compile-time error, not silently mishandled, since no evidenced puzzle has needed it and
+correctly generalizing per-entity conjunction is a separate, undesigned question. Live-verified
+against a real `minizinc` install with PZL-0011's full three-rule cascade (two independent
+denial thresholds, then a conjunctive Approved/CounterOffer gate) solving to its true answer.
 
 ### 2.5 `arithmetic`: a structured expression, not an interpolated string
 
