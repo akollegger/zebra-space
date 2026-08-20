@@ -370,22 +370,185 @@ function compileFactDrivenThen(
   )
 }
 
+/** Placeholders a derivedRule's `thenConstraints` uses to refer to entities that are never
+ * named by id, only bound by an enclosing rule's condition — mode 2's analogue of mode 1's
+ * `$a`/`$b` (`compileFactDrivenThen`). `SELF_ENTITY_TOKEN` ("the entity currently satisfying
+ * *this* rule's condition") covers self-referential zebra clues ("if a house is green, its
+ * position = ivory's position + 1"). `OUTER_ENTITY_TOKEN` ("the entity satisfying the
+ * *enclosing* rule's condition") covers the one-level-deeper case a nested derivedRule needs —
+ * e.g. "whoever smokes Chesterfields lives next to whoever owns the fox," where neither house is
+ * ever named, each is only identified by its own attribute. Models reach for both spontaneously
+ * (observed verbatim in eval output, the latter as an ad hoc value-derived name); until this fix
+ * neither was ever interpreted, and nested derivedRule was rejected outright. Depth is bounded to
+ * these two levels by `MAX_NESTING_DEPTH` (types.ts) — a derivedRule nested inside a derivedRule
+ * can itself only contain non-recursive (leaf) thenConstraints. */
+const SELF_ENTITY_TOKEN = "$this"
+const OUTER_ENTITY_TOKEN = "$outer"
+
+type EntityTokenMap = Readonly<Record<string, string>>
+
+function substituteEntityTokens(expr: ArithmeticExpression, tokens: EntityTokenMap): ArithmeticExpression {
+  switch (expr.kind) {
+    case "variableRef":
+      return expr.entity !== null && expr.entity in tokens ? { ...expr, entity: tokens[expr.entity]! } : expr
+    case "literal":
+      return expr
+    case "binaryOp":
+      return { ...expr, operands: expr.operands.map((operand) => substituteEntityTokens(operand, tokens)) }
+  }
+}
+
+function substituteEntityTokensInTarget(
+  target: string | number | ArithmeticExpression,
+  tokens: EntityTokenMap,
+): string | number | ArithmeticExpression {
+  return isArithmeticExpressionTarget(target) ? substituteEntityTokens(target, tokens) : target
+}
+
+/** Substitutes entity-placeholder tokens throughout one `thenConstraints` entry with concrete
+ * entities. Scoped to the constraint kinds that reference a specific entity at all
+ * (assignment, arithmetic) — a nested `derivedRule` is deliberately left untouched here; its own
+ * tokens are resolved when `compileNestedVariableConditionedRule` compiles it. */
+function substituteEntityTokensInConstraint(c: ExtractedConstraint, tokens: EntityTokenMap): ExtractedConstraint {
+  switch (c.kind) {
+    case "assignment":
+      return c.entity in tokens ? { ...c, entity: tokens[c.entity]! } : c
+    case "arithmetic":
+      return {
+        ...c,
+        expression: substituteEntityTokens(c.expression, tokens),
+        target: substituteEntityTokensInTarget(c.target, tokens),
+      }
+    default:
+      return c
+  }
+}
+
+/**
+ * A derivedRule nested inside another derivedRule's `thenConstraints` — the two-anonymous-
+ * entities relational-chaining pattern (ADR-004 §2.2/`eval/README.md`'s previously-unaddressed
+ * gap). Compiles to a `forall` boolean expression (not top-level `constraint` statements, which
+ * can't nest inside the outer implication's parens): `forall(e in EntityEnum)((innerCond) ->
+ * (innerBody))`, with `SELF_ENTITY_TOKEN` bound to the forall's own generator variable and
+ * `OUTER_ENTITY_TOKEN` bound to the already-concrete entity the enclosing rule is reifying over.
+ */
+function compileNestedVariableConditionedRule(
+  compiled: readonly CompiledDomain[],
+  rule: Extract<ExtractedConstraint, { kind: "derivedRule" }>,
+  outerEntityId: string,
+): Effect.Effect<string, CompileError> {
+  if (rule.condition.kind !== "comparison") {
+    return Effect.fail(
+      new CompileError({
+        reason: 'A derivedRule nested inside a "then" list must have a variable-conditioned ("comparison") condition.',
+      }),
+    )
+  }
+  const condition = rule.condition
+  const domainInfo = findDomain(compiled, condition.variable)
+  if (domainInfo === undefined) {
+    return Effect.fail(
+      new CompileError({ reason: `Unknown variable "${condition.variable}" — no matching domain declared.` }),
+    )
+  }
+  if (domainInfo.isScalar) {
+    return Effect.fail(
+      new CompileError({
+        reason: `A nested derivedRule's condition variable "${condition.variable}" must be entity-indexed, not scalar.`,
+      }),
+    )
+  }
+
+  const generatorVar = sanitizeIdentifier(`${domainInfo.entityTypeEnumName}_e`)
+  const tokens: EntityTokenMap = { [SELF_ENTITY_TOKEN]: generatorVar, [OUTER_ENTITY_TOKEN]: outerEntityId }
+
+  return renderVariableRef(compiled, condition.variable, generatorVar).pipe(
+    Effect.flatMap((conditionRef) => {
+      const conditionExpr = `${conditionRef} ${condition.operator} ${renderScalar(condition.value)}`
+      const substituted = rule.thenConstraints.map((thenConstraint) =>
+        substituteEntityTokensInConstraint(thenConstraint, tokens),
+      )
+      // Depth-bounded (MAX_NESTING_DEPTH): these are leaf constraints, never another derivedRule.
+      return Effect.forEach(substituted, (thenConstraint) => compileConstraintBody(compiled, thenConstraint)).pipe(
+        Effect.map(
+          (thenBodies) =>
+            `forall(${generatorVar} in ${domainInfo.entityTypeEnumName})(` +
+            `${thenBodies.map((body) => `(${conditionExpr}) -> (${body})`).join(" /\\ ")})`,
+        ),
+      )
+    }),
+  )
+}
+
+/** Dispatches one `thenConstraints` entry: a nested `derivedRule` compiles via
+ * `compileNestedVariableConditionedRule` (needs the enclosing rule's bound entity for
+ * `OUTER_ENTITY_TOKEN`); everything else via the shared `compileConstraintBody`. */
+function compileThenConstraint(
+  compiled: readonly CompiledDomain[],
+  thenConstraint: ExtractedConstraint,
+  outerEntityId: string | undefined,
+): Effect.Effect<string, CompileError> {
+  if (thenConstraint.kind === "derivedRule") {
+    if (outerEntityId === undefined) {
+      return Effect.fail(
+        new CompileError({
+          reason: 'A nested derivedRule needs an entity-indexed enclosing rule to bind "$outer" against.',
+        }),
+      )
+    }
+    return compileNestedVariableConditionedRule(compiled, thenConstraint, outerEntityId)
+  }
+  return compileConstraintBody(compiled, thenConstraint)
+}
+
 /** Variable-conditioned reified implication (ADR-005 §2.4 mode 2). */
 function compileVariableConditionedRule(
   compiled: readonly CompiledDomain[],
   rule: Extract<ExtractedConstraint, { kind: "derivedRule" }>,
   condition: Extract<DerivedCondition, { kind: "comparison" }>,
 ): Effect.Effect<string, CompileError> {
-  return renderVariableRef(compiled, condition.variable).pipe(
-    Effect.flatMap((conditionRef) => {
-      const conditionExpr = `${conditionRef} ${condition.operator} ${renderScalar(condition.value)}`
-      return Effect.forEach(rule.thenConstraints, (thenConstraint) => compileConstraintBody(compiled, thenConstraint)).pipe(
-        Effect.map((thenBodies) =>
-          thenBodies.map((body) => `constraint (${conditionExpr}) -> (${body});`).join("\n"),
-        ),
-      )
-    }),
-  )
+  const domainInfo = findDomain(compiled, condition.variable)
+  if (domainInfo === undefined) {
+    return Effect.fail(
+      new CompileError({ reason: `Unknown variable "${condition.variable}" — no matching domain declared.` }),
+    )
+  }
+
+  if (domainInfo.isScalar) {
+    return renderVariableRef(compiled, condition.variable).pipe(
+      Effect.flatMap((conditionRef) => {
+        const conditionExpr = `${conditionRef} ${condition.operator} ${renderScalar(condition.value)}`
+        return Effect.forEach(rule.thenConstraints, (thenConstraint) =>
+          compileThenConstraint(compiled, thenConstraint, undefined),
+        ).pipe(
+          Effect.map((thenBodies) =>
+            thenBodies.map((body) => `constraint (${conditionExpr}) -> (${body});`).join("\n"),
+          ),
+        )
+      }),
+    )
+  }
+
+  // An entity-indexed condition variable: reify once per entity of its domain, substituting
+  // SELF_ENTITY_TOKEN in thenConstraints with that entity (mirrors mode 1's per-relation-fact
+  // $a/$b substitution in compileFactDrivenThen).
+  return Effect.forEach(domainInfo.entityIds, (entityId) =>
+    renderVariableRef(compiled, condition.variable, entityId).pipe(
+      Effect.flatMap((conditionRef) => {
+        const conditionExpr = `${conditionRef} ${condition.operator} ${renderScalar(condition.value)}`
+        const substituted = rule.thenConstraints.map((thenConstraint) =>
+          substituteEntityTokensInConstraint(thenConstraint, { [SELF_ENTITY_TOKEN]: entityId }),
+        )
+        return Effect.forEach(substituted, (thenConstraint) =>
+          compileThenConstraint(compiled, thenConstraint, entityId),
+        ).pipe(
+          Effect.map((thenBodies) =>
+            thenBodies.map((body) => `constraint (${conditionExpr}) -> (${body});`).join("\n"),
+          ),
+        )
+      }),
+    ),
+  ).pipe(Effect.map((groups) => groups.join("\n")))
 }
 
 /** Renders one constraint's boolean body (no `constraint `/`;` wrapper) — reused by the

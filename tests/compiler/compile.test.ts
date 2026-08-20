@@ -134,6 +134,109 @@ test("ADR-005 §2.4 mode 2 (variable-conditioned): a comparison condition compil
   assert.match(mzn, /constraint \(score < 600\) -> \(outcome = Denied\);/)
 })
 
+test('ADR-005 §2.4 mode 2, entity-indexed condition: "$this" reifies per entity (self-referential zebra clue)', async () => {
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "H1", type: "House" },
+      { id: "H2", type: "House" },
+      { id: "H3", type: "House" },
+    ],
+    domains: [
+      { variable: "color", entityType: "House", values: ["red", "green", "ivory"] },
+      { variable: "position", entityType: "House", values: ["1", "2", "3"] },
+    ],
+    constraints: [
+      {
+        kind: "derivedRule",
+        appliesTo: "House",
+        condition: { kind: "comparison", variable: "color", operator: "==", value: "green" },
+        thenConstraints: [
+          {
+            kind: "arithmetic",
+            expression: { kind: "variableRef", variable: "position", entity: "$this" },
+            comparator: "=",
+            target: {
+              kind: "binaryOp",
+              op: "+",
+              operands: [
+                { kind: "variableRef", variable: "position", entity: "H1" },
+                { kind: "literal", value: 1 },
+              ],
+            },
+          },
+        ],
+      },
+    ],
+  }
+  const mzn = await run(csp)
+  assert.match(mzn, /constraint \(color\[H1\] == green\) -> \(position\[H1\] = \(position\[H1\] \+ 1\)\);/)
+  assert.match(mzn, /constraint \(color\[H2\] == green\) -> \(position\[H2\] = \(position\[H1\] \+ 1\)\);/)
+  assert.match(mzn, /constraint \(color\[H3\] == green\) -> \(position\[H3\] = \(position\[H1\] \+ 1\)\);/)
+  assert.doesNotMatch(mzn, /\$this/)
+})
+
+test('ADR-004 §2.2/eval gap: a nested derivedRule chains two anonymous entities via "$outer"/"$this" and forall', async () => {
+  // "Whoever smokes Chesterfields lives next to whoever owns the fox" — neither house is ever
+  // named, each is only identified by its own attribute (the classic zebra-puzzle shape this
+  // gap blocked, per ADR-004 §2.2/eval/README.md's "relational chaining" limitation).
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "H1", type: "House" },
+      { id: "H2", type: "House" },
+      { id: "H3", type: "House" },
+    ],
+    domains: [
+      { variable: "cigarette", entityType: "House", values: ["Chesterfields", "Kools", "OldGold"] },
+      { variable: "pet", entityType: "House", values: ["fox", "horse", "dog"] },
+      { variable: "position", entityType: "House", values: ["1", "2", "3"] },
+    ],
+    constraints: [
+      {
+        kind: "derivedRule",
+        appliesTo: "House",
+        condition: { kind: "comparison", variable: "cigarette", operator: "==", value: "Chesterfields" },
+        thenConstraints: [
+          {
+            kind: "derivedRule",
+            appliesTo: "House",
+            condition: { kind: "comparison", variable: "pet", operator: "==", value: "fox" },
+            thenConstraints: [
+              {
+                kind: "arithmetic",
+                expression: {
+                  kind: "binaryOp",
+                  op: "abs",
+                  operands: [
+                    {
+                      kind: "binaryOp",
+                      op: "-",
+                      operands: [
+                        { kind: "variableRef", variable: "position", entity: "$outer" },
+                        { kind: "variableRef", variable: "position", entity: "$this" },
+                      ],
+                    },
+                  ],
+                },
+                comparator: "=",
+                target: 1,
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  }
+  const mzn = await run(csp)
+  assert.match(
+    mzn,
+    /constraint \(cigarette\[H1\] == Chesterfields\) -> \(forall\(House_e in House\)\(\(pet\[House_e\] == fox\) -> \(abs\(\(position\[H1\] - position\[House_e\]\)\) = 1\)\)\);/,
+  )
+  assert.match(mzn, /cigarette\[H2\]/)
+  assert.match(mzn, /cigarette\[H3\]/)
+  assert.doesNotMatch(mzn, /\$this/)
+  assert.doesNotMatch(mzn, /\$outer/)
+})
+
 test("ADR-005 §2.5: arithmetic expressions render structured binary operations, not interpolated strings", async () => {
   const csp: ExtractedCsp = {
     entities: [

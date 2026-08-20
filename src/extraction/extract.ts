@@ -40,9 +40,20 @@ interface RevisionContext {
   readonly issues: readonly string[]
 }
 
+/** Context for retrying a schema-invalid tool call — distinct from `RevisionContext` because
+ * there's no decoded `ExtractedCsp` to echo back, only the raw arguments and the validation
+ * error that rejected them. */
+interface SchemaRepairContext {
+  readonly raw: string
+  readonly detail: string
+}
+
 interface TierOutcome {
   readonly attempts: readonly ExtractionAttempt[]
   readonly accepted?: { readonly extractedCsp: ExtractedCsp }
+  // Carried so `extract()` can surface a real diagnostic instead of an empty `CriticRejected`
+  // when every attempt across both tiers failed schema validation and none ever decoded.
+  readonly lastSchemaViolation?: SchemaViolation
 }
 
 function extractionSystemPrompt(): string {
@@ -69,7 +80,32 @@ function extractionSystemPrompt(): string {
     'invent a compound variable name like "houseA.color" or "time(DrugB)" to smuggle an ' +
     "entity reference into a plain string — `variableRef` has its own `variable` (the domain " +
     "name) and `entity` (null for a scalar domain, or the specific entity id) fields for " +
-    "exactly this."
+    "exactly this.\n\n" +
+    "`arithmetic`'s `comparator` field (e.g. \"=\", \"!=\", \">=\") is ALWAYS separate from " +
+    "`expression`'s `op` — `op` is only ever one of the arithmetic operators " +
+    '(+ - * / min max abs), never a comparator. For "Drug B is at least 4 hours after Drug ' +
+    'A": `expression` is `{kind: "binaryOp", op: "-", operands: [timeB, timeA]}`, ' +
+    '`comparator` is ">=", `target` is `{kind: "literal", value: 4}` — do NOT put ">=" inside ' +
+    "`expression.op`. For a symmetric \"at least N (hours/units) away from\" clue, wrap the " +
+    'difference in `abs`: `expression` is `{kind: "binaryOp", op: "abs", operands: [{kind: ' +
+    '"binaryOp", op: "-", operands: [a, b]}]}`, with the threshold still in the top-level ' +
+    "`comparator`/`target`.\n\n" +
+    'A derivedRule\'s condition is evaluated per entity ("if THIS entity\'s attribute has ' +
+    'some value, then..."), e.g. "the green house\'s owner drinks milk" or "if a house is ' +
+    'green, its position is one more than the ivory house\'s". Inside that derivedRule\'s ' +
+    '`thenConstraints`, use the literal entity id `"$this"` for `variableRef.entity` (or ' +
+    "`assignment.entity`) wherever you mean \"the entity currently satisfying this rule's " +
+    'condition" — never invent another placeholder name or the entity\'s attribute value ' +
+    'itself (e.g. not `entity: "green"`). Reference a different, already-named entity by its ' +
+    "real id as usual.\n\n" +
+    'When a clue relates TWO entities that are BOTH unnamed, each identified only by its own ' +
+    'attribute ("whoever smokes Chesterfields lives next to whoever owns the fox" — neither ' +
+    'house is ever named directly), nest a second derivedRule inside the first one\'s ' +
+    '`thenConstraints`: the outer derivedRule\'s condition picks out the first entity ' +
+    '("cigarette == Chesterfields"), the inner nested derivedRule\'s condition picks out the ' +
+    'second ("pet == fox"). Inside the INNER rule\'s own `thenConstraints`, use `"$this"` for ' +
+    'the inner entity (the one satisfying the inner condition) and `"$outer"` for the outer ' +
+    "entity (the one satisfying the outer condition) — never reuse `\"$this\"` for both."
   )
 }
 
@@ -84,6 +120,17 @@ function revisionUserPrompt(prose: string, context: RevisionContext): string {
     `Your previous extraction was:\n${JSON.stringify(context.extractedCsp)}\n\n` +
     `A critic rejected it for these reasons:\n${issueList}\n\n` +
     "Produce a corrected extraction that addresses every reason above."
+  )
+}
+
+function schemaRepairUserPrompt(prose: string, repair: SchemaRepairContext): string {
+  return (
+    `Puzzle:\n\n${prose}\n\n` +
+    `Your previous tool call did not match the required schema.\n\n` +
+    `Raw arguments you sent:\n${repair.raw}\n\n` +
+    `Validation error:\n${repair.detail}\n\n` +
+    "Call the tool again with corrected arguments that strictly satisfy the schema — fix only " +
+    "the structural problem described above; keep everything else faithful to the puzzle."
   )
 }
 
@@ -116,11 +163,18 @@ function extractOnce(
   model: string,
   prose: string,
   context?: RevisionContext,
+  repair?: SchemaRepairContext,
 ): Effect.Effect<ExtractedCsp, ProviderError | SchemaRejected | SchemaViolation> {
+  const userPrompt =
+    repair !== undefined
+      ? schemaRepairUserPrompt(prose, repair)
+      : context !== undefined
+        ? revisionUserPrompt(prose, context)
+        : extractionUserPrompt(prose)
   return requestStructuredCompletion({
     model,
     systemPrompt: extractionSystemPrompt(),
-    userPrompt: context === undefined ? extractionUserPrompt(prose) : revisionUserPrompt(prose, context),
+    userPrompt,
     schemaName: "ExtractedCsp",
     jsonSchema: extractedCspJsonSchema,
     schema: ExtractedCsp,
@@ -148,6 +202,13 @@ function critiqueOnce(
  * Returns the accepted result *or* every attempt made, rather than failing outright, so a caller
  * can escalate to another tier and still report the full attempt history if that tier also fails
  * (ADR-004 §2.6's CriticRejected carries attempts from every tier, not just the last).
+ *
+ * A schema-invalid tool call (`SchemaViolation`) is treated the same way as a critic rejection —
+ * consumed as one of the `MAX_REVISIONS_PER_TIER + 1` rounds, retried with a repair prompt
+ * showing the model its own raw arguments and the validation error — rather than propagating out
+ * and aborting the whole extraction. It previously did exactly that: `resolvedModel` was `null`
+ * for 100% of `SchemaViolation` failures across every `eval/results.md` run, meaning the frontier
+ * tier was never even attempted when the cheap tier produced a malformed payload.
  */
 function runTier(
   model: string,
@@ -156,19 +217,33 @@ function runTier(
   return Effect.gen(function* () {
     const attempts: ExtractionAttempt[] = []
     let context: RevisionContext | undefined
+    let repair: SchemaRepairContext | undefined
+    let lastSchemaViolation: SchemaViolation | undefined
 
     for (let round = 0; round <= MAX_REVISIONS_PER_TIER; round++) {
-      const extractedCsp = yield* extractOnce(model, prose, context)
-      const critique = yield* critiqueOnce(model, prose, extractedCsp)
-      attempts.push({ model, extractedCsp, critique })
+      const attempt = yield* extractOnce(model, prose, context, repair).pipe(
+        Effect.map((extractedCsp) => ({ ok: true as const, extractedCsp })),
+        Effect.catchTag("SchemaViolation", (violation) => Effect.succeed({ ok: false as const, violation })),
+      )
+
+      if (!attempt.ok) {
+        lastSchemaViolation = attempt.violation
+        repair = { raw: attempt.violation.raw, detail: attempt.violation.detail }
+        context = undefined
+        continue
+      }
+
+      repair = undefined
+      const critique = yield* critiqueOnce(model, prose, attempt.extractedCsp)
+      attempts.push({ model, extractedCsp: attempt.extractedCsp, critique })
 
       if (critique.accepted) {
-        return { attempts, accepted: { extractedCsp } }
+        return { attempts, accepted: { extractedCsp: attempt.extractedCsp } }
       }
-      context = { extractedCsp, issues: critique.issues }
+      context = { extractedCsp: attempt.extractedCsp, issues: critique.issues }
     }
 
-    return { attempts }
+    return { attempts, lastSchemaViolation }
   })
 }
 
@@ -192,8 +267,16 @@ export function extract(prose: string, options?: ExtractOptions): Effect.Effect<
       return { extractedCsp: frontierOutcome.accepted.extractedCsp, model: frontierModel }
     }
 
-    return yield* Effect.fail(
-      new CriticRejected({ attempts: [...cheapOutcome.attempts, ...frontierOutcome.attempts] }),
-    )
+    const attempts = [...cheapOutcome.attempts, ...frontierOutcome.attempts]
+
+    // Neither tier ever decoded a candidate to critique — every round was a schema violation.
+    // Surface the frontier tier's last one (the more relevant, final diagnostic) rather than a
+    // CriticRejected carrying zero attempts, which would hide why extraction actually failed.
+    const lastSchemaViolation = frontierOutcome.lastSchemaViolation ?? cheapOutcome.lastSchemaViolation
+    if (attempts.length === 0 && lastSchemaViolation !== undefined) {
+      return yield* Effect.fail(lastSchemaViolation)
+    }
+
+    return yield* Effect.fail(new CriticRejected({ attempts }))
   })
 }

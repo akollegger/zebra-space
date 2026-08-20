@@ -138,3 +138,27 @@ Model: `openai/gpt-4o-mini (default)` (frontier: `anthropic/claude-sonnet-4.5 (d
 | PZL-0014 | MISMATCH |
 
 Full detail: `eval/results/2026-08-19T18-33-07-176Z.json`
+
+---
+
+## 2026-08-20T13:31:39Z — commit `d835ca5`
+
+Model: `openai/gpt-4o-mini (default)` (frontier: `anthropic/claude-sonnet-4.5 (default)`) · 1 puzzles · pass rate **0/1 (0%)**
+
+| Puzzle | Outcome |
+|---|---|
+| PZL-0001 | SOLVE_MULTIPLY_SATISFIABLE |
+
+Full detail: `eval/results/2026-08-20T13-31-39-912Z.json`
+
+---
+
+## 2026-08-20T13:33:11Z — commit `d835ca5`
+
+Model: `openai/gpt-4o-mini (default)` (frontier: `anthropic/claude-sonnet-4.5 (default)`) · 1 puzzles · pass rate **1/1 (100%)**
+
+| Puzzle | Outcome |
+|---|---|
+| PZL-0002 | MATCH |
+
+Full detail: `eval/results/2026-08-20T13-33-11-333Z.json`
