@@ -406,31 +406,28 @@ function compileFactDrivenRule(
   ).pipe(Effect.map((groups) => groups.flat().join("\n")))
 }
 
+/**
+ * Fact-driven `thenConstraints` reference the matched fact's two entities via `FACT_A_TOKEN`/
+ * `FACT_B_TOKEN` ("$a"/"$b") — same general substitution mechanism as mode 2's `$this`/`$outer`
+ * (`substituteEntityTokensInConstraint`/`compileThenConstraint`, defined below), not the narrower
+ * ad hoc "target is exactly the bare string '$a'/'$b', expression is always fact.a" logic this
+ * used to have. That narrower version silently produced an invalid MiniZinc identifier
+ * (`renderVariableRef` sanitized the literal string "$b" into "_b") whenever a model reasonably
+ * used a STRUCTURED `variableRef.entity: "$a"/"$b"` instead of the undocumented bare-string
+ * special case (observed live: PZL-0005 produced `target: {kind: "variableRef", ..., entity:
+ * "$b"}`) — this is now caught loudly by `renderVariableRef`'s `$`-prefix guard rather than
+ * emitting garbage, but supporting the structured form directly is the real fix.
+ */
 function compileFactDrivenThen(
   compiled: readonly CompiledDomain[],
   thenConstraint: ExtractedConstraint,
   fact: { readonly a: string; readonly b: string },
 ): Effect.Effect<string, CompileError> {
-  if (thenConstraint.kind !== "arithmetic" || thenConstraint.expression.kind !== "variableRef") {
-    return Effect.fail(
-      new CompileError({
-        reason:
-          `Fact-driven derivedRule "then" constraints must be an arithmetic constraint over a ` +
-          `variableRef (got kind "${thenConstraint.kind}").`,
-      }),
-    )
-  }
-  const variable = thenConstraint.expression.variable
-  const target = thenConstraint.target
-
-  const rightEffect =
-    target === "$a" || target === "$b"
-      ? renderVariableRef(compiled, variable, target === "$a" ? fact.a : fact.b)
-      : renderTarget(compiled, target)
-
-  return Effect.all([renderVariableRef(compiled, variable, fact.a), rightEffect]).pipe(
-    Effect.map(([left, right]) => `constraint ${left} ${thenConstraint.comparator} ${right};`),
-  )
+  const substituted = substituteEntityTokensInConstraint(thenConstraint, {
+    [FACT_A_TOKEN]: fact.a,
+    [FACT_B_TOKEN]: fact.b,
+  })
+  return compileThenConstraint(compiled, substituted, undefined).pipe(Effect.map((body) => `constraint ${body};`))
 }
 
 /** Placeholders a derivedRule's `thenConstraints` uses to refer to entities that are never
@@ -447,6 +444,15 @@ function compileFactDrivenThen(
  * can itself only contain non-recursive (leaf) thenConstraints. */
 const SELF_ENTITY_TOKEN = "$this"
 const OUTER_ENTITY_TOKEN = "$outer"
+
+/** Mode 1's (fact-driven) analogue of `$this`/`$outer` — the matched `relation` fact's two
+ * entities. Resolved via the same generic `substituteEntityTokensInConstraint` mechanism, not a
+ * bare-string special case: a bare `target: "$a"` can't be substituted generically (it implicitly
+ * means "the same variable as `expression`, indexed at the other entity," which needs context
+ * `substituteEntityTokensInConstraint` doesn't have), so both tokens now only resolve inside a
+ * structured `variableRef.entity`/`assignment.entity` — exactly like `$this`/`$outer` already do. */
+const FACT_A_TOKEN = "$a"
+const FACT_B_TOKEN = "$b"
 
 type EntityTokenMap = Readonly<Record<string, string>>
 

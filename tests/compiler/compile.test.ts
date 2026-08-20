@@ -204,9 +204,9 @@ test("ADR-005 §2.4 mode 1 (fact-driven): relation facts expand derivedRule.then
         thenConstraints: [
           {
             kind: "arithmetic",
-            expression: { kind: "variableRef", variable: "color", entity: null },
+            expression: { kind: "variableRef", variable: "color", entity: "$a" },
             comparator: "!=",
-            target: "$b",
+            target: { kind: "variableRef", variable: "color", entity: "$b" },
           },
         ],
       },
@@ -220,7 +220,7 @@ test("ADR-005 §2.4 mode 1 (fact-driven): relation facts expand derivedRule.then
 })
 
 test('a leaked, unresolved entity placeholder (e.g. "$outer" misused in a mode-1 fact-driven rule) is a loud CompileError, never a silently-sanitized identifier', async () => {
-  // Exactly the shape a live eval run produced (PZL-0005): the model applied mode 2's
+  // A live eval run produced this exact confusion (PZL-0005): the model applied mode 2's
   // "$this"/"$outer" convention inside a mode-1 (fact-driven, condition.kind "relation") rule,
   // where only "$a"/"$b" resolve. Before this fix, this compiled to the invalid MiniZinc
   // identifier `_outer` and only failed later, cryptically, at the `minizinc` CLI.
@@ -239,7 +239,7 @@ test('a leaked, unresolved entity placeholder (e.g. "$outer" misused in a mode-1
         thenConstraints: [
           {
             kind: "arithmetic",
-            expression: { kind: "variableRef", variable: "color", entity: "$this" },
+            expression: { kind: "variableRef", variable: "color", entity: "$a" },
             comparator: "!=",
             target: { kind: "variableRef", variable: "color", entity: "$outer" },
           },

@@ -92,17 +92,18 @@ function extractionSystemPrompt(): string {
     '`abs`: `expression` is `{kind: "binaryOp", op: "abs", operands: [{kind: "binaryOp", op: ' +
     '"-", operands: [a, b]}]}`, with the threshold still in the top-level `comparator`/' +
     "`target`.\n\n" +
-    "A derivedRule's two condition shapes each have their OWN entity-reference convention in " +
-    "thenConstraints — don't mix them up:\n" +
+    "A derivedRule's two condition shapes each have their OWN entity-placeholder tokens in " +
+    "thenConstraints, always used the SAME way — as the `entity` field of a `variableRef` (or " +
+    "`assignment`), never as a bare, freestanding string value — don't mix the two token " +
+    "families up:\n" +
     '- `condition: {kind: "relation", name: ...}` (fact-driven — paired with separate ' +
     '`relation` facts elsewhere, e.g. "X relates to Y via someRelation"): thenConstraints ' +
-    'reference the matched fact\'s two entities via `target: "$a"` or `target: "$b"` — a ' +
-    "literal STRING value, not a `variableRef` object. Leave `expression`'s own " +
-    "`variableRef.entity` as `null`.\n" +
+    'reference the matched fact\'s two entities via `variableRef.entity: "$a"` / `"$b"` — on ' +
+    "EITHER side (`expression` or `target`), whichever the clue means. Never use " +
+    "`\"$this\"`/`\"$outer\"` here.\n" +
     '- `condition: {kind: "comparison", variable, operator, value}` (variable-conditioned, ' +
-    'evaluated per entity — see below): use `"$this"`/`"$outer"` inside `variableRef.entity` ' +
-    "instead. Never use `\"$a\"`/`\"$b\"` here, and never use `\"$this\"`/`\"$outer\"` as a bare " +
-    "`target` string for a relation-conditioned rule.\n\n" +
+    'evaluated per entity — see below): use `variableRef.entity: "$this"` / `"$outer"` ' +
+    'instead. Never use `"$a"`/`"$b"` here.\n\n' +
     'A derivedRule\'s condition is evaluated per entity ("if THIS entity\'s attr1 is val1, ' +
     'then..."), e.g. "whichever entity has attr1=val1 also has attr2=val2" or "if an entity\'s ' +
     'attr1 is val1, its attr3 is one more than the entity whose attr1 is val2". Inside that ' +
