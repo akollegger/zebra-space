@@ -349,6 +349,42 @@ test("ADR-005 §2.4 mode 2 (variable-conditioned): a comparison condition compil
   assert.match(mzn, /constraint \(score < 600\) -> \(outcome = Denied\);/)
 })
 
+test('arithmetic on a whole-hour clock-time domain (e.g. "9am"/"11am"/"4pm") uses each value\'s real hour, not its ordinal position', async () => {
+  // Mirrors PZL-0012 (Medication Schedule): "Drug B must be taken at least 4 hours after Drug
+  // A" over a 9am/11am/4pm domain. MiniZinc's own implicit enum-to-int coercion gives ONLY
+  // ordinal position (1, 2, 3) — verified directly against a real minizinc install that this
+  // silently makes ">= 4" impossible to satisfy (max ordinal gap is 2), even though the real
+  // hour gap (9am to 4pm) is 7.
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "DrugA", type: "drug" },
+      { id: "DrugB", type: "drug" },
+    ],
+    domains: [{ variable: "time", entityType: "drug", values: ["9am", "11am", "4pm"] }],
+    constraints: [
+      {
+        kind: "arithmetic",
+        expression: {
+          kind: "binaryOp",
+          op: "-",
+          operands: [
+            { kind: "variableRef", variable: "time", entity: "DrugB" },
+            { kind: "variableRef", variable: "time", entity: "DrugA" },
+          ],
+        },
+        comparator: ">=",
+        target: 4,
+      },
+    ],
+  }
+  const mzn = await run(csp)
+  assert.match(mzn, /array\[Values_v9am_v11am_v4pm\] of int: Values_v9am_v11am_v4pm_Hours = \[9, 11, 16\];/)
+  assert.match(
+    mzn,
+    /constraint \(Values_v9am_v11am_v4pm_Hours\[time\[DrugB\]\] - Values_v9am_v11am_v4pm_Hours\[time\[DrugA\]\]\) >= 4;/,
+  )
+})
+
 test('ADR-005 §2.4 mode 2, expressionComparison: a computed quantity (e.g. a debt-to-income ratio) can gate a derivedRule condition', async () => {
   // Mirrors PZL-0011 (Loan Review): "if their debt-to-income ratio exceeds 43%, Denied" needs a
   // COMPUTED expression (debt / income) as the condition, not a single declared variable —

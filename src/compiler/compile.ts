@@ -27,6 +27,28 @@ function isIntegerLiteral(value: string): boolean {
   return /^-?\d+$/.test(value)
 }
 
+/**
+ * Parses a whole-hour clock-time string ("9am", "11am", "4pm", "12am", "12pm") into its 24-hour
+ * hour number (9, 11, 16, 0, 12). Domains valued this way (a common scheduling-puzzle shape —
+ * interview slots, medication times, meeting times) still render as a MiniZinc enum (so a solved
+ * assignment reads back "9am", not a bare number, matching how the puzzle poses the question) —
+ * but arithmetic on them (e.g. "at least N hours after/away from") needs each value's actual hour,
+ * not its ordinal position in the enum. MiniZinc's own implicit enum-to-int coercion gives ONLY
+ * ordinal position (1, 2, 3, ...) — verified directly: for values declared in the order
+ * "9am"/"11am"/"4pm", `time[b] - time[a]` evaluates as an ordinal difference (at most 2), never
+ * the actual 7-hour gap between 9am and 4pm the puzzle's own arithmetic assumes. Returns
+ * `undefined` for anything that doesn't match (including minutes, e.g. "9:30am" — out of scope
+ * for now; every observed puzzle uses whole hours).
+ */
+function parseClockHour(value: string): number | undefined {
+  const match = /^(\d{1,2})(am|pm)$/i.exec(value.trim())
+  if (match === null) return undefined
+  const hour12 = Number(match[1])
+  if (hour12 < 1 || hour12 > 12) return undefined
+  const isPm = match[2]!.toLowerCase() === "pm"
+  return (hour12 % 12) + (isPm ? 12 : 0)
+}
+
 /** Numeric strings render as MiniZinc int literals; everything else as a sanitized enum member. */
 function renderScalar(value: string | number): string {
   if (typeof value === "number") return String(value)
@@ -40,6 +62,10 @@ interface CompiledDomain {
   readonly isNumeric: boolean
   readonly entityTypeEnumName: string
   readonly valuesEnumName: string
+  /** Present only when every value parses as a whole-hour clock time AND the domain isn't
+   * already integer-numeric — the name of the `array[valuesEnumName] of int: ...` mapping
+   * declared in `renderDeclarations`, from each enum member to its real 24-hour hour number. */
+  readonly clockHourMapName: string | undefined
 }
 
 /**
@@ -78,6 +104,17 @@ function analyzeDomains(csp: ExtractedCsp): readonly CompiledDomain[] {
   const entityTypeEnumNames = computeEntityTypeEnumNames(csp)
   return csp.domains.map((domain) => {
     const entityIds = csp.entities.filter((entity) => entity.type === domain.entityType).map((entity) => entity.id)
+    const isNumeric = domain.values.length > 0 && domain.values.every(isIntegerLiteral)
+    const isClockTime =
+      !isNumeric && domain.values.length > 0 && domain.values.every((v) => parseClockHour(v) !== undefined)
+    // Named by VALUE CONTENT, not by the owning domain's variable name: MiniZinc enum member
+    // identifiers share one global namespace, so two domains with the same vocabulary (e.g.
+    // two independent "Yes"/"No" criteria) must resolve to the SAME enum declaration, or the
+    // second declaration's members collide with the first's ("identifier `Yes' already
+    // defined"). Sharing one enum for an identical value set is correct MiniZinc practice, not
+    // a workaround. The clock-hour mapping (if any) shares this same dedup key for the same
+    // reason — two domains with an identical clock-time vocabulary must reuse one mapping array.
+    const valuesEnumName = `Values_${domain.values.map(sanitizeIdentifier).join("_")}`
     return {
       domain,
       entityIds,
@@ -85,15 +122,10 @@ function analyzeDomains(csp: ExtractedCsp): readonly CompiledDomain[] {
       // 1-element array — matches this project's own hand-written reference convention
       // (catalog/mzn/PZL-0004-whodunit.mzn's `var Suspect: culprit;`, not an array).
       isScalar: entityIds.length <= 1,
-      isNumeric: domain.values.length > 0 && domain.values.every(isIntegerLiteral),
+      isNumeric,
       entityTypeEnumName: entityTypeEnumNames.get(domain.entityType)!,
-      // Named by VALUE CONTENT, not by the owning domain's variable name: MiniZinc enum member
-      // identifiers share one global namespace, so two domains with the same vocabulary (e.g.
-      // two independent "Yes"/"No" criteria) must resolve to the SAME enum declaration, or the
-      // second declaration's members collide with the first's ("identifier `Yes' already
-      // defined"). Sharing one enum for an identical value set is correct MiniZinc practice, not
-      // a workaround.
-      valuesEnumName: `Values_${domain.values.map(sanitizeIdentifier).join("_")}`,
+      valuesEnumName,
+      clockHourMapName: isClockTime ? `${valuesEnumName}_Hours` : undefined,
     }
   })
 }
@@ -142,6 +174,15 @@ function renderDeclarations(compiled: readonly CompiledDomain[], csp: ExtractedC
   const orphans = collectRuleTableOrphanValues(csp)
   if (orphans.length > 0) {
     lines.push(`enum RuleTableValues_${orphans.map(sanitizeIdentifier).join("_")} = {${orphans.map(sanitizeIdentifier).join(", ")}};`)
+  }
+
+  const declaredClockHourMaps = new Set<string>()
+  for (const c of compiled) {
+    if (c.clockHourMapName !== undefined && !declaredClockHourMaps.has(c.clockHourMapName)) {
+      const hours = c.domain.values.map((v) => parseClockHour(v)!)
+      lines.push(`array[${c.valuesEnumName}] of int: ${c.clockHourMapName} = [${hours.join(", ")}];`)
+      declaredClockHourMaps.add(c.clockHourMapName)
+    }
   }
 
   for (const c of compiled) {
@@ -208,8 +249,18 @@ function renderArithmeticExpr(
   expr: ArithmeticExpression,
 ): Effect.Effect<string, CompileError> {
   switch (expr.kind) {
-    case "variableRef":
-      return renderVariableRef(compiled, expr.variable, expr.entity ?? undefined)
+    case "variableRef": {
+      // A clock-time-valued domain (e.g. "9am"/"11am"/"4pm") stays enum-typed (so a solved
+      // assignment reads back "9am", not a bare number), but MiniZinc's own implicit enum-to-int
+      // coercion gives only ORDINAL POSITION, not the value's real hour — arithmetic needs the
+      // explicit hour-mapping array declared for it in renderDeclarations instead.
+      const domainInfo = findDomain(compiled, expr.variable)
+      return renderVariableRef(compiled, expr.variable, expr.entity ?? undefined).pipe(
+        Effect.map((rawRef) =>
+          domainInfo?.clockHourMapName !== undefined ? `${domainInfo.clockHourMapName}[${rawRef}]` : rawRef,
+        ),
+      )
+    }
     case "literal":
       return Effect.succeed(String(expr.value))
     case "binaryOp": {
