@@ -16,7 +16,11 @@ import { CompileError } from "./types.ts"
 
 function sanitizeIdentifier(name: string): string {
   const cleaned = name.replace(/[^A-Za-z0-9_]/g, "_")
-  return /^[A-Za-z_]/.test(cleaned) ? cleaned : `_${cleaned}`
+  // A bare leading underscore is valid MiniZinc (`_a` parses fine), but only when a letter
+  // immediately follows it — `_9am` is a syntax error ("unexpected _"), verified against a real
+  // `minizinc` install (a value starting with a digit, e.g. a time like "9am", would otherwise
+  // hit exactly this). A digit-leading value needs a LETTER prefix instead.
+  return /^([A-Za-z]|_[A-Za-z])/.test(cleaned) ? cleaned : `v${cleaned}`
 }
 
 function isIntegerLiteral(value: string): boolean {

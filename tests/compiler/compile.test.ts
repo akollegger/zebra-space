@@ -105,6 +105,20 @@ test("ADR-005 §2.3: allDifferent on a scalar (single-entity) domain is a Compil
   assert.match(reason, /allDifferent requires an entity-indexed variable/)
 })
 
+test('sanitizeIdentifier: a digit-leading value (e.g. "9am") gets a LETTER prefix, never an invalid leading-underscore-digit like "_9am"', async () => {
+  // Verified against a real `minizinc` install: a bare leading underscore parses fine ("_a" is
+  // valid), but an underscore immediately followed by a digit is a syntax error ("unexpected _").
+  const csp: ExtractedCsp = {
+    entities: [{ id: "Only", type: "Slot" }],
+    domains: [{ variable: "time", entityType: "Slot", values: ["9am", "10am", "11am"] }],
+    constraints: [{ kind: "assignment", entity: "Only", variable: "time", value: "9am" }],
+  }
+  const mzn = await run(csp)
+  assert.doesNotMatch(mzn, /_9am|_10am|_11am/)
+  assert.match(mzn, /enum Values_v9am_v10am_v11am = \{v9am, v10am, v11am\};/)
+  assert.match(mzn, /constraint time = v9am;/)
+})
+
 test("ADR-005 §2.3: adjacency compiles via the relation-name registry over a shared numeric domain", async () => {
   const csp: ExtractedCsp = {
     entities: [
