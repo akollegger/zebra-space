@@ -45,26 +45,6 @@ export const Domain = Schema.Struct({
 })
 export type Domain = Schema.Schema.Type<typeof Domain>
 
-export const DerivedCondition = Schema.Union([
-  Schema.Struct({
-    kind: Schema.Literal("relation"),
-    name: Schema.String,
-  }).annotate({
-    description:
-      "Fact-driven condition: true for entity pairs where the named `relation` constraint holds.",
-  }),
-  Schema.Struct({
-    kind: Schema.Literal("comparison"),
-    variable: Schema.String,
-    operator: Schema.String,
-    value: Schema.Union([Schema.String, Schema.Number]),
-  }).annotate({
-    description:
-      "Variable-conditioned condition: compares an extracted domain variable against a value.",
-  }),
-])
-export type DerivedCondition = Schema.Schema.Type<typeof DerivedCondition>
-
 const RuleTableOperandSchema = Schema.Union([
   Schema.Struct({
     kind: Schema.Literal("variableRef"),
@@ -137,6 +117,39 @@ function makeArithmeticExpression(depth: number): Schema.Codec<ArithmeticExpress
 }
 
 export const ArithmeticExpression = makeArithmeticExpression(MAX_NESTING_DEPTH)
+
+export const DerivedCondition = Schema.Union([
+  Schema.Struct({
+    kind: Schema.Literal("relation"),
+    name: Schema.String,
+  }).annotate({
+    description:
+      "Fact-driven condition: true for entity pairs where the named `relation` constraint holds.",
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("comparison"),
+    variable: Schema.String,
+    operator: Schema.String,
+    value: Schema.Union([Schema.String, Schema.Number]),
+  }).annotate({
+    description:
+      "Variable-conditioned condition: compares an extracted domain variable against a value.",
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("expressionComparison"),
+    expression: ArithmeticExpression,
+    operator: Schema.String,
+    value: Schema.Union([Schema.String, Schema.Number]),
+  }).annotate({
+    description:
+      "Computed-quantity condition: compares a COMPUTED expression (e.g. a ratio, a sum, the " +
+      'lower of two values) against a threshold — e.g. "if their debt-to-income ratio exceeds ' +
+      '43%" or "if the lower of their two credit scores is below 600". Use this instead of ' +
+      '`comparison` whenever the condition itself is derived from more than one plain declared ' +
+      "variable, rather than testing a single declared variable directly.",
+  }),
+])
+export type DerivedCondition = Schema.Schema.Type<typeof DerivedCondition>
 
 /** Either side of a `ruleTableConstraint` — a variable's value, or a known constant. Values are
  * strings (rule tables relate domain values, e.g. "Paper"/"Rock", not numbers), so this is its

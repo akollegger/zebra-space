@@ -128,7 +128,17 @@ function extractionSystemPrompt(): string {
     'the table, e.g. "you should play a move that beats the opponent\'s Rock" becomes `{table: ' +
     '"beats", a: {kind: "variableRef", variable: "move", entity: null}, b: {kind: "literal", ' +
     'value: "Rock"}}`. Never use `derivedRule`\'s fact-driven mode for this — that expands per ' +
-    "matching ENTITY pair, not per value."
+    "matching ENTITY pair, not per value.\n\n" +
+    "A derivedRule's condition normally tests a single plain declared variable directly " +
+    '(`condition.kind: "comparison"`) — but some clues condition on a COMPUTED quantity ' +
+    'instead ("if their debt-to-income ratio exceeds 43%", "if the lower of their two credit ' +
+    'scores is below 600"). For these, use `condition.kind: "expressionComparison"` — ' +
+    "`{kind: \"expressionComparison\", expression, operator, value}`, where `expression` is a " +
+    'full `ArithmeticExpression` (the same structured shape `arithmetic` constraints use, e.g. ' +
+    '`{kind: "binaryOp", op: "/", operands: [debt, income]}` for a ratio, or `{kind: "binaryOp", ' +
+    'op: "min", operands: [scoreA, scoreB]}` for "the lower of two values") — never ' +
+    '`"comparison"`, whose `variable` field can only name a single plain declared variable, not ' +
+    "a computed one."
   )
 }
 

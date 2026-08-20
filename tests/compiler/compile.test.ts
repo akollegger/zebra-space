@@ -316,6 +316,44 @@ test("ADR-005 §2.4 mode 2 (variable-conditioned): a comparison condition compil
   assert.match(mzn, /constraint \(score < 600\) -> \(outcome = Denied\);/)
 })
 
+test('ADR-005 §2.4 mode 2, expressionComparison: a computed quantity (e.g. a debt-to-income ratio) can gate a derivedRule condition', async () => {
+  // Mirrors PZL-0011 (Loan Review): "if their debt-to-income ratio exceeds 43%, Denied" needs a
+  // COMPUTED expression (debt / income) as the condition, not a single declared variable —
+  // `comparison`'s condition can only test a plain declared variable directly.
+  const csp: ExtractedCsp = {
+    entities: [{ id: "App1", type: "Application" }],
+    domains: [
+      { variable: "debt", entityType: "Application", values: ["0", "10000"] },
+      { variable: "income", entityType: "Application", values: ["0", "20000"] },
+      { variable: "outcome", entityType: "Application", values: ["Denied", "Approved"] },
+    ],
+    constraints: [
+      { kind: "assignment", entity: "App1", variable: "debt", value: "3200" },
+      { kind: "assignment", entity: "App1", variable: "income", value: "9000" },
+      {
+        kind: "derivedRule",
+        appliesTo: "outcome",
+        condition: {
+          kind: "expressionComparison",
+          expression: {
+            kind: "binaryOp",
+            op: "/",
+            operands: [
+              { kind: "variableRef", variable: "debt", entity: null },
+              { kind: "variableRef", variable: "income", entity: null },
+            ],
+          },
+          operator: ">",
+          value: 0.43,
+        },
+        thenConstraints: [{ kind: "assignment", entity: "App1", variable: "outcome", value: "Denied" }],
+      },
+    ],
+  }
+  const mzn = await run(csp)
+  assert.match(mzn, /constraint \(\(debt \/ income\) > 0\.43\) -> \(outcome = Denied\);/)
+})
+
 test('ADR-005 §2.4 mode 2, entity-indexed condition: "$this" reifies per entity (self-referential zebra clue)', async () => {
   const csp: ExtractedCsp = {
     entities: [

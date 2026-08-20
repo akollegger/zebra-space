@@ -614,6 +614,31 @@ function compileVariableConditionedRule(
   ).pipe(Effect.map((groups) => groups.join("\n")))
 }
 
+/**
+ * Computed-quantity-conditioned reified implication (ADR-005 §2.4 mode 2's `expressionComparison`
+ * variant) — e.g. "if their debt-to-income ratio exceeds 43%, the loan is Denied". Unlike the
+ * plain `comparison` mode, an `ArithmeticExpression` condition needs no per-entity reification of
+ * its own: any entity it cares about is already explicit in the expression (a `variableRef`'s own
+ * `entity` field), so this always compiles to exactly one global implication, the same shape as
+ * `compileVariableConditionedRule`'s scalar branch.
+ */
+function compileExpressionConditionedRule(
+  compiled: readonly CompiledDomain[],
+  rule: Extract<ExtractedConstraint, { kind: "derivedRule" }>,
+  condition: Extract<DerivedCondition, { kind: "expressionComparison" }>,
+): Effect.Effect<string, CompileError> {
+  return renderArithmeticExpr(compiled, condition.expression).pipe(
+    Effect.flatMap((conditionRef) => {
+      const conditionExpr = `${conditionRef} ${condition.operator} ${renderScalar(condition.value)}`
+      return Effect.forEach(rule.thenConstraints, (thenConstraint) =>
+        compileThenConstraint(compiled, thenConstraint, undefined),
+      ).pipe(
+        Effect.map((thenBodies) => thenBodies.map((body) => `constraint (${conditionExpr}) -> (${body});`).join("\n")),
+      )
+    }),
+  )
+}
+
 /** Renders one constraint's boolean body (no `constraint `/`;` wrapper) — reused by the
  * reified-implication mode above and by `compileTopLevelConstraint`'s top-level wrapping.
  */
@@ -648,9 +673,14 @@ function compileDerivedRule(
   csp: ExtractedCsp,
   rule: Extract<ExtractedConstraint, { kind: "derivedRule" }>,
 ): Effect.Effect<string, CompileError> {
-  return rule.condition.kind === "relation"
-    ? compileFactDrivenRule(compiled, csp, rule, rule.condition.name)
-    : compileVariableConditionedRule(compiled, rule, rule.condition)
+  switch (rule.condition.kind) {
+    case "relation":
+      return compileFactDrivenRule(compiled, csp, rule, rule.condition.name)
+    case "comparison":
+      return compileVariableConditionedRule(compiled, rule, rule.condition)
+    case "expressionComparison":
+      return compileExpressionConditionedRule(compiled, rule, rule.condition)
+  }
 }
 
 function compileArithmeticTopLevel(
