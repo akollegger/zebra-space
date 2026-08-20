@@ -112,6 +112,22 @@ function renderVariableRef(
       new CompileError({ reason: `Variable "${variable}" is entity-indexed but no entity was given.` }),
     )
   }
+  // A leaked, never-substituted entity placeholder (e.g. "$this"/"$outer" used in a
+  // fact-driven derivedRule, which only substitutes "$a"/"$b", or either used somewhere with no
+  // enclosing rule to bind them at all) would otherwise sanitize into a plausible-looking but
+  // undeclared MiniZinc identifier (e.g. "_outer") and fail only later, cryptically, at the
+  // `minizinc` CLI. Fail loudly here instead — no real entity id is ever "$"-prefixed.
+  if (entity.startsWith("$")) {
+    return Effect.fail(
+      new CompileError({
+        reason:
+          `Entity placeholder "${entity}" for variable "${variable}" was never substituted with a real ` +
+          `entity — "$a"/"$b" only resolve inside a fact-driven derivedRule's thenConstraints, and ` +
+          `"$this"/"$outer" only inside a variable-conditioned derivedRule's (nested one level for ` +
+          `"$outer"). Used outside that shape, it has nothing to bind to.`,
+      }),
+    )
+  }
   return Effect.succeed(`${name}[${sanitizeIdentifier(entity)}]`)
 }
 

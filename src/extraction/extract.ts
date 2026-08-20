@@ -90,6 +90,16 @@ function extractionSystemPrompt(): string {
     'difference in `abs`: `expression` is `{kind: "binaryOp", op: "abs", operands: [{kind: ' +
     '"binaryOp", op: "-", operands: [a, b]}]}`, with the threshold still in the top-level ' +
     "`comparator`/`target`.\n\n" +
+    "A derivedRule's two condition shapes each have their OWN entity-reference convention in " +
+    "thenConstraints — don't mix them up:\n" +
+    '- `condition: {kind: "relation", name: ...}` (fact-driven — paired with separate `relation` ' +
+    'facts elsewhere, e.g. "France shares a border with Spain"): thenConstraints reference the ' +
+    'matched fact\'s two entities via `target: "$a"` or `target: "$b"` — a literal STRING value, ' +
+    "not a `variableRef` object. Leave `expression`'s own `variableRef.entity` as `null`.\n" +
+    '- `condition: {kind: "comparison", variable, operator, value}` (variable-conditioned, ' +
+    'evaluated per entity — see below): use `"$this"`/`"$outer"` inside `variableRef.entity` ' +
+    "instead. Never use `\"$a\"`/`\"$b\"` here, and never use `\"$this\"`/`\"$outer\"` as a bare " +
+    "`target` string for a relation-conditioned rule.\n\n" +
     'A derivedRule\'s condition is evaluated per entity ("if THIS entity\'s attribute has ' +
     'some value, then..."), e.g. "the green house\'s owner drinks milk" or "if a house is ' +
     'green, its position is one more than the ivory house\'s". Inside that derivedRule\'s ' +

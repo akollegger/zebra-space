@@ -113,6 +113,39 @@ test("ADR-005 §2.4 mode 1 (fact-driven): relation facts expand derivedRule.then
   assert.doesNotMatch(mzn, /constraint sharesBorder/)
 })
 
+test('a leaked, unresolved entity placeholder (e.g. "$outer" misused in a mode-1 fact-driven rule) is a loud CompileError, never a silently-sanitized identifier', async () => {
+  // Exactly the shape a live eval run produced (PZL-0005): the model applied mode 2's
+  // "$this"/"$outer" convention inside a mode-1 (fact-driven, condition.kind "relation") rule,
+  // where only "$a"/"$b" resolve. Before this fix, this compiled to the invalid MiniZinc
+  // identifier `_outer` and only failed later, cryptically, at the `minizinc` CLI.
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "France", type: "Country" },
+      { id: "Spain", type: "Country" },
+    ],
+    domains: [{ variable: "color", entityType: "Country", values: ["Red", "Green"] }],
+    constraints: [
+      { kind: "relation", name: "sharesBorder", a: "France", b: "Spain" },
+      {
+        kind: "derivedRule",
+        appliesTo: "color",
+        condition: { kind: "relation", name: "sharesBorder" },
+        thenConstraints: [
+          {
+            kind: "arithmetic",
+            expression: { kind: "variableRef", variable: "color", entity: "$this" },
+            comparator: "!=",
+            target: { kind: "variableRef", variable: "color", entity: "$outer" },
+          },
+        ],
+      },
+    ],
+  }
+  const reason = await runFails(csp)
+  assert.match(reason, /Entity placeholder "\$outer".*never substituted/)
+  assert.doesNotMatch(reason, /_outer/)
+})
+
 test("ADR-005 §2.4 mode 2 (variable-conditioned): a comparison condition compiles to a reified implication", async () => {
   const csp: ExtractedCsp = {
     entities: [{ id: "App1", type: "Application" }],
