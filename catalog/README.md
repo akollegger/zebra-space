@@ -31,6 +31,7 @@ natural-language prose.
 | [PZL-0012](puzzles/PZL-0012-medication-schedule.md) | Medication Schedule | 3/1/3 | hand-authored | seeded |
 | [PZL-0013](puzzles/PZL-0013-picking-a-restaurant.md) | Picking a Restaurant | 1/1/7 | hand-authored | seeded |
 | [PZL-0014](puzzles/PZL-0014-packing-the-box.md) | Packing the Box | 5/1/2 | hand-authored | seeded |
+| [PZL-0015](puzzles/PZL-0015-extract-a-solvable-csp.md) | Extract a Solvable CSP | 0/0/0 | hand-authored | seeded |
 
 `Size` is `variables/domains/constraints` (ADR-001 §2.1) — a CSP-neutral profile, not a
 difficulty rating.
