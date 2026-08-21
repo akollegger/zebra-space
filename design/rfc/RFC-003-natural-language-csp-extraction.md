@@ -20,7 +20,7 @@ automatically. This RFC scopes that extraction step and compares candidate high-
 Every constraint model in `catalog/mzn/` today is hand-translated from its corresponding prose
 puzzle (`catalog/mzn/README.md`), and [RFC-002](RFC-002-constraint-solver-selection.md) Non-Goal 2
 explicitly excluded building an automatic prose-to-MiniZinc compiler as out of scope for solver
-selection. That leaves a gap: nothing in this project reads a puzzle's clue text and produces a
+selection. That leaves a gap: no automated step reads a puzzle's clue text and produces a
 structured constraint representation. Without it, the pipeline described in the project's mission
 (generate → model as CSP → represent as graph → solve) has a manual step in the middle that
 doesn't scale past a small hand-curated catalog, and blocks any future work on the graph
@@ -162,10 +162,10 @@ are scored formally as Appendix (§9) criteria rather than restated here.
   CSP exists before any prose is rendered. Not adopted as a substitute for this RFC's scope — it
   only covers future solution-first generation, not the existing hand-authored catalog or
   prose-only scenario generation ([RFC-001](RFC-001-parameterizable-puzzle-generation.md) §9.4) —
-  and it's really the mirror-image problem (CSP → NL) to this RFC's NL → CSP extraction. This
-  project intends to address that direction, and further format conversions beyond it (e.g. an
-  eventual `.mzn` → gram translator), as their own separate future RFCs rather than folding them
-  into this one's scope (see Non-Goals, §4).
+  and it's really the mirror-image problem (CSP → NL) to this RFC's NL → CSP extraction. That
+  direction, and further format conversions beyond it (e.g. an eventual `.mzn` → gram
+  translator), are intended as their own separate future RFCs rather than folded into this one's
+  scope (see Non-Goals, §4).
 
 ## 7. Open Questions
 
@@ -446,9 +446,9 @@ well-intentioned phrasing, not arbitrary/adversarial input), not the catalog's c
   provider-side model updates.
 - **Failure legibility**: Constrained decoding/tool calling guarantees schema-*valid* output, but
   not semantic correctness — [SPIKE-004](../spikes/SPIKE-004-llm-based-extraction/SPIKE.md)'s
-  non-determinism finding above is a direct, observed example of this, not just a hypothetical
-  one: a confidently wrong extraction looked identical (valid JSON, right shape) to a correct one
-  without a separate validation step (§5.3, §7.3).
+  non-determinism finding above is a direct, observed example of this: a confidently wrong
+  extraction looked identical (valid JSON, right shape) to a correct one without a separate
+  validation step (§5.3, §7.3).
 - **Extensibility to novel phrasing**: Best of any tier — little to no per-phrasing engineering
   effort, and — per [RFC-001](RFC-001-parameterizable-puzzle-generation.md) §9.4's own
   observation — the most natural fit of any tier for the vague/contextual and

@@ -12,21 +12,21 @@ specs:
 
 ## 1. Context
 
-[ADR-004](ADR-004-llm-extraction-critic-loop.md) §2.2 introduced `ExtractedCsp`, a solver-agnostic
-intermediate representation extraction produces. ADR-004's own critic loop (§2.4) validates an
-extraction's *fidelity* to the source prose directly — a second LLM call, not a solver round-trip
-— so it has no dependency on this ADR. Compiling `ExtractedCsp` to MiniZinc remains a genuinely
-needed, independent capability regardless: it's what actually lets a validated extraction be
-rendered as a solvable model at all — [ADR-003](ADR-003-cli-interface.md) §2.6's `extract` CLI
-compiles by default before printing, and the same compiled output can be piped to `solve`. This
-ADR designs that compiler, from
+`ExtractedCsp` is the solver-agnostic intermediate representation extraction produces (introduced
+in [ADR-004](ADR-004-llm-extraction-critic-loop.md) §2.2). ADR-004's own critic loop (§2.4)
+validates an extraction's *fidelity* to the source prose directly — a second LLM call, not a
+solver round-trip — so it has no dependency on this ADR. Compiling `ExtractedCsp` to MiniZinc
+remains a needed, independent capability regardless: it's what actually lets a validated
+extraction be rendered as a solvable model at all — [ADR-003](ADR-003-cli-interface.md) §2.6's
+`extract` CLI compiles by default before printing, and the same compiled output can be piped to
+`solve`. This ADR designs that compiler, from
 [ADR-004](ADR-004-llm-extraction-critic-loop.md) §2.2's `ExtractedCsp` representation to the
 MiniZinc target [ADR-002](ADR-002-adopt-minizinc-solver.md) §2.5 already committed to (decision
 variables as `array of var`, one per domain/attribute-category; constraints built from
 `alldifferent`, comparison/arithmetic operators, and `if-then-else`) — directly completing RFC-003
 Goal 3's MiniZinc half ("output that is a plausible input to... a MiniZinc model").
 
-This is genuinely shared infrastructure, not scoped to one RFC: it produces the actual input
+This is shared infrastructure, not scoped to one RFC: it produces the actual input
 `src/solver/solve.ts` consumes (RFC-002's concern) and it's the missing link that makes RFC-003's
 extraction pipeline solvable end-to-end (RFC-003's concern) — hence both as parent RFCs, per this
 project's many-to-many convention (already used by [ADR-003](ADR-003-cli-interface.md)).

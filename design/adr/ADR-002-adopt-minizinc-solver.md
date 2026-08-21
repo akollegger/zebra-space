@@ -12,31 +12,32 @@ specs:
 
 ## 1. Context
 
-RFC-002 established that this project needs a way to check whether a puzzle is solvable — and
-specifically, uniquely solvable — without relying on manual solving, and that building a solver
-ourselves is explicitly out of scope. RFC-002 §5.2 compared five candidate ecosystems and §5.4
-listed the abstract requirements any solver-ready representation needs to expose (finite
-enumerable domains, an explicit constraint list, coverage of the constraint shapes already in
-the catalog, all/n-solutions query support, and stable identifiers for round-tripping results).
-§5.1 defined what "solved" means: unsatisfiable, uniquely satisfiable, or multiply satisfiable.
+Checking whether a puzzle is solvable — and specifically, uniquely solvable — currently requires
+working it out by hand; nothing automates that check, and building a solver from scratch is a
+large, well-trodden problem RFC-002 explicitly scoped out. RFC-002 §5.2 compared five candidate
+ecosystems and §5.4 listed the abstract requirements any solver-ready representation needs to
+expose (finite enumerable domains, an explicit constraint list, coverage of the constraint
+shapes already in the catalog, all/n-solutions query support, and stable identifiers for
+round-tripping results). §5.1 defined what "solved" means: unsatisfiable, uniquely satisfiable,
+or multiply satisfiable.
 
-This ADR converges on MiniZinc as the chosen ecosystem and makes the integration concrete enough
-to build: which backend solver to target by default, how the puzzle reaches the solver from this
-project's TypeScript/Effect codebase, and how uniqueness is checked efficiently (resolving
-RFC-002's Open Question 7.2). It does **not** design the compiler that turns a puzzle's
-`@relateby/pattern` graph into a MiniZinc model — that remains a separate, still-undesigned
-follow-up ADR, per RFC-002's Non-Goal 2. This ADR only commits to the target this project's own
-future graph representation must eventually be compiled to.
+MiniZinc is the chosen ecosystem; what remains is making the integration concrete enough to
+build: which backend solver to target by default, how a puzzle reaches the solver from the
+TypeScript/Effect codebase, and how uniqueness is checked efficiently (resolving RFC-002's Open
+Question 7.2). Compiling a puzzle's `@relateby/pattern` graph into a MiniZinc model is not
+designed here — that remains a separate, still-undesigned follow-up ADR, per RFC-002's Non-Goal
+2. What this decision fixes is only the target that future graph representation must eventually
+compile to.
 
 ## 2. Decision
 
 ### 2.1 Ecosystem and compilation path
 
 Use MiniZinc's own toolchain: generate a `.mzn` model and invoke the `minizinc` CLI, which
-compiles it to FlatZinc internally and dispatches to a backend solver. This project does not
-hand-generate FlatZinc directly — FlatZinc is meant to be a compiler output, and reimplementing
-that flattening step ourselves would be error-prone for no real benefit, per RFC-002 §5.2's
-comparison and the earlier discussion that motivated it. This resolves RFC-002 Open Question 7.4
+compiles it to FlatZinc internally and dispatches to a backend solver. FlatZinc is not
+hand-generated directly — it is meant to be a compiler output, and reimplementing that
+flattening step would be error-prone for no real benefit, per RFC-002 §5.2's comparison. This
+resolves RFC-002 Open Question 7.4
 in favor of the portable intermediate format over a solver-native one — the backend (2.2) can
 change later without touching anything upstream of it.
 
@@ -94,9 +95,9 @@ per model.
 
 ### 2.6 Example catalog
 
-To build and validate the eventual graph-to-`.mzn` compiler (Context; deferred to a follow-up
-ADR), this project accumulates hand-written MiniZinc examples in `catalog/mzn/`, sibling to
-`catalog/puzzles/`. Each example is one `.mzn` file, named after the puzzle it models where one
+Hand-written MiniZinc examples accumulate in `catalog/mzn/`, sibling to `catalog/puzzles/`, to
+build and validate the eventual graph-to-`.mzn` compiler (Context; deferred to a follow-up ADR).
+Each example is one `.mzn` file, named after the puzzle it models where one
 exists (e.g. `catalog/mzn/PZL-0004-whodunit.mzn`) — a growing, concrete reference corpus of what
 a catalog puzzle's constraints look like in MiniZinc, independent of any compiler. This ADR only
 establishes the directory and naming convention; populating it — hand-translating catalog

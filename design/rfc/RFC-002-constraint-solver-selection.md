@@ -10,10 +10,10 @@ adrs: [ADR-002, ADR-003, ADR-005]
 
 ## 1. Summary
 
-This project generates, catalogs, and (per RFC-001's planned strategies) modifies zebra-style
-CSPs, but has no way to check whether a puzzle is solvable — let alone *uniquely* solvable —
-other than solving it by hand. This RFC selects an existing, mature constraint-solver ecosystem
-to hand a distilled CSP off to, rather than building solving logic ourselves.
+Zebra-style CSPs are generated and cataloged — and, per RFC-001's planned strategies, will be
+modified — with no way to check solvability, let alone *unique* solvability, other than working a
+puzzle out by hand. An existing, mature constraint-solver ecosystem can take over that check,
+rather than building solving logic from scratch.
 
 ## 2. Problem / Motivation
 
@@ -22,14 +22,12 @@ time. That doesn't scale: RFC-001's catalog-modification strategy (§9.2; a foll
 RFC-001) needs to confirm that a *programmatically generated* variant is still uniquely
 solvable, and manual solving can't be the verification method for something meant to run
 automatically. RFC-001's own Non-Goals (4) and ADR-001's Context explicitly exclude solving from
-that RFC's scope — this is a genuinely separate problem needing its own RFC, not a late addition
-to RFC-001.
+that RFC's scope.
 
 Building a solver is itself a large, well-studied problem (constraint propagation, search
 strategies, global constraints, performance tuning) that mature ecosystems already solve well.
-This project's own background reading already names [MiniZinc](https://www.minizinc.org) as
-prior art for constraint modeling/solving — the instinct to lean on an existing ecosystem rather
-than writing one from scratch predates this RFC.
+The project's background reading already names [MiniZinc](https://www.minizinc.org) as prior art
+for constraint modeling/solving.
 
 ## 3. Goals
 

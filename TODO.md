@@ -11,6 +11,23 @@ Entries are removed (or moved to a "Done" section if we want history) when the w
 
 ---
 
+## 0. Foundations: define the problem space
+
+**Approach: RFC/ADR** — [RFC-004](design/rfc/RFC-004-computational-decision-making.md) drafted
+2026-08-21, status `draft`.
+
+Numbered 0 because it's foundational rather than sequenced first: RFC-001/002/003 each assumed a
+well-posed problem as input without defining one, and the gap only became visible once the catalog
+started acquiring non-determinate material. RFC-004 defines well-posedness (a six-condition
+ladder), reconciles satisfaction (CSP) with optimization (COP), and classifies problems as
+determinate / ambiguous-NL / subjective / non-problem.
+
+Gates workstreams 2 and 3 below: the eval's outcome taxonomy (2) should follow from what can go
+wrong in principle rather than from today's failure modes, and the expressiveness gaps (3) are
+easier to scope once the classification exists. Doesn't gate workstream 1 — authoring puzzles is
+how the classification gets tested. Next step is `/rfc-review`, then an ADR for the
+expected-outcome vocabulary (RFC-004 §7.3).
+
 ## 1. Grow the puzzle catalog in size, complexity, and variety
 
 **Approach: collaborative iteration**

@@ -1,13 +1,13 @@
 <!--
 Sync Impact Report
-Version change: 1.1.0 → 1.2.0
+Version change: 1.2.0 → 1.3.0
 Modified principles: none
 Added principles:
-  - V. Lint-Clean, Type-Safe Code — code must pass `pnpm lint` (Biome) with zero errors/warnings
-    and must not weaken tsconfig.json's strictness settings to silence a finding; a Biome rule
-    may only be disabled for a documented, structural conflict with an established convention,
-    never to suppress a one-off finding. New principle, materially expanded governance — hence
-    MINOR, not PATCH.
+  - VI. A Callable Tool, Not a Decision System — this project is a callable tool a decision
+    support system invokes, not that system itself: closed world inside, report conflicts/gaps/
+    assumptions without resolving them, and a non-interactive command boundary (internal agentic
+    workflows permitted but invisible from outside). Derived from RFC-004 §5.5. New principle,
+    materially expanded governance — hence MINOR, not PATCH.
 Added sections: none
 Removed sections: none
 Deferred TODOs: none
@@ -82,6 +82,31 @@ type-aware vs. syntax-only rules — a compatibility blocker, not a stylistic pr
 rule-disable that isn't tied to a specific, documented, structural conflict is indistinguishable
 from suppressing a real finding, which defeats the point of linting at all.
 
+### VI. A Callable Tool, Not a Decision System
+
+This project MUST be built as a callable tool that a decision support system invokes, never as the
+decision support system itself. Reasoning MUST range only over what a given invocation was handed —
+the entities, domains, and constraints recoverable from its input — and MUST NOT treat that closed
+world as complete evidence about the caller's open one. Where a problem is unsatisfiable,
+underdetermined, or turns on a judgment its input does not settle, the tool MUST report what
+conflicts, what is missing, or what it assumed, and MUST NOT resolve the conflict, retrieve the
+absent context, or supply the missing judgment on the caller's behalf. Every capability MUST be
+invocable as a command with input and output, composable with the others, and usable unattended in
+CI, and MUST NOT require conversational turn-taking or ask follow-up questions to fill gaps in its
+own input. Internal agentic workflows are explicitly permitted —
+[ADR-004](../../design/adr/ADR-004-llm-extraction-critic-loop.md)'s extraction-and-critic loop is
+one — provided they remain invisible at the boundary.
+
+Rationale: the caller structurally holds context this project cannot see — further constraints,
+current data, the authority to relax a requirement, whose preference prevails. A tool that resolves
+ambiguity or fills gaps on its own initiative substitutes a closed-world guess for the caller's
+open-world knowledge, discarding precisely the information a decision needs; reporting the conflict
+instead leaves that choice where it belongs. Fixing the boundary as a non-interactive command also
+keeps each capability's contract testable and composable, where a conversational surface would make
+it depend on dialogue state. [RFC-004](../../design/rfc/RFC-004-computational-decision-making.md)
+§5.5 derives this stance in full; [ADR-003](../../design/adr/ADR-003-cli-interface.md)'s CLI shape
+already followed it before it was written down.
+
 ## Governance
 
 This constitution supersedes all other project practices and conventions. Amendments are made
@@ -91,4 +116,4 @@ wording or clarification fixes with no rule change. `/speckit-plan`'s Constituti
 the primary compliance checkpoint for new work; any justified deviation from a principle MUST be
 recorded in that plan's Complexity Tracking rather than silently ignored.
 
-**Version**: 1.2.0 | **Ratified**: 2026-08-11 | **Last Amended**: 2026-08-17
+**Version**: 1.3.0 | **Ratified**: 2026-08-11 | **Last Amended**: 2026-08-21
