@@ -10,15 +10,17 @@ adrs: [ADR-001]
 
 ## 1. Summary
 
-We need a way to generate zebra puzzles as natural-language prose, controlled by parameters
-rather than hand-authored one at a time, spanning a spectrum from strict/explicit clues through
+Zebra puzzles are hand-authored one at a time today, which doesn't scale and gives no
+systematic control over difficulty, size, or clue style. Generating them as natural-language
+prose, controlled by parameters, would need to span a spectrum from strict/explicit clues through
 vague contextual clues to subjective preference-based clues.
 
 ## 2. Problem / Motivation
 
-"Generating prose zebra puzzles" is a stated purpose of this project, but nothing exists yet to
-do it. Hand-authoring puzzles one at a time doesn't scale and gives no way to systematically vary
-difficulty, size, or clue style. As referenced in [Context Graphs & Agentic
+The project README lists "Generating prose zebra puzzles" first among its goals, but nothing
+produces one yet — every catalog/puzzles entry is hand-authored. Hand-authoring one at a time
+doesn't scale and gives no way to systematically vary difficulty, size, or clue style. As
+referenced in [Context Graphs & Agentic
 Decisions](https://medium.com/neo4j/context-graphs-agentic-decisions-9a125f22f411), clues aren't
 all the same kind of thing:
 
@@ -45,8 +47,8 @@ they imply, would need to be bolted on as an afterthought.
   satisfaction problems.
 - Keep the door open for vague/contextual and subjective/preference-based clues as later
   additions, without needing to redo the foundational generation work to accommodate them.
-- No single generation strategy (5.2) is committed to by this RFC — which one(s) to build, and
-  in what order, is deferred to a child ADR informed by the comparative evaluation in 9.
+- Which generation strategy(ies) in §5.2 to build, and in what order, is left to a child ADR,
+  informed by the comparative evaluation in §9.
 - Treat the puzzle catalog as growing shared infrastructure, not just a lookup table: every
   generation strategy that produces a validated puzzle should be able to contribute it back to
   the catalog, so the catalog accumulates into a dataset usable for solver evaluation, analysis
@@ -60,11 +62,11 @@ they imply, would need to be bolted on as an afterthought.
 ## 4. Non-Goals
 
 - Solving generated puzzles — that's a separate downstream concern.
-- Representing clues as formal/graph constraints — that's a separate concern with its own
-  design work; this RFC only covers producing the natural-language puzzle itself.
+- Representing clues as formal/graph constraints — a separate concern with its own design work,
+  distinct from producing the natural-language puzzle itself.
 - Building a full dynamic/flexible constraint-satisfaction engine now. Initial work targets
   puzzles expressible as classic CSPs; dynamic/flexible CSPs (needed for the vague/contextual
-  and subjective/preference clue tiers) are future work this RFC should not foreclose.
+  and subjective/preference clue tiers) are future work that should remain possible, not built now.
 - Visually rendering puzzles.
 
 ## 5. Proposed Approach (high-level)
@@ -145,19 +147,19 @@ Two further ideas apply *across* the strategies in 5.2 rather than being alterna
   selection.
 - **Adopt or adapt an existing zebra-puzzle generator instead of building one.** Rejected:
   existing generators typically only cover the strict/explicit tier (5.1) and don't obviously
-  extend to the vague/contextual or subjective/preference tiers this RFC treats as first-class,
-  nor to the catalog-as-growing-dataset goal (3) — adapting one to all of that is likely as much
-  work as building against this RFC's strategy spectrum (5.2, 9) directly, without the benefit
-  of having evaluated the trade-offs ourselves.
+  extend to the vague/contextual or subjective/preference tiers (§5.1), nor to the
+  catalog-as-growing-dataset goal (3) — adapting one to all of that is likely as much work as
+  building against the strategy spectrum in §5.2/§9 directly, without the benefit of having
+  evaluated the trade-offs ourselves.
 - **Recognize and extract an implicit CSP from arbitrary prose about a real-world domain**
   (e.g. a loan-increase approval decision shaped by the immediate scenario, applicable business
   rules, and the regulatory environment), rather than generating zebra-style puzzles from
-  parameters. Rejected for this RFC — this inverts the direction of every strategy in 5.2
+  parameters. Rejected — this inverts the direction of every strategy in §5.2
   (extracting structure *from* unstructured prose, rather than rendering structure *as* prose),
   and generalizes far beyond puzzle generation into arbitrary business/regulatory domains that
   have nothing to do with zebra puzzles specifically. Genuinely interesting and likely valuable
   on its own terms, but different enough in kind, and large enough in scope, to deserve its own
-  RFC rather than being folded into this one as a fifth generation strategy.
+  RFC rather than being folded in as a fifth generation strategy.
 
 ## 7. Open Questions
 

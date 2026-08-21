@@ -10,31 +10,37 @@ adrs: []
 
 ## 1. Summary
 
-This project is named for a space it has never mapped. Zebra Space's stated purpose spans
-generating prose puzzles, modeling them as constraint problems, representing them as graphs, and
-solving them — but nothing on record says what kind of thing is being generated, modeled, or
-solved, nor where that space ends. Each existing RFC defined its own slice
-([RFC-001](RFC-001-parameterizable-puzzle-generation.md) generation,
-[RFC-002](RFC-002-constraint-solver-selection.md) solving,
-[RFC-003](RFC-003-natural-language-csp-extraction.md) extraction) while assuming a well-posed
-problem as its input. This RFC defines the space itself: what makes prose a solvable problem at
-all, which classes of problem are in scope, and what a correct *non*-answer is. Its organizing
-claim is that a problem with exactly one valid solution is the degenerate corner of that space
-rather than its center — which is why the space is named for decision making rather than problem
-solving (§6), and why the project's direction runs from zebra puzzles outward toward decision
-support — as the callable tool such a system is built on, not as the system itself (§5.5).
+A zebra puzzle has exactly one answer. Clues about five houses and their occupants constrain the
+arrangement until precisely one satisfies them all, and finding it is pure computation. That
+property is unusual, and it is the puzzle's defining feature: the constraints have removed every
+choice, so nothing is left to *decide*. Treat it as the **degenerate corner** of a larger space
+rather than the center of one.
+
+Every direction out of that corner widens the set of admissible answers instead of narrowing it.
+Optimization admits many feasible points and asks which is best. Ambiguous language admits
+several faithful readings of one text. Subjective criteria admit answers that depend on who is
+judging. And some prose that looks like a puzzle poses no answerable question at all. Once more
+than one answer is admissible, the useful output stops being "the solution" and becomes the
+trade-offs among candidates, what each one depended on, and the risk of acting on any of them.
+That is decision making rather than problem solving — the space mapped below.
+
+Mapping it requires three things: conditions prose must satisfy to pose a solvable problem
+(§5.1), a vocabulary for the classes of problem in scope — including prose that poses none
+(§5.3), and satisfaction and optimization treated as two solving regimes (§5.2). It also requires
+a boundary: the deliverable is a callable tool a decision support system can invoke, not that
+system itself (§5.5). §2 sets out why the gap is now blocking three active workstreams.
 
 ## 2. Problem / Motivation
 
 The project has worked from reasonable assumptions, well-known definitions, and a reference
-solver — none of them written down. That was economical rather than careless: while every puzzle
-in view was a determinate constraint problem with exactly one answer, an implicit vocabulary was
-sufficient because nothing tested it. But the four verbs in the project's mission — generate,
+solver — none of them written down. While every puzzle in view was a determinate constraint
+problem with exactly one answer, an implicit vocabulary was sufficient because nothing tested it.
+But the four verbs in the project's mission — generate,
 model, represent, solve — all quietly presuppose the same three unstated things: that the input
 poses a problem, that the problem has an answer, and that the answer is unique. None of those is
 true across the space this project actually intends to work in.
 
-The omission is now load-bearing, and it shows up from several independent directions rather than
+That gap is now load-bearing, and it shows up from several independent directions rather than
 at any single point:
 
 **The solver contract and the generation roadmap already disagree, and nothing records it.**
@@ -45,15 +51,14 @@ multiply satisfiable)" — a purely satisfaction-shaped, three-way taxonomy, now
 [RFC-001](RFC-001-parameterizable-puzzle-generation.md) §2 states that satisfying
 subjective/preference clues "is a matter of optimization, not binary satisfaction," and its §5.1
 makes that tier a planned axis of the work rather than a speculative aside. One RFC's roadmap
-therefore requires a solving regime the other RFC's selected contract cannot express, and the
-conflict has never been stated as such.
+therefore requires a solving regime the other RFC's selected contract cannot express.
 
 **Well-posedness has already been discovered once, and filed as a local detail.**
 [RFC-003](RFC-003-natural-language-csp-extraction.md) §7.3 concluded that "solvability and
 translation correctness are orthogonal," because "a faithful extraction of a genuinely
 unsatisfiable or under-constrained prose should legitimately fail to solve uniquely." That is a
 claim about the well-posedness of the *problem*, not about extraction — but it was resolved as an
-extraction-validation question, so the concept it depends on was never named or reused.
+extraction-validation question, leaving well-posedness itself undefined until now.
 
 **An expected non-answer is currently inexpressible.** `eval/answer-keys.json` entries hold
 `{title, answer, notes}`, which can only say "here is the right answer," and
@@ -87,8 +92,7 @@ on who is judging. And moving the constraints, variables, or domains changes wha
 all. Once more than one answer is admissible, the useful output stops being "the solution" and
 becomes the trade-offs among candidates, the nuance in how each was reached, and the risk of
 acting on any of them — which is a decision-making framework rather than a solving one. The
-trajectory this RFC serves runs from the determinate corner outward toward decision support, and
-naming the space accordingly is deliberate rather than stylistic (§6).
+trajectory this RFC serves runs from the determinate corner outward toward decision support (§6).
 
 ## 3. Goals
 
@@ -103,13 +107,13 @@ naming the space accordingly is deliberate rather than stylistic (§6).
   underdetermination, all of which read as the same failure today.
 - Reconcile **satisfaction and optimization** as two solving regimes the project needs, rather
   than leaving optimization as an unacknowledged bolt-on.
-- Establish the **unique solution as the degenerate case** rather than the target, so that
-  optimization, ambiguity, and subjectivity register as the space opening up — the direction the
-  project is heading — instead of as defects to be engineered away.
+- Ensure no artifact this RFC governs — catalog frontmatter, the expected-outcome vocabulary, the
+  eval grader — treats answer **multiplicity as a failure by default**. Multiplicity must be
+  expressible as the expected, passing outcome, since the unique solution is the degenerate case
+  rather than the target (§2).
 - Give the catalog and the eval a common frame in which a puzzle's expected outcome is expressible
   for *every* class, including classes that correctly have no unique answer.
-- Describe what RFC-001/002/003 already assumed and name where they conflict — this RFC is meant
-  to make existing work explicit, not to invalidate it.
+- Make explicit what RFC-001/002/003 already assumed, and name where they conflict.
 
 ## 4. Non-Goals
 
@@ -125,15 +129,13 @@ naming the space accordingly is deliberate rather than stylistic (§6).
 - A general theory of decision making, formal epistemology, or question semantics. Scope is
   bounded by what the catalog, extraction, and eval need in order to classify their own material.
 - Adversarial-input or prompt-injection defense as a security concern. The instruction-vs-data
-  boundary appears below (§5.6) as a well-posedness condition, not as threat modeling.
+  boundary appears below (§5.7) as a well-posedness condition, not as threat modeling.
 - Difficulty calibration and tiering. Well-posedness is orthogonal to difficulty: a puzzle can
   clear every condition and still be trivial, or fail the first one and look hard.
-- Building the decision support system. §5.5 fixes the boundary: this project produces a callable
-  tool such a system can be built on. Resolving conflicts, retrieving missing context, eliciting
-  preferences, and holding any interactive dialogue with a human all sit on the far side of that
-  line. Designing the tool's *own* diagnostic capabilities (sensitivity analysis, counterfactual
-  queries, explanation) is legitimate future territory but is not designed here either — §5.4 only
-  argues the vocabulary must leave room for them.
+- Building the decision support system. §5.5 fixes that boundary, and the constitution's
+  Principle VI is its normative statement. Designing the tool's *own* diagnostic capabilities
+  (sensitivity analysis, counterfactual queries, explanation) is legitimate future territory but
+  is not designed here either — §5.4 only argues the vocabulary must leave room for them.
 
 ## 5. Proposed Approach (high-level)
 
@@ -142,48 +144,60 @@ naming the space accordingly is deliberate rather than stylistic (§6).
 Six conditions, each of which prose must satisfy for its demand to have a determinate referent.
 They are ordered so that a failure can be attributed to the lowest condition that fails.
 
+**Condition names, not ordinals, are the stable interface.** The six are cited throughout this RFC
+— and should be cited by any child ADR, schema, or eval code — as **Demand**, **Determinate
+answer-space**, **Relevance**, **Constitutive constraints**, **Determinate atoms**, and
+**Sufficiency**. The numbers in the table below are exposition: they record the attribution order
+and carry no other meaning. This distinction is load-bearing, because §7.1
+and §7.2 leave the *structure* provisional — whether this is a ladder at all, and whether
+Relevance is distinct from Sufficiency — and resolving either would renumber a sequence that five
+other sections cite. Names survive that renumbering; ordinals do not.
+
 The ladder maps where a framing sits; it is not a quality ranking, and clearing every condition is
-not the objective (§5.4). A well-posed problem may admit many valid answers, because condition 6
+not the objective (§5.4). A well-posed problem may admit many valid answers, because Sufficiency
 checks the answer count against what was actually *asked* — not against one.
 
-| # | Condition | Requires | Characteristic failure |
+| Order | Condition | Requires | Characteristic failure |
 |---|---|---|---|
 | 1 | **Demand** | An illocutionary act requesting resolution, *about entities in a scenario* | Descriptive prose with no question; or a demand about the modeling act rather than the scenario |
 | 2 | **Determinate answer-space** | The demand ranges over identifiable candidates, and membership in that range is itself determinate | "Why did the bridge collapse?" — quantifies over an open class of explanations |
 | 3 | **Relevance** | The demanded unknown is a projection of what the constraints act on | A solvable model that answers a different question than the one asked |
 | 4 | **Constitutive constraints** | Propositions that eliminate candidates, categorical rather than defeasible | "Marta is often late" — narrows nothing definitively |
 | 5 | **Determinate atoms** | Predicates evaluable without a valuer: lookup, arithmetic, structural check | "excessive relative to circumstances" in place of "exceeds 43%" |
-| 6 | **Sufficiency** | The model's answer count matches the demand type declared at condition 1 | Seventeen constraints, one model (passes); a definite question with three models (fails) |
+| 6 | **Sufficiency** | The model's answer count matches the demand type declared at Demand | Seventeen constraints, one model (passes); a definite question with three models (fails) |
 
 Two features of this structure are worth stating explicitly, because "ladder" is a useful mnemonic
 that misdescribes the topology:
 
-- **Conditions 1 and 6 are a matched pair, not opposite ends of a climb.** Sufficiency is not a
+- **Demand and Sufficiency are a matched pair, not opposite ends of a climb.** Sufficiency is not a
   property of the constraint set; it is a *match* between the demand's expected answer cardinality
-  and the number of models. So condition 1 must record the demand's **type** — find-any, find-all,
-  find-unique, find-best, or decide — and condition 6 checks the model against that declared type.
+  and the number of models. So Demand must record the demand's **type** — find-any, find-all,
+  find-unique, find-best, or decide — and Sufficiency checks the model against that declared type.
   A definite description ("who drinks water?") presupposes exactly one; "list every valid seating"
   tolerates many; an optimization demand wants a unique *optimum*, which is a different success
-  condition than a unique feasible point. Read this way the structure is a bracket: 1 declares
-  what shape of answer counts, 2–5 build the model, 6 checks the model answers in that shape.
-- **Conditions 4 and 5 are orthogonal, not stacked.** They vary along different dimensions — modal
-  force (categorical versus defeasible) and predicate determinacy (bright-line versus standard) —
-  and all four combinations occur. "The guilty party is whoever had motive" is categorical and
-  exception-free, so it clears 4 cleanly, yet "had motive" needs a valuer and fails 5. "The
-  debt-to-income ratio is usually under 43%" is the opposite cell. See §7.1.
+  condition than a unique feasible point. Read this way the structure is a bracket: Demand declares
+  what shape of answer counts, the middle four build the model, and Sufficiency checks that the
+  model answers in that shape.
+- **Constitutive constraints and Determinate atoms are orthogonal, not stacked.** They vary along
+  different dimensions — modal force (categorical versus defeasible) and predicate determinacy
+  (bright-line versus standard) — and all four combinations occur. "The guilty party is whoever had
+  motive" is categorical and exception-free, so it clears Constitutive constraints cleanly, yet
+  "had motive" needs a valuer and fails Determinate atoms. "The debt-to-income ratio is usually
+  under 43%" is the opposite cell. See §7.1.
 
-Condition 4 requires constraints to be non-*defeasible*, which is narrower than exception-free: "the
-clinic is open daily except Sunday" is an exception and formalizes cleanly as a conditional. What
-has to be excluded is probabilistic or defeasible force ("often," "tends to," "as a rule"), not
-scope conditions. Condition 5's distinction is the one legal theory draws between **rules** and
-**standards** — bright-line rules are evaluable, standards require a valuer — and that analogy is
-borrowed deliberately, since it is the closest existing articulation of the boundary.
+The Constitutive constraints condition requires constraints to be non-*defeasible*, which is
+narrower than exception-free: "the clinic is open daily except Sunday" is an exception and
+formalizes cleanly as a conditional. What has to be excluded is probabilistic or defeasible force
+("often," "tends to," "as a rule"), not scope conditions. Determinate atoms draws the line legal
+theory draws between **rules** and **standards** — bright-line rules are evaluable, standards
+require a valuer — and that analogy is borrowed deliberately, since it is the closest existing
+articulation of the boundary.
 
-Condition 3 (relevance) is the only condition whose failure is silent. Every other failure is
-loud: no question, no domain, no constraints, an unevaluable predicate, the wrong number of
-answers. An irrelevant query produces a well-formed model, a confident answer, and the wrong
-question answered. PZL-0014's recorded mismatch — a subset-selection answer (3 tokens) compared
-against a full assignment (12) — looks like a mild instance of exactly this.
+Relevance is the only condition whose failure is silent. Every other failure is loud: no question,
+no domain, no constraints, an unevaluable predicate, the wrong number of answers. An irrelevant
+query produces a well-formed model, a confident answer, and the wrong question answered. PZL-0014's
+recorded mismatch — a subset-selection answer (3 tokens) compared against a full assignment (12) —
+looks like a mild instance of exactly this.
 
 ### 5.2 Satisfaction and optimization
 
@@ -208,8 +222,8 @@ has no optimization outcome.
 
 This is not a solver-selection problem. MiniZinc supports optimization natively, so
 [RFC-002](RFC-002-constraint-solver-selection.md)'s choice does not need revisiting; the gap is in
-the representation, the outcome vocabulary, and the well-posedness conditions that reference them
-(§5.1 condition 6).
+the representation (§5.6), the outcome vocabulary, and the well-posedness conditions that reference
+them (§5.1's Sufficiency).
 
 ### 5.3 Problem classification
 
@@ -230,15 +244,24 @@ indeterminacy sits*.
    more than one faithful reading, each of which may be perfectly determinate once fixed.
    RFC-001 §2's example is exact: "to the right of" may mean immediately adjacent or merely
    somewhere to the right. This is categorically distinct from underdetermination (a
-   condition-6 failure): there, one model has many solutions; here, the text has many models. The
+   Sufficiency failure): there, one model has many solutions; here, the text has many models. The
    distinction matters because RFC-003's fidelity critic judges an extraction against the prose,
    which presupposes that a single faithful reading exists (§7.4).
 4. **Subjective problems** — indeterminacy in the *values*. Either the predicates require a valuer
-   (a condition-5 failure) or the demand is find-best over preferences with no privileged
+   (a Determinate atoms failure) or the demand is find-best over preferences with no privileged
    weighting. These are not ill-posed as *decisions* — people make them constantly — they are
    ill-posed as CSPs. Supplying a valuation makes them well-posed, which reframes the question
    from "how do we model this" to "who decides" (§7.5). Corresponds to RFC-001 §5.1's
    subjective/preference tier, and becomes a COP (§5.2) once weights are fixed.
+
+These four are intended to be exhaustive but are **not** known to be mutually exclusive, and this
+RFC does not settle whether classification is single-label or multi-label. Indeterminacy can sit in
+two places at once: `catalog/puzzles/PZL-0013` ("Picking a Restaurant") closes with "Which
+restaurant *should* the group choose?" over three hard dietary constraints plus an unranked price
+column, which reads as class 3 (is "should" demanding find-any-feasible or find-best?) and class 4
+(no privileged weighting of price against preference) simultaneously. Whether such a puzzle carries
+two class labels, one label plus a per-condition annotation, or a fifth label of its own is open
+(§7.14), and the answer changes the shape of the expected-outcome vocabulary in §7.3.
 
 For classes 3 and 4, correct behavior stops being "produce the answer" and becomes "produce the
 right kind of non-answer." That is the capability the project currently has no way to specify or
@@ -268,20 +291,27 @@ decision actually needs:
 This is not an argument for building those capabilities now — §4 explicitly excludes that. It is an
 argument that the vocabulary established here must leave room for them, so that "solve" does not
 get fixed as the only verb the pipeline knows. A representation whose sole output shape is one
-assignment forecloses all four bullets above at the representation layer, which is the most
+assignment forecloses all four bullets above at the representation layer (§5.6), which is the most
 expensive place to undo such a choice later. The four are also why these must be *exposed* rather
 than consumed: under §5.5's boundary the caller is the decision maker, so anything resolved
 internally and then discarded is information the actual decision never gets to see.
 
-### 5.5 System boundary: a closed-world tool in an open world
+### 5.5 System boundary: a closed-world tool in an open world (ratified as Principle VI)
 
 This project produces a *tool that facilitates* decision support; it does not implement a decision
 support system. Drawing that line settles several things that would otherwise drift.
 
+What follows is the derivation, not the norm. The constitution's **Principle VI** ("A Callable
+Tool, Not a Decision System," v1.3.0) is the normative home for everything below and states it as a
+set of MUSTs binding on every future capability; it was ratified ahead of this RFC's acceptance
+deliberately, because ADR-003 and ADR-004 were already being built against it. Amend Principle VI
+to change the rule, not what follows here; what follows is the reasoning that principle's
+Rationale compresses.
+
 **Closed world inside, open world assumed outside.** Everything the tool reasons over is exactly
 what it was handed: the entities, domains, and constraints recoverable from the prose in front of
-it, and nothing more. Within that boundary the closed-world assumption holds, and condition 2's
-determinate answer-space (§5.1) is precisely the requirement that the world be closed enough to
+it, and nothing more. Within that boundary the closed-world assumption holds, and §5.1's
+Determinate answer-space is precisely the requirement that the world be closed enough to
 enumerate. But the tool must assume it is being *called* from an open world in which the caller
 knows things it cannot: further constraints, current data, the authority to relax a requirement,
 which stakeholder's preference prevails. So the tool may never treat its own closed world as
@@ -302,16 +332,39 @@ requires — [ADR-004](../adr/ADR-004-llm-extraction-critic-loop.md)'s extractio
 already is — and that stays invisible from outside; what is fixed is the shape at the boundary.
 [ADR-003](../adr/ADR-003-cli-interface.md) already chose that shape in practice (subcommands,
 output pipeable between them, `--json` for machine consumers, explicit flags for "reproducible,
-non-interactive/scripted use") without ever stating it as a stance. This subsection states it, and
-the constitution's Principle VI (v1.3.0) makes it binding on every future capability rather than
-advisory to this RFC alone.
+non-interactive/scripted use") without ever stating it as a stance until now; Principle VI makes
+it binding.
 
-### 5.6 Cross-cutting concerns
+### 5.6 Which representation carries this vocabulary
+
+"The representation" is invoked repeatedly above — an objective has nowhere to live (§5.2), a
+single-assignment output shape forecloses trade-offs and levers (§5.4) — and the project has more
+than one candidate for the phrase. Naming them is necessary because *represent* is the one mission
+verb §2 lists and the rest of this section has not touched, and because a child ADR asked "where
+does answer shape belong?" (§7.8) cannot answer without knowing which layer it is being asked about.
+
+Four layers are in play, each owning a different part of what this RFC requires:
+
+| Layer | Currently | What this RFC needs from it |
+|---|---|---|
+| Constraint representation | Constitution **Principle III** mandates `@relateby/pattern` `Pattern`/`Subject`/`StandardGraph` graphs; the extraction pipeline in fact carries [ADR-005](../adr/ADR-005-extractedcsp-mzn-compiler.md)'s `ExtractedCsp` | Hard versus soft constraints (§5.2), an objective, and a recorded demand type (§5.1's Demand) |
+| Solver outcome | `SolveResult`'s three satisfaction outcomes (`src/solver/types.ts`) | COP outcomes: infeasible, unique optimum, tied optima, unbounded (§5.2, §7.9) |
+| Catalog frontmatter | `tier`/`difficulty`/counts per [ADR-001](../adr/ADR-001-catalog-format-seeding.md) | A problem class (§5.3) and a demand type |
+| Answer key / eval record | `{title, answer, notes}` in `eval/answer-keys.json` | An expected outcome for every class, including diagnoses and answers conditional on a valuation (§7.3) |
+
+The gap between the first row's two halves is itself unresolved and not this RFC's to close (§7.15).
+Any resolution must make the vocabulary established here — demand type, condition-level failure
+attribution, problem class, hard-versus-soft, objective — expressible in whichever layer ends up
+owning constraints, and must not smuggle it into a side-channel that the graph, the solver, and
+the eval each interpret differently. That is the same
+failure mode §2 diagnoses, one layer down.
+
+### 5.7 Cross-cutting concerns
 
 - **Failure attribution.** A correct system fails at the right condition with the right diagnosis.
   Failing for the wrong reason is still a failure: prose carrying no object-level demand should be
   reported as such, and judged *wrong* if it is reported as "no unique solution" instead — that
-  misdiagnoses input which never got past condition 1 as though it had reached condition 6.
+  misdiagnoses input which never cleared Demand as though it had reached Sufficiency.
 - **Silent promotion is the characteristic failure mode.** The danger with ill-posed input is not a
   crash but a system quietly making the problem well-posed — inventing a domain, hardening a
   defeasible clue into a constraint, choosing one reading of an ambiguous phrase, or supplying its
@@ -319,7 +372,7 @@ advisory to this RFC alone.
   plausible-looking answer. RFC-003 §9.4 already documented the empirical version of this: an
   identical extraction call returning a correct result once and a schema-valid-but-wrong result on
   a second run. Without condition-level attribution, promotion is invisible.
-- **Prose is data, not instruction.** Condition 1's object-level requirement implies a standing
+- **Prose is data, not instruction.** Demand's object-level requirement implies a standing
   boundary: puzzle text is material to be modeled, never a directive to execute. This is what makes
   a misdirected imperative diagnosable rather than merely confusing, and it needs to hold even when
   a legitimate puzzle contains an imperative in place of a question (§7.7).
@@ -330,9 +383,9 @@ advisory to this RFC alone.
 
 ## 6. Alternatives Considered
 
-- **Frame the space as computational *problem solving*.** The obvious alternative title, and
-  rejected deliberately rather than by preference. "Problem solving" presupposes that a solution
-  exists and is unique enough to be called *the* solution — which is precisely the assumption §2
+- **Frame the space as computational *problem solving*.** The obvious alternative title.
+  "Problem solving" presupposes that a solution exists and is unique enough to be called *the*
+  solution — which is precisely the assumption §2
   identifies as this project's blind spot, so adopting it would encode the degenerate case directly
   into the project's vocabulary and make the wider space the exception rather than the rule.
   "Decision making" puts the emphasis where the space actually leads: trade-offs among admissible
@@ -343,8 +396,9 @@ advisory to this RFC alone.
   the gap stayed invisible. Rejected because the vocabulary is already contradicting itself between
   RFCs (§2) and the ambiguity compounds with every non-determinate problem the project takes on.
 - **Fold this into RFC-003 (extraction)** — treat well-posedness as an extraction concern, since
-  most condition failures surface during extraction. Rejected: condition 6 is a solver outcome,
-  conditions 1–2 are properties of the prose independent of any extraction strategy, and the
+  most condition failures surface during extraction. Rejected: Sufficiency is a solver outcome,
+  Demand and Determinate answer-space are properties of the prose independent of any extraction
+  strategy, and the
   classification governs the catalog and eval as much as the extractor. Scoping it to extraction
   would reproduce the same implicit-assumption problem one layer down.
 - **Fold this into the eval-hardening workstream** — define the outcome taxonomy directly and skip
@@ -356,7 +410,7 @@ advisory to this RFC alone.
   well-posedness concerns existence, uniqueness, and stability of solutions to an
   *already-posed* problem, and says nothing about whether prose poses one. The CSP/COP literature
   begins after the model exists. The rules-versus-standards distinction from legal theory fits
-  condition 5 closely enough to borrow explicitly (§5.1). None of these covers the
+  Determinate atoms closely enough to borrow explicitly (§5.1). None of these covers the
   text → model → answer chain end to end, which is why this RFC defines its own vocabulary rather
   than citing one.
 - **Declare subjective and ambiguous problems out of scope** — restrict the project to determinate
@@ -364,23 +418,47 @@ advisory to this RFC alone.
   genuine axis of the problem" from the beginning and deliberately chose a foundation that
   "doesn't assume every clue is strict," so this would contradict an accepted direction rather
   than defer it.
+- **An unordered set of independent predicates** instead of §5.1's ordered ladder — six checks with
+  no precedence, each reported pass/fail, with no notion of the *lowest* failing condition.
+  Genuinely attractive: it is immune to the renumbering §7.1 and §7.2 threaten, it makes no claim
+  about topology that the 4/5 orthogonality then has to walk back, and it reports strictly more
+  information (all failures, not the first). Rejected for now because lowest-failure attribution is
+  the specific thing §2 says is missing — "extraction failed" covering five distinct conditions is a
+  flat report, and the fix is knowing *which* condition to blame. Prose with no demand at all also
+  fails several checks vacuously (there is no answer-space and no constraints because there is no
+  question), so an unordered report would list five failures where the diagnosis is one. Worth
+  revisiting if §7.1/§7.2 show the ordering is not defensible: names-as-interface (§5.1) already
+  makes this a cheap change rather than a rewrite.
+- **Organize by demand type × answer cardinality** instead of by where the indeterminacy sits —
+  promote §5.1's Demand/Sufficiency bracket to the primary axis (find-any/all/unique/best/decide
+  crossed with zero/one/many/optimum), and demote Determinate answer-space, Relevance, Constitutive
+  constraints, and Determinate atoms to diagnostics explaining a mismatch. This has real appeal: the
+  bracket is the part of §5.1 that is structurally certain, the axes are directly observable in the
+  eval (a demand type is recordable, a model count is measurable), and the four §5.3 classes would
+  fall out of cells rather than being asserted. Rejected because it inverts the diagnostic direction
+  this project needs: a mismatch between declared type and model count tells you the prose is not
+  well-posed but not *why*, and "why" is what the catalog, the extractor, and the eval each have to
+  act on. It also cannot classify a non-problem at all — prose with no demand has no cell, since
+  the axis it would be filed under is the one that failed.
 
 ## 7. Open Questions
 
-7.1. Are conditions 4 and 5 genuinely orthogonal dimensions rather than sequential rungs, and if
-so, should the model be presented as a ladder at all? The four-cell reading in §5.1 suggests a
-2×2 (modal force × predicate determinacy) sitting inside an otherwise ordered sequence. A cleaner
-formulation may exist.
+7.1. Are Constitutive constraints and Determinate atoms genuinely orthogonal dimensions rather than
+sequential rungs, and if so, should the model be presented as a ladder at all? The four-cell reading
+in §5.1 suggests a 2×2 (modal force × predicate determinacy) sitting inside an otherwise ordered
+sequence. A cleaner formulation may exist — §6 records two candidates (an unordered predicate set,
+and demand type × answer cardinality) and why neither displaces the ladder yet.
 
-7.2. Is relevance (condition 3) a distinct condition or a special case of sufficiency? A model
-that does not bear on the demand arguably fails to pin down the *demanded* assignment. Keeping
-them separate captures a real failure mode that sufficiency alone misses — a solvable model
-answering the wrong question — but the boundary should be tested against real cases before it is
-treated as settled.
+7.2. Is Relevance a distinct condition or a special case of Sufficiency? A model that does not bear
+on the demand arguably fails to pin down the *demanded* assignment. Keeping them separate captures a
+real failure mode that Sufficiency alone misses — a solvable model answering the wrong question —
+but the boundary should be tested against real cases before it is treated as settled.
 
 7.3. What expected-outcome vocabulary should the catalog and eval share — one code per condition,
 or a coarser grouping? Condition-level granularity is maximally diagnostic but risks baking this
-RFC's exact taxonomy into a schema that must change if 7.1 or 7.2 resolve differently. Consumed
+RFC's exact taxonomy into a schema that must change if 7.1, 7.2, or 7.14 resolve differently. Naming
+conditions rather than numbering them (§5.1) reduces that exposure but does not remove it: a schema
+still has to commit to how many codes exist and whether a puzzle can carry more than one. Consumed
 by the eval-hardening workstream (root `TODO.md` item 2).
 
 7.4. For ambiguous-NL problems (§5.3 class 3), what is correct behavior — enumerate the readings,
@@ -395,17 +473,18 @@ actually solve (as a COP) or only classify.
 
 7.6. Should the 14 seed puzzles be re-audited against §5.1? PZL-0011's threshold cascade (already
 flagged in [RFC-003](RFC-003-natural-language-csp-extraction.md) §7.6) and PZL-0013's restaurant
-selection are candidates for sitting at the condition-5 boundary rather than cleanly above it. If
+selection are candidates for sitting at the Determinate atoms boundary rather than cleanly above it.
+If
 so, the nominally determinate dev set already contains the indeterminacy the catalog work was
 planning to add — which would change what the current 9/14 eval pass rate actually measures.
 
-7.7. Does the prose-is-data boundary (§5.6) need to hold as a hard pipeline invariant, or is it
+7.7. Does the prose-is-data boundary (§5.7) need to hold as a hard pipeline invariant, or is it
 sufficient to classify a misdirected imperative correctly when one appears? Related to but
 distinct from the adversarial-input handling §4 excludes.
 
-7.8. Where does answer *shape* belong — in the extracted representation, the catalog frontmatter,
-the answer key, or all three? Condition 1's demand type (find-any/all/unique/best/decide) has to
-be recorded somewhere for condition 6 to be checkable, and PZL-0014's subset-versus-assignment
+7.8. Where does answer *shape* belong — in the constraint representation, the catalog frontmatter,
+the answer key, or all three (§5.6)? Demand's declared type (find-any/all/unique/best/decide) has to
+be recorded somewhere for Sufficiency to be checkable, and PZL-0014's subset-versus-assignment
 mismatch suggests answer shape is currently an unowned concern.
 
 7.9. Does this RFC's classification imply that `SolveResult`'s satisfaction-only taxonomy
@@ -425,17 +504,39 @@ pipeline has nowhere to put it either way.
 
 7.12. How far along the trajectory from determinate puzzle to decision support is *this* project
 meant to travel, versus a successor that consumes its output? **Resolved: this project builds the
-tool, not the system.** It produces a callable capability a decision support system can be built
-on, and stops at the boundary §5.5 draws — closed world inside, open world assumed outside, report
-conflicts and gaps but resolve neither. That settles the generality question the rest of this
-item raised: the representation needs enough expressiveness to *state* trade-offs, levers,
-provenance, and risk (§5.4), and no machinery whatsoever for negotiating them.
+tool, not the system** — see §5.5 and constitution Principle VI for the boundary and its
+consequences.
 
 7.13. What concretely belongs in the diagnostic payload §5.5 commits to? For an unsatisfiable
 problem the natural candidate is a minimal conflicting subset of constraints; for an
-underdetermined one, which additional facts would most reduce the model count. Both are computable
-in principle, neither is specified, and "be informative about what's missing" is not yet a
-testable requirement.
+underdetermined one, which additional facts would most reduce the model count. This stays an
+RFC-level question rather than an ADR detail because it tests whether §5.5's "report, do not
+resolve" is achievable at all: if neither diagnostic is computable within the closed world, the
+boundary collapses into "refuse" and the caller gets nothing it can act on, which would force the
+boundary itself to move. Both are computable in principle, neither is specified, and "be informative
+about what's missing" is not yet a testable requirement.
+
+7.14. Are §5.3's four classes mutually exclusive and exhaustive? PZL-0013 appears to be
+simultaneously ambiguous-NL (the demand type is unclear) and subjective (no privileged weighting),
+which would make classification multi-label. Options: two class labels, one label plus per-condition
+annotations, or a fifth class for compound indeterminacy. This gates 7.3 — a single-label schema and
+a multi-label one are different artifacts — and 7.6, since re-auditing the seed set requires knowing
+whether a puzzle can land in two classes.
+
+7.15. Constitution Principle III mandates `@relateby/pattern` gram graphs as the constraint
+representation, but the pipeline currently carries ADR-005's `ExtractedCsp` (§5.6). Do the §5.1
+conditions and §5.3 classes need to be expressible on the graph, on `ExtractedCsp`, or on both — and
+does that answer change which artifact owns answer shape (7.8), the objective (§5.2), and provenance
+(7.11)? Closing this gap is not this RFC's work, but every §5.6 requirement lands on whichever side
+of it wins.
+
+7.16. Are the §5.1 conditions targets a *generator* can be parameterized by — "generate prose that
+fails Determinate atoms" — or only a post-hoc classification of prose that already exists? Every
+consumer named in this RFC is downstream (catalog authoring, extraction, eval, solver outcomes),
+while [RFC-001](RFC-001-parameterizable-puzzle-generation.md) is machine generation and appears here
+only as §9's mapping column. This determines whether the non-determinate material root `TODO.md`
+item 1 needs is generated at volume or hand-authored 14 at a time, and whether RFC-001's generation
+axis has to reference this vocabulary directly.
 
 ## 8. ADRs
 
@@ -444,8 +545,8 @@ _(populated automatically as `/adr-create` links ADRs to this RFC)_
 ## 9. Appendix: Vocabulary Reconciliation
 
 Where the three existing RFCs' implicit vocabularies align with §5.3's classes, and what each one
-currently cannot express. This is the concrete form of the claim in §1 that the vocabulary was
-assumed but never defined.
+currently cannot express. This is the concrete form of §2's claim that RFC-001/002/003 each
+assumed a vocabulary without stating it directly.
 
 | §5.3 class | RFC-001 §5.1 clue tier | Regime (§5.2) | `SolveResult` outcome | Eval outcome today | Gap |
 |---|---|---|---|---|---|
@@ -456,6 +557,9 @@ assumed but never defined.
 
 The pattern across the rows: RFC-001 anticipated three of the four classes as a *generation* axis
 and chose a foundation intended not to foreclose them; RFC-002 then scoped the solving contract to
-the first class only; RFC-003 built extraction against that contract and hit the resulting edge in
-its own §7.3 without a vocabulary to name it. No decision in that sequence was wrong on its own
-terms — the omission is that nothing recorded the narrowing.
+the first class only, without recording that narrowing; RFC-003 built extraction against that
+contract and hit the resulting edge in its own §7.3 without a vocabulary to name it.
+
+One row per class is a simplification: §5.3 does not claim the classes are mutually exclusive, so a
+puzzle may map onto two rows at once (§7.14). The table reconciles the *vocabularies*, not the
+per-puzzle classification.

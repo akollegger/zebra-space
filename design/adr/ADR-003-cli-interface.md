@@ -13,11 +13,11 @@ specs:
 
 ## 1. Context
 
-RFC-002/ADR-002 gives this project a real, working `solve()` capability
-(`src/solver/solve.ts`, `specs/002-minizinc-integration`) with no way for a person to invoke it
+A real, working `solve()` capability now exists (`src/solver/solve.ts`,
+`specs/002-minizinc-integration`, from RFC-002/ADR-002) with no way for a person to invoke it
 directly from a terminal. A CLI tool was floated earlier, during discussion of catalog
-modification, but that's a separate, not-yet-designed workstream — this ADR is scoped to what
-exists now: exposing `solve`.
+modification, but that's a separate, not-yet-designed workstream — scope here is what exists
+now: exposing `solve`.
 
 This ADR decides the CLI's interface *shape* — how a user invokes any of this project's
 capabilities, not just this one — and its first concrete subcommand, `solve`. The shape is
@@ -33,8 +33,8 @@ decided — see below for how and when a second parent was added.
 original ask named) is not usable here. Its latest stable release (0.77.0) peer-depends on
 `effect@^3.22.1` and `@effect/platform@^0.97.1` — the exact same incompatibility ADR-002/spec
 002's T001 already hit and worked around, since this repo is pinned to `effect@4.0.0-beta.107`.
-This ADR's argument-parsing decision (2.3) is a direct consequence of that finding, not a
-stylistic preference. [Tracking issue #5](https://github.com/akollegger/zebra-space/issues/5)
+This ADR's argument-parsing decision (2.3) is a direct consequence of that finding.
+[Tracking issue #5](https://github.com/akollegger/zebra-space/issues/5)
 watches for `@effect/platform`/`@effect/cli` catching up to the Effect 4.0 line — independent of
 that, though: 2.3's actual choice (Stricli) stands on its own merits, not as a placeholder
 waiting for that issue to close.
@@ -198,8 +198,8 @@ format, and building a second naming layer on top isn't justified yet.
 
 ## 3. Alternatives Considered
 
-- **`@effect/cli`** (the original ask). Rejected: incompatible peer dependencies (Context) — not
-  a stylistic rejection, a hard version-compatibility blocker with this repo's pinned `effect`.
+- **`@effect/cli`** (the original ask). Rejected: incompatible peer dependencies (Context) — a
+  hard version-compatibility blocker with this repo's pinned `effect`.
 - **`node:util.parseArgs` + hand-rolled subcommand dispatch** (this ADR's original 2.3 decision).
   Rejected on reflection, before any implementation existed to migrate away from: real design
   effort was already spent precisely hand-deriving the exact global-vs-subcommand dispatch
@@ -308,9 +308,8 @@ format, and building a second naming layer on top isn't justified yet.
   doesn't recognize is a `ProviderError` (ADR-004 §2.6) surfaced at request time, not validated
   upfront by this ADR. A friendlier upfront check (e.g. against OpenRouter's model catalog) is
   possible future work, not decided here.
-- This is the first time this ADR has actually grown a second parent RFC (RFC-003, Context) —
-  confirming the growth pattern this ADR's own Consequences already described as expected,
-  rather than introducing a new one.
+- RFC-003 is now a second parent RFC (Context) — the growth pattern already anticipated above,
+  not a new one.
 
 ## 5. Related
 
