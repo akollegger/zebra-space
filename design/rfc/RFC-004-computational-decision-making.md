@@ -22,7 +22,7 @@ all, which classes of problem are in scope, and what a correct *non*-answer is. 
 claim is that a problem with exactly one valid solution is the degenerate corner of that space
 rather than its center — which is why the space is named for decision making rather than problem
 solving (§6), and why the project's direction runs from zebra puzzles outward toward decision
-support.
+support — as the callable tool such a system is built on, not as the system itself (§5.5).
 
 ## 2. Problem / Motivation
 
@@ -125,13 +125,15 @@ naming the space accordingly is deliberate rather than stylistic (§6).
 - A general theory of decision making, formal epistemology, or question semantics. Scope is
   bounded by what the catalog, extraction, and eval need in order to classify their own material.
 - Adversarial-input or prompt-injection defense as a security concern. The instruction-vs-data
-  boundary appears below (§5.5) as a well-posedness condition, not as threat modeling.
+  boundary appears below (§5.6) as a well-posedness condition, not as threat modeling.
 - Difficulty calibration and tiering. Well-posedness is orthogonal to difficulty: a puzzle can
   clear every condition and still be trivial, or fail the first one and look hard.
-- Designing decision-support capabilities themselves — sensitivity analysis, counterfactual
-  queries, preference elicitation, explanation. §5.4 names them as the direction the space opens
-  toward and argues the vocabulary must leave room for them; building any of them is its own
-  future RFC, not something to smuggle in here.
+- Building the decision support system. §5.5 fixes the boundary: this project produces a callable
+  tool such a system can be built on. Resolving conflicts, retrieving missing context, eliciting
+  preferences, and holding any interactive dialogue with a human all sit on the far side of that
+  line. Designing the tool's *own* diagnostic capabilities (sensitivity analysis, counterfactual
+  queries, explanation) is legitimate future territory but is not designed here either — §5.4 only
+  argues the vocabulary must leave room for them.
 
 ## 5. Proposed Approach (high-level)
 
@@ -267,9 +269,42 @@ This is not an argument for building those capabilities now — §4 explicitly e
 argument that the vocabulary established here must leave room for them, so that "solve" does not
 get fixed as the only verb the pipeline knows. A representation whose sole output shape is one
 assignment forecloses all four bullets above at the representation layer, which is the most
-expensive place to undo such a choice later.
+expensive place to undo such a choice later. The four are also why these must be *exposed* rather
+than consumed: under §5.5's boundary the caller is the decision maker, so anything resolved
+internally and then discarded is information the actual decision never gets to see.
 
-### 5.5 Cross-cutting concerns
+### 5.5 System boundary: a closed-world tool in an open world
+
+This project produces a *tool that facilitates* decision support; it does not implement a decision
+support system. Drawing that line settles several things that would otherwise drift.
+
+**Closed world inside, open world assumed outside.** Everything the tool reasons over is exactly
+what it was handed: the entities, domains, and constraints recoverable from the prose in front of
+it, and nothing more. Within that boundary the closed-world assumption holds, and condition 2's
+determinate answer-space (§5.1) is precisely the requirement that the world be closed enough to
+enumerate. But the tool must assume it is being *called* from an open world in which the caller
+knows things it cannot: further constraints, current data, the authority to relax a requirement,
+which stakeholder's preference prevails. So the tool may never treat its own closed world as
+complete evidence about the caller's.
+
+**Report, do not resolve.** This is the operative consequence. Handed an unsatisfiable problem,
+the tool can and should say what is in conflict; handed an underdetermined one, what is missing
+that would pin it down. Both are diagnostics computed entirely within the closed world. Actually
+resolving the conflict — deciding which constraint yields — or retrieving the absent context is
+the calling system's work, because both require exactly the open-world knowledge the tool does not
+have. The same line runs through §5.4's four bullets: surface trade-offs, levers, provenance, and
+risk because the caller decides; do not decide among them.
+
+**A callable tool, not a conversation.** The interface is a command invoked with input that returns
+output — not a chat, not a copilot, not an interactive agent that asks follow-up questions to fill
+its own gaps. Gaps are reported, not negotiated. Internally the tool may be as agentic as the work
+requires — [ADR-004](../adr/ADR-004-llm-extraction-critic-loop.md)'s extraction-and-critic loop
+already is — and that stays invisible from outside; what is fixed is the shape at the boundary.
+[ADR-003](../adr/ADR-003-cli-interface.md) already chose that shape in practice (subcommands,
+output pipeable between them, `--json` for machine consumers, explicit flags for "reproducible,
+non-interactive/scripted use") without ever stating it as a stance. This subsection states it.
+
+### 5.6 Cross-cutting concerns
 
 - **Failure attribution.** A correct system fails at the right condition with the right diagnosis.
   Failing for the wrong reason is still a failure: prose carrying no object-level demand should be
@@ -362,7 +397,7 @@ selection are candidates for sitting at the condition-5 boundary rather than cle
 so, the nominally determinate dev set already contains the indeterminacy the catalog work was
 planning to add — which would change what the current 9/14 eval pass rate actually measures.
 
-7.7. Does the prose-is-data boundary (§5.5) need to hold as a hard pipeline invariant, or is it
+7.7. Does the prose-is-data boundary (§5.6) need to hold as a hard pipeline invariant, or is it
 sufficient to classify a misdirected imperative correctly when one appears? Related to but
 distinct from the adversarial-input handling §4 excludes.
 
@@ -387,9 +422,18 @@ often the most decision-relevant part of the result, which points toward in-band
 pipeline has nowhere to put it either way.
 
 7.12. How far along the trajectory from determinate puzzle to decision support is *this* project
-meant to travel, versus a successor that consumes its output? §2 fixes the direction but not an
-endpoint, and the answer governs how much generality the representation should carry now — the
-classic cost of guessing wrong in either direction.
+meant to travel, versus a successor that consumes its output? **Resolved: this project builds the
+tool, not the system.** It produces a callable capability a decision support system can be built
+on, and stops at the boundary §5.5 draws — closed world inside, open world assumed outside, report
+conflicts and gaps but resolve neither. That settles the generality question the rest of this
+item raised: the representation needs enough expressiveness to *state* trade-offs, levers,
+provenance, and risk (§5.4), and no machinery whatsoever for negotiating them.
+
+7.13. What concretely belongs in the diagnostic payload §5.5 commits to? For an unsatisfiable
+problem the natural candidate is a minimal conflicting subset of constraints; for an
+underdetermined one, which additional facts would most reduce the model count. Both are computable
+in principle, neither is specified, and "be informative about what's missing" is not yet a
+testable requirement.
 
 ## 8. ADRs
 
