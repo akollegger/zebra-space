@@ -205,11 +205,16 @@ interface Comparison {
 function recoverEntityKeyedArrays(assignment: Assignment, extractedCsp: ExtractedCsp): Assignment {
   const recovered: Record<string, unknown> = { ...assignment }
   for (const domain of extractedCsp.domains) {
-    const value = recovered[domain.variable]
+    // solve()'s assignment keys are minizinc's own (compile.ts-sanitized) identifiers, e.g.
+    // "house-color" compiles and returns as "house_color" — look up (and write back) under
+    // that same sanitized key, not the raw extracted variable name, or a variable needing
+    // sanitization silently fails to be recovered.
+    const key = sanitizeIdentifier(domain.variable)
+    const value = recovered[key]
     if (!Array.isArray(value)) continue
     const entityIds = extractedCsp.entities.filter((e) => e.type === domain.entityType).map((e) => e.id)
     if (entityIds.length !== value.length) continue
-    recovered[domain.variable] = Object.fromEntries(entityIds.map((id, i) => [id, value[i]]))
+    recovered[key] = Object.fromEntries(entityIds.map((id, i) => [id, value[i]]))
   }
   return recovered
 }
