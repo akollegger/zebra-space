@@ -10,20 +10,28 @@ adrs: []
 
 ## 1. Summary
 
-Every capability this project has built so far — generation
-([RFC-001](RFC-001-parameterizable-puzzle-generation.md)), solving
-([RFC-002](RFC-002-constraint-solver-selection.md)), extraction
-([RFC-003](RFC-003-natural-language-csp-extraction.md)) — assumes its input prose *is* a
-well-posed constraint problem. That assumption was safe while the catalog was uniformly
-determinate and is now demonstrably false. This RFC defines the problem space those RFCs
-presupposed: what makes prose a solvable problem at all, which classes of problem are in scope,
-and what a correct *non*-answer is.
+This project is named for a space it has never mapped. Zebra Space's stated purpose spans
+generating prose puzzles, modeling them as constraint problems, representing them as graphs, and
+solving them — but nothing on record says what kind of thing is being generated, modeled, or
+solved, nor where that space ends. Each existing RFC defined its own slice
+([RFC-001](RFC-001-parameterizable-puzzle-generation.md) generation,
+[RFC-002](RFC-002-constraint-solver-selection.md) solving,
+[RFC-003](RFC-003-natural-language-csp-extraction.md) extraction) while assuming a well-posed
+problem as its input. This RFC defines the space itself: what makes prose a solvable problem at
+all, which classes of problem are in scope, and what a correct *non*-answer is.
 
 ## 2. Problem / Motivation
 
 The project has worked from reasonable assumptions, well-known definitions, and a reference
-solver — none of them written down. Three concrete symptoms show that the implicit vocabulary has
-run out:
+solver — none of them written down. That was economical rather than careless: while every puzzle
+in view was a determinate constraint problem with exactly one answer, an implicit vocabulary was
+sufficient because nothing tested it. But the four verbs in the project's mission — generate,
+model, represent, solve — all quietly presuppose the same three unstated things: that the input
+poses a problem, that the problem has an answer, and that the answer is unique. None of those is
+true across the space this project actually intends to work in.
+
+The omission is now load-bearing, and it shows up from several independent directions rather than
+at any single point:
 
 **The solver contract and the generation roadmap already disagree, and nothing records it.**
 [RFC-002](RFC-002-constraint-solver-selection.md) §3 set out to "establish a shared definition of
@@ -43,28 +51,29 @@ unsatisfiable or under-constrained prose should legitimately fail to solve uniqu
 claim about the well-posedness of the *problem*, not about extraction — but it was resolved as an
 extraction-validation question, so the concept it depends on was never named or reused.
 
-**The catalog can now hold puzzles whose expected result is inexpressible.**
-`catalog/puzzles/PZL-0015-extract-a-solvable-csp.md` was authored deliberately as a non-problem:
-its entire body is the sentence "Extract a solvable CSP from this prose." There is nothing to
-solve, and the correct behavior is a specific diagnosis — no scenario, therefore nothing to model
-— rather than an answer. Nothing in the project can currently record that expectation:
-`eval/answer-keys.json` entries hold `{title, answer, notes}`, which can only express "here is
-the right answer," and `scripts/eval-extraction.ts` collapses every pre-solve failure into
+**An expected non-answer is currently inexpressible.** `eval/answer-keys.json` entries hold
+`{title, answer, notes}`, which can only say "here is the right answer," and
+`scripts/eval-extraction.ts` collapses every pre-solve failure into
 `EXTRACT_FAILED`/`COMPILE_FAILED` while treating `SOLVE_UNSATISFIABLE` and
-`SOLVE_MULTIPLY_SATISFIABLE` as unconditional failures. A puzzle that is *supposed* to have no
-unique answer cannot pass.
+`SOLVE_MULTIPLY_SATISFIABLE` as unconditional failures. So for any problem whose correct result is
+*not* a unique assignment — a contradiction, a question with no determinate answer-space, a
+preference with no privileged weighting — the project can neither state the expectation nor score
+it as met. Correct behavior and a bug are indistinguishable.
 
-This matters now because the catalog is about to grow deliberately into non-problems,
-optimization problems, and subjective/ambiguous problems (root `TODO.md` item 1). Each is a
-category the current vocabulary cannot name. Authoring them without a shared definition means
-every puzzle's expected outcome is decided ad hoc, and — the real cost — a system failing for the
-*right* reason becomes indistinguishable from a bug.
+Every active workstream runs into this from its own angle. Growing the catalog (root `TODO.md`
+item 1) means authoring non-problems, optimization problems, and subjective/ambiguous problems —
+categories the current vocabulary cannot name, so each one's expected outcome gets decided ad hoc.
+Hardening the eval (item 2) requires deciding whether multiple solutions constitute a pass, which
+is unanswerable without first knowing what class of problem is being scored. Closing
+expressiveness gaps (item 3) requires distinguishing a genuinely missing constraint-language
+feature from prose that was never a constraint problem in the first place. Any one of these would
+have surfaced the gap; that they all do is the argument for defining the space once, centrally,
+rather than three times in passing.
 
-There is also a motivation beyond the catalog. Solving a determinate zebra puzzle is the easy
-corner of computational decision making; the project's interest is the wider space. Being
-explicit about where the boundaries are beats assuming them, and the boundary cases are not
-tricks: an imperative sentence appearing where a question belongs (PZL-0015) is a thing
-legitimate prose does.
+Underneath the immediate blockages is the broader point. Solving a determinate zebra puzzle is the
+easy corner of computational decision making, and it is the only corner currently described. The
+project's interest is the wider space — ambiguity, preference, and ill-posedness included — and
+being explicit about where its boundaries lie beats continuing to assume them.
 
 ## 3. Goals
 
@@ -182,10 +191,10 @@ indeterminacy sits*.
 1. **Non-problems** — indeterminacy in the demand. One or more conditions in §5.1 fail, and the
    correct output is a diagnosis rather than a solution. Subtypes follow the failing condition, and
    two that look alike are worth separating: prose with no demand at all ("Hello, world") versus
-   prose with a demand at the wrong level (PZL-0015's "Extract a solvable CSP from this prose" —
-   an imperative that requests resolution, but of the modeling act rather than of a scenario). The
+   prose with a demand at the wrong *level* — an imperative like "extract a solvable CSP from this
+   prose," which does request resolution, but of the modeling act rather than of any scenario. The
    second is the adversarial one, because a system that treats the last imperative sentence as the
-   query will follow it.
+   query will simply follow it.
 2. **Determinate problems** — no indeterminacy. All six conditions hold; there is one correct
    answer and it is checkable. Corresponds to RFC-001 §5.1's strict/explicit tier, and is what the
    seed catalog nominally consists of.
@@ -210,9 +219,9 @@ score.
 ### 5.4 Cross-cutting concerns
 
 - **Failure attribution.** A correct system fails at the right condition with the right diagnosis.
-  Failing for the wrong reason is still a failure: PZL-0015 should report that there is no
-  object-level demand, and should be judged *wrong* if it reports "no unique solution," because
-  that misdiagnoses prose that never got past condition 1.
+  Failing for the wrong reason is still a failure: prose carrying no object-level demand should be
+  reported as such, and judged *wrong* if it is reported as "no unique solution" instead — that
+  misdiagnoses input which never got past condition 1 as though it had reached condition 6.
 - **Silent promotion is the characteristic failure mode.** The danger with ill-posed input is not a
   crash but a system quietly making the problem well-posed — inventing a domain, hardening a
   defeasible clue into a constraint, choosing one reading of an ambiguous phrase, or supplying its
@@ -221,9 +230,9 @@ score.
   identical extraction call returning a correct result once and a schema-valid-but-wrong result on
   a second run. Without condition-level attribution, promotion is invisible.
 - **Prose is data, not instruction.** Condition 1's object-level requirement implies a standing
-  boundary: puzzle text is material to be modeled, never a directive to execute. This is what
-  makes PZL-0015 diagnosable rather than merely confusing, and it needs to hold even when a
-  legitimate puzzle happens to contain an imperative (§7.7).
+  boundary: puzzle text is material to be modeled, never a directive to execute. This is what makes
+  a misdirected imperative diagnosable rather than merely confusing, and it needs to hold even when
+  a legitimate puzzle contains an imperative in place of a question (§7.7).
 - **Expected outcomes must be recordable per class.** For determinate problems the expectation is
   an answer; for the other three it is a diagnosis, a set of readings, or an answer conditional on
   a valuation. The catalog and eval need to express all four (§7.3) — today they can express only
@@ -231,11 +240,10 @@ score.
 
 ## 6. Alternatives Considered
 
-- **Leave it implicit** — continue deciding each puzzle's expected outcome case by case. This is
-  the status quo and it worked while the catalog was uniformly determinate, which is precisely why
-  the gap stayed invisible. Rejected because it has already produced concrete blockage (PZL-0015's
-  expectation is unrecordable) and the ambiguity multiplies with every non-determinate puzzle
-  added.
+- **Leave it implicit** — continue deciding each problem's expected outcome case by case. This is
+  the status quo, and it worked precisely because everything in view was determinate, which is why
+  the gap stayed invisible. Rejected because the vocabulary is already contradicting itself between
+  RFCs (§2) and the ambiguity compounds with every non-determinate problem the project takes on.
 - **Fold this into RFC-003 (extraction)** — treat well-posedness as an extraction concern, since
   most condition failures surface during extraction. Rejected: condition 6 is a solver outcome,
   conditions 1–2 are properties of the prose independent of any extraction strategy, and the
@@ -294,8 +302,8 @@ so, the nominally determinate dev set already contains the indeterminacy the cat
 planning to add — which would change what the current 9/14 eval pass rate actually measures.
 
 7.7. Does the prose-is-data boundary (§5.4) need to hold as a hard pipeline invariant, or is it
-sufficient to classify PZL-0015-style input correctly when it appears? Related to but distinct
-from the adversarial-input handling §4 excludes.
+sufficient to classify a misdirected imperative correctly when one appears? Related to but
+distinct from the adversarial-input handling §4 excludes.
 
 7.8. Where does answer *shape* belong — in the extracted representation, the catalog frontmatter,
 the answer key, or all three? Condition 1's demand type (find-any/all/unique/best/decide) has to
