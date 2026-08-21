@@ -340,9 +340,12 @@ explicitly left open there.
     capability, not bug fixes, but found and validated the same way: live pipeline runs against
     PZL-0003, PZL-0013, and PZL-0011/PZL-0012 respectively.
 
-  All fixed in `src/compiler/compile.ts`/`src/extraction/types.ts`/the extraction prompt; residual
-  failures are either PZL-0011's still-open compound-condition gap (ADR-004 §4) or ordinary LLM
-  non-determinism (ADR-004 §2.6) — not further compiler/schema representation gaps, as far as this
+  All fixed in `src/compiler/compile.ts`/`src/extraction/types.ts`/the extraction prompt. PZL-0011's
+  compound-condition gap, open when this pass started, is resolved by the `"and"` `DerivedCondition`
+  variant added in §2.4 above; residual PZL-0011 failures are prose-comprehension/critic issues
+  (the model failing to recognize or correctly extract the conjunction, not a missing
+  representation for it) or ordinary LLM non-determinism (ADR-004 §2.6) — not further
+  compiler/schema representation gaps, as far as this
   pass's evidence shows.
 - The graph-to-`.mzn` compiler RFC-002/[ADR-002](ADR-002-adopt-minizinc-solver.md) originally
   anticipated remains undesigned — this ADR doesn't resolve it, though a future graph
