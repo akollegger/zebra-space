@@ -18,7 +18,11 @@ solved, nor where that space ends. Each existing RFC defined its own slice
 [RFC-002](RFC-002-constraint-solver-selection.md) solving,
 [RFC-003](RFC-003-natural-language-csp-extraction.md) extraction) while assuming a well-posed
 problem as its input. This RFC defines the space itself: what makes prose a solvable problem at
-all, which classes of problem are in scope, and what a correct *non*-answer is.
+all, which classes of problem are in scope, and what a correct *non*-answer is. Its organizing
+claim is that a problem with exactly one valid solution is the degenerate corner of that space
+rather than its center — which is why the space is named for decision making rather than problem
+solving (§6), and why the project's direction runs from zebra puzzles outward toward decision
+support.
 
 ## 2. Problem / Motivation
 
@@ -70,10 +74,21 @@ feature from prose that was never a constraint problem in the first place. Any o
 have surfaced the gap; that they all do is the argument for defining the space once, centrally,
 rather than three times in passing.
 
-Underneath the immediate blockages is the broader point. Solving a determinate zebra puzzle is the
-easy corner of computational decision making, and it is the only corner currently described. The
-project's interest is the wider space — ambiguity, preference, and ill-posedness included — and
-being explicit about where its boundaries lie beats continuing to assume them.
+Underneath the immediate blockages is a framing point the project's own name already commits to. A
+problem with exactly one valid solution is the **degenerate** case, not the paradigm case: the
+constraints have removed every choice, so nothing remains to decide and the only work left is
+computation. The determinate zebra puzzle is the easy corner of this space, and it is the only
+corner currently described.
+
+Every direction out of that corner *widens* the set of valid answers rather than narrowing it.
+Optimization admits many feasible points and asks which is best. Ambiguous language admits several
+faithful readings of the same text. Common sense and subjective judgment admit answers that depend
+on who is judging. And moving the constraints, variables, or domains changes what is possible at
+all. Once more than one answer is admissible, the useful output stops being "the solution" and
+becomes the trade-offs among candidates, the nuance in how each was reached, and the risk of
+acting on any of them — which is a decision-making framework rather than a solving one. The
+trajectory this RFC serves runs from the determinate corner outward toward decision support, and
+naming the space accordingly is deliberate rather than stylistic (§6).
 
 ## 3. Goals
 
@@ -88,6 +103,9 @@ being explicit about where its boundaries lie beats continuing to assume them.
   underdetermination, all of which read as the same failure today.
 - Reconcile **satisfaction and optimization** as two solving regimes the project needs, rather
   than leaving optimization as an unacknowledged bolt-on.
+- Establish the **unique solution as the degenerate case** rather than the target, so that
+  optimization, ambiguity, and subjectivity register as the space opening up — the direction the
+  project is heading — instead of as defects to be engineered away.
 - Give the catalog and the eval a common frame in which a puzzle's expected outcome is expressible
   for *every* class, including classes that correctly have no unique answer.
 - Describe what RFC-001/002/003 already assumed and name where they conflict — this RFC is meant
@@ -107,16 +125,24 @@ being explicit about where its boundaries lie beats continuing to assume them.
 - A general theory of decision making, formal epistemology, or question semantics. Scope is
   bounded by what the catalog, extraction, and eval need in order to classify their own material.
 - Adversarial-input or prompt-injection defense as a security concern. The instruction-vs-data
-  boundary appears below (§5.4) as a well-posedness condition, not as threat modeling.
+  boundary appears below (§5.5) as a well-posedness condition, not as threat modeling.
 - Difficulty calibration and tiering. Well-posedness is orthogonal to difficulty: a puzzle can
   clear every condition and still be trivial, or fail the first one and look hard.
+- Designing decision-support capabilities themselves — sensitivity analysis, counterfactual
+  queries, preference elicitation, explanation. §5.4 names them as the direction the space opens
+  toward and argues the vocabulary must leave room for them; building any of them is its own
+  future RFC, not something to smuggle in here.
 
 ## 5. Proposed Approach (high-level)
 
 ### 5.1 A well-posedness ladder
 
-Six conditions, each of which prose must satisfy for "the solution" to have a referent. They are
-ordered so that a failure can be attributed to the lowest condition that fails.
+Six conditions, each of which prose must satisfy for its demand to have a determinate referent.
+They are ordered so that a failure can be attributed to the lowest condition that fails.
+
+The ladder maps where a framing sits; it is not a quality ranking, and clearing every condition is
+not the objective (§5.4). A well-posed problem may admit many valid answers, because condition 6
+checks the answer count against what was actually *asked* — not against one.
 
 | # | Condition | Requires | Characteristic failure |
 |---|---|---|---|
@@ -216,7 +242,34 @@ For classes 3 and 4, correct behavior stops being "produce the answer" and becom
 right kind of non-answer." That is the capability the project currently has no way to specify or
 score.
 
-### 5.4 Cross-cutting concerns
+### 5.4 From answers to decisions
+
+The classification in §5.3 has a consequence for what the pipeline is ultimately *for*. In the
+determinate class the deliverable is an assignment and the modeling is the whole job. In the other
+three the admissible set is larger than one, and an assignment by itself withholds most of what a
+decision actually needs:
+
+- **Trade-offs.** With several admissible answers, the useful output is how they differ and along
+  which dimensions — not one of them presented as though the others did not exist. For an
+  optimization problem that means the shape of the frontier, not only the argmax.
+- **Levers.** Constraints, variables, and domains are inputs the asker may control, not immutable
+  facts. Which constraint is binding, how much slack the others carry, and what minimal change
+  would make a different answer win are all questions about the *model* rather than about any one
+  assignment, and none of them is answerable from a single assignment.
+- **Provenance.** Where a reading was chosen (class 3) or a valuation supplied (class 4), the
+  answer holds only conditional on that choice. Reporting the answer without its condition is
+  false precision, and the condition is frequently the most decision-relevant part of the result.
+- **Risk.** An answer resting on judgment-laden predicates or a contested reading carries
+  uncertainty that a bare assignment cannot express. Confidence belongs in the answer, not in a
+  footnote about it.
+
+This is not an argument for building those capabilities now — §4 explicitly excludes that. It is an
+argument that the vocabulary established here must leave room for them, so that "solve" does not
+get fixed as the only verb the pipeline knows. A representation whose sole output shape is one
+assignment forecloses all four bullets above at the representation layer, which is the most
+expensive place to undo such a choice later.
+
+### 5.5 Cross-cutting concerns
 
 - **Failure attribution.** A correct system fails at the right condition with the right diagnosis.
   Failing for the wrong reason is still a failure: prose carrying no object-level demand should be
@@ -240,6 +293,14 @@ score.
 
 ## 6. Alternatives Considered
 
+- **Frame the space as computational *problem solving*.** The obvious alternative title, and
+  rejected deliberately rather than by preference. "Problem solving" presupposes that a solution
+  exists and is unique enough to be called *the* solution — which is precisely the assumption §2
+  identifies as this project's blind spot, so adopting it would encode the degenerate case directly
+  into the project's vocabulary and make the wider space the exception rather than the rule.
+  "Decision making" puts the emphasis where the space actually leads: trade-offs among admissible
+  answers, the nuance in how each was reached, and the risk of acting on any of them (§5.4). The
+  determinate corner stays fully in scope — as the easy case, not as the definition.
 - **Leave it implicit** — continue deciding each problem's expected outcome case by case. This is
   the status quo, and it worked precisely because everything in view was determinate, which is why
   the gap stayed invisible. Rejected because the vocabulary is already contradicting itself between
@@ -301,7 +362,7 @@ selection are candidates for sitting at the condition-5 boundary rather than cle
 so, the nominally determinate dev set already contains the indeterminacy the catalog work was
 planning to add — which would change what the current 9/14 eval pass rate actually measures.
 
-7.7. Does the prose-is-data boundary (§5.4) need to hold as a hard pipeline invariant, or is it
+7.7. Does the prose-is-data boundary (§5.5) need to hold as a hard pipeline invariant, or is it
 sufficient to classify a misdirected imperative correctly when one appears? Related to but
 distinct from the adversarial-input handling §4 excludes.
 
@@ -314,6 +375,21 @@ mismatch suggests answer shape is currently an unowned concern.
 (§5.2) should be extended, or that optimization belongs behind a separate solving entry point
 altogether? Either way it is an ADR decision under
 [RFC-002](RFC-002-constraint-solver-selection.md) or this RFC, not a change this RFC makes.
+
+7.10. Does the project need first-class support for the model-as-lever questions in §5.4 — which
+constraint is binding, how much slack the others carry, what minimal change flips the answer? A
+solver can answer several of these; nothing in the current representation or CLI asks. Whether
+this is a solving-layer concern, a representation concern, or both is unresolved.
+
+7.11. Should an answer carry its own provenance and confidence in band — the reading chosen, the
+valuation supplied, the threshold applied — rather than alongside it? §5.4 argues the condition is
+often the most decision-relevant part of the result, which points toward in-band; the current
+pipeline has nowhere to put it either way.
+
+7.12. How far along the trajectory from determinate puzzle to decision support is *this* project
+meant to travel, versus a successor that consumes its output? §2 fixes the direction but not an
+endpoint, and the answer governs how much generality the representation should carry now — the
+classic cost of guessing wrong in either direction.
 
 ## 8. ADRs
 
