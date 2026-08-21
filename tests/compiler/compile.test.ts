@@ -441,6 +441,32 @@ test('arithmetic on a whole-hour clock-time domain (e.g. "9am"/"11am"/"4pm") use
   )
 })
 
+test('a bare clock-time variableRef used directly as an equality/inequality test (not inside arithmetic) stays a raw enum comparison, never hour-converted', async () => {
+  // Copilot review finding: converting every clock-domain variableRef unconditionally broke a
+  // clue like "Drug A is not taken at 9am" (expression is a BARE variableRef, no binaryOp at
+  // all) — hour conversion made it `Hours[time[DrugA]] != v9am`, comparing an int against the
+  // clock enum, a MiniZinc type error. A bare variableRef used as the entire top-level
+  // expression (not nested inside a binaryOp) must stay the raw enum reference.
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "DrugA", type: "drug" },
+      { id: "DrugB", type: "drug" },
+    ],
+    domains: [{ variable: "time", entityType: "drug", values: ["9am", "11am", "4pm"] }],
+    constraints: [
+      {
+        kind: "arithmetic",
+        expression: { kind: "variableRef", variable: "time", entity: "DrugA" },
+        comparator: "!=",
+        target: "9am",
+      },
+    ],
+  }
+  const mzn = await run(csp)
+  assert.doesNotMatch(mzn, /Hours\[/)
+  assert.match(mzn, /constraint time\[DrugA\] != v9am;/)
+})
+
 test('ADR-005 §2.4 mode 2, expressionComparison: a computed quantity (e.g. a debt-to-income ratio) can gate a derivedRule condition', async () => {
   // Mirrors PZL-0011 (Loan Review): "if their debt-to-income ratio exceeds 43%, Denied" needs a
   // COMPUTED expression (debt / income) as the condition, not a single declared variable —

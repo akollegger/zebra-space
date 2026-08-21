@@ -280,18 +280,31 @@ function renderVariableRef(
  * are associative and take 2 or more — a multi-term sum is one node with every term as an
  * operand, not a deeply nested binary tree.
  */
+/**
+ * `isOperand` distinguishes a `variableRef` genuinely being used as an arithmetic operand
+ * (needs the numeric hour-mapping for a clock-time domain — a `binaryOp`'s operands are always
+ * rendered with this `true`) from a bare `variableRef` that IS the entire top-level `expression`
+ * of a constraint, tested directly via `comparator` (an equality/inequality against a domain
+ * value — must stay the raw enum reference, or MiniZinc rejects comparing an `int` against the
+ * clock enum). Defaults to `false`, matching every external caller's "top-level expression" use.
+ * Found via code review: converting unconditionally broke `time[DrugA] != "9am"`-shaped clues,
+ * which have no `binaryOp` at all — just a bare `variableRef` compared straight to a target.
+ */
 function renderArithmeticExpr(
   compiled: readonly CompiledDomain[],
   expr: ArithmeticExpression,
+  isOperand = false,
 ): Effect.Effect<string, CompileError> {
   switch (expr.kind) {
     case "variableRef": {
+      const rawRefEffect = renderVariableRef(compiled, expr.variable, expr.entity ?? undefined)
+      if (!isOperand) return rawRefEffect
       // A clock-time-valued domain (e.g. "9am"/"11am"/"4pm") stays enum-typed (so a solved
       // assignment reads back "9am", not a bare number), but MiniZinc's own implicit enum-to-int
       // coercion gives only ORDINAL POSITION, not the value's real hour — arithmetic needs the
       // explicit hour-mapping array declared for it in renderDeclarations instead.
       const domainInfo = findDomain(compiled, expr.variable)
-      return renderVariableRef(compiled, expr.variable, expr.entity ?? undefined).pipe(
+      return rawRefEffect.pipe(
         Effect.map((rawRef) =>
           domainInfo?.clockHourMapName !== undefined ? `${domainInfo.clockHourMapName}[${rawRef}]` : rawRef,
         ),
@@ -306,7 +319,7 @@ function renderArithmeticExpr(
             new CompileError({ reason: `Operator "abs" takes exactly 1 operand, got ${expr.operands.length}.` }),
           )
         }
-        return renderArithmeticExpr(compiled, expr.operands[0]!).pipe(Effect.map((operand) => `abs(${operand})`))
+        return renderArithmeticExpr(compiled, expr.operands[0]!, true).pipe(Effect.map((operand) => `abs(${operand})`))
       }
       if (expr.op === "-" || expr.op === "/") {
         if (expr.operands.length !== 2) {
@@ -317,8 +330,8 @@ function renderArithmeticExpr(
           )
         }
         return Effect.all([
-          renderArithmeticExpr(compiled, expr.operands[0]!),
-          renderArithmeticExpr(compiled, expr.operands[1]!),
+          renderArithmeticExpr(compiled, expr.operands[0]!, true),
+          renderArithmeticExpr(compiled, expr.operands[1]!, true),
         ]).pipe(Effect.map(([left, right]) => `(${left} ${expr.op} ${right})`))
       }
       // "+" | "*" | "min" | "max" — associative, 2 or more operands.
@@ -329,7 +342,7 @@ function renderArithmeticExpr(
           }),
         )
       }
-      return Effect.all(expr.operands.map((operand) => renderArithmeticExpr(compiled, operand))).pipe(
+      return Effect.all(expr.operands.map((operand) => renderArithmeticExpr(compiled, operand, true))).pipe(
         Effect.map((rendered) =>
           expr.op === "min" || expr.op === "max" ? `${expr.op}([${rendered.join(", ")}])` : `(${rendered.join(` ${expr.op} `)})`,
         ),
