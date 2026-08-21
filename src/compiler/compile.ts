@@ -27,7 +27,12 @@ const MINIZINC_RESERVED_WORDS = new Set([
   "test", "then", "true", "tuple", "type", "union", "var", "where", "xor",
 ])
 
-function sanitizeIdentifier(name: string): string {
+/** Exported so `scripts/eval-extraction.ts`'s answer-key comparison can reuse this directly
+ * instead of hand-duplicating it (a duplicate already drifted out of sync once — the reserved-
+ * word suffix, added here after a live "true" collision, was never mirrored there, so a
+ * genuinely correct solved value like "true_" scored as MISMATCH against the answer key's
+ * "true"). */
+export function sanitizeIdentifier(name: string): string {
   const cleaned = name.replace(/[^A-Za-z0-9_]/g, "_")
   // A bare leading underscore is valid MiniZinc (`_a` parses fine), but only when a letter
   // immediately follows it — `_9am` is a syntax error ("unexpected _"), verified against a real

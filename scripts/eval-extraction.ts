@@ -32,7 +32,7 @@ import { appendFile, mkdir, readFile, readdir, writeFile } from "node:fs/promise
 import { existsSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { Effect } from "effect"
-import { compile } from "../src/compiler/compile.ts"
+import { compile, sanitizeIdentifier } from "../src/compiler/compile.ts"
 import type { CompileError } from "../src/compiler/types.ts"
 import { extract } from "../src/extraction/extract.ts"
 import type { ExtractedCsp, ExtractionAttempt, ExtractionError } from "../src/extraction/types.ts"
@@ -119,17 +119,18 @@ function isFlatScalarRecord(value: unknown): value is Record<string, Scalar> {
   )
 }
 
-// Mirrors src/compiler/compile.ts's sanitizeIdentifier()/renderScalar() exactly: the compiler
-// renders a string constant as a MiniZinc enum member (non-alphanumerics -> "_"), so the answer
-// key's natural-language values ("Professor Plum") must go through the same transform as the
-// solved assignment's values ("Professor_Plum") before comparing, or every non-identifier-safe
-// value falsely mismatches. Must stay byte-for-byte in sync with sanitizeIdentifier() — e.g. a
-// digit-leading value ("9am") needs a LETTER prefix ("v9am"), not "_9am", which real `minizinc`
-// rejects as a syntax error (a bare leading underscore is valid only when a letter follows it).
+// Mirrors src/compiler/compile.ts's renderScalar() exactly: the compiler renders a string
+// constant as a MiniZinc enum member via sanitizeIdentifier(), so the answer key's natural-
+// language values ("Professor Plum") must go through the same transform as the solved
+// assignment's values ("Professor_Plum") before comparing, or every non-identifier-safe value
+// falsely mismatches. Reuses the compiler's actual sanitizeIdentifier() directly — this used to
+// be a hand-duplicated copy, and the duplicate already drifted out of sync once (the reserved-
+// word suffix, added after a live "true" collision, was never mirrored here, so a genuinely
+// correct solved value like "true_" scored as MISMATCH against the answer key's "true"). Only
+// the integer passthrough (renderScalar's OTHER branch, never reaching sanitizeIdentifier at
+// all) still needs restating here, since renderScalar itself isn't exported.
 function normalizeToken(raw: string): string {
-  if (/^-?\d+$/.test(raw)) return raw
-  const cleaned = raw.replace(/[^A-Za-z0-9_]/g, "_")
-  return /^([A-Za-z]|_[A-Za-z])/.test(cleaned) ? cleaned : `v${cleaned}`
+  return /^-?\d+$/.test(raw) ? raw : sanitizeIdentifier(raw)
 }
 
 /**
