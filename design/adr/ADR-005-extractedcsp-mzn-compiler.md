@@ -79,7 +79,11 @@ category, sized to the puzzle's entity count." `entities` supplies the enum memb
   relation name is a compile-time error naming the unknown relation, per RFC-003 Goal 4 (fail
   loudly, not silently) — never silently dropped or guessed at. The registry is expected to grow
   as new relation names are encountered, the same way ADR-004 §2.2 expects its constraint kinds
-  to grow.
+  to grow. `Domain` carries no "this one is ordered" flag, so a non-numeric domain can only be
+  used as the positional one when `adjacency.variable` names it explicitly — otherwise
+  declaration order for a genuinely unordered categorical domain (e.g. color) could
+  coincidentally match spatial order and silently produce a wrong solution. `variable` may be
+  left unset only when the two entities share exactly one, already-numeric domain.
 - **`relation`** → does **not** by itself produce a `constraint` statement. It becomes MiniZinc
   data (e.g. `array[Entities, Entities] of bool`) that a paired `derivedRule` (2.4) consumes —
   a fact table, not a constraint.

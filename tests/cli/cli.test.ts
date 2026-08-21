@@ -274,7 +274,9 @@ test("SC-004/contracts/cli-contract.md: --json prints the raw ExtractedCsp and n
   const uncompilableCsp = {
     entities: [{ id: "H1", type: "House" }],
     domains: [{ variable: "position", entityType: "House", values: ["1"] }],
-    constraints: [{ kind: "adjacency", relation: "an unrecognized relation phrase", a: "H1", b: "H1" }],
+    constraints: [
+      { kind: "adjacency", relation: "an unrecognized relation phrase", a: "H1", b: "H1", variable: null },
+    ],
   }
   await withExtractStub(
     (exchange) => {

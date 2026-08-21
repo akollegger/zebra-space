@@ -98,6 +98,15 @@ function extractionSystemPrompt(): string {
     "schema allows. Instead emit ONE separate `arithmetic` constraint per reference (`abs(X - " +
     'ref1) >= N`, `abs(X - ref2) >= N`, ...) — every top-level constraint is implicitly ANDed, ' +
     "so this is logically identical and keeps each expression shallow.\n\n" +
+    'For a positional/ordering clue between two entities ("X is immediately right of Y", "X is ' +
+    'next to Y"): use `adjacency`. Set its `variable` field to name the domain the ordering is ' +
+    "over whenever that domain's values are not plain integers (e.g. time slots like " +
+    '\"9am\"/\"10am\", ordered by the sequence you declared them in) — leave `variable` null ' +
+    "ONLY when the two entities share exactly one domain whose values are already plain " +
+    "integers. Guessing wrong here (naming a categorical, non-ordered domain like color, or " +
+    "leaving `variable` null when it's needed) is not just a compile error — it can silently " +
+    "produce a wrong solution, so if you're unsure which shared domain is the ordered one, " +
+    "name it explicitly.\n\n" +
     "A derivedRule's two condition shapes each have their OWN entity-placeholder tokens in " +
     "thenConstraints, always used the SAME way — as the `entity` field of a `variableRef` (or " +
     "`assignment`), never as a bare, freestanding string value — don't mix the two token " +

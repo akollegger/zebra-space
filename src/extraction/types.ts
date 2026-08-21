@@ -181,7 +181,13 @@ export type ExtractedConstraint =
       readonly attributes: readonly { readonly variable: string; readonly value: string }[]
     }
   | { readonly kind: "allDifferent"; readonly variable: string }
-  | { readonly kind: "adjacency"; readonly relation: string; readonly a: string; readonly b: string }
+  | {
+      readonly kind: "adjacency"
+      readonly relation: string
+      readonly a: string
+      readonly b: string
+      readonly variable: string | null
+    }
   | { readonly kind: "relation"; readonly name: string; readonly a: string; readonly b: string }
   | {
       readonly kind: "derivedRule"
@@ -236,10 +242,15 @@ function nonRecursiveConstraints() {
       relation: Schema.String,
       a: Schema.String,
       b: Schema.String,
+      variable: Schema.NullOr(Schema.String),
     }).annotate({
       description:
         'An ordering/positional relation between two entities (e.g. "immediately right of", ' +
-        '"next to") over an ordered/numeric domain.',
+        '"next to"). `variable` must name the domain the ordering is over whenever that domain\'s ' +
+        "values are not plain integers (e.g. time slots like \"9am\"/\"10am\", ordered by their " +
+        "declared sequence) — otherwise the compiler cannot tell an ordered domain from an " +
+        'unordered categorical one (e.g. color) and will reject the constraint as ambiguous. Set ' +
+        "`variable` to null only when the two entities share exactly one numeric domain.",
     }),
     Schema.Struct({
       kind: Schema.Literal("relation"),

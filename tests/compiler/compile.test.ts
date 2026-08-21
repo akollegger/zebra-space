@@ -172,7 +172,7 @@ test("ADR-005 §2.3: adjacency compiles via the relation-name registry over a sh
     constraints: [
       { kind: "allDifferent", variable: "position" },
       { kind: "assignment", entity: "H1", variable: "position", value: "1" },
-      { kind: "adjacency", relation: "immediately right of", a: "H2", b: "H1" },
+      { kind: "adjacency", relation: "immediately right of", a: "H2", b: "H1", variable: null },
     ],
   }
   const mzn = await run(csp)
@@ -180,9 +180,10 @@ test("ADR-005 §2.3: adjacency compiles via the relation-name registry over a sh
   assert.match(mzn, /constraint position\[H2\] = position\[H1\] \+ 1;/)
 })
 
-test('ADR-005 §2.3: adjacency works over an ordered-but-non-integer domain (e.g. time slots) via enum2int, when it is the ONLY domain shared', async () => {
+test('ADR-005 §2.3: adjacency works over an ordered-but-non-integer domain (e.g. time slots) via enum2int, when named explicitly by "variable"', async () => {
   // Exactly the shape a live eval run produced (PZL-0009): "immediately before" over a
-  // "9am"/"10am"/"11am" time-slot domain — ordered by declaration, not literal integers.
+  // "9am"/"10am"/"11am" time-slot domain — ordered by declaration, not literal integers. Since
+  // that ordering can't be inferred from numeric-ness, the model must name it explicitly.
   const csp: ExtractedCsp = {
     entities: [
       { id: "Chen", type: "candidate" },
@@ -190,16 +191,35 @@ test('ADR-005 §2.3: adjacency works over an ordered-but-non-integer domain (e.g
       { id: "Aisha", type: "candidate" },
     ],
     domains: [{ variable: "time_slot", entityType: "candidate", values: ["9am", "10am", "11am"] }],
-    constraints: [{ kind: "adjacency", relation: "immediately_before", a: "Chen", b: "Deepak" }],
+    constraints: [
+      { kind: "adjacency", relation: "immediately_before", a: "Chen", b: "Deepak", variable: "time_slot" },
+    ],
   }
   const mzn = await run(csp)
   assert.match(mzn, /constraint enum2int\(time_slot\[Chen\]\) = enum2int\(time_slot\[Deepak\]\) - 1;/)
 })
 
+test("ADR-005 §2.3: adjacency over a single shared non-numeric domain fails as ambiguous when \"variable\" isn't named, never a silent declaration-order guess", async () => {
+  // Copilot review finding: a purely categorical domain (e.g. color) with no real spatial order
+  // could previously be silently accepted as positional whenever it happened to be the only
+  // domain shared by both entities. Declaration order is not evidence of spatial order, so this
+  // must fail unless the model names the domain explicitly via "variable".
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "H1", type: "House" },
+      { id: "H2", type: "House" },
+    ],
+    domains: [{ variable: "color", entityType: "House", values: ["Red", "Blue", "Green"] }],
+    constraints: [{ kind: "adjacency", relation: "next to", a: "H1", b: "H2", variable: null }],
+  }
+  const reason = await runFails(csp)
+  assert.match(reason, /Could not find a single numeric positional domain/)
+})
+
 test("ADR-005 §2.3: adjacency over multiple shared (non-numeric) domains still fails as ambiguous, not a silent guess", async () => {
-  // With more than one domain shared by both entities, numeric-ness is the only positional
-  // signal available (no explicit "ordered" flag on Domain) — so this must still fail, not
-  // silently pick one of two categorical domains (e.g. color vs. drink).
+  // With more than one domain shared by both entities and no explicit "variable", numeric-ness
+  // is the only positional signal available — so this must still fail, not silently pick one of
+  // two categorical domains (e.g. color vs. drink).
   const csp: ExtractedCsp = {
     entities: [
       { id: "H1", type: "House" },
@@ -209,10 +229,23 @@ test("ADR-005 §2.3: adjacency over multiple shared (non-numeric) domains still 
       { variable: "color", entityType: "House", values: ["Red", "Blue"] },
       { variable: "drink", entityType: "House", values: ["Tea", "Coffee"] },
     ],
-    constraints: [{ kind: "adjacency", relation: "next to", a: "H1", b: "H2" }],
+    constraints: [{ kind: "adjacency", relation: "next to", a: "H1", b: "H2", variable: null }],
   }
   const reason = await runFails(csp)
-  assert.match(reason, /Could not find a single positional domain/)
+  assert.match(reason, /Could not find a single numeric positional domain/)
+})
+
+test('ADR-005 §2.3: adjacency\'s "variable" naming an unshared or unknown domain is a loud CompileError', async () => {
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "H1", type: "House" },
+      { id: "H2", type: "House" },
+    ],
+    domains: [{ variable: "color", entityType: "House", values: ["Red", "Blue"] }],
+    constraints: [{ kind: "adjacency", relation: "next to", a: "H1", b: "H2", variable: "nonexistent" }],
+  }
+  const reason = await runFails(csp)
+  assert.match(reason, /Unknown adjacency variable "nonexistent"/)
 })
 
 test("ADR-005 §2.3: an unrecognized adjacency relation name is a CompileError, never a silent guess", async () => {
@@ -222,7 +255,7 @@ test("ADR-005 §2.3: an unrecognized adjacency relation name is a CompileError, 
       { id: "H2", type: "House" },
     ],
     domains: [{ variable: "position", entityType: "House", values: ["1", "2"] }],
-    constraints: [{ kind: "adjacency", relation: "somewhere near", a: "H1", b: "H2" }],
+    constraints: [{ kind: "adjacency", relation: "somewhere near", a: "H1", b: "H2", variable: null }],
   }
   const reason = await runFails(csp)
   assert.match(reason, /Unrecognized adjacency relation/)
