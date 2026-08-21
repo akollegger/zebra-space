@@ -130,9 +130,9 @@ variables, `alldifferent`/comparison/arithmetic/`if-then-else` constraints) and 
 representation (entities/constraints as candidate nodes/edges).
 
 The decision is the constraint taxonomy below (drawn from SPIKE-001's shapes, per the rationale
-after the listing — originally six kinds, seven since `linkedAttributes` was added) — not the
-exact TypeScript syntax. The shape illustrates that taxonomy; field names and precise typing are
-implementation's call, not fixed by this ADR:
+after the listing — originally six kinds, seven since `linkedAttributes` was added, nine since
+`ruleTable`/`ruleTableConstraint` was) — not the exact TypeScript syntax. The shape illustrates
+that taxonomy; field names and precise typing are implementation's call, not fixed by this ADR:
 
 ```ts
 interface ExtractedCsp {
@@ -153,6 +153,13 @@ type ExtractedConstraint =
   | { readonly kind: "relation"; readonly name: string; readonly a: string; readonly b: string }
   | { readonly kind: "derivedRule"; readonly appliesTo: string; readonly condition: string; readonly then: readonly ExtractedConstraint[] }
   | { readonly kind: "arithmetic"; readonly expression: string; readonly comparator: string; readonly target: string | number }
+  | { readonly kind: "ruleTable"; readonly name: string; readonly a: string; readonly b: string }
+  | { readonly kind: "ruleTableConstraint"; readonly table: string; readonly a: RuleTableOperand; readonly b: RuleTableOperand }
+
+// Either side of a ruleTableConstraint — a declared variable's value, or a known constant.
+type RuleTableOperand =
+  | { readonly kind: "variableRef"; readonly variable: string; readonly entity: string | null }
+  | { readonly kind: "literal"; readonly value: string }
 ```
 
 This taxonomy is drawn directly from [SPIKE-001](../spikes/SPIKE-001-catalog-clue-audit/SPIKE.md)'s
@@ -196,6 +203,20 @@ Shapes G (an ASCII-art arithmetic diagram) and K's raw markdown table (SPIKE-001
 addressed by this schema directly — per SPIKE-004, the LLM tier parses them directly into the
 schema fields above (e.g. a table row's columns become `assignment` facts) without needing a
 dedicated pre-parser, unlike every other tier.
+
+**`ruleTable` is a second taxonomy addition, found the same way `linkedAttributes` was — running
+the live pipeline (`eval/`'s harness, see `eval/README.md`) against a real catalog puzzle exposed
+a shape this ADR's original seven kinds had no home for.** PZL-0003 (Rock-Paper-Scissors) turns on
+"paper beats rock, rock beats scissors, scissors beats paper" — a small, closed, static fact about
+*values*, true regardless of which entity holds them. `relation` facts look superficially similar
+but are about specific *entities* ("France shares a border with Spain"), consumed by
+`derivedRule`'s fact-driven expansion (§2.4) over matching entity *pairs* — there is no existing
+mechanism that expands per matching *value* pair instead. `ruleTable` fills this gap: one fact per
+clue (`{name, a, b}`, structurally identical to `relation`'s shape but over domain values, not
+entity ids), consumed by a paired `ruleTableConstraint` that requires two operands — each either a
+declared variable's value or a known constant — to match some declared tuple. `ExtractedCsp`'s
+taxonomy is now nine kinds, not seven; [ADR-005](ADR-005-extractedcsp-mzn-compiler.md) §2.3
+documents how `ruleTableConstraint` compiles.
 
 ### 2.3 Workflow architecture: pure Effect, single-shot LLM calls — an MVP scoping choice
 
@@ -519,18 +540,21 @@ an LLM provider is unaffected.
   `tests/extraction/live.test.ts` (SC-002, §2.5) checks aggregate accuracy against a 5-puzzle
   sample but wasn't run as part of finding this. Neither test tier is a substitute for
   occasionally running the real pipeline against a real puzzle end to end.
-- **Relational chaining remains open.** §2.2 names it directly: a clue like "the Chesterfields
-  smoker lives next to the fox owner" needs two anonymous entities bound to each other via
-  `adjacency`, not one entity's attributes bound to each other via `linkedAttributes`. Whether
-  this needs a seventh constraint kind or a generalization of `linkedAttributes`/`adjacency` is
-  not decided here.
-- **No constraint kind represents a static, entity-independent rule table.** Found running
-  `eval/`'s extraction harness (see `eval/README.md`) against PZL-0003 (Rock-Paper-Scissors):
-  clues like "paper beats rock, rock beats scissors, scissors beats paper" are a small closed set
-  of facts about *values*, not about specific entities — `relation` facts exist but are only
-  consumed by `derivedRule`'s fact-driven expansion, which expands per matching *entity pair*, not
-  per free-variable assignment checked against a static table. A sibling gap to relational
-  chaining above, not resolved by it and not resolved here.
+- **Relational chaining is resolved, not by a new constraint kind but by nesting `derivedRule`.**
+  §2.2 named this gap directly: a clue like "the Chesterfields smoker lives next to the fox owner"
+  needs two anonymous entities bound to each other, not one entity's attributes bound to each
+  other via `linkedAttributes`. The resolution generalizes `derivedRule`'s existing per-entity
+  reification instead of adding an eighth kind: nesting a second `derivedRule` inside the first
+  one's `then` list, the outer condition picking out the first entity and the inner condition the
+  second. [ADR-005](ADR-005-extractedcsp-mzn-compiler.md) §2.4 documents the compiled shape (a
+  `forall` boolean expression, not top-level constraints, so it composes inside the outer
+  implication) and the entity-placeholder convention (`$this`/`$outer`) this needed. Live-verified
+  against a real `minizinc` install and confirmed via the eval harness before being called
+  resolved, not assumed from the schema shape alone.
+- **The static-value-rule-table gap is resolved — see `ruleTable`/`ruleTableConstraint` in §2.2.**
+  Found and fixed the same way as relational chaining: running `eval/`'s harness against PZL-0003
+  surfaced the gap, and the fix (a new taxonomy pair, not a generalization of an existing kind)
+  is now live-verified — PZL-0003 solves to its recorded answer key end to end.
 - This ADR's single-shot, pure-`Effect`, no-agentic-framework shape (§2.3) is a starting point
   scoped to this MVP, not a permanent architectural stance. Richer agentic patterns — tool-using
   extraction subagents, multi-agent critique panels, retrieval-augmented few-shot prompting drawn
@@ -585,8 +609,16 @@ an LLM provider is unaffected.
 - This ADR does not decide CLI exposure — implemented separately in
   [ADR-003](ADR-003-cli-interface.md) §2.6.
 - Open Question 7.6 is addressed at the representation level (`derivedRule`'s nested `then`,
-  admitting derived variables and non-boolean outcomes) but not empirically re-validated against
-  `PZL-0011` specifically by this ADR — worth confirming once implemented.
+  admitting derived variables and non-boolean outcomes), and the more precise gap running the live
+  pipeline against PZL-0011 actually found — a `derivedRule` conditioned on the **conjunction** of
+  multiple prior conditions ("if not denied by rules 1-2, **and** the requested amount is within
+  policy limits, Approved"), which nesting (used for relational chaining, above) doesn't
+  substitute for — is now resolved by a new `"and"` `DerivedCondition` variant (ADR-005 §2.4),
+  live-verified against a real `minizinc` install with PZL-0011's full three-rule cascade solving
+  to its true answer. What Open Question 7.6 does **not** resolve, and this ADR doesn't claim to:
+  PZL-0011's critic-rejection detail also showed the model getting facts wrong ("states scores are
+  below 600, which contradicts the provided information") independent of any schema limitation —
+  raw prose comprehension, not representation, and outside what a schema/compiler fix can address.
 
 ## 5. Related
 

@@ -242,18 +242,88 @@ test("A provider rejecting the schema fails with SchemaRejected, distinct from P
   )
 })
 
-test("A model replying in prose instead of calling the tool fails with SchemaViolation", async () => {
+test("A model persistently replying in prose retries within each tier, escalates, then fails with the frontier tier's SchemaViolation", async () => {
   await withStub(
     (exchange) => {
       exchange.respondWithProse("Sure! Here is an example object: { \"id\": 1 }")
     },
-    async () => {
+    async (stub) => {
       const error = await runExtractFails()
       assert.equal(error._tag, "SchemaViolation")
       if (error._tag === "SchemaViolation") {
         assert.match(error.detail, /prose instead of calling the required tool/)
-        assert.equal(error.model, CHEAP_MODEL)
+        // Every round is a schema violation, so it never reaches FidelityCritique — the final
+        // error should come from the frontier tier (the last one attempted), not the cheap tier.
+        assert.equal(error.model, FRONTIER_MODEL)
       }
+      // 3 rounds (1 initial + MAX_REVISIONS_PER_TIER=2 repairs) per tier, both tiers exhausted.
+      assert.equal(stub.requests.length, 6)
+      assert.ok(stub.requests.every((r) => r.schemaName === "ExtractedCsp"))
+      const cheapRequests = stub.requests.filter((r) => r.model === CHEAP_MODEL)
+      const frontierRequests = stub.requests.filter((r) => r.model === FRONTIER_MODEL)
+      assert.equal(cheapRequests.length, 3)
+      assert.equal(frontierRequests.length, 3)
+    },
+  )
+})
+
+test("A schema-invalid tool call is retried with a repair prompt and succeeds within the same tier", async () => {
+  let extractionCalls = 0
+  await withStub(
+    (exchange) => {
+      if (exchange.request.schemaName === "FidelityCritique") {
+        exchange.respondWithJson({ accepted: true, issues: [] })
+        return
+      }
+      extractionCalls += 1
+      if (extractionCalls === 1) {
+        // Missing every required field — a schema violation, not a decode of SAMPLE_CSP.
+        exchange.respondWithJson({})
+      } else {
+        exchange.respondWithJson(SAMPLE_CSP)
+      }
+    },
+    async (stub) => {
+      const result = await runExtract()
+      assert.equal(result.model, CHEAP_MODEL)
+      assert.deepEqual(result.extractedCsp, SAMPLE_CSP)
+      const extractionRequests = stub.requests.filter((r) => r.schemaName === "ExtractedCsp")
+      assert.equal(extractionRequests.length, 2)
+      assert.match(extractionRequests[1]?.userPrompt ?? "", /did not match the required schema/)
+      assert.match(extractionRequests[1]?.userPrompt ?? "", /Validation error/)
+    },
+  )
+})
+
+test("A schema-invalid CRITIQUE response (not extraction) is also retried with a repair prompt, not just abandoned", async () => {
+  // Code review finding: only extractOnce's SchemaViolation was ever caught — a schema-invalid
+  // *critique* (e.g. the critic model replying in prose) still propagated straight out of
+  // runTier uncaught, skipping the frontier tier the same way the original bug did for
+  // extraction. The extraction itself always succeeds here; only the first critique call fails.
+  let critiqueCalls = 0
+  await withStub(
+    (exchange) => {
+      if (exchange.request.schemaName !== "FidelityCritique") {
+        exchange.respondWithJson(SAMPLE_CSP)
+        return
+      }
+      critiqueCalls += 1
+      if (critiqueCalls === 1) {
+        exchange.respondWithProse("Sure! Here's my judgment in plain text.")
+      } else {
+        exchange.respondWithJson({ accepted: true, issues: [] })
+      }
+    },
+    async (stub) => {
+      const result = await runExtract()
+      assert.equal(result.model, CHEAP_MODEL)
+      assert.deepEqual(result.extractedCsp, SAMPLE_CSP)
+      const critiqueRequests = stub.requests.filter((r) => r.schemaName === "FidelityCritique")
+      assert.equal(critiqueRequests.length, 2)
+      assert.match(critiqueRequests[1]?.userPrompt ?? "", /did not match the required schema/)
+      // Only ONE extraction call — the critique repair reused the same extractedCsp, no
+      // re-extraction was needed.
+      assert.equal(stub.requests.filter((r) => r.schemaName === "ExtractedCsp").length, 1)
     },
   )
 })

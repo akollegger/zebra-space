@@ -79,12 +79,29 @@ category, sized to the puzzle's entity count." `entities` supplies the enum memb
   relation name is a compile-time error naming the unknown relation, per RFC-003 Goal 4 (fail
   loudly, not silently) — never silently dropped or guessed at. The registry is expected to grow
   as new relation names are encountered, the same way ADR-004 §2.2 expects its constraint kinds
-  to grow.
+  to grow. `Domain` carries no "this one is ordered" flag, so a non-numeric domain can only be
+  used as the positional one when `adjacency.variable` names it explicitly — otherwise
+  declaration order for a genuinely unordered categorical domain (e.g. color) could
+  coincidentally match spatial order and silently produce a wrong solution. `variable` may be
+  left unset only when the two entities share exactly one, already-numeric domain.
 - **`relation`** → does **not** by itself produce a `constraint` statement. It becomes MiniZinc
   data (e.g. `array[Entities, Entities] of bool`) that a paired `derivedRule` (2.4) consumes —
   a fact table, not a constraint.
+- **`ruleTable`** → same non-constraint role as `relation`, but the fact table is over *values*,
+  not entity ids (ADR-004 §2.2's addition for static, entity-independent rules like
+  rock-paper-scissors' "beats" relation). A paired **`ruleTableConstraint`** compiles to a
+  disjunction over the named table's declared tuples: `constraint (a = tupleA_1 /\ b = tupleB_1)
+  \/ (a = tupleA_2 /\ b = tupleB_2) \/ ...;`, where `a`/`b` are each rendered once (a declared
+  variable's value, or a known constant) and only each tuple's literal values vary per disjunct —
+  exactly the tuples true for the current assignment select it, the others are vacuously false.
+  Values a `ruleTable` fact uses that aren't part of any declared `Domain` (e.g. a `"Yes"`/`"No"`
+  fact attached to otherwise-unrelated domain values) still need a MiniZinc enum to belong to, or
+  `minizinc` rejects them as an undefined identifier — the compiler declares one synthetic enum
+  covering every such orphan value across the whole `ExtractedCsp`, not per table, since MiniZinc's
+  enum-member namespace is global and the same value reused across multiple `ruleTable`s must
+  resolve to one identifier, not be redeclared.
 
-### 2.4 `derivedRule`: two distinct compilation modes
+### 2.4 `derivedRule`: compilation modes, entity placeholders, and computed-quantity conditions
 
 This is the compiler's least mechanical piece, and refines (does not contradict — ADR-004 §2.2
 left `derivedRule`'s exact field shape as "implementation's call") how `derivedRule.condition`
@@ -114,10 +131,76 @@ taxonomy is the decision):
 type DerivedCondition =
   | { readonly kind: "relation"; readonly name: string }
   | { readonly kind: "comparison"; readonly variable: string; readonly operator: string; readonly value: string | number }
+  | { readonly kind: "expressionComparison"; readonly expression: ArithmeticExpression; readonly operator: string; readonly value: string | number }
+  | { readonly kind: "and"; readonly conditions: readonly (
+      | { readonly kind: "comparison"; readonly variable: string; readonly operator: string; readonly value: string | number }
+      | { readonly kind: "expressionComparison"; readonly expression: ArithmeticExpression; readonly operator: string; readonly value: string | number }
+    )[] }
 ```
 
 An unrecognized/ambiguous condition shape is a compile-time error (2.3's same fail-loud
 principle), not a best-effort guess.
+
+**A third condition variant, `expressionComparison`, was added after the live pipeline found
+`comparison` insufficient.** PZL-0011's "if their debt-to-income ratio exceeds 43%" conditions on
+a *computed* quantity (a ratio of two declared variables), not a single declared variable
+directly — `comparison.variable` can only name one. `expressionComparison` carries a full
+`ArithmeticExpression` (2.5) instead, needing no per-entity reification of its own: any entity the
+expression cares about is already explicit in its own `variableRef.entity` fields, so it always
+compiles to exactly one global reified implication, the same shape as mode 2's scalar case.
+Verified directly against a real `minizinc` install, not just the compiled string: MiniZinc's `/`
+operator already promotes integer operands to float division correctly (a debt/income ratio of
+3200/9000 ≈ 0.356 compares correctly against a 0.43 literal threshold) — no special casting
+needed, only the missing schema representation.
+
+**Mode 2's `then`-list entities are named via placeholder tokens, resolved by substitution before
+compiling each `then` constraint** — not left implicit. Two token families, each scoped to its own
+condition kind, always used as a `variableRef`'s (or `assignment`'s) `entity` field, never as a
+bare freestanding string:
+
+- Fact-driven mode's `then` constraints reference the matched fact's two entities via
+  `variableRef.entity: "$a"` / `"$b"`. (An earlier version of this compiler special-cased a bare
+  `target: "$a"`/`"$b"` string instead, and silently ignored `expression`'s own `entity` field
+  entirely — found broken live when a model reasonably produced the structured form instead,
+  since nothing resolved it: the literal string `"$a"` sanitized into an invalid MiniZinc
+  identifier. Both token families are now resolved the same way, by the same substitution
+  mechanism, precisely to avoid this asymmetry recurring.)
+- Variable-conditioned mode's `then` constraints reference "the entity currently satisfying this
+  rule's condition" via `variableRef.entity: "$this"` — needed for the self-referential zebra-clue
+  shape ("if a house is green, its position is one more than the ivory house's"), which requires
+  reifying once per entity of the condition variable's domain, not once globally.
+- **Relational chaining** (ADR-004 §2.2/§4) — a clue relating TWO entities that are both unnamed,
+  each identified only by its own attribute ("whoever smokes X lives next to whoever owns Y") —
+  nests a second `derivedRule` inside the first one's `then` list: the outer condition picks out
+  the first entity, the inner nested condition the second. The inner rule compiles to a `forall`
+  boolean expression (`forall(e in EntityEnum)((innerCondition) -> (innerBody))`), not top-level
+  `constraint` statements — nested `derivedRule`s can't emit those, since they need to compose
+  *inside* the outer implication's parens, not sit beside it. Inside the inner rule's own `then`
+  list, `"$this"` refers to the inner (forall-bound) entity and `"$outer"` refers to the entity the
+  enclosing rule is currently reifying over — resolved by substitution the same way as `$a`/`$b`,
+  just with an extra token for the one additional nesting level `MAX_NESTING_DEPTH` (ADR-004 §2.7)
+  admits. Live-verified against a real `minizinc` install and the eval harness, not assumed from
+  the schema shape alone.
+
+A leaked, never-substituted placeholder (any of the four tokens used outside the specific rule
+shape that binds it — e.g. `"$outer"` in a fact-driven rule) is a loud compile-time error rather
+than a silently-sanitized invalid identifier, per 2.3's same fail-loud principle: no real entity id
+is ever `$`-prefixed, so this is unconditionally safe to detect generically at the point a
+placeholder would otherwise be rendered as an array index.
+
+**A fourth `DerivedCondition` variant, `"and"`, was added after the live pipeline found no way to
+express a `derivedRule` conditioned on more than one independent check.** PZL-0011's "if not
+denied by rules 1-2, **and** the requested amount is within policy limits, Approved" needs a
+conjunction, and nesting `derivedRule`s (used for relational chaining, above) doesn't substitute:
+nesting narrows which entity a rule applies to, it doesn't combine two boolean conditions into one
+gate. `{kind: "and", conditions: [...]}` carries two-or-more `"comparison"`/`"expressionComparison"`
+sub-conditions — deliberately not `"relation"` or a nested `"and"`, scoped to the evidenced need
+rather than maximal generality — each rendered independently and joined with MiniZinc `/\`. Each
+sub-condition's variable must be scalar (non-entity-indexed); combining per-entity conditions this
+way is a compile-time error, not silently mishandled, since no evidenced puzzle has needed it and
+correctly generalizing per-entity conjunction is a separate, undesigned question. Live-verified
+against a real `minizinc` install with PZL-0011's full three-rule cascade (two independent
+denial thresholds, then a conjunctive Approved/CounterOffer gate) solving to its true answer.
 
 ### 2.5 `arithmetic`: a structured expression, not an interpolated string
 
@@ -130,10 +213,20 @@ tagged-union taxonomy is the decision):
 
 ```ts
 type ArithmeticExpression =
-  | { readonly kind: "variableRef"; readonly variable: string }
+  | { readonly kind: "variableRef"; readonly variable: string; readonly entity: string | null }
   | { readonly kind: "literal"; readonly value: number }
-  | { readonly kind: "binaryOp"; readonly op: "+" | "-" | "min" | "max" | "abs"; readonly left: ArithmeticExpression; readonly right?: ArithmeticExpression }
+  | { readonly kind: "binaryOp"; readonly op: "+" | "-" | "*" | "/" | "min" | "max" | "abs"; readonly operands: readonly ArithmeticExpression[] }
 ```
+
+This has already moved twice since first decided here, on the same evidence-driven basis as
+everything else in this ADR — worth stating plainly rather than leaving the original illustration
+to silently rot: `left`/`right?` (a nullable second operand) was replaced with an operand *array*
+(length 1 for the unary `abs`, 2 for `-`/`/`, 2-or-more for the associative `+`/`*`/`min`/`max` —
+both a more honest arity model and, per ADR-004 §2.7, the encoding that survives provider
+transmission where a nullable nested object doesn't); `*`/`/` were added once a puzzle's clue
+needed a weighted/percentage/ratio quantity; and `variableRef` gained its own `entity` field (null
+for a scalar domain, or a specific entity id) once a clue needed to reference one particular
+entity's value from within an expression, rather than only the ambient domain variable.
 
 Treating `expression` as opaque text would mean the compiler can't validate an expression before
 emitting it (a malformed or malicious string becomes a MiniZinc syntax error discovered only by
@@ -206,6 +299,54 @@ explicitly left open there.
   vocabulary (e.g. two independent "Yes"/"No" criteria). All fixed in `src/compiler/compile.ts`/
   `src/extraction/types.ts`; residual failures after these fixes are either the still-open gaps
   named elsewhere in this ADR/ADR-004, or ordinary LLM non-determinism (ADR-004 §2.6).
+- **A second pass of the same comparison harness surfaced a further, distinct round of gaps** —
+  distinct in kind from the first pass above: that pass was almost entirely missing arithmetic
+  capability (an expression shape with no representation at all); this pass was almost entirely
+  the compiler's own generated MiniZinc being subtly invalid, or an entity-placeholder convention
+  applied inconsistently, in cases the schema already had a representation for. All confirmed
+  against a real `minizinc` install before being called fixed, not just by string-matching
+  compiled output:
+  - `sanitizeIdentifier`'s digit-leading fallback (a value like `"9am"`) prefixed with `_`,
+    producing `_9am` — a genuine MiniZinc syntax error (a bare leading underscore parses fine, but
+    only when a letter immediately follows it). Falls back to a letter prefix instead.
+  - An entity id matching its own `entityType`'s name (e.g. an entity `"player"` of type
+    `"player"`) produced `enum player = {player, ...};` — an enum type and one of its own members
+    sharing an identifier, also rejected by `minizinc`. The same collision shape applies to a
+    variable named identically to its own `entityType`. Both are now detected once per distinct
+    `entityType` (not per domain — two domains can share an `entityType` and must resolve to the
+    same, consistently-disambiguated enum name) and given a `_Type`-suffixed name only when a real
+    collision is detected.
+  - `adjacency` (2.3) required the shared positional domain to be integer-valued, rejecting a
+    genuinely ordered-but-non-integer domain (e.g. time slots "9am"/"10am"/"11am") outright even
+    when it was the only domain shared and therefore unambiguous. Now accepted in that case,
+    cast through `enum2int` (MiniZinc's ordinal-position coercion) so the adjacency templates'
+    arithmetic operates on the value's declared order rather than failing to type-check.
+  - Arithmetic on a non-numeric domain more generally silently used MiniZinc's own implicit
+    enum-to-int coercion, which gives only **ordinal position**, not a value's real meaning — for a
+    clock-time domain ("9am"/"11am"/"4pm"), "Drug B is at least 4 hours after Drug A" became an
+    ordinal-position difference (at most 2 for a 3-value domain), never satisfiable, even though
+    the real 7-hour gap (9am to 4pm) satisfies it. The domain still renders as an enum (so a solved
+    assignment reads back "9am", matching how the puzzle poses the question), but a whole-hour
+    clock-time domain now also gets an explicit `array[ValuesEnum] of int: ..._Hours = [9, 11,
+    16];` mapping, and arithmetic on it is rendered through that mapping instead of relying on
+    implicit coercion.
+  - The nesting-depth budget (ADR-004 §2.7) is sometimes exceeded unnecessarily: "at least N units
+    away from EACH of several fixed references" (e.g. two meal times) most naturally combines into
+    one `min(abs(...), abs(...))` expression, one level deeper than the budget allows. Resolved in
+    the extraction prompt, not the schema: emit one separate `arithmetic` constraint per reference
+    instead, logically identical since every top-level constraint is implicitly ANDed, and shallow
+    enough to fit — avoiding the real cost (ADR-004 §2.7) of raising the depth budget itself.
+  - `ruleTable`/`ruleTableConstraint` (2.3, ADR-004 §2.2) and `expressionComparison` (2.4) are new
+    capability, not bug fixes, but found and validated the same way: live pipeline runs against
+    PZL-0003, PZL-0013, and PZL-0011/PZL-0012 respectively.
+
+  All fixed in `src/compiler/compile.ts`/`src/extraction/types.ts`/the extraction prompt. PZL-0011's
+  compound-condition gap, open when this pass started, is resolved by the `"and"` `DerivedCondition`
+  variant added in §2.4 above; residual PZL-0011 failures are prose-comprehension/critic issues
+  (the model failing to recognize or correctly extract the conjunction, not a missing
+  representation for it) or ordinary LLM non-determinism (ADR-004 §2.6) — not further
+  compiler/schema representation gaps, as far as this
+  pass's evidence shows.
 - The graph-to-`.mzn` compiler RFC-002/[ADR-002](ADR-002-adopt-minizinc-solver.md) originally
   anticipated remains undesigned — this ADR doesn't resolve it, though a future graph
   representation built from `ExtractedCsp` could plausibly reuse this compiler's per-kind

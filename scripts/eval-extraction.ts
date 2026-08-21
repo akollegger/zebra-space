@@ -12,6 +12,16 @@
  * UniquelySolvable, so a false MATCH there requires both the structure and the vocabulary to
  * align by accident. Every eval/results.md entry's legend names the affected puzzle ids.
  *
+ * recoverEntityKeyedArrays() closes one specific hole in that vocabulary check, found live on
+ * PZL-0010: MiniZinc's own JSON output for an entity-indexed array variable is purely positional
+ * (no entity-id keys at all), so an answer key phrased as a flat list of entity names (e.g.
+ * `["South", "Pedestrian", ...]`) could never match even a fully correct solve — the vocabulary
+ * itself was structurally absent, not just unpaired. Re-zipping the solved array against the
+ * SAME entities/order `compile.ts` itself used to index it recovers that vocabulary. This does
+ * NOT add ordinal-pairing verification (the limitation above still stands) — it only fixes cases
+ * where the entity vocabulary was missing entirely, not cases like PZL-0006 (a mapping keyed by
+ * row numbers, not entity ids), which remain a genuine, unaddressed blind spot.
+ *
  * Usage:
  *   node scripts/eval-extraction.ts                  # all 14 catalog puzzles
  *   node scripts/eval-extraction.ts PZL-0004 PZL-0007 # just these
@@ -22,10 +32,10 @@ import { appendFile, mkdir, readFile, readdir, writeFile } from "node:fs/promise
 import { existsSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { Effect } from "effect"
-import { compile } from "../src/compiler/compile.ts"
+import { compile, sanitizeIdentifier } from "../src/compiler/compile.ts"
 import type { CompileError } from "../src/compiler/types.ts"
 import { extract } from "../src/extraction/extract.ts"
-import type { ExtractionAttempt, ExtractionError } from "../src/extraction/types.ts"
+import type { ExtractedCsp, ExtractionAttempt, ExtractionError } from "../src/extraction/types.ts"
 import { loadEnvFileIfPresent } from "../src/cli/load-env.ts"
 import { solve } from "../src/solver/solve.ts"
 import type { Assignment, SolverError } from "../src/solver/types.ts"
@@ -109,15 +119,18 @@ function isFlatScalarRecord(value: unknown): value is Record<string, Scalar> {
   )
 }
 
-// Mirrors src/compiler/compile.ts's sanitizeIdentifier()/renderScalar() exactly: the compiler
-// renders a string constant as a MiniZinc enum member (non-alphanumerics -> "_"), so the answer
-// key's natural-language values ("Professor Plum") must go through the same transform as the
-// solved assignment's values ("Professor_Plum") before comparing, or every non-identifier-safe
-// value falsely mismatches.
+// Mirrors src/compiler/compile.ts's renderScalar() exactly: the compiler renders a string
+// constant as a MiniZinc enum member via sanitizeIdentifier(), so the answer key's natural-
+// language values ("Professor Plum") must go through the same transform as the solved
+// assignment's values ("Professor_Plum") before comparing, or every non-identifier-safe value
+// falsely mismatches. Reuses the compiler's actual sanitizeIdentifier() directly — this used to
+// be a hand-duplicated copy, and the duplicate already drifted out of sync once (the reserved-
+// word suffix, added after a live "true" collision, was never mirrored here, so a genuinely
+// correct solved value like "true_" scored as MISMATCH against the answer key's "true"). Only
+// the integer passthrough (renderScalar's OTHER branch, never reaching sanitizeIdentifier at
+// all) still needs restating here, since renderScalar itself isn't exported.
 function normalizeToken(raw: string): string {
-  if (/^-?\d+$/.test(raw)) return raw
-  const cleaned = raw.replace(/[^A-Za-z0-9_]/g, "_")
-  return /^[A-Za-z_]/.test(cleaned) ? cleaned : `_${cleaned}`
+  return /^-?\d+$/.test(raw) ? raw : sanitizeIdentifier(raw)
 }
 
 /**
@@ -174,6 +187,36 @@ interface Comparison {
   readonly missing: readonly string[]
   readonly expectedTokenCount: number
   readonly actualTokenCount: number
+}
+
+/**
+ * Recovers entity-name vocabulary for an array-typed (entity-indexed) domain variable's solved
+ * value — MiniZinc's own `--output-mode json` never carries it, an array is purely positional,
+ * not keyed by the enum that indexes it. Confirmed live on PZL-0010: the solved assignment
+ * (`{"order": [4,1,3,5,2]}`) never mentions "North"/"South"/etc. anywhere, even though the answer
+ * key is exactly that vocabulary in declared order, and the puzzle solved correctly. Zips each
+ * array against the SAME entities, in the SAME declared order, `src/compiler/compile.ts` itself
+ * indexes that array by (`csp.entities` filtered by the domain's `entityType`), so those ids
+ * appear in the flattened comparison. This recovers VOCABULARY only — it does not verify ordinal
+ * pairing (`compareAnswer`'s existing known limitation, this file's header) — so it fixes cases
+ * like PZL-0010 (a flat array of entity names) but not PZL-0006 (a mapping keyed by row NUMBERS
+ * that don't match any entity id), which stays a genuine remaining blind spot.
+ */
+function recoverEntityKeyedArrays(assignment: Assignment, extractedCsp: ExtractedCsp): Assignment {
+  const recovered: Record<string, unknown> = { ...assignment }
+  for (const domain of extractedCsp.domains) {
+    // solve()'s assignment keys are minizinc's own (compile.ts-sanitized) identifiers, e.g.
+    // "house-color" compiles and returns as "house_color" — look up (and write back) under
+    // that same sanitized key, not the raw extracted variable name, or a variable needing
+    // sanitization silently fails to be recovered.
+    const key = sanitizeIdentifier(domain.variable)
+    const value = recovered[key]
+    if (!Array.isArray(value)) continue
+    const entityIds = extractedCsp.entities.filter((e) => e.type === domain.entityType).map((e) => e.id)
+    if (entityIds.length !== value.length) continue
+    recovered[key] = Object.fromEntries(entityIds.map((id, i) => [id, value[i]]))
+  }
+  return recovered
 }
 
 function compareAnswer(expected: unknown, actualAssignment: Assignment): Comparison {
@@ -375,7 +418,10 @@ async function runOnePuzzle(
     )
   }
 
-  const comparison = compareAnswer(answerKeyEntry.answer, solveResult.assignment)
+  const comparison = compareAnswer(
+    answerKeyEntry.answer,
+    recoverEntityKeyedArrays(solveResult.assignment, extractedCsp),
+  )
   return record(
     puzzle,
     comparison.verdict,

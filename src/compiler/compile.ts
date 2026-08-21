@@ -5,6 +5,7 @@ import type {
   Domain,
   ExtractedConstraint,
   ExtractedCsp,
+  RuleTableOperand,
 } from "../extraction/types.ts"
 import { CompileError } from "./types.ts"
 
@@ -13,19 +14,86 @@ import { CompileError } from "./types.ts"
 // enum-valued vars use `enum X = {...}; var X: v;`; reified implication is plain
 // `constraint (cond) -> (then);`; `abs`/enum `!=` work as expected.
 
-function sanitizeIdentifier(name: string): string {
+// Every MiniZinc reserved word, verified individually against a real `minizinc` install (each
+// one rejected as an enum member on its own) rather than copied from a spec that may not match
+// this pinned version's actual parser. A domain value colliding with one of these (e.g. a
+// boolean-flavored ruleTable fact literally valued "true") would otherwise silently produce an
+// invalid identifier — observed live for "true" specifically.
+const MINIZINC_RESERVED_WORDS = new Set([
+  "ann", "annotation", "any", "array", "bool", "case", "constraint", "default", "diff", "div",
+  "else", "elseif", "endif", "enum", "false", "float", "function", "if", "in", "include", "int",
+  "intersect", "let", "list", "maximize", "minimize", "mod", "not", "of", "opt", "output", "par",
+  "predicate", "record", "satisfy", "set", "solve", "string", "subset", "superset", "symdiff",
+  "test", "then", "true", "tuple", "type", "union", "var", "where", "xor",
+])
+
+/** Exported so `scripts/eval-extraction.ts`'s answer-key comparison can reuse this directly
+ * instead of hand-duplicating it (a duplicate already drifted out of sync once — the reserved-
+ * word suffix, added here after a live "true" collision, was never mirrored there, so a
+ * genuinely correct solved value like "true_" scored as MISMATCH against the answer key's
+ * "true"). */
+export function sanitizeIdentifier(name: string): string {
   const cleaned = name.replace(/[^A-Za-z0-9_]/g, "_")
-  return /^[A-Za-z_]/.test(cleaned) ? cleaned : `_${cleaned}`
+  // A bare leading underscore is valid MiniZinc (`_a` parses fine), but only when a letter
+  // immediately follows it — `_9am` is a syntax error ("unexpected _"), verified against a real
+  // `minizinc` install (a value starting with a digit, e.g. a time like "9am", would otherwise
+  // hit exactly this). A digit-leading value needs a LETTER prefix instead.
+  const based = /^([A-Za-z]|_[A-Za-z])/.test(cleaned) ? cleaned : `v${cleaned}`
+  return MINIZINC_RESERVED_WORDS.has(based) ? `${based}_` : based
 }
 
 function isIntegerLiteral(value: string): boolean {
   return /^-?\d+$/.test(value)
 }
 
+/**
+ * Parses a whole-hour clock-time string ("9am", "11am", "4pm", "12am", "12pm") into its 24-hour
+ * hour number (9, 11, 16, 0, 12). Domains valued this way (a common scheduling-puzzle shape —
+ * interview slots, medication times, meeting times) still render as a MiniZinc enum (so a solved
+ * assignment reads back "9am", not a bare number, matching how the puzzle poses the question) —
+ * but arithmetic on them (e.g. "at least N hours after/away from") needs each value's actual hour,
+ * not its ordinal position in the enum. MiniZinc's own implicit enum-to-int coercion gives ONLY
+ * ordinal position (1, 2, 3, ...) — verified directly: for values declared in the order
+ * "9am"/"11am"/"4pm", `time[b] - time[a]` evaluates as an ordinal difference (at most 2), never
+ * the actual 7-hour gap between 9am and 4pm the puzzle's own arithmetic assumes. Returns
+ * `undefined` for anything that doesn't match (including minutes, e.g. "9:30am" — out of scope
+ * for now; every observed puzzle uses whole hours).
+ */
+function parseClockHour(value: string): number | undefined {
+  const match = /^(\d{1,2})(am|pm)$/i.exec(value.trim())
+  if (match === null) return undefined
+  const hour12 = Number(match[1])
+  if (hour12 < 1 || hour12 > 12) return undefined
+  const isPm = match[2]!.toLowerCase() === "pm"
+  return (hour12 % 12) + (isPm ? 12 : 0)
+}
+
 /** Numeric strings render as MiniZinc int literals; everything else as a sanitized enum member. */
 function renderScalar(value: string | number): string {
   if (typeof value === "number") return String(value)
   return isIntegerLiteral(value) ? value : sanitizeIdentifier(value)
+}
+
+/**
+ * Renders a plain scalar/threshold value (an `arithmetic`/`derivedRule` condition's `target`/
+ * `value`, or an `assignment`'s `value`) — never a specific entity, unlike `renderVariableRef`.
+ * Fails loudly if it's a leaked, never-substituted entity-placeholder token instead, rather than
+ * silently sanitizing it into a plausible-looking but undeclared identifier: the legacy bare-
+ * string target shape (`target: "$b"`) is no longer translated (mode 1's `$a`/`$b` only resolve
+ * inside a structured `variableRef.entity` now, ADR-005 §2.4), so nothing else catches it here.
+ */
+function renderThresholdScalar(value: string | number): Effect.Effect<string, CompileError> {
+  if (typeof value === "string" && value.startsWith("$")) {
+    return Effect.fail(
+      new CompileError({
+        reason:
+          `Entity placeholder "${value}" was never substituted with a real entity — a bare ` +
+          `"$a"/"$b"/"$this"/"$outer" string here isn't supported; use a structured ` +
+          "variableRef.entity instead.",
+      }),
+    )
+  }
+  return Effect.succeed(renderScalar(value))
 }
 
 interface CompiledDomain {
@@ -35,11 +103,77 @@ interface CompiledDomain {
   readonly isNumeric: boolean
   readonly entityTypeEnumName: string
   readonly valuesEnumName: string
+  /** Present only when every value parses as a whole-hour clock time AND the domain isn't
+   * already integer-numeric — the name of the `array[valuesEnumName] of int: ...` mapping
+   * declared in `renderDeclarations`, from each enum member to its real 24-hour hour number. */
+  readonly clockHourMapName: string | undefined
+}
+
+/**
+ * One entityType enum name per distinct `entityType` string — computed once, up front, rather
+ * than per domain, because two domains can share an entityType (e.g. "color" and "position" both
+ * over "house") and must resolve to the exact same enum name (`renderDeclarations` dedupes by
+ * this name; if two domains sharing an entityType computed it independently and only one
+ * happened to collide with its own variable name, they'd disagree and the entity ids would end
+ * up declared as members of two different enums — itself a fresh "identifier already defined").
+ *
+ * MiniZinc's enum-type names, member names, and top-level variable names all share one
+ * identifier namespace — a type can't also be one of its own members, and can't be the same
+ * identifier as an array variable indexed by it. An LLM will readily name an entity the same as
+ * its own type (e.g. an entity "player" of type "player", observed live on PZL-0003), or name a
+ * variable the same as its entityType, either of which would otherwise emit `enum player =
+ * {player, ...};` or `array[position] of var ...: position;` — both rejected by `minizinc` as
+ * "identifier already defined". Disambiguate only when a real collision is detected, so the
+ * common (non-colliding) case keeps its plain, readable name.
+ *
+ * The disambiguated fallback is checked against, and reserved into, the SAME global identifier
+ * space as the original name — not just tried once: every entity id (any type, since MiniZinc's
+ * enum-member namespace is global — an entity of a DIFFERENT type could also collide), every
+ * domain variable name, and every other entityType's own already-chosen name, looping with an
+ * incrementing suffix until a genuinely fresh name is found. Found via code review: appending
+ * "_Type" exactly once could reproduce the exact collision it exists to prevent — entities
+ * "player" AND "player_Type", both of type "player", would still emit `enum player_Type =
+ * {player, player_Type};`. (Domain VALUES sharing a name with an entityType are not checked here
+ * — a real but far more contrived collision, left unaddressed the same way other low-probability
+ * identifier clashes in this compiler are.)
+ */
+function computeEntityTypeEnumNames(csp: ExtractedCsp): ReadonlyMap<string, string> {
+  const taken = new Set<string>([
+    ...csp.entities.map((e) => sanitizeIdentifier(e.id)),
+    ...csp.domains.map((d) => sanitizeIdentifier(d.variable)),
+  ])
+
+  const names = new Map<string, string>()
+  for (const entityType of new Set(csp.domains.map((d) => d.entityType))) {
+    const base = sanitizeIdentifier(entityType)
+    let chosen = base
+    if (taken.has(base)) {
+      chosen = `${base}_Type`
+      for (let suffix = 2; taken.has(chosen); suffix++) {
+        chosen = `${base}_Type${suffix}`
+      }
+    }
+    names.set(entityType, chosen)
+    taken.add(chosen)
+  }
+  return names
 }
 
 function analyzeDomains(csp: ExtractedCsp): readonly CompiledDomain[] {
+  const entityTypeEnumNames = computeEntityTypeEnumNames(csp)
   return csp.domains.map((domain) => {
     const entityIds = csp.entities.filter((entity) => entity.type === domain.entityType).map((entity) => entity.id)
+    const isNumeric = domain.values.length > 0 && domain.values.every(isIntegerLiteral)
+    const isClockTime =
+      !isNumeric && domain.values.length > 0 && domain.values.every((v) => parseClockHour(v) !== undefined)
+    // Named by VALUE CONTENT, not by the owning domain's variable name: MiniZinc enum member
+    // identifiers share one global namespace, so two domains with the same vocabulary (e.g.
+    // two independent "Yes"/"No" criteria) must resolve to the SAME enum declaration, or the
+    // second declaration's members collide with the first's ("identifier `Yes' already
+    // defined"). Sharing one enum for an identical value set is correct MiniZinc practice, not
+    // a workaround. The clock-hour mapping (if any) shares this same dedup key for the same
+    // reason — two domains with an identical clock-time vocabulary must reuse one mapping array.
+    const valuesEnumName = `Values_${domain.values.map(sanitizeIdentifier).join("_")}`
     return {
       domain,
       entityIds,
@@ -47,15 +181,10 @@ function analyzeDomains(csp: ExtractedCsp): readonly CompiledDomain[] {
       // 1-element array — matches this project's own hand-written reference convention
       // (catalog/mzn/PZL-0004-whodunit.mzn's `var Suspect: culprit;`, not an array).
       isScalar: entityIds.length <= 1,
-      isNumeric: domain.values.length > 0 && domain.values.every(isIntegerLiteral),
-      entityTypeEnumName: sanitizeIdentifier(domain.entityType),
-      // Named by VALUE CONTENT, not by the owning domain's variable name: MiniZinc enum member
-      // identifiers share one global namespace, so two domains with the same vocabulary (e.g.
-      // two independent "Yes"/"No" criteria) must resolve to the SAME enum declaration, or the
-      // second declaration's members collide with the first's ("identifier `Yes' already
-      // defined"). Sharing one enum for an identical value set is correct MiniZinc practice, not
-      // a workaround.
-      valuesEnumName: `Values_${domain.values.map(sanitizeIdentifier).join("_")}`,
+      isNumeric,
+      entityTypeEnumName: entityTypeEnumNames.get(domain.entityType)!,
+      valuesEnumName,
+      clockHourMapName: isClockTime ? `${valuesEnumName}_Hours` : undefined,
     }
   })
 }
@@ -64,7 +193,28 @@ function findDomain(compiled: readonly CompiledDomain[], variable: string): Comp
   return compiled.find((c) => c.domain.variable === variable)
 }
 
-function renderDeclarations(compiled: readonly CompiledDomain[]): string {
+/**
+ * `ruleTable` facts relate VALUES, not necessarily values already declared by any `Domain` — a
+ * puzzle can use a ruleTable to attach a synthetic boolean/categorical fact to existing domain
+ * values (e.g. "Restaurant X is vegan-friendly: Yes" — "Wheat & Co"/"Garden Table" are the
+ * `restaurant` domain's own values, but "Yes" is never declared anywhere as a domain). Those
+ * orphan values still need an enum to belong to, or `minizinc` rejects them as an undefined
+ * identifier — collected once, across every ruleTable fact in the whole CSP, since MiniZinc's
+ * enum-member namespace is global (the same "Yes" used across multiple ruleTables must be the
+ * SAME declared identifier, not redeclared per table).
+ */
+function collectRuleTableOrphanValues(csp: ExtractedCsp): readonly string[] {
+  const declaredValues = new Set(csp.domains.flatMap((d) => d.values))
+  const orphans = new Set<string>()
+  for (const c of csp.constraints) {
+    if (c.kind !== "ruleTable") continue
+    if (!declaredValues.has(c.a)) orphans.add(c.a)
+    if (!declaredValues.has(c.b)) orphans.add(c.b)
+  }
+  return [...orphans]
+}
+
+function renderDeclarations(compiled: readonly CompiledDomain[], csp: ExtractedCsp): string {
   const lines: string[] = []
   const declaredEntityEnums = new Set<string>()
   const declaredValueEnums = new Set<string>()
@@ -77,6 +227,20 @@ function renderDeclarations(compiled: readonly CompiledDomain[]): string {
     if (!c.isNumeric && !declaredValueEnums.has(c.valuesEnumName)) {
       lines.push(`enum ${c.valuesEnumName} = {${c.domain.values.map(sanitizeIdentifier).join(", ")}};`)
       declaredValueEnums.add(c.valuesEnumName)
+    }
+  }
+
+  const orphans = collectRuleTableOrphanValues(csp)
+  if (orphans.length > 0) {
+    lines.push(`enum RuleTableValues_${orphans.map(sanitizeIdentifier).join("_")} = {${orphans.map(sanitizeIdentifier).join(", ")}};`)
+  }
+
+  const declaredClockHourMaps = new Set<string>()
+  for (const c of compiled) {
+    if (c.clockHourMapName !== undefined && !declaredClockHourMaps.has(c.clockHourMapName)) {
+      const hours = c.domain.values.map((v) => parseClockHour(v)!)
+      lines.push(`array[${c.valuesEnumName}] of int: ${c.clockHourMapName} = [${hours.join(", ")}];`)
+      declaredClockHourMaps.add(c.clockHourMapName)
     }
   }
 
@@ -112,6 +276,22 @@ function renderVariableRef(
       new CompileError({ reason: `Variable "${variable}" is entity-indexed but no entity was given.` }),
     )
   }
+  // A leaked, never-substituted entity placeholder (e.g. "$this"/"$outer" used in a
+  // fact-driven derivedRule, which only substitutes "$a"/"$b", or either used somewhere with no
+  // enclosing rule to bind them at all) would otherwise sanitize into a plausible-looking but
+  // undeclared MiniZinc identifier (e.g. "_outer") and fail only later, cryptically, at the
+  // `minizinc` CLI. Fail loudly here instead — no real entity id is ever "$"-prefixed.
+  if (entity.startsWith("$")) {
+    return Effect.fail(
+      new CompileError({
+        reason:
+          `Entity placeholder "${entity}" for variable "${variable}" was never substituted with a real ` +
+          `entity — "$a"/"$b" only resolve inside a fact-driven derivedRule's thenConstraints, and ` +
+          `"$this"/"$outer" only inside a variable-conditioned derivedRule's (nested one level for ` +
+          `"$outer"). Used outside that shape, it has nothing to bind to.`,
+      }),
+    )
+  }
   return Effect.succeed(`${name}[${sanitizeIdentifier(entity)}]`)
 }
 
@@ -123,13 +303,36 @@ function renderVariableRef(
  * are associative and take 2 or more — a multi-term sum is one node with every term as an
  * operand, not a deeply nested binary tree.
  */
+/**
+ * `isOperand` distinguishes a `variableRef` genuinely being used as an arithmetic operand
+ * (needs the numeric hour-mapping for a clock-time domain — a `binaryOp`'s operands are always
+ * rendered with this `true`) from a bare `variableRef` that IS the entire top-level `expression`
+ * of a constraint, tested directly via `comparator` (an equality/inequality against a domain
+ * value — must stay the raw enum reference, or MiniZinc rejects comparing an `int` against the
+ * clock enum). Defaults to `false`, matching every external caller's "top-level expression" use.
+ * Found via code review: converting unconditionally broke `time[DrugA] != "9am"`-shaped clues,
+ * which have no `binaryOp` at all — just a bare `variableRef` compared straight to a target.
+ */
 function renderArithmeticExpr(
   compiled: readonly CompiledDomain[],
   expr: ArithmeticExpression,
+  isOperand = false,
 ): Effect.Effect<string, CompileError> {
   switch (expr.kind) {
-    case "variableRef":
-      return renderVariableRef(compiled, expr.variable, expr.entity ?? undefined)
+    case "variableRef": {
+      const rawRefEffect = renderVariableRef(compiled, expr.variable, expr.entity ?? undefined)
+      if (!isOperand) return rawRefEffect
+      // A clock-time-valued domain (e.g. "9am"/"11am"/"4pm") stays enum-typed (so a solved
+      // assignment reads back "9am", not a bare number), but MiniZinc's own implicit enum-to-int
+      // coercion gives only ORDINAL POSITION, not the value's real hour — arithmetic needs the
+      // explicit hour-mapping array declared for it in renderDeclarations instead.
+      const domainInfo = findDomain(compiled, expr.variable)
+      return rawRefEffect.pipe(
+        Effect.map((rawRef) =>
+          domainInfo?.clockHourMapName !== undefined ? `${domainInfo.clockHourMapName}[${rawRef}]` : rawRef,
+        ),
+      )
+    }
     case "literal":
       return Effect.succeed(String(expr.value))
     case "binaryOp": {
@@ -139,7 +342,7 @@ function renderArithmeticExpr(
             new CompileError({ reason: `Operator "abs" takes exactly 1 operand, got ${expr.operands.length}.` }),
           )
         }
-        return renderArithmeticExpr(compiled, expr.operands[0]!).pipe(Effect.map((operand) => `abs(${operand})`))
+        return renderArithmeticExpr(compiled, expr.operands[0]!, true).pipe(Effect.map((operand) => `abs(${operand})`))
       }
       if (expr.op === "-" || expr.op === "/") {
         if (expr.operands.length !== 2) {
@@ -150,8 +353,8 @@ function renderArithmeticExpr(
           )
         }
         return Effect.all([
-          renderArithmeticExpr(compiled, expr.operands[0]!),
-          renderArithmeticExpr(compiled, expr.operands[1]!),
+          renderArithmeticExpr(compiled, expr.operands[0]!, true),
+          renderArithmeticExpr(compiled, expr.operands[1]!, true),
         ]).pipe(Effect.map(([left, right]) => `(${left} ${expr.op} ${right})`))
       }
       // "+" | "*" | "min" | "max" — associative, 2 or more operands.
@@ -162,7 +365,7 @@ function renderArithmeticExpr(
           }),
         )
       }
-      return Effect.all(expr.operands.map((operand) => renderArithmeticExpr(compiled, operand))).pipe(
+      return Effect.all(expr.operands.map((operand) => renderArithmeticExpr(compiled, operand, true))).pipe(
         Effect.map((rendered) =>
           expr.op === "min" || expr.op === "max" ? `${expr.op}([${rendered.join(", ")}])` : `(${rendered.join(` ${expr.op} `)})`,
         ),
@@ -182,15 +385,15 @@ function renderTarget(
   compiled: readonly CompiledDomain[],
   target: string | number | ArithmeticExpression,
 ): Effect.Effect<string, CompileError> {
-  return isArithmeticExpressionTarget(target) ? renderArithmeticExpr(compiled, target) : Effect.succeed(renderScalar(target))
+  return isArithmeticExpressionTarget(target) ? renderArithmeticExpr(compiled, target) : renderThresholdScalar(target)
 }
 
 function compileAssignment(
   compiled: readonly CompiledDomain[],
   c: Extract<ExtractedConstraint, { kind: "assignment" }>,
 ): Effect.Effect<string, CompileError> {
-  return renderVariableRef(compiled, c.variable, c.entity).pipe(
-    Effect.map((ref) => `constraint ${ref} = ${renderScalar(c.value)};`),
+  return Effect.all([renderVariableRef(compiled, c.variable, c.entity), renderThresholdScalar(c.value)]).pipe(
+    Effect.map(([ref, value]) => `constraint ${ref} = ${value};`),
   )
 }
 
@@ -301,23 +504,49 @@ function compileAdjacency(
   if (template === undefined) {
     return Effect.fail(new CompileError({ reason: `Unrecognized adjacency relation "${c.relation}".` }))
   }
-  // Adjacency needs a single, numeric, ordered domain shared by both entities (ADR-005 §2.3) —
-  // there's no `variable` field on this constraint kind, so the positional domain is inferred as
-  // the entities' one shared numeric domain.
-  const positional = compiled.filter(
-    (d) => d.isNumeric && d.entityIds.includes(c.a) && d.entityIds.includes(c.b),
-  )
-  if (positional.length !== 1) {
-    return Effect.fail(
-      new CompileError({
-        reason: `Could not find a single numeric positional domain shared by "${c.a}" and "${c.b}" for adjacency relation "${c.relation}".`,
-      }),
-    )
+  // Adjacency needs a single ordered domain shared by both entities (ADR-005 §2.3). `Domain`
+  // carries no explicit "this one is ordered" flag, so an unnamed non-numeric domain can't be
+  // trusted as positional — declaration order coincidentally matching spatial order for a
+  // genuinely categorical domain (e.g. color) would silently produce a wrong solution. `variable`
+  // is the model's explicit signal for exactly that case (e.g. time slots ordered by declaration,
+  // not literal integers); only a numeric domain may be inferred without it.
+  let domainInfo: CompiledDomain
+  if (c.variable !== null) {
+    const named = findDomain(compiled, c.variable)
+    if (named === undefined) {
+      return Effect.fail(new CompileError({ reason: `Unknown adjacency variable "${c.variable}".` }))
+    }
+    if (!named.entityIds.includes(c.a) || !named.entityIds.includes(c.b)) {
+      return Effect.fail(
+        new CompileError({
+          reason: `Adjacency variable "${c.variable}" is not shared by "${c.a}" and "${c.b}".`,
+        }),
+      )
+    }
+    domainInfo = named
+  } else {
+    const shared = compiled.filter((d) => d.entityIds.includes(c.a) && d.entityIds.includes(c.b))
+    const positional = shared.filter((d) => d.isNumeric)
+    if (positional.length !== 1) {
+      return Effect.fail(
+        new CompileError({
+          reason:
+            `Could not find a single numeric positional domain shared by "${c.a}" and "${c.b}" for ` +
+            `adjacency relation "${c.relation}". If the ordering is over a non-numeric domain ` +
+            '(e.g. time slots), set adjacency\'s "variable" field to name it explicitly.',
+        }),
+      )
+    }
+    domainInfo = positional[0]!
   }
-  const domainInfo = positional[0]!
   const varName = sanitizeIdentifier(domainInfo.domain.variable)
-  const refA = `${varName}[${sanitizeIdentifier(c.a)}]`
-  const refB = `${varName}[${sanitizeIdentifier(c.b)}]`
+  const rawRefA = `${varName}[${sanitizeIdentifier(c.a)}]`
+  const rawRefB = `${varName}[${sanitizeIdentifier(c.b)}]`
+  // A non-numeric domain renders as a MiniZinc enum, which doesn't support the templates' direct
+  // arithmetic (+/-/abs) — cast to each value's ordinal position (its index within the domain's
+  // own declared order) via `enum2int` so the arithmetic operates on plain integers instead.
+  const refA = domainInfo.isNumeric ? rawRefA : `enum2int(${rawRefA})`
+  const refB = domainInfo.isNumeric ? rawRefB : `enum2int(${rawRefB})`
   return Effect.succeed(`constraint ${template(refA, refB)};`)
 }
 
@@ -343,31 +572,171 @@ function compileFactDrivenRule(
   ).pipe(Effect.map((groups) => groups.flat().join("\n")))
 }
 
+/**
+ * Fact-driven `thenConstraints` reference the matched fact's two entities via `FACT_A_TOKEN`/
+ * `FACT_B_TOKEN` ("$a"/"$b") — same general substitution mechanism as mode 2's `$this`/`$outer`
+ * (`substituteEntityTokensInConstraint`/`compileThenConstraint`, defined below), not the narrower
+ * ad hoc "target is exactly the bare string '$a'/'$b', expression is always fact.a" logic this
+ * used to have. That narrower version silently produced an invalid MiniZinc identifier
+ * (`renderVariableRef` sanitized the literal string "$b" into "_b") whenever a model reasonably
+ * used a STRUCTURED `variableRef.entity: "$a"/"$b"` instead of the undocumented bare-string
+ * special case (observed live: PZL-0005 produced `target: {kind: "variableRef", ..., entity:
+ * "$b"}`) — this is now caught loudly by `renderVariableRef`'s `$`-prefix guard rather than
+ * emitting garbage, but supporting the structured form directly is the real fix.
+ */
 function compileFactDrivenThen(
   compiled: readonly CompiledDomain[],
   thenConstraint: ExtractedConstraint,
   fact: { readonly a: string; readonly b: string },
 ): Effect.Effect<string, CompileError> {
-  if (thenConstraint.kind !== "arithmetic" || thenConstraint.expression.kind !== "variableRef") {
+  const substituted = substituteEntityTokensInConstraint(thenConstraint, {
+    [FACT_A_TOKEN]: fact.a,
+    [FACT_B_TOKEN]: fact.b,
+  })
+  return compileThenConstraint(compiled, substituted, undefined).pipe(Effect.map((body) => `constraint ${body};`))
+}
+
+/** Placeholders a derivedRule's `thenConstraints` uses to refer to entities that are never
+ * named by id, only bound by an enclosing rule's condition — mode 2's analogue of mode 1's
+ * `$a`/`$b` (`compileFactDrivenThen`). `SELF_ENTITY_TOKEN` ("the entity currently satisfying
+ * *this* rule's condition") covers self-referential zebra clues ("if a house is green, its
+ * position = ivory's position + 1"). `OUTER_ENTITY_TOKEN` ("the entity satisfying the
+ * *enclosing* rule's condition") covers the one-level-deeper case a nested derivedRule needs —
+ * e.g. "whoever smokes Chesterfields lives next to whoever owns the fox," where neither house is
+ * ever named, each is only identified by its own attribute. Models reach for both spontaneously
+ * (observed verbatim in eval output, the latter as an ad hoc value-derived name); until this fix
+ * neither was ever interpreted, and nested derivedRule was rejected outright. Depth is bounded to
+ * these two levels by `MAX_NESTING_DEPTH` (types.ts) — a derivedRule nested inside a derivedRule
+ * can itself only contain non-recursive (leaf) thenConstraints. */
+const SELF_ENTITY_TOKEN = "$this"
+const OUTER_ENTITY_TOKEN = "$outer"
+
+/** Mode 1's (fact-driven) analogue of `$this`/`$outer` — the matched `relation` fact's two
+ * entities. Resolved via the same generic `substituteEntityTokensInConstraint` mechanism, not a
+ * bare-string special case: a bare `target: "$a"` can't be substituted generically (it implicitly
+ * means "the same variable as `expression`, indexed at the other entity," which needs context
+ * `substituteEntityTokensInConstraint` doesn't have), so both tokens now only resolve inside a
+ * structured `variableRef.entity`/`assignment.entity` — exactly like `$this`/`$outer` already do. */
+const FACT_A_TOKEN = "$a"
+const FACT_B_TOKEN = "$b"
+
+type EntityTokenMap = Readonly<Record<string, string>>
+
+function substituteEntityTokens(expr: ArithmeticExpression, tokens: EntityTokenMap): ArithmeticExpression {
+  switch (expr.kind) {
+    case "variableRef":
+      return expr.entity !== null && expr.entity in tokens ? { ...expr, entity: tokens[expr.entity]! } : expr
+    case "literal":
+      return expr
+    case "binaryOp":
+      return { ...expr, operands: expr.operands.map((operand) => substituteEntityTokens(operand, tokens)) }
+  }
+}
+
+function substituteEntityTokensInTarget(
+  target: string | number | ArithmeticExpression,
+  tokens: EntityTokenMap,
+): string | number | ArithmeticExpression {
+  return isArithmeticExpressionTarget(target) ? substituteEntityTokens(target, tokens) : target
+}
+
+/** Substitutes entity-placeholder tokens throughout one `thenConstraints` entry with concrete
+ * entities. Scoped to the constraint kinds that reference a specific entity at all
+ * (assignment, arithmetic) — a nested `derivedRule` is deliberately left untouched here; its own
+ * tokens are resolved when `compileNestedVariableConditionedRule` compiles it. */
+function substituteEntityTokensInConstraint(c: ExtractedConstraint, tokens: EntityTokenMap): ExtractedConstraint {
+  switch (c.kind) {
+    case "assignment":
+      return c.entity in tokens ? { ...c, entity: tokens[c.entity]! } : c
+    case "arithmetic":
+      return {
+        ...c,
+        expression: substituteEntityTokens(c.expression, tokens),
+        target: substituteEntityTokensInTarget(c.target, tokens),
+      }
+    default:
+      return c
+  }
+}
+
+/**
+ * A derivedRule nested inside another derivedRule's `thenConstraints` — the two-anonymous-
+ * entities relational-chaining pattern (ADR-004 §2.2/`eval/README.md`'s previously-unaddressed
+ * gap). Compiles to a `forall` boolean expression (not top-level `constraint` statements, which
+ * can't nest inside the outer implication's parens): `forall(e in EntityEnum)((innerCond) ->
+ * (innerBody))`, with `SELF_ENTITY_TOKEN` bound to the forall's own generator variable and
+ * `OUTER_ENTITY_TOKEN` bound to the already-concrete entity the enclosing rule is reifying over.
+ */
+function compileNestedVariableConditionedRule(
+  compiled: readonly CompiledDomain[],
+  rule: Extract<ExtractedConstraint, { kind: "derivedRule" }>,
+  outerEntityId: string,
+): Effect.Effect<string, CompileError> {
+  if (rule.condition.kind !== "comparison") {
     return Effect.fail(
       new CompileError({
-        reason:
-          `Fact-driven derivedRule "then" constraints must be an arithmetic constraint over a ` +
-          `variableRef (got kind "${thenConstraint.kind}").`,
+        reason: 'A derivedRule nested inside a "then" list must have a variable-conditioned ("comparison") condition.',
       }),
     )
   }
-  const variable = thenConstraint.expression.variable
-  const target = thenConstraint.target
+  const condition = rule.condition
+  const domainInfo = findDomain(compiled, condition.variable)
+  if (domainInfo === undefined) {
+    return Effect.fail(
+      new CompileError({ reason: `Unknown variable "${condition.variable}" — no matching domain declared.` }),
+    )
+  }
+  if (domainInfo.isScalar) {
+    return Effect.fail(
+      new CompileError({
+        reason: `A nested derivedRule's condition variable "${condition.variable}" must be entity-indexed, not scalar.`,
+      }),
+    )
+  }
 
-  const rightEffect =
-    target === "$a" || target === "$b"
-      ? renderVariableRef(compiled, variable, target === "$a" ? fact.a : fact.b)
-      : renderTarget(compiled, target)
+  const generatorVar = sanitizeIdentifier(`${domainInfo.entityTypeEnumName}_e`)
+  const tokens: EntityTokenMap = { [SELF_ENTITY_TOKEN]: generatorVar, [OUTER_ENTITY_TOKEN]: outerEntityId }
 
-  return Effect.all([renderVariableRef(compiled, variable, fact.a), rightEffect]).pipe(
-    Effect.map(([left, right]) => `constraint ${left} ${thenConstraint.comparator} ${right};`),
+  return Effect.all([
+    renderVariableRef(compiled, condition.variable, generatorVar),
+    renderThresholdScalar(condition.value),
+  ]).pipe(
+    Effect.flatMap(([conditionRef, conditionValue]) => {
+      const conditionExpr = `${conditionRef} ${condition.operator} ${conditionValue}`
+      const substituted = rule.thenConstraints.map((thenConstraint) =>
+        substituteEntityTokensInConstraint(thenConstraint, tokens),
+      )
+      // Depth-bounded (MAX_NESTING_DEPTH): these are leaf constraints, never another derivedRule.
+      return Effect.forEach(substituted, (thenConstraint) => compileConstraintBody(compiled, thenConstraint)).pipe(
+        Effect.map(
+          (thenBodies) =>
+            `forall(${generatorVar} in ${domainInfo.entityTypeEnumName})(` +
+            `${thenBodies.map((body) => `(${conditionExpr}) -> (${body})`).join(" /\\ ")})`,
+        ),
+      )
+    }),
   )
+}
+
+/** Dispatches one `thenConstraints` entry: a nested `derivedRule` compiles via
+ * `compileNestedVariableConditionedRule` (needs the enclosing rule's bound entity for
+ * `OUTER_ENTITY_TOKEN`); everything else via the shared `compileConstraintBody`. */
+function compileThenConstraint(
+  compiled: readonly CompiledDomain[],
+  thenConstraint: ExtractedConstraint,
+  outerEntityId: string | undefined,
+): Effect.Effect<string, CompileError> {
+  if (thenConstraint.kind === "derivedRule") {
+    if (outerEntityId === undefined) {
+      return Effect.fail(
+        new CompileError({
+          reason: 'A nested derivedRule needs an entity-indexed enclosing rule to bind "$outer" against.',
+        }),
+      )
+    }
+    return compileNestedVariableConditionedRule(compiled, thenConstraint, outerEntityId)
+  }
+  return compileConstraintBody(compiled, thenConstraint)
 }
 
 /** Variable-conditioned reified implication (ADR-005 §2.4 mode 2). */
@@ -376,13 +745,133 @@ function compileVariableConditionedRule(
   rule: Extract<ExtractedConstraint, { kind: "derivedRule" }>,
   condition: Extract<DerivedCondition, { kind: "comparison" }>,
 ): Effect.Effect<string, CompileError> {
-  return renderVariableRef(compiled, condition.variable).pipe(
-    Effect.flatMap((conditionRef) => {
-      const conditionExpr = `${conditionRef} ${condition.operator} ${renderScalar(condition.value)}`
-      return Effect.forEach(rule.thenConstraints, (thenConstraint) => compileConstraintBody(compiled, thenConstraint)).pipe(
-        Effect.map((thenBodies) =>
-          thenBodies.map((body) => `constraint (${conditionExpr}) -> (${body});`).join("\n"),
-        ),
+  const domainInfo = findDomain(compiled, condition.variable)
+  if (domainInfo === undefined) {
+    return Effect.fail(
+      new CompileError({ reason: `Unknown variable "${condition.variable}" — no matching domain declared.` }),
+    )
+  }
+
+  if (domainInfo.isScalar) {
+    return Effect.all([renderVariableRef(compiled, condition.variable), renderThresholdScalar(condition.value)]).pipe(
+      Effect.flatMap(([conditionRef, conditionValue]) => {
+        const conditionExpr = `${conditionRef} ${condition.operator} ${conditionValue}`
+        return Effect.forEach(rule.thenConstraints, (thenConstraint) =>
+          compileThenConstraint(compiled, thenConstraint, undefined),
+        ).pipe(
+          Effect.map((thenBodies) =>
+            thenBodies.map((body) => `constraint (${conditionExpr}) -> (${body});`).join("\n"),
+          ),
+        )
+      }),
+    )
+  }
+
+  // An entity-indexed condition variable: reify once per entity of its domain, substituting
+  // SELF_ENTITY_TOKEN in thenConstraints with that entity (mirrors mode 1's per-relation-fact
+  // $a/$b substitution in compileFactDrivenThen).
+  return Effect.forEach(domainInfo.entityIds, (entityId) =>
+    Effect.all([renderVariableRef(compiled, condition.variable, entityId), renderThresholdScalar(condition.value)]).pipe(
+      Effect.flatMap(([conditionRef, conditionValue]) => {
+        const conditionExpr = `${conditionRef} ${condition.operator} ${conditionValue}`
+        const substituted = rule.thenConstraints.map((thenConstraint) =>
+          substituteEntityTokensInConstraint(thenConstraint, { [SELF_ENTITY_TOKEN]: entityId }),
+        )
+        return Effect.forEach(substituted, (thenConstraint) =>
+          compileThenConstraint(compiled, thenConstraint, entityId),
+        ).pipe(
+          Effect.map((thenBodies) =>
+            thenBodies.map((body) => `constraint (${conditionExpr}) -> (${body});`).join("\n"),
+          ),
+        )
+      }),
+    ),
+  ).pipe(Effect.map((groups) => groups.join("\n")))
+}
+
+/**
+ * Computed-quantity-conditioned reified implication (ADR-005 §2.4 mode 2's `expressionComparison`
+ * variant) — e.g. "if their debt-to-income ratio exceeds 43%, the loan is Denied". Unlike the
+ * plain `comparison` mode, an `ArithmeticExpression` condition needs no per-entity reification of
+ * its own: any entity it cares about is already explicit in the expression (a `variableRef`'s own
+ * `entity` field), so this always compiles to exactly one global implication, the same shape as
+ * `compileVariableConditionedRule`'s scalar branch.
+ */
+/**
+ * Renders a single SIMPLE condition (`comparison` or `expressionComparison`) to a boolean MiniZinc
+ * expression — no `then`-list or reification wrapping. Shared by the standalone modes below and
+ * by `and`'s conjunction of them. `comparison` here is always the SCALAR case; a non-scalar
+ * (entity-indexed) `comparison` needs per-entity reification and is handled separately by
+ * `compileVariableConditionedRule`, which this helper deliberately doesn't replace.
+ */
+function renderSimpleCondition(
+  compiled: readonly CompiledDomain[],
+  condition: Extract<DerivedCondition, { kind: "comparison" | "expressionComparison" }>,
+): Effect.Effect<string, CompileError> {
+  if (condition.kind === "expressionComparison") {
+    return Effect.all([renderArithmeticExpr(compiled, condition.expression), renderThresholdScalar(condition.value)]).pipe(
+      Effect.map(([ref, value]) => `${ref} ${condition.operator} ${value}`),
+    )
+  }
+  const domainInfo = findDomain(compiled, condition.variable)
+  if (domainInfo === undefined) {
+    return Effect.fail(
+      new CompileError({ reason: `Unknown variable "${condition.variable}" — no matching domain declared.` }),
+    )
+  }
+  if (!domainInfo.isScalar) {
+    return Effect.fail(
+      new CompileError({
+        reason:
+          `Condition variable "${condition.variable}" is entity-indexed — combining an ` +
+          `entity-indexed condition inside "and" isn't supported; only scalar conditions can be ` +
+          "conjoined this way.",
+      }),
+    )
+  }
+  return Effect.all([renderVariableRef(compiled, condition.variable), renderThresholdScalar(condition.value)]).pipe(
+    Effect.map(([ref, value]) => `${ref} ${condition.operator} ${value}`),
+  )
+}
+
+function compileExpressionConditionedRule(
+  compiled: readonly CompiledDomain[],
+  rule: Extract<ExtractedConstraint, { kind: "derivedRule" }>,
+  condition: Extract<DerivedCondition, { kind: "expressionComparison" }>,
+): Effect.Effect<string, CompileError> {
+  return renderSimpleCondition(compiled, condition).pipe(
+    Effect.flatMap((conditionExpr) =>
+      Effect.forEach(rule.thenConstraints, (thenConstraint) =>
+        compileThenConstraint(compiled, thenConstraint, undefined),
+      ).pipe(
+        Effect.map((thenBodies) => thenBodies.map((body) => `constraint (${conditionExpr}) -> (${body});`).join("\n")),
+      ),
+    ),
+  )
+}
+
+/**
+ * `and`: conjunction of two-or-more simple conditions (ADR-004 §2.2/§4's compound-condition gap,
+ * found blocking PZL-0011 — "if not denied by rules 1-2 AND the amount is within policy limits").
+ * Scoped to `comparison`/`expressionComparison` sub-conditions only (relation-conditioned
+ * conjunction isn't supported); each renders independently via `renderSimpleCondition` and the
+ * results are ANDed together in one reified implication.
+ */
+function compileConjunctionConditionedRule(
+  compiled: readonly CompiledDomain[],
+  rule: Extract<ExtractedConstraint, { kind: "derivedRule" }>,
+  condition: Extract<DerivedCondition, { kind: "and" }>,
+): Effect.Effect<string, CompileError> {
+  if (condition.conditions.length === 0) {
+    return Effect.fail(new CompileError({ reason: 'A derivedRule\'s "and" condition needs at least one condition.' }))
+  }
+  return Effect.all(condition.conditions.map((c) => renderSimpleCondition(compiled, c))).pipe(
+    Effect.flatMap((parts) => {
+      const conditionExpr = parts.map((p) => `(${p})`).join(" /\\ ")
+      return Effect.forEach(rule.thenConstraints, (thenConstraint) =>
+        compileThenConstraint(compiled, thenConstraint, undefined),
+      ).pipe(
+        Effect.map((thenBodies) => thenBodies.map((body) => `constraint (${conditionExpr}) -> (${body});`).join("\n")),
       )
     }),
   )
@@ -397,8 +886,8 @@ function compileConstraintBody(
 ): Effect.Effect<string, CompileError> {
   switch (c.kind) {
     case "assignment":
-      return renderVariableRef(compiled, c.variable, c.entity).pipe(
-        Effect.map((ref) => `${ref} = ${renderScalar(c.value)}`),
+      return Effect.all([renderVariableRef(compiled, c.variable, c.entity), renderThresholdScalar(c.value)]).pipe(
+        Effect.map(([ref, value]) => `${ref} = ${value}`),
       )
     case "arithmetic":
       return Effect.all([renderArithmeticExpr(compiled, c.expression), renderTarget(compiled, c.target)]).pipe(
@@ -422,9 +911,16 @@ function compileDerivedRule(
   csp: ExtractedCsp,
   rule: Extract<ExtractedConstraint, { kind: "derivedRule" }>,
 ): Effect.Effect<string, CompileError> {
-  return rule.condition.kind === "relation"
-    ? compileFactDrivenRule(compiled, csp, rule, rule.condition.name)
-    : compileVariableConditionedRule(compiled, rule, rule.condition)
+  switch (rule.condition.kind) {
+    case "relation":
+      return compileFactDrivenRule(compiled, csp, rule, rule.condition.name)
+    case "comparison":
+      return compileVariableConditionedRule(compiled, rule, rule.condition)
+    case "expressionComparison":
+      return compileExpressionConditionedRule(compiled, rule, rule.condition)
+    case "and":
+      return compileConjunctionConditionedRule(compiled, rule, rule.condition)
+  }
 }
 
 function compileArithmeticTopLevel(
@@ -433,6 +929,48 @@ function compileArithmeticTopLevel(
 ): Effect.Effect<string, CompileError> {
   return Effect.all([renderArithmeticExpr(compiled, c.expression), renderTarget(compiled, c.target)]).pipe(
     Effect.map(([expr, target]) => `constraint ${expr} ${c.comparator} ${target};`),
+  )
+}
+
+/** Renders one side of a `ruleTableConstraint`: a variable's value, or a known constant. */
+function renderRuleTableOperand(
+  compiled: readonly CompiledDomain[],
+  operand: RuleTableOperand,
+): Effect.Effect<string, CompileError> {
+  return operand.kind === "literal"
+    ? Effect.succeed(renderScalar(operand.value))
+    : renderVariableRef(compiled, operand.variable, operand.entity ?? undefined)
+}
+
+/**
+ * A static, entity-independent rule table (ADR-004 §2.2/eval's previously-unaddressed "no
+ * universal rule table" gap) — e.g. rock-paper-scissors' "paper beats rock, rock beats scissors,
+ * scissors beats paper". `ruleTable` facts (one tuple per clue, sharing `name`) declare the table;
+ * this compiles the paired `ruleTableConstraint` into a disjunction over the declared tuples: the
+ * two rendered operands must match SOME tuple's `a`/`b` values. Each disjunct's own `aRef`/`bRef`
+ * are the same rendered expression across every tuple — only the tuple's literal values change —
+ * so exactly the tuples that are actually true for the current assignment select it.
+ */
+function compileRuleTableConstraint(
+  compiled: readonly CompiledDomain[],
+  csp: ExtractedCsp,
+  c: Extract<ExtractedConstraint, { kind: "ruleTableConstraint" }>,
+): Effect.Effect<string, CompileError> {
+  const tuples = csp.constraints.filter(
+    (x): x is Extract<ExtractedConstraint, { kind: "ruleTable" }> => x.kind === "ruleTable" && x.name === c.table,
+  )
+  if (tuples.length === 0) {
+    return Effect.fail(
+      new CompileError({ reason: `Unknown rule table "${c.table}" — no matching "ruleTable" facts declared.` }),
+    )
+  }
+  return Effect.all([renderRuleTableOperand(compiled, c.a), renderRuleTableOperand(compiled, c.b)]).pipe(
+    Effect.map(
+      ([aRef, bRef]) =>
+        `constraint ${tuples
+          .map((t) => `(${aRef} = ${renderScalar(t.a)} /\\ ${bRef} = ${renderScalar(t.b)})`)
+          .join(" \\/ ")};`,
+    ),
   )
 }
 
@@ -457,6 +995,11 @@ function compileTopLevelConstraint(
       return compileDerivedRule(compiled, csp, c)
     case "arithmetic":
       return compileArithmeticTopLevel(compiled, c)
+    case "ruleTable":
+      // Consumed by a paired ruleTableConstraint — produces no output itself.
+      return Effect.succeed("")
+    case "ruleTableConstraint":
+      return compileRuleTableConstraint(compiled, csp, c)
   }
 }
 
@@ -467,7 +1010,7 @@ function compileTopLevelConstraint(
  */
 export function compile(csp: ExtractedCsp): Effect.Effect<string, CompileError> {
   const compiled = analyzeDomains(csp)
-  const declarations = renderDeclarations(compiled)
+  const declarations = renderDeclarations(compiled, csp)
   const needsGlobals = csp.constraints.some((c) => c.kind === "allDifferent")
 
   return Effect.forEach(csp.constraints, (c) => compileTopLevelConstraint(compiled, csp, c)).pipe(

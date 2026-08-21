@@ -23,6 +23,83 @@ test("ADR-005 §2.2/§2.3: assignment on a scalar (single-entity) domain compile
   assert.match(mzn, /constraint culprit = Plum;/)
 })
 
+test('an entity id matching its own entityType name (e.g. entity "player" of type "player") disambiguates the enum, never emits a self-colliding `enum player = {player, ...};`', async () => {
+  // Exactly the shape a live eval run produced (PZL-0003): two entities of type "player", one of
+  // them also named "player" — `enum player = {player, opponent};` is rejected by `minizinc` as
+  // "identifier `player' already defined" (the enum type and one of its own members).
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "player", type: "player" },
+      { id: "opponent", type: "player" },
+    ],
+    domains: [{ variable: "move", entityType: "player", values: ["Paper", "Rock", "Scissors"] }],
+    constraints: [{ kind: "assignment", entity: "opponent", variable: "move", value: "Rock" }],
+  }
+  const mzn = await run(csp)
+  assert.doesNotMatch(mzn, /enum player = /)
+  assert.match(mzn, /enum player_Type = \{player, opponent\};/)
+  assert.match(mzn, /array\[player_Type\] of var Values_Paper_Rock_Scissors: move;/)
+  assert.match(mzn, /constraint move\[opponent\] = Rock;/)
+})
+
+test('when the disambiguated "_Type" fallback ITSELF collides with an entity id (e.g. entities "player" and "player_Type"), a further-disambiguated name is chosen instead', async () => {
+  // Copilot review finding: the fallback was computed once and never re-checked — with entities
+  // "player" and "player_Type" both of type "player", the old code emitted
+  // `enum player_Type = {player, player_Type};`, reproducing the exact type/member collision the
+  // fallback exists to prevent.
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "player", type: "player" },
+      { id: "player_Type", type: "player" },
+      { id: "opponent", type: "player" },
+    ],
+    domains: [{ variable: "move", entityType: "player", values: ["Paper", "Rock", "Scissors"] }],
+    constraints: [{ kind: "assignment", entity: "opponent", variable: "move", value: "Rock" }],
+  }
+  const mzn = await run(csp)
+  assert.doesNotMatch(mzn, /enum player_Type = /)
+  assert.match(mzn, /enum player_Type2 = \{player, player_Type, opponent\};/)
+  assert.match(mzn, /array\[player_Type2\] of var Values_Paper_Rock_Scissors: move;/)
+})
+
+test('a variable named identically to its own entityType (e.g. variable/entityType both "position") disambiguates the enum, never emits self-colliding `array[position] of var ...: position;`', async () => {
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "A", type: "position" },
+      { id: "B", type: "position" },
+    ],
+    domains: [{ variable: "position", entityType: "position", values: ["1", "2"] }],
+    constraints: [{ kind: "assignment", entity: "A", variable: "position", value: "1" }],
+  }
+  const mzn = await run(csp)
+  assert.doesNotMatch(mzn, /enum position = /)
+  assert.match(mzn, /enum position_Type = \{A, B\};/)
+  assert.match(mzn, /array\[position_Type\] of var 1\.\.2: position;/)
+})
+
+test("two domains sharing an entityType still resolve to the SAME (disambiguated) enum name, even if only one domain's variable collides", async () => {
+  // "color" doesn't collide with entityType "house", but "house" (the second domain's own
+  // variable) does — both domains share entityType "house", so both must end up pointing at the
+  // SAME enum name, or the entity ids would be declared as members of two different enums (a
+  // fresh collision of its own).
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "H1", type: "house" },
+      { id: "H2", type: "house" },
+    ],
+    domains: [
+      { variable: "color", entityType: "house", values: ["Red", "Blue"] },
+      { variable: "house", entityType: "house", values: ["Yes", "No"] },
+    ],
+    constraints: [{ kind: "assignment", entity: "H1", variable: "color", value: "Red" }],
+  }
+  const mzn = await run(csp)
+  const enumDeclarations = mzn.match(/enum house\w* = /g) ?? []
+  assert.equal(new Set(enumDeclarations).size, 1, `expected one consistent entity enum, got: ${enumDeclarations}`)
+  assert.match(mzn, /array\[house_Type\] of var Values_Red_Blue: color;/)
+  assert.match(mzn, /array\[house_Type\] of var Values_Yes_No: house;/)
+})
+
 test("ADR-005 §2.3: allDifferent renders all_different (with include \"globals.mzn\";), not the invalid bare `alldifferent`", async () => {
   const csp: ExtractedCsp = {
     entities: [
@@ -48,6 +125,42 @@ test("ADR-005 §2.3: allDifferent on a scalar (single-entity) domain is a Compil
   assert.match(reason, /allDifferent requires an entity-indexed variable/)
 })
 
+test('sanitizeIdentifier: a digit-leading value (e.g. "9am") gets a LETTER prefix, never an invalid leading-underscore-digit like "_9am"', async () => {
+  // Verified against a real `minizinc` install: a bare leading underscore parses fine ("_a" is
+  // valid), but an underscore immediately followed by a digit is a syntax error ("unexpected _").
+  const csp: ExtractedCsp = {
+    entities: [{ id: "Only", type: "Slot" }],
+    domains: [{ variable: "time", entityType: "Slot", values: ["9am", "10am", "11am"] }],
+    constraints: [{ kind: "assignment", entity: "Only", variable: "time", value: "9am" }],
+  }
+  const mzn = await run(csp)
+  assert.doesNotMatch(mzn, /_9am|_10am|_11am/)
+  assert.match(mzn, /enum Values_v9am_v10am_v11am = \{v9am, v10am, v11am\};/)
+  assert.match(mzn, /constraint time = v9am;/)
+})
+
+test('sanitizeIdentifier: a value colliding with a MiniZinc reserved word (e.g. "true") is disambiguated, never emitted verbatim', async () => {
+  // Exactly the shape a live eval run produced (PZL-0013): a boolean-flavored ruleTable fact
+  // literally valued "true" — verified directly against a real minizinc install that a bare
+  // `enum X = {true};` is rejected ("unexpected bool literal").
+  const csp: ExtractedCsp = {
+    entities: [{ id: "Group", type: "Group" }],
+    domains: [{ variable: "restaurant", entityType: "Group", values: ["Thai Palace", "Wheat & Co"] }],
+    constraints: [
+      { kind: "ruleTable", name: "vegan_friendly", a: "Wheat & Co", b: "true" },
+      {
+        kind: "ruleTableConstraint",
+        table: "vegan_friendly",
+        a: { kind: "variableRef", variable: "restaurant", entity: "Group" },
+        b: { kind: "literal", value: "true" },
+      },
+    ],
+  }
+  const mzn = await run(csp)
+  assert.doesNotMatch(mzn, /\{true\}|= true[ ;)]/)
+  assert.match(mzn, /enum RuleTableValues_true_ = \{true_\};/)
+})
+
 test("ADR-005 §2.3: adjacency compiles via the relation-name registry over a shared numeric domain", async () => {
   const csp: ExtractedCsp = {
     entities: [
@@ -59,12 +172,80 @@ test("ADR-005 §2.3: adjacency compiles via the relation-name registry over a sh
     constraints: [
       { kind: "allDifferent", variable: "position" },
       { kind: "assignment", entity: "H1", variable: "position", value: "1" },
-      { kind: "adjacency", relation: "immediately right of", a: "H2", b: "H1" },
+      { kind: "adjacency", relation: "immediately right of", a: "H2", b: "H1", variable: null },
     ],
   }
   const mzn = await run(csp)
   assert.match(mzn, /array\[House\] of var 1\.\.3: position;/)
   assert.match(mzn, /constraint position\[H2\] = position\[H1\] \+ 1;/)
+})
+
+test('ADR-005 §2.3: adjacency works over an ordered-but-non-integer domain (e.g. time slots) via enum2int, when named explicitly by "variable"', async () => {
+  // Exactly the shape a live eval run produced (PZL-0009): "immediately before" over a
+  // "9am"/"10am"/"11am" time-slot domain — ordered by declaration, not literal integers. Since
+  // that ordering can't be inferred from numeric-ness, the model must name it explicitly.
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "Chen", type: "candidate" },
+      { id: "Deepak", type: "candidate" },
+      { id: "Aisha", type: "candidate" },
+    ],
+    domains: [{ variable: "time_slot", entityType: "candidate", values: ["9am", "10am", "11am"] }],
+    constraints: [
+      { kind: "adjacency", relation: "immediately_before", a: "Chen", b: "Deepak", variable: "time_slot" },
+    ],
+  }
+  const mzn = await run(csp)
+  assert.match(mzn, /constraint enum2int\(time_slot\[Chen\]\) = enum2int\(time_slot\[Deepak\]\) - 1;/)
+})
+
+test("ADR-005 §2.3: adjacency over a single shared non-numeric domain fails as ambiguous when \"variable\" isn't named, never a silent declaration-order guess", async () => {
+  // Copilot review finding: a purely categorical domain (e.g. color) with no real spatial order
+  // could previously be silently accepted as positional whenever it happened to be the only
+  // domain shared by both entities. Declaration order is not evidence of spatial order, so this
+  // must fail unless the model names the domain explicitly via "variable".
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "H1", type: "House" },
+      { id: "H2", type: "House" },
+    ],
+    domains: [{ variable: "color", entityType: "House", values: ["Red", "Blue", "Green"] }],
+    constraints: [{ kind: "adjacency", relation: "next to", a: "H1", b: "H2", variable: null }],
+  }
+  const reason = await runFails(csp)
+  assert.match(reason, /Could not find a single numeric positional domain/)
+})
+
+test("ADR-005 §2.3: adjacency over multiple shared (non-numeric) domains still fails as ambiguous, not a silent guess", async () => {
+  // With more than one domain shared by both entities and no explicit "variable", numeric-ness
+  // is the only positional signal available — so this must still fail, not silently pick one of
+  // two categorical domains (e.g. color vs. drink).
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "H1", type: "House" },
+      { id: "H2", type: "House" },
+    ],
+    domains: [
+      { variable: "color", entityType: "House", values: ["Red", "Blue"] },
+      { variable: "drink", entityType: "House", values: ["Tea", "Coffee"] },
+    ],
+    constraints: [{ kind: "adjacency", relation: "next to", a: "H1", b: "H2", variable: null }],
+  }
+  const reason = await runFails(csp)
+  assert.match(reason, /Could not find a single numeric positional domain/)
+})
+
+test('ADR-005 §2.3: adjacency\'s "variable" naming an unshared or unknown domain is a loud CompileError', async () => {
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "H1", type: "House" },
+      { id: "H2", type: "House" },
+    ],
+    domains: [{ variable: "color", entityType: "House", values: ["Red", "Blue"] }],
+    constraints: [{ kind: "adjacency", relation: "next to", a: "H1", b: "H2", variable: "nonexistent" }],
+  }
+  const reason = await runFails(csp)
+  assert.match(reason, /Unknown adjacency variable "nonexistent"/)
 })
 
 test("ADR-005 §2.3: an unrecognized adjacency relation name is a CompileError, never a silent guess", async () => {
@@ -74,7 +255,7 @@ test("ADR-005 §2.3: an unrecognized adjacency relation name is a CompileError, 
       { id: "H2", type: "House" },
     ],
     domains: [{ variable: "position", entityType: "House", values: ["1", "2"] }],
-    constraints: [{ kind: "adjacency", relation: "somewhere near", a: "H1", b: "H2" }],
+    constraints: [{ kind: "adjacency", relation: "somewhere near", a: "H1", b: "H2", variable: null }],
   }
   const reason = await runFails(csp)
   assert.match(reason, /Unrecognized adjacency relation/)
@@ -98,9 +279,9 @@ test("ADR-005 §2.4 mode 1 (fact-driven): relation facts expand derivedRule.then
         thenConstraints: [
           {
             kind: "arithmetic",
-            expression: { kind: "variableRef", variable: "color", entity: null },
+            expression: { kind: "variableRef", variable: "color", entity: "$a" },
             comparator: "!=",
-            target: "$b",
+            target: { kind: "variableRef", variable: "color", entity: "$b" },
           },
         ],
       },
@@ -111,6 +292,149 @@ test("ADR-005 §2.4 mode 1 (fact-driven): relation facts expand derivedRule.then
   assert.match(mzn, /constraint color\[France\] != color\[Germany\];/)
   // The relation fact itself produces no direct constraint output.
   assert.doesNotMatch(mzn, /constraint sharesBorder/)
+})
+
+test('a leaked, unresolved entity placeholder (e.g. "$outer" misused in a mode-1 fact-driven rule) is a loud CompileError, never a silently-sanitized identifier', async () => {
+  // A live eval run produced this exact confusion (PZL-0005): the model applied mode 2's
+  // "$this"/"$outer" convention inside a mode-1 (fact-driven, condition.kind "relation") rule,
+  // where only "$a"/"$b" resolve. Before this fix, this compiled to the invalid MiniZinc
+  // identifier `_outer` and only failed later, cryptically, at the `minizinc` CLI.
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "France", type: "Country" },
+      { id: "Spain", type: "Country" },
+    ],
+    domains: [{ variable: "color", entityType: "Country", values: ["Red", "Green"] }],
+    constraints: [
+      { kind: "relation", name: "sharesBorder", a: "France", b: "Spain" },
+      {
+        kind: "derivedRule",
+        appliesTo: "color",
+        condition: { kind: "relation", name: "sharesBorder" },
+        thenConstraints: [
+          {
+            kind: "arithmetic",
+            expression: { kind: "variableRef", variable: "color", entity: "$a" },
+            comparator: "!=",
+            target: { kind: "variableRef", variable: "color", entity: "$outer" },
+          },
+        ],
+      },
+    ],
+  }
+  const reason = await runFails(csp)
+  assert.match(reason, /Entity placeholder "\$outer".*never substituted/)
+  assert.doesNotMatch(reason, /_outer/)
+})
+
+test('a bare-string placeholder target (the removed legacy `target: "$b"` shape) is a loud CompileError, never the undeclared identifier "_b"', async () => {
+  // Copilot review finding: renderTarget's non-expression branch went straight to renderScalar,
+  // so a bare-string target never reached renderVariableRef's "$"-prefix guard at all — only the
+  // STRUCTURED `{kind: "variableRef", entity: "$b"}` shape was ever checked. Any bare-string
+  // placeholder (in a target, a condition's value, or an assignment's value) must fail the same
+  // way, via renderThresholdScalar, not silently sanitize into "_b".
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "France", type: "Country" },
+      { id: "Spain", type: "Country" },
+    ],
+    domains: [{ variable: "color", entityType: "Country", values: ["Red", "Green"] }],
+    constraints: [
+      { kind: "relation", name: "sharesBorder", a: "France", b: "Spain" },
+      {
+        kind: "derivedRule",
+        appliesTo: "color",
+        condition: { kind: "relation", name: "sharesBorder" },
+        thenConstraints: [
+          {
+            kind: "arithmetic",
+            expression: { kind: "variableRef", variable: "color", entity: "$a" },
+            comparator: "!=",
+            target: "$b",
+          },
+        ],
+      },
+    ],
+  }
+  const reason = await runFails(csp)
+  assert.match(reason, /Entity placeholder "\$b".*never substituted/)
+  assert.doesNotMatch(reason, /_b\b/)
+})
+
+test('ADR-004 §2.2/eval gap: ruleTable + ruleTableConstraint model a static, entity-independent rule (rock-paper-scissors)', async () => {
+  const csp: ExtractedCsp = {
+    entities: [{ id: "You", type: "Player" }],
+    domains: [{ variable: "move", entityType: "Player", values: ["Paper", "Rock", "Scissors"] }],
+    constraints: [
+      { kind: "ruleTable", name: "beats", a: "Paper", b: "Rock" },
+      { kind: "ruleTable", name: "beats", a: "Rock", b: "Scissors" },
+      { kind: "ruleTable", name: "beats", a: "Scissors", b: "Paper" },
+      {
+        kind: "ruleTableConstraint",
+        table: "beats",
+        a: { kind: "variableRef", variable: "move", entity: null },
+        b: { kind: "literal", value: "Rock" },
+      },
+    ],
+  }
+  const mzn = await run(csp)
+  assert.ok(
+    mzn.includes(
+      "constraint (move = Paper /\\ Rock = Rock) \\/ (move = Rock /\\ Rock = Scissors) \\/ (move = Scissors /\\ Rock = Paper);",
+    ),
+  )
+  // The rule table's own facts produce no direct constraint output.
+  assert.doesNotMatch(mzn, /constraint beats/)
+})
+
+test("ADR-004 §2.2/eval gap: ruleTableConstraint referencing an undeclared table is a CompileError", async () => {
+  const csp: ExtractedCsp = {
+    entities: [{ id: "You", type: "Player" }],
+    domains: [{ variable: "move", entityType: "Player", values: ["Paper", "Rock", "Scissors"] }],
+    constraints: [
+      {
+        kind: "ruleTableConstraint",
+        table: "beats",
+        a: { kind: "variableRef", variable: "move", entity: null },
+        b: { kind: "literal", value: "Rock" },
+      },
+    ],
+  }
+  const reason = await runFails(csp)
+  assert.match(reason, /Unknown rule table "beats"/)
+})
+
+test('ADR-004 §2.2/eval gap: ruleTable values not belonging to any declared Domain (e.g. a boolean "Yes"/"No" fact) get their own synthetic enum', async () => {
+  // Exactly the shape a live eval run produced (PZL-0013, Picking a Restaurant): a ruleTable
+  // attaching a boolean fact to existing domain values ("Wheat & Co is vegan-friendly: Yes") —
+  // "Wheat & Co" is the restaurant domain's own value, but "Yes" is never declared anywhere,
+  // and multiple ruleTables reuse it. Before this fix, "Yes" compiled to an undeclared MiniZinc
+  // identifier.
+  const csp: ExtractedCsp = {
+    entities: [{ id: "Group", type: "group" }],
+    domains: [
+      { variable: "restaurant", entityType: "group", values: ["Thai Palace", "Wheat & Co", "Garden Table"] },
+    ],
+    constraints: [
+      { kind: "ruleTable", name: "vegan_friendly", a: "Wheat & Co", b: "Yes" },
+      { kind: "ruleTable", name: "vegan_friendly", a: "Garden Table", b: "Yes" },
+      { kind: "ruleTable", name: "gluten_free", a: "Thai Palace", b: "Yes" },
+      {
+        kind: "ruleTableConstraint",
+        table: "vegan_friendly",
+        a: { kind: "variableRef", variable: "restaurant", entity: "Group" },
+        b: { kind: "literal", value: "Yes" },
+      },
+    ],
+  }
+  const mzn = await run(csp)
+  assert.match(mzn, /enum RuleTableValues_Yes = \{Yes\};/)
+  // Only ONE enum declares "Yes", shared across both ruleTables that use it — not redeclared.
+  assert.equal((mzn.match(/enum RuleTableValues_Yes/g) ?? []).length, 1)
+  assert.match(
+    mzn,
+    /constraint \(restaurant = Wheat___Co \/\\ Yes = Yes\) \\\/ \(restaurant = Garden_Table \/\\ Yes = Yes\);/,
+  )
 })
 
 test("ADR-005 §2.4 mode 2 (variable-conditioned): a comparison condition compiles to a reified implication", async () => {
@@ -132,6 +456,264 @@ test("ADR-005 §2.4 mode 2 (variable-conditioned): a comparison condition compil
   }
   const mzn = await run(csp)
   assert.match(mzn, /constraint \(score < 600\) -> \(outcome = Denied\);/)
+})
+
+test('arithmetic on a whole-hour clock-time domain (e.g. "9am"/"11am"/"4pm") uses each value\'s real hour, not its ordinal position', async () => {
+  // Mirrors PZL-0012 (Medication Schedule): "Drug B must be taken at least 4 hours after Drug
+  // A" over a 9am/11am/4pm domain. MiniZinc's own implicit enum-to-int coercion gives ONLY
+  // ordinal position (1, 2, 3) — verified directly against a real minizinc install that this
+  // silently makes ">= 4" impossible to satisfy (max ordinal gap is 2), even though the real
+  // hour gap (9am to 4pm) is 7.
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "DrugA", type: "drug" },
+      { id: "DrugB", type: "drug" },
+    ],
+    domains: [{ variable: "time", entityType: "drug", values: ["9am", "11am", "4pm"] }],
+    constraints: [
+      {
+        kind: "arithmetic",
+        expression: {
+          kind: "binaryOp",
+          op: "-",
+          operands: [
+            { kind: "variableRef", variable: "time", entity: "DrugB" },
+            { kind: "variableRef", variable: "time", entity: "DrugA" },
+          ],
+        },
+        comparator: ">=",
+        target: 4,
+      },
+    ],
+  }
+  const mzn = await run(csp)
+  assert.match(mzn, /array\[Values_v9am_v11am_v4pm\] of int: Values_v9am_v11am_v4pm_Hours = \[9, 11, 16\];/)
+  assert.match(
+    mzn,
+    /constraint \(Values_v9am_v11am_v4pm_Hours\[time\[DrugB\]\] - Values_v9am_v11am_v4pm_Hours\[time\[DrugA\]\]\) >= 4;/,
+  )
+})
+
+test('a bare clock-time variableRef used directly as an equality/inequality test (not inside arithmetic) stays a raw enum comparison, never hour-converted', async () => {
+  // Copilot review finding: converting every clock-domain variableRef unconditionally broke a
+  // clue like "Drug A is not taken at 9am" (expression is a BARE variableRef, no binaryOp at
+  // all) — hour conversion made it `Hours[time[DrugA]] != v9am`, comparing an int against the
+  // clock enum, a MiniZinc type error. A bare variableRef used as the entire top-level
+  // expression (not nested inside a binaryOp) must stay the raw enum reference.
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "DrugA", type: "drug" },
+      { id: "DrugB", type: "drug" },
+    ],
+    domains: [{ variable: "time", entityType: "drug", values: ["9am", "11am", "4pm"] }],
+    constraints: [
+      {
+        kind: "arithmetic",
+        expression: { kind: "variableRef", variable: "time", entity: "DrugA" },
+        comparator: "!=",
+        target: "9am",
+      },
+    ],
+  }
+  const mzn = await run(csp)
+  assert.doesNotMatch(mzn, /Hours\[/)
+  assert.match(mzn, /constraint time\[DrugA\] != v9am;/)
+})
+
+test('ADR-005 §2.4 mode 2, expressionComparison: a computed quantity (e.g. a debt-to-income ratio) can gate a derivedRule condition', async () => {
+  // Mirrors PZL-0011 (Loan Review): "if their debt-to-income ratio exceeds 43%, Denied" needs a
+  // COMPUTED expression (debt / income) as the condition, not a single declared variable —
+  // `comparison`'s condition can only test a plain declared variable directly.
+  const csp: ExtractedCsp = {
+    entities: [{ id: "App1", type: "Application" }],
+    domains: [
+      { variable: "debt", entityType: "Application", values: ["0", "10000"] },
+      { variable: "income", entityType: "Application", values: ["0", "20000"] },
+      { variable: "outcome", entityType: "Application", values: ["Denied", "Approved"] },
+    ],
+    constraints: [
+      { kind: "assignment", entity: "App1", variable: "debt", value: "3200" },
+      { kind: "assignment", entity: "App1", variable: "income", value: "9000" },
+      {
+        kind: "derivedRule",
+        appliesTo: "outcome",
+        condition: {
+          kind: "expressionComparison",
+          expression: {
+            kind: "binaryOp",
+            op: "/",
+            operands: [
+              { kind: "variableRef", variable: "debt", entity: null },
+              { kind: "variableRef", variable: "income", entity: null },
+            ],
+          },
+          operator: ">",
+          value: 0.43,
+        },
+        thenConstraints: [{ kind: "assignment", entity: "App1", variable: "outcome", value: "Denied" }],
+      },
+    ],
+  }
+  const mzn = await run(csp)
+  assert.match(mzn, /constraint \(\(debt \/ income\) > 0\.43\) -> \(outcome = Denied\);/)
+})
+
+test('ADR-004 §2.2/eval gap: "and" conjoins multiple simple conditions into one derivedRule gate', async () => {
+  // Mirrors PZL-0011's rules 3-4: "if not denied by rules 1-2, AND the requested amount is
+  // within policy limits, Approved" — a derivedRule conditioned on TWO independent checks, not
+  // one. `comparison`/`expressionComparison` can each only carry a single condition.
+  const csp: ExtractedCsp = {
+    entities: [{ id: "App1", type: "Application" }],
+    domains: [
+      { variable: "score", entityType: "Application", values: ["0", "1000"] },
+      { variable: "withinLimits", entityType: "Application", values: ["Yes", "No"] },
+      { variable: "outcome", entityType: "Application", values: ["Approved", "Denied"] },
+    ],
+    constraints: [
+      { kind: "assignment", entity: "App1", variable: "score", value: "680" },
+      { kind: "assignment", entity: "App1", variable: "withinLimits", value: "Yes" },
+      {
+        kind: "derivedRule",
+        appliesTo: "outcome",
+        condition: {
+          kind: "and",
+          conditions: [
+            { kind: "comparison", variable: "score", operator: ">=", value: 600 },
+            { kind: "comparison", variable: "withinLimits", operator: "=", value: "Yes" },
+          ],
+        },
+        thenConstraints: [{ kind: "assignment", entity: "App1", variable: "outcome", value: "Approved" }],
+      },
+    ],
+  }
+  const mzn = await run(csp)
+  assert.match(mzn, /constraint \(\(score >= 600\) \/\\ \(withinLimits = Yes\)\) -> \(outcome = Approved\);/)
+})
+
+test('"and" over an entity-indexed condition variable is a clear CompileError, not silently ignored', async () => {
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "H1", type: "House" },
+      { id: "H2", type: "House" },
+    ],
+    domains: [{ variable: "color", entityType: "House", values: ["Red", "Blue"] }],
+    constraints: [
+      {
+        kind: "derivedRule",
+        appliesTo: "House",
+        condition: {
+          kind: "and",
+          conditions: [{ kind: "comparison", variable: "color", operator: "==", value: "Red" }],
+        },
+        thenConstraints: [],
+      },
+    ],
+  }
+  const reason = await runFails(csp)
+  assert.match(reason, /entity-indexed.*"and".*isn't supported/)
+})
+
+test('ADR-005 §2.4 mode 2, entity-indexed condition: "$this" reifies per entity (self-referential zebra clue)', async () => {
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "H1", type: "House" },
+      { id: "H2", type: "House" },
+      { id: "H3", type: "House" },
+    ],
+    domains: [
+      { variable: "color", entityType: "House", values: ["red", "green", "ivory"] },
+      { variable: "position", entityType: "House", values: ["1", "2", "3"] },
+    ],
+    constraints: [
+      {
+        kind: "derivedRule",
+        appliesTo: "House",
+        condition: { kind: "comparison", variable: "color", operator: "==", value: "green" },
+        thenConstraints: [
+          {
+            kind: "arithmetic",
+            expression: { kind: "variableRef", variable: "position", entity: "$this" },
+            comparator: "=",
+            target: {
+              kind: "binaryOp",
+              op: "+",
+              operands: [
+                { kind: "variableRef", variable: "position", entity: "H1" },
+                { kind: "literal", value: 1 },
+              ],
+            },
+          },
+        ],
+      },
+    ],
+  }
+  const mzn = await run(csp)
+  assert.match(mzn, /constraint \(color\[H1\] == green\) -> \(position\[H1\] = \(position\[H1\] \+ 1\)\);/)
+  assert.match(mzn, /constraint \(color\[H2\] == green\) -> \(position\[H2\] = \(position\[H1\] \+ 1\)\);/)
+  assert.match(mzn, /constraint \(color\[H3\] == green\) -> \(position\[H3\] = \(position\[H1\] \+ 1\)\);/)
+  assert.doesNotMatch(mzn, /\$this/)
+})
+
+test('ADR-004 §2.2/eval gap: a nested derivedRule chains two anonymous entities via "$outer"/"$this" and forall', async () => {
+  // "Whoever smokes Chesterfields lives next to whoever owns the fox" — neither house is ever
+  // named, each is only identified by its own attribute (the classic zebra-puzzle shape this
+  // gap blocked, per ADR-004 §2.2/eval/README.md's "relational chaining" limitation).
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "H1", type: "House" },
+      { id: "H2", type: "House" },
+      { id: "H3", type: "House" },
+    ],
+    domains: [
+      { variable: "cigarette", entityType: "House", values: ["Chesterfields", "Kools", "OldGold"] },
+      { variable: "pet", entityType: "House", values: ["fox", "horse", "dog"] },
+      { variable: "position", entityType: "House", values: ["1", "2", "3"] },
+    ],
+    constraints: [
+      {
+        kind: "derivedRule",
+        appliesTo: "House",
+        condition: { kind: "comparison", variable: "cigarette", operator: "==", value: "Chesterfields" },
+        thenConstraints: [
+          {
+            kind: "derivedRule",
+            appliesTo: "House",
+            condition: { kind: "comparison", variable: "pet", operator: "==", value: "fox" },
+            thenConstraints: [
+              {
+                kind: "arithmetic",
+                expression: {
+                  kind: "binaryOp",
+                  op: "abs",
+                  operands: [
+                    {
+                      kind: "binaryOp",
+                      op: "-",
+                      operands: [
+                        { kind: "variableRef", variable: "position", entity: "$outer" },
+                        { kind: "variableRef", variable: "position", entity: "$this" },
+                      ],
+                    },
+                  ],
+                },
+                comparator: "=",
+                target: 1,
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  }
+  const mzn = await run(csp)
+  assert.match(
+    mzn,
+    /constraint \(cigarette\[H1\] == Chesterfields\) -> \(forall\(House_e in House\)\(\(pet\[House_e\] == fox\) -> \(abs\(\(position\[H1\] - position\[House_e\]\)\) = 1\)\)\);/,
+  )
+  assert.match(mzn, /cigarette\[H2\]/)
+  assert.match(mzn, /cigarette\[H3\]/)
+  assert.doesNotMatch(mzn, /\$this/)
+  assert.doesNotMatch(mzn, /\$outer/)
 })
 
 test("ADR-005 §2.5: arithmetic expressions render structured binary operations, not interpolated strings", async () => {

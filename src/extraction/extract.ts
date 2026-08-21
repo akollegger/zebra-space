@@ -40,9 +40,20 @@ interface RevisionContext {
   readonly issues: readonly string[]
 }
 
+/** Context for retrying a schema-invalid tool call — distinct from `RevisionContext` because
+ * there's no decoded `ExtractedCsp` to echo back, only the raw arguments and the validation
+ * error that rejected them. */
+interface SchemaRepairContext {
+  readonly raw: string
+  readonly detail: string
+}
+
 interface TierOutcome {
   readonly attempts: readonly ExtractionAttempt[]
   readonly accepted?: { readonly extractedCsp: ExtractedCsp }
+  // Carried so `extract()` can surface a real diagnostic instead of an empty `CriticRejected`
+  // when every attempt across both tiers failed schema validation and none ever decoded.
+  readonly lastSchemaViolation?: SchemaViolation
 }
 
 function extractionSystemPrompt(): string {
@@ -51,25 +62,120 @@ function extractionSystemPrompt(): string {
     "natural-language logic puzzle. Produce the entities, decision-variable domains, and " +
     "constraints exactly as described by the prose — represent every clue, invent nothing, " +
     "and never guess at a clue you can't confidently translate.\n\n" +
+    "The examples below use placeholder names (X/Y for entities, attr1/attr2 for variables, " +
+    'val1/val2 for values, N for a number) to illustrate SCHEMA STRUCTURE, not puzzle content ' +
+    "— map them onto whatever the actual puzzle's entities, attributes, and values are.\n\n" +
     "Three easily-confused clue shapes need different constraint kinds — pick by what the " +
     "clue actually asserts, not by superficial similarity:\n" +
-    '- Exclusion/negation ("The culprit is not Colonel Mustard", "not the Revolver"): use ' +
-    '`arithmetic` with comparator "!=" against the excluded value. This is NOT ' +
-    "`linkedAttributes` — the clue rules one value out, it does not link two values together.\n" +
-    '- Attribute co-occurrence with NO entity ever named ("The Englishman lives in the red ' +
-    'house"): use `linkedAttributes` — it links two-or-more attribute values on some ' +
-    "unspecified entity. Do not use this for exclusion/negation clues, and do not use it to " +
-    "represent an entity ruling out a value.\n" +
-    '- A specific, already-known entity ("the first house", or one named directly): use ' +
+    '- Exclusion/negation ("X is not val1", "not val2"): use `arithmetic` with comparator ' +
+    '"!=" against the excluded value. This is NOT `linkedAttributes` — the clue rules one ' +
+    "value out, it does not link two values together.\n" +
+    '- Attribute co-occurrence with NO entity ever named ("some entity has attr1=val1 and ' +
+    'attr2=val2 at the same time"): use `linkedAttributes` — it links two-or-more attribute ' +
+    "values on some unspecified entity. Do not use this for exclusion/negation clues, and do " +
+    "not use it to represent an entity ruling out a value.\n" +
+    '- A specific, already-known entity ("the first one", or one named directly): use ' +
     "`assignment`.\n\n" +
     "A clue comparing two computed quantities, or one entity's value against another's " +
-    '("the sum of these three cells equals the sum of those three", "Drug B is at least 4 ' +
-    'hours after Drug A", "the color of house A differs from house B\'s"): use `arithmetic` ' +
-    "with a structured `target` (an `ArithmeticExpression`, not just a plain value). Never " +
-    'invent a compound variable name like "houseA.color" or "time(DrugB)" to smuggle an ' +
-    "entity reference into a plain string — `variableRef` has its own `variable` (the domain " +
-    "name) and `entity` (null for a scalar domain, or the specific entity id) fields for " +
-    "exactly this."
+    '("the total of these three equals the total of those three", "X\'s attr1 is at least N ' +
+    'units more than Y\'s", "X\'s attr1 differs from Y\'s"): use `arithmetic` with a ' +
+    "structured `target` (an `ArithmeticExpression`, not just a plain value). Never invent a " +
+    'compound variable name like "X.attr1" or "attr1(Y)" to smuggle an entity reference into ' +
+    "a plain string — `variableRef` has its own `variable` (the domain name) and `entity` " +
+    "(null for a scalar domain, or the specific entity id) fields for exactly this.\n\n" +
+    "`arithmetic`'s `comparator` field (e.g. \"=\", \"!=\", \">=\") is ALWAYS separate from " +
+    "`expression`'s `op` — `op` is only ever one of the arithmetic operators " +
+    '(+ - * / min max abs), never a comparator. For "X\'s attr1 is at least N units more than ' +
+    'Y\'s attr1": `expression` is `{kind: "binaryOp", op: "-", operands: [attr1@X, attr1@Y]}`, ' +
+    '`comparator` is ">=", `target` is `{kind: "literal", value: N}` — do NOT put ">=" inside ' +
+    "`expression.op`. For a symmetric \"at least N units apart\" clue, wrap the difference in " +
+    '`abs`: `expression` is `{kind: "binaryOp", op: "abs", operands: [{kind: "binaryOp", op: ' +
+    '"-", operands: [a, b]}]}`, with the threshold still in the top-level `comparator`/' +
+    "`target`.\n\n" +
+    'Nesting depth is bounded — for "at least N units away from EACH of several fixed ' +
+    'references" (e.g. "away from any of these two reference points"), do NOT wrap multiple ' +
+    'distances in one combined `min`/`max` expression; that nests one level deeper than this ' +
+    "schema allows. Instead emit ONE separate `arithmetic` constraint per reference (`abs(X - " +
+    'ref1) >= N`, `abs(X - ref2) >= N`, ...) — every top-level constraint is implicitly ANDed, ' +
+    "so this is logically identical and keeps each expression shallow.\n\n" +
+    'For a positional/ordering clue between two entities ("X is immediately right of Y", "X is ' +
+    'next to Y"): use `adjacency`. Set its `variable` field to name the domain the ordering is ' +
+    "over whenever that domain's values are not plain integers (e.g. time slots like " +
+    '\"9am\"/\"10am\", ordered by the sequence you declared them in) — leave `variable` null ' +
+    "ONLY when the two entities share exactly one domain whose values are already plain " +
+    "integers. Guessing wrong here (naming a categorical, non-ordered domain like color, or " +
+    "leaving `variable` null when it's needed) is not just a compile error — it can silently " +
+    "produce a wrong solution, so if you're unsure which shared domain is the ordered one, " +
+    "name it explicitly.\n\n" +
+    "A derivedRule's two condition shapes each have their OWN entity-placeholder tokens in " +
+    "thenConstraints, always used the SAME way — as the `entity` field of a `variableRef` (or " +
+    "`assignment`), never as a bare, freestanding string value — don't mix the two token " +
+    "families up:\n" +
+    '- `condition: {kind: "relation", name: ...}` (fact-driven — paired with separate ' +
+    '`relation` facts elsewhere, e.g. "X relates to Y via someRelation"): thenConstraints ' +
+    'reference the matched fact\'s two entities via `variableRef.entity: "$a"` / `"$b"` — on ' +
+    "EITHER side (`expression` or `target`), whichever the clue means. Never use " +
+    "`\"$this\"`/`\"$outer\"` here.\n" +
+    '- `condition: {kind: "comparison", variable, operator, value}` (variable-conditioned, ' +
+    'evaluated per entity — see below): use `variableRef.entity: "$this"` / `"$outer"` ' +
+    'instead. Never use `"$a"`/`"$b"` here.\n\n' +
+    'A derivedRule\'s condition is evaluated per entity ("if THIS entity\'s attr1 is val1, ' +
+    'then..."), e.g. "whichever entity has attr1=val1 also has attr2=val2" or "if an entity\'s ' +
+    'attr1 is val1, its attr3 is one more than the entity whose attr1 is val2". Inside that ' +
+    'derivedRule\'s `thenConstraints`, use the literal entity id `"$this"` for ' +
+    '`variableRef.entity` (or `assignment.entity`) wherever you mean "the entity currently ' +
+    'satisfying this rule\'s condition" — never invent another placeholder name or the ' +
+    'entity\'s attribute value itself (e.g. not `entity: "val1"`). Reference a different, ' +
+    "already-named entity by its real id as usual.\n\n" +
+    'When a clue relates TWO entities that are BOTH unnamed, each identified only by its own ' +
+    'attribute ("whichever entity has attr1=val1 is adjacent to whichever entity has ' +
+    'attr2=val2" — neither entity is ever named directly), nest a second derivedRule inside ' +
+    "the first one's `thenConstraints`: the outer derivedRule's condition picks out the " +
+    'first entity ("attr1 == val1"), the inner nested derivedRule\'s condition picks out the ' +
+    'second ("attr2 == val2"). Inside the INNER rule\'s own `thenConstraints`, use `"$this"` ' +
+    'for the inner entity (the one satisfying the inner condition) and `"$outer"` for the ' +
+    'outer entity (the one satisfying the outer condition) — never reuse `"$this"` for ' +
+    "both.\n\n" +
+    'When that relation is DIRECTIONAL rather than symmetric ("whichever entity has attr1=val1 ' +
+    'is immediately AFTER whichever entity has attr2=val2" — not just "adjacent to"), the ' +
+    "arithmetic's operand order must match the prose's stated direction exactly, not just its " +
+    'entities: nest val1 as the outer condition and val2 as the inner (as above), then "val1 ' +
+    'is immediately after val2" becomes `position[$outer] - position[$this] == 1` — $outer ' +
+    "(val1, the entity stated to come after) MINUS \$this (val2, the entity it comes after), " +
+    'never the reverse. Getting this backwards ($this - $outer instead) is NOT a compile error ' +
+    "— it silently produces the mirror-image (wrong) solution instead of the correct one, so " +
+    "double-check which side of the subtraction is which before finishing.\n\n" +
+    'Some puzzles depend on a small, closed, static rule between VALUES rather than between ' +
+    'specific entities ("val1 beats val2, val2 beats val3, val3 beats val1" — a fixed fact ' +
+    "about the values themselves, true no matter which entity holds them; contrast with " +
+    '`relation`, which is a fact about specific entities like "X relates to Y via ' +
+    'someRelation"). Represent each such fact as one `ruleTable` entry — `{kind: ' +
+    '"ruleTable", name, a, b}`, e.g. `{name: "beats", a: "val1", b: "val2"}` — with every ' +
+    'entry for the same table sharing `name`. Then use exactly one `ruleTableConstraint` — ' +
+    '`{kind: "ruleTableConstraint", table, a, b}`, where `a`/`b` are each either `{kind: ' +
+    '"variableRef", variable, entity}` or `{kind: "literal", value}` — to require the ACTUAL ' +
+    'values satisfy the table, e.g. "X\'s attr1 must beat the known constant val2" becomes ' +
+    '`{table: "beats", a: {kind: "variableRef", variable: "attr1", entity: "X"}, b: {kind: ' +
+    '"literal", value: "val2"}}`. Never use `derivedRule`\'s fact-driven mode for this — that ' +
+    "expands per matching ENTITY pair, not per value.\n\n" +
+    "A derivedRule's condition normally tests a single plain declared variable directly " +
+    '(`condition.kind: "comparison"`) — but some clues condition on a COMPUTED quantity ' +
+    'instead ("if the ratio of two declared quantities exceeds N%", "if the lower of two ' +
+    'declared quantities is below N"). For these, use `condition.kind: ' +
+    '"expressionComparison"` — `{kind: "expressionComparison", expression, operator, value}`, ' +
+    "where `expression` is a full `ArithmeticExpression` (the same structured shape " +
+    '`arithmetic` constraints use, e.g. `{kind: "binaryOp", op: "/", operands: [attr1, ' +
+    'attr2]}` for a ratio, or `{kind: "binaryOp", op: "min", operands: [attr1@X, attr1@Y]}` ' +
+    'for "the lower of two values") — never `"comparison"`, whose `variable` field can only ' +
+    "name a single plain declared variable, not a computed one.\n\n" +
+    'A derivedRule normally has ONE condition — but some clues combine multiple independent ' +
+    'checks with "and" ("if not denied by the earlier rules AND the amount is within policy ' +
+    'limits, Approved"). For these, use `condition.kind: "and"` — `{kind: "and", conditions: ' +
+    '[...]}`, where each entry in `conditions` is itself a `"comparison"` or ' +
+    '`"expressionComparison"` (never `"relation"`, and never another `"and"` — no nesting). Do ' +
+    "NOT try to express this as nested `derivedRule`s (that changes which entity a rule applies " +
+    'to, it does not combine two conditions into one gate) or as a single condition with an ' +
+    '"AND"-like operator string — there is no such operator; `"and"` is its own `condition.kind`.'
   )
 }
 
@@ -84,6 +190,17 @@ function revisionUserPrompt(prose: string, context: RevisionContext): string {
     `Your previous extraction was:\n${JSON.stringify(context.extractedCsp)}\n\n` +
     `A critic rejected it for these reasons:\n${issueList}\n\n` +
     "Produce a corrected extraction that addresses every reason above."
+  )
+}
+
+function schemaRepairUserPrompt(prose: string, repair: SchemaRepairContext): string {
+  return (
+    `Puzzle:\n\n${prose}\n\n` +
+    `Your previous tool call did not match the required schema.\n\n` +
+    `Raw arguments you sent:\n${repair.raw}\n\n` +
+    `Validation error:\n${repair.detail}\n\n` +
+    "Call the tool again with corrected arguments that strictly satisfy the schema — fix only " +
+    "the structural problem described above; keep everything else faithful to the puzzle."
   )
 }
 
@@ -116,11 +233,18 @@ function extractOnce(
   model: string,
   prose: string,
   context?: RevisionContext,
+  repair?: SchemaRepairContext,
 ): Effect.Effect<ExtractedCsp, ProviderError | SchemaRejected | SchemaViolation> {
+  const userPrompt =
+    repair !== undefined
+      ? schemaRepairUserPrompt(prose, repair)
+      : context !== undefined
+        ? revisionUserPrompt(prose, context)
+        : extractionUserPrompt(prose)
   return requestStructuredCompletion({
     model,
     systemPrompt: extractionSystemPrompt(),
-    userPrompt: context === undefined ? extractionUserPrompt(prose) : revisionUserPrompt(prose, context),
+    userPrompt,
     schemaName: "ExtractedCsp",
     jsonSchema: extractedCspJsonSchema,
     schema: ExtractedCsp,
@@ -131,15 +255,46 @@ function critiqueOnce(
   model: string,
   prose: string,
   candidate: ExtractedCsp,
+  repair?: SchemaRepairContext,
 ): Effect.Effect<FidelityCritique, ProviderError | SchemaRejected | SchemaViolation> {
   return requestStructuredCompletion({
     model,
     systemPrompt: critiqueSystemPrompt(),
-    userPrompt: critiqueUserPrompt(prose, candidate),
+    userPrompt: repair !== undefined ? schemaRepairUserPrompt(prose, repair) : critiqueUserPrompt(prose, candidate),
     schemaName: "FidelityCritique",
     jsonSchema: fidelityCritiqueJsonSchema,
     schema: FidelityCritique,
   })
+}
+
+type CritiqueOutcome =
+  | { readonly ok: true; readonly critique: FidelityCritique }
+  | { readonly ok: false; readonly violation: SchemaViolation }
+
+/**
+ * `critiqueOnce`, but a schema-invalid critic response gets exactly one immediate repair retry
+ * before giving up — the same "SchemaViolation is treated like a rejection, not aborted" policy
+ * `extractOnce`'s callers already get (`runTier`, below), extended to cover the critique step
+ * itself. Found via code review: only `extractOnce` was ever wrapped in `catchTag`, so a
+ * schema-invalid *critique* (e.g. the critic model replying in prose) still propagated straight
+ * out of `runTier` uncaught, skipping the frontier tier the same way the original bug did for
+ * extraction. Bounded to one retry rather than its own round budget — recovering a critique
+ * doesn't need a fresh extraction, unlike a genuinely rejected one.
+ */
+function critiqueWithRepair(
+  model: string,
+  prose: string,
+  candidate: ExtractedCsp,
+): Effect.Effect<CritiqueOutcome, ProviderError | SchemaRejected> {
+  return critiqueOnce(model, prose, candidate).pipe(
+    Effect.map((critique): CritiqueOutcome => ({ ok: true, critique })),
+    Effect.catchTag("SchemaViolation", (violation) =>
+      critiqueOnce(model, prose, candidate, { raw: violation.raw, detail: violation.detail }).pipe(
+        Effect.map((critique): CritiqueOutcome => ({ ok: true, critique })),
+        Effect.catchTag("SchemaViolation", (violation2) => Effect.succeed<CritiqueOutcome>({ ok: false, violation: violation2 })),
+      ),
+    ),
+  )
 }
 
 /**
@@ -148,6 +303,13 @@ function critiqueOnce(
  * Returns the accepted result *or* every attempt made, rather than failing outright, so a caller
  * can escalate to another tier and still report the full attempt history if that tier also fails
  * (ADR-004 §2.6's CriticRejected carries attempts from every tier, not just the last).
+ *
+ * A schema-invalid tool call (`SchemaViolation`) is treated the same way as a critic rejection —
+ * consumed as one of the `MAX_REVISIONS_PER_TIER + 1` rounds, retried with a repair prompt
+ * showing the model its own raw arguments and the validation error — rather than propagating out
+ * and aborting the whole extraction. It previously did exactly that: `resolvedModel` was `null`
+ * for 100% of `SchemaViolation` failures across every `eval/results.md` run, meaning the frontier
+ * tier was never even attempted when the cheap tier produced a malformed payload.
  */
 function runTier(
   model: string,
@@ -156,19 +318,43 @@ function runTier(
   return Effect.gen(function* () {
     const attempts: ExtractionAttempt[] = []
     let context: RevisionContext | undefined
+    let repair: SchemaRepairContext | undefined
+    let lastSchemaViolation: SchemaViolation | undefined
 
     for (let round = 0; round <= MAX_REVISIONS_PER_TIER; round++) {
-      const extractedCsp = yield* extractOnce(model, prose, context)
-      const critique = yield* critiqueOnce(model, prose, extractedCsp)
-      attempts.push({ model, extractedCsp, critique })
+      const attempt = yield* extractOnce(model, prose, context, repair).pipe(
+        Effect.map((extractedCsp) => ({ ok: true as const, extractedCsp })),
+        Effect.catchTag("SchemaViolation", (violation) => Effect.succeed({ ok: false as const, violation })),
+      )
+
+      if (!attempt.ok) {
+        lastSchemaViolation = attempt.violation
+        repair = { raw: attempt.violation.raw, detail: attempt.violation.detail }
+        context = undefined
+        continue
+      }
+
+      repair = undefined
+      const critiqueOutcome = yield* critiqueWithRepair(model, prose, attempt.extractedCsp)
+      if (!critiqueOutcome.ok) {
+        // The critique itself never conformed, even after one repair retry — this round produced
+        // no attempt to record (no valid critique exists to pair with the extraction), but the
+        // extraction succeeded, so re-extracting fresh next round is still a reasonable recovery.
+        lastSchemaViolation = critiqueOutcome.violation
+        context = undefined
+        continue
+      }
+
+      const critique = critiqueOutcome.critique
+      attempts.push({ model, extractedCsp: attempt.extractedCsp, critique })
 
       if (critique.accepted) {
-        return { attempts, accepted: { extractedCsp } }
+        return { attempts, accepted: { extractedCsp: attempt.extractedCsp } }
       }
-      context = { extractedCsp, issues: critique.issues }
+      context = { extractedCsp: attempt.extractedCsp, issues: critique.issues }
     }
 
-    return { attempts }
+    return lastSchemaViolation === undefined ? { attempts } : { attempts, lastSchemaViolation }
   })
 }
 
@@ -192,8 +378,16 @@ export function extract(prose: string, options?: ExtractOptions): Effect.Effect<
       return { extractedCsp: frontierOutcome.accepted.extractedCsp, model: frontierModel }
     }
 
-    return yield* Effect.fail(
-      new CriticRejected({ attempts: [...cheapOutcome.attempts, ...frontierOutcome.attempts] }),
-    )
+    const attempts = [...cheapOutcome.attempts, ...frontierOutcome.attempts]
+
+    // Neither tier ever decoded a candidate to critique — every round was a schema violation.
+    // Surface the frontier tier's last one (the more relevant, final diagnostic) rather than a
+    // CriticRejected carrying zero attempts, which would hide why extraction actually failed.
+    const lastSchemaViolation = frontierOutcome.lastSchemaViolation ?? cheapOutcome.lastSchemaViolation
+    if (attempts.length === 0 && lastSchemaViolation !== undefined) {
+      return yield* Effect.fail(lastSchemaViolation)
+    }
+
+    return yield* Effect.fail(new CriticRejected({ attempts }))
   })
 }

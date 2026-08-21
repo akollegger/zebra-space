@@ -45,25 +45,20 @@ export const Domain = Schema.Struct({
 })
 export type Domain = Schema.Schema.Type<typeof Domain>
 
-export const DerivedCondition = Schema.Union([
+const RuleTableOperandSchema = Schema.Union([
   Schema.Struct({
-    kind: Schema.Literal("relation"),
-    name: Schema.String,
-  }).annotate({
-    description:
-      "Fact-driven condition: true for entity pairs where the named `relation` constraint holds.",
-  }),
-  Schema.Struct({
-    kind: Schema.Literal("comparison"),
+    kind: Schema.Literal("variableRef"),
     variable: Schema.String,
-    operator: Schema.String,
-    value: Schema.Union([Schema.String, Schema.Number]),
-  }).annotate({
-    description:
-      "Variable-conditioned condition: compares an extracted domain variable against a value.",
+    entity: Schema.NullOr(Schema.String),
+  }).annotate({ description: "References a domain variable — see `ArithmeticExpression`'s `variableRef`." }),
+  Schema.Struct({ kind: Schema.Literal("literal"), value: Schema.String }).annotate({
+    description: "A known constant value (e.g. the opponent's fixed move), not a variable.",
   }),
-])
-export type DerivedCondition = Schema.Schema.Type<typeof DerivedCondition>
+]).annotate({
+  description:
+    "Either side of a `ruleTableConstraint` — a variable's value, or a known constant. Values " +
+    "are strings, matching a domain's own value vocabulary.",
+})
 
 // The TypeScript types stay fully recursive — consumers (notably src/compiler) reason about
 // arbitrarily nested values. Only the *schema* is depth-bounded, which is the safe direction:
@@ -123,6 +118,61 @@ function makeArithmeticExpression(depth: number): Schema.Codec<ArithmeticExpress
 
 export const ArithmeticExpression = makeArithmeticExpression(MAX_NESTING_DEPTH)
 
+const ComparisonCondition = Schema.Struct({
+  kind: Schema.Literal("comparison"),
+  variable: Schema.String,
+  operator: Schema.String,
+  value: Schema.Union([Schema.String, Schema.Number]),
+}).annotate({
+  description: "Variable-conditioned condition: compares an extracted domain variable against a value.",
+})
+
+const ExpressionComparisonCondition = Schema.Struct({
+  kind: Schema.Literal("expressionComparison"),
+  expression: ArithmeticExpression,
+  operator: Schema.String,
+  value: Schema.Union([Schema.String, Schema.Number]),
+}).annotate({
+  description:
+    "Computed-quantity condition: compares a COMPUTED expression (e.g. a ratio, a sum, the " +
+    'lower of two values) against a threshold — e.g. "if their debt-to-income ratio exceeds ' +
+    '43%" or "if the lower of their two credit scores is below 600". Use this instead of ' +
+    '`comparison` whenever the condition itself is derived from more than one plain declared ' +
+    "variable, rather than testing a single declared variable directly.",
+})
+
+export const DerivedCondition = Schema.Union([
+  Schema.Struct({
+    kind: Schema.Literal("relation"),
+    name: Schema.String,
+  }).annotate({
+    description:
+      "Fact-driven condition: true for entity pairs where the named `relation` constraint holds.",
+  }),
+  ComparisonCondition,
+  ExpressionComparisonCondition,
+  Schema.Struct({
+    kind: Schema.Literal("and"),
+    conditions: Schema.Array(Schema.Union([ComparisonCondition, ExpressionComparisonCondition])),
+  }).annotate({
+    description:
+      'Conjunction of two-or-more SIMPLE conditions ("comparison"/"expressionComparison" only, ' +
+      'not "relation" or another "and") — ALL must hold. Use when a derivedRule\'s condition ' +
+      'combines multiple independent checks with "and" ("if not denied by the earlier rules AND ' +
+      'the amount is within policy limits") rather than a single test. Each condition here must ' +
+      "reference a scalar (non-entity-indexed) variable — combining per-entity conditions this " +
+      "way isn't supported.",
+  }),
+])
+export type DerivedCondition = Schema.Schema.Type<typeof DerivedCondition>
+
+/** Either side of a `ruleTableConstraint` — a variable's value, or a known constant. Values are
+ * strings (rule tables relate domain values, e.g. "Paper"/"Rock", not numbers), so this is its
+ * own small union rather than reusing `ArithmeticExpression` (whose `literal` is number-only). */
+export type RuleTableOperand =
+  | { readonly kind: "variableRef"; readonly variable: string; readonly entity: string | null }
+  | { readonly kind: "literal"; readonly value: string }
+
 export type ExtractedConstraint =
   | { readonly kind: "assignment"; readonly entity: string; readonly variable: string; readonly value: string }
   | {
@@ -131,7 +181,13 @@ export type ExtractedConstraint =
       readonly attributes: readonly { readonly variable: string; readonly value: string }[]
     }
   | { readonly kind: "allDifferent"; readonly variable: string }
-  | { readonly kind: "adjacency"; readonly relation: string; readonly a: string; readonly b: string }
+  | {
+      readonly kind: "adjacency"
+      readonly relation: string
+      readonly a: string
+      readonly b: string
+      readonly variable: string | null
+    }
   | { readonly kind: "relation"; readonly name: string; readonly a: string; readonly b: string }
   | {
       readonly kind: "derivedRule"
@@ -144,6 +200,13 @@ export type ExtractedConstraint =
       readonly expression: ArithmeticExpression
       readonly comparator: string
       readonly target: string | number | ArithmeticExpression
+    }
+  | { readonly kind: "ruleTable"; readonly name: string; readonly a: string; readonly b: string }
+  | {
+      readonly kind: "ruleTableConstraint"
+      readonly table: string
+      readonly a: RuleTableOperand
+      readonly b: RuleTableOperand
     }
 
 function nonRecursiveConstraints() {
@@ -179,10 +242,15 @@ function nonRecursiveConstraints() {
       relation: Schema.String,
       a: Schema.String,
       b: Schema.String,
+      variable: Schema.NullOr(Schema.String),
     }).annotate({
       description:
         'An ordering/positional relation between two entities (e.g. "immediately right of", ' +
-        '"next to") over an ordered/numeric domain.',
+        '"next to"). `variable` must name the domain the ordering is over whenever that domain\'s ' +
+        "values are not plain integers (e.g. time slots like \"9am\"/\"10am\", ordered by their " +
+        "declared sequence) — otherwise the compiler cannot tell an ordered domain from an " +
+        'unordered categorical one (e.g. color) and will reject the constraint as ambiguous. Set ' +
+        "`variable` to null only when the two entities share exactly one numeric domain.",
     }),
     Schema.Struct({
       kind: Schema.Literal("relation"),
@@ -206,6 +274,34 @@ function nonRecursiveConstraints() {
         "itself be a structured expression when the clue compares two computed quantities " +
         '(e.g. "the sum of these three cells equals the sum of those three cells", or one ' +
         "entity's value against another's).",
+    }),
+    Schema.Struct({
+      kind: Schema.Literal("ruleTable"),
+      name: Schema.String,
+      a: Schema.String,
+      b: Schema.String,
+    }).annotate({
+      description:
+        "One fact in a static, entity-independent rule table over domain VALUES, not entities — " +
+        'e.g. "paper beats rock" is {name: "beats", a: "Paper", b: "Rock"}. Structurally the same ' +
+        "shape as `relation`, but `a`/`b` are values from a domain's `values`, never entity ids. " +
+        'Declare one `ruleTable` entry per clue, all sharing the same `name`, to build up the ' +
+        "full table (e.g. rock-paper-scissors' three \"beats\" clues). Consumed by a paired " +
+        "`ruleTableConstraint`; produces no output by itself.",
+    }),
+    Schema.Struct({
+      kind: Schema.Literal("ruleTableConstraint"),
+      table: Schema.String,
+      a: RuleTableOperandSchema,
+      b: RuleTableOperandSchema,
+    }).annotate({
+      description:
+        "Requires two values — each either a variable's value (`variableRef`) or a known " +
+        "constant (`literal`) — to be related by the named `ruleTable`: some declared tuple " +
+        '`{a, b}` in that table must match them. Use this when a clue depends on a small, ' +
+        'closed, static rule between VALUES (e.g. "you should play a move that beats the ' +
+        'opponent\'s Rock" against a "beats" ruleTable) — never `relation`/`derivedRule`\'s ' +
+        "fact-driven mode, which expands per matching ENTITY pair, not per value.",
     }),
   ]
 }
