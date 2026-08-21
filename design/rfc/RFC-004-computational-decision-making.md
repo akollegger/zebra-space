@@ -302,7 +302,9 @@ requires — [ADR-004](../adr/ADR-004-llm-extraction-critic-loop.md)'s extractio
 already is — and that stays invisible from outside; what is fixed is the shape at the boundary.
 [ADR-003](../adr/ADR-003-cli-interface.md) already chose that shape in practice (subcommands,
 output pipeable between them, `--json` for machine consumers, explicit flags for "reproducible,
-non-interactive/scripted use") without ever stating it as a stance. This subsection states it.
+non-interactive/scripted use") without ever stating it as a stance. This subsection states it, and
+the constitution's Principle VI (v1.3.0) makes it binding on every future capability rather than
+advisory to this RFC alone.
 
 ### 5.6 Cross-cutting concerns
 
