@@ -69,6 +69,28 @@ function renderScalar(value: string | number): string {
   return isIntegerLiteral(value) ? value : sanitizeIdentifier(value)
 }
 
+/**
+ * Renders a plain scalar/threshold value (an `arithmetic`/`derivedRule` condition's `target`/
+ * `value`, or an `assignment`'s `value`) — never a specific entity, unlike `renderVariableRef`.
+ * Fails loudly if it's a leaked, never-substituted entity-placeholder token instead, rather than
+ * silently sanitizing it into a plausible-looking but undeclared identifier: the legacy bare-
+ * string target shape (`target: "$b"`) is no longer translated (mode 1's `$a`/`$b` only resolve
+ * inside a structured `variableRef.entity` now, ADR-005 §2.4), so nothing else catches it here.
+ */
+function renderThresholdScalar(value: string | number): Effect.Effect<string, CompileError> {
+  if (typeof value === "string" && value.startsWith("$")) {
+    return Effect.fail(
+      new CompileError({
+        reason:
+          `Entity placeholder "${value}" was never substituted with a real entity — a bare ` +
+          `"$a"/"$b"/"$this"/"$outer" string here isn't supported; use a structured ` +
+          "variableRef.entity instead.",
+      }),
+    )
+  }
+  return Effect.succeed(renderScalar(value))
+}
+
 interface CompiledDomain {
   readonly domain: Domain
   readonly entityIds: readonly string[]
@@ -327,15 +349,15 @@ function renderTarget(
   compiled: readonly CompiledDomain[],
   target: string | number | ArithmeticExpression,
 ): Effect.Effect<string, CompileError> {
-  return isArithmeticExpressionTarget(target) ? renderArithmeticExpr(compiled, target) : Effect.succeed(renderScalar(target))
+  return isArithmeticExpressionTarget(target) ? renderArithmeticExpr(compiled, target) : renderThresholdScalar(target)
 }
 
 function compileAssignment(
   compiled: readonly CompiledDomain[],
   c: Extract<ExtractedConstraint, { kind: "assignment" }>,
 ): Effect.Effect<string, CompileError> {
-  return renderVariableRef(compiled, c.variable, c.entity).pipe(
-    Effect.map((ref) => `constraint ${ref} = ${renderScalar(c.value)};`),
+  return Effect.all([renderVariableRef(compiled, c.variable, c.entity), renderThresholdScalar(c.value)]).pipe(
+    Effect.map(([ref, value]) => `constraint ${ref} = ${value};`),
   )
 }
 
@@ -622,9 +644,12 @@ function compileNestedVariableConditionedRule(
   const generatorVar = sanitizeIdentifier(`${domainInfo.entityTypeEnumName}_e`)
   const tokens: EntityTokenMap = { [SELF_ENTITY_TOKEN]: generatorVar, [OUTER_ENTITY_TOKEN]: outerEntityId }
 
-  return renderVariableRef(compiled, condition.variable, generatorVar).pipe(
-    Effect.flatMap((conditionRef) => {
-      const conditionExpr = `${conditionRef} ${condition.operator} ${renderScalar(condition.value)}`
+  return Effect.all([
+    renderVariableRef(compiled, condition.variable, generatorVar),
+    renderThresholdScalar(condition.value),
+  ]).pipe(
+    Effect.flatMap(([conditionRef, conditionValue]) => {
+      const conditionExpr = `${conditionRef} ${condition.operator} ${conditionValue}`
       const substituted = rule.thenConstraints.map((thenConstraint) =>
         substituteEntityTokensInConstraint(thenConstraint, tokens),
       )
@@ -675,9 +700,9 @@ function compileVariableConditionedRule(
   }
 
   if (domainInfo.isScalar) {
-    return renderVariableRef(compiled, condition.variable).pipe(
-      Effect.flatMap((conditionRef) => {
-        const conditionExpr = `${conditionRef} ${condition.operator} ${renderScalar(condition.value)}`
+    return Effect.all([renderVariableRef(compiled, condition.variable), renderThresholdScalar(condition.value)]).pipe(
+      Effect.flatMap(([conditionRef, conditionValue]) => {
+        const conditionExpr = `${conditionRef} ${condition.operator} ${conditionValue}`
         return Effect.forEach(rule.thenConstraints, (thenConstraint) =>
           compileThenConstraint(compiled, thenConstraint, undefined),
         ).pipe(
@@ -693,9 +718,9 @@ function compileVariableConditionedRule(
   // SELF_ENTITY_TOKEN in thenConstraints with that entity (mirrors mode 1's per-relation-fact
   // $a/$b substitution in compileFactDrivenThen).
   return Effect.forEach(domainInfo.entityIds, (entityId) =>
-    renderVariableRef(compiled, condition.variable, entityId).pipe(
-      Effect.flatMap((conditionRef) => {
-        const conditionExpr = `${conditionRef} ${condition.operator} ${renderScalar(condition.value)}`
+    Effect.all([renderVariableRef(compiled, condition.variable, entityId), renderThresholdScalar(condition.value)]).pipe(
+      Effect.flatMap(([conditionRef, conditionValue]) => {
+        const conditionExpr = `${conditionRef} ${condition.operator} ${conditionValue}`
         const substituted = rule.thenConstraints.map((thenConstraint) =>
           substituteEntityTokensInConstraint(thenConstraint, { [SELF_ENTITY_TOKEN]: entityId }),
         )
@@ -731,8 +756,8 @@ function renderSimpleCondition(
   condition: Extract<DerivedCondition, { kind: "comparison" | "expressionComparison" }>,
 ): Effect.Effect<string, CompileError> {
   if (condition.kind === "expressionComparison") {
-    return renderArithmeticExpr(compiled, condition.expression).pipe(
-      Effect.map((ref) => `${ref} ${condition.operator} ${renderScalar(condition.value)}`),
+    return Effect.all([renderArithmeticExpr(compiled, condition.expression), renderThresholdScalar(condition.value)]).pipe(
+      Effect.map(([ref, value]) => `${ref} ${condition.operator} ${value}`),
     )
   }
   const domainInfo = findDomain(compiled, condition.variable)
@@ -751,8 +776,8 @@ function renderSimpleCondition(
       }),
     )
   }
-  return renderVariableRef(compiled, condition.variable).pipe(
-    Effect.map((ref) => `${ref} ${condition.operator} ${renderScalar(condition.value)}`),
+  return Effect.all([renderVariableRef(compiled, condition.variable), renderThresholdScalar(condition.value)]).pipe(
+    Effect.map(([ref, value]) => `${ref} ${condition.operator} ${value}`),
   )
 }
 
@@ -808,8 +833,8 @@ function compileConstraintBody(
 ): Effect.Effect<string, CompileError> {
   switch (c.kind) {
     case "assignment":
-      return renderVariableRef(compiled, c.variable, c.entity).pipe(
-        Effect.map((ref) => `${ref} = ${renderScalar(c.value)}`),
+      return Effect.all([renderVariableRef(compiled, c.variable, c.entity), renderThresholdScalar(c.value)]).pipe(
+        Effect.map(([ref, value]) => `${ref} = ${value}`),
       )
     case "arithmetic":
       return Effect.all([renderArithmeticExpr(compiled, c.expression), renderTarget(compiled, c.target)]).pipe(

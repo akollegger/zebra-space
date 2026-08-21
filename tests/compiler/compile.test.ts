@@ -274,6 +274,40 @@ test('a leaked, unresolved entity placeholder (e.g. "$outer" misused in a mode-1
   assert.doesNotMatch(reason, /_outer/)
 })
 
+test('a bare-string placeholder target (the removed legacy `target: "$b"` shape) is a loud CompileError, never the undeclared identifier "_b"', async () => {
+  // Copilot review finding: renderTarget's non-expression branch went straight to renderScalar,
+  // so a bare-string target never reached renderVariableRef's "$"-prefix guard at all — only the
+  // STRUCTURED `{kind: "variableRef", entity: "$b"}` shape was ever checked. Any bare-string
+  // placeholder (in a target, a condition's value, or an assignment's value) must fail the same
+  // way, via renderThresholdScalar, not silently sanitize into "_b".
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "France", type: "Country" },
+      { id: "Spain", type: "Country" },
+    ],
+    domains: [{ variable: "color", entityType: "Country", values: ["Red", "Green"] }],
+    constraints: [
+      { kind: "relation", name: "sharesBorder", a: "France", b: "Spain" },
+      {
+        kind: "derivedRule",
+        appliesTo: "color",
+        condition: { kind: "relation", name: "sharesBorder" },
+        thenConstraints: [
+          {
+            kind: "arithmetic",
+            expression: { kind: "variableRef", variable: "color", entity: "$a" },
+            comparator: "!=",
+            target: "$b",
+          },
+        ],
+      },
+    ],
+  }
+  const reason = await runFails(csp)
+  assert.match(reason, /Entity placeholder "\$b".*never substituted/)
+  assert.doesNotMatch(reason, /_b\b/)
+})
+
 test('ADR-004 §2.2/eval gap: ruleTable + ruleTableConstraint model a static, entity-independent rule (rock-paper-scissors)', async () => {
   const csp: ExtractedCsp = {
     entities: [{ id: "You", type: "Player" }],
