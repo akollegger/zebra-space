@@ -32,7 +32,7 @@ decided — see below for how and when a second parent was added.
 **A load-bearing constraint discovered before drafting**: `@effect/cli` (the "effect-cli" the
 original ask named) is not usable here. Its latest stable release (0.77.0) peer-depends on
 `effect@^3.22.1` and `@effect/platform@^0.97.1` — the exact same incompatibility ADR-002/spec
-002's T001 already hit and worked around, since this repo is pinned to `effect@4.0.0-beta.107`.
+002's T001 already hit and worked around, since this repo is pinned to `effect@4.0.0-rc.110`.
 This ADR's argument-parsing decision (2.3) is a direct consequence of that finding.
 [Tracking issue #5](https://github.com/akollegger/zebra-space/issues/5)
 watches for `@effect/platform`/`@effect/cli` catching up to the Effect 4.0 line — independent of
