@@ -42,6 +42,26 @@ test('an entity id matching its own entityType name (e.g. entity "player" of typ
   assert.match(mzn, /constraint move\[opponent\] = Rock;/)
 })
 
+test('when the disambiguated "_Type" fallback ITSELF collides with an entity id (e.g. entities "player" and "player_Type"), a further-disambiguated name is chosen instead', async () => {
+  // Copilot review finding: the fallback was computed once and never re-checked — with entities
+  // "player" and "player_Type" both of type "player", the old code emitted
+  // `enum player_Type = {player, player_Type};`, reproducing the exact type/member collision the
+  // fallback exists to prevent.
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "player", type: "player" },
+      { id: "player_Type", type: "player" },
+      { id: "opponent", type: "player" },
+    ],
+    domains: [{ variable: "move", entityType: "player", values: ["Paper", "Rock", "Scissors"] }],
+    constraints: [{ kind: "assignment", entity: "opponent", variable: "move", value: "Rock" }],
+  }
+  const mzn = await run(csp)
+  assert.doesNotMatch(mzn, /enum player_Type = /)
+  assert.match(mzn, /enum player_Type2 = \{player, player_Type, opponent\};/)
+  assert.match(mzn, /array\[player_Type2\] of var Values_Paper_Rock_Scissors: move;/)
+})
+
 test('a variable named identically to its own entityType (e.g. variable/entityType both "position") disambiguates the enum, never emits self-colliding `array[position] of var ...: position;`', async () => {
   const csp: ExtractedCsp = {
     entities: [

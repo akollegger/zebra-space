@@ -120,18 +120,36 @@ interface CompiledDomain {
  * {player, ...};` or `array[position] of var ...: position;` — both rejected by `minizinc` as
  * "identifier already defined". Disambiguate only when a real collision is detected, so the
  * common (non-colliding) case keeps its plain, readable name.
+ *
+ * The disambiguated fallback is checked against, and reserved into, the SAME global identifier
+ * space as the original name — not just tried once: every entity id (any type, since MiniZinc's
+ * enum-member namespace is global — an entity of a DIFFERENT type could also collide), every
+ * domain variable name, and every other entityType's own already-chosen name, looping with an
+ * incrementing suffix until a genuinely fresh name is found. Found via code review: appending
+ * "_Type" exactly once could reproduce the exact collision it exists to prevent — entities
+ * "player" AND "player_Type", both of type "player", would still emit `enum player_Type =
+ * {player, player_Type};`. (Domain VALUES sharing a name with an entityType are not checked here
+ * — a real but far more contrived collision, left unaddressed the same way other low-probability
+ * identifier clashes in this compiler are.)
  */
 function computeEntityTypeEnumNames(csp: ExtractedCsp): ReadonlyMap<string, string> {
+  const taken = new Set<string>([
+    ...csp.entities.map((e) => sanitizeIdentifier(e.id)),
+    ...csp.domains.map((d) => sanitizeIdentifier(d.variable)),
+  ])
+
   const names = new Map<string, string>()
   for (const entityType of new Set(csp.domains.map((d) => d.entityType))) {
     const base = sanitizeIdentifier(entityType)
-    const sanitizedEntityIds = csp.entities
-      .filter((entity) => entity.type === entityType)
-      .map((entity) => sanitizeIdentifier(entity.id))
-    const collidesWithAnyVariable = csp.domains.some(
-      (d) => d.entityType === entityType && sanitizeIdentifier(d.variable) === base,
-    )
-    names.set(entityType, sanitizedEntityIds.includes(base) || collidesWithAnyVariable ? `${base}_Type` : base)
+    let chosen = base
+    if (taken.has(base)) {
+      chosen = `${base}_Type`
+      for (let suffix = 2; taken.has(chosen); suffix++) {
+        chosen = `${base}_Type${suffix}`
+      }
+    }
+    names.set(entityType, chosen)
+    taken.add(chosen)
   }
   return names
 }
