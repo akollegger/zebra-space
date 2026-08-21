@@ -246,15 +246,46 @@ function critiqueOnce(
   model: string,
   prose: string,
   candidate: ExtractedCsp,
+  repair?: SchemaRepairContext,
 ): Effect.Effect<FidelityCritique, ProviderError | SchemaRejected | SchemaViolation> {
   return requestStructuredCompletion({
     model,
     systemPrompt: critiqueSystemPrompt(),
-    userPrompt: critiqueUserPrompt(prose, candidate),
+    userPrompt: repair !== undefined ? schemaRepairUserPrompt(prose, repair) : critiqueUserPrompt(prose, candidate),
     schemaName: "FidelityCritique",
     jsonSchema: fidelityCritiqueJsonSchema,
     schema: FidelityCritique,
   })
+}
+
+type CritiqueOutcome =
+  | { readonly ok: true; readonly critique: FidelityCritique }
+  | { readonly ok: false; readonly violation: SchemaViolation }
+
+/**
+ * `critiqueOnce`, but a schema-invalid critic response gets exactly one immediate repair retry
+ * before giving up — the same "SchemaViolation is treated like a rejection, not aborted" policy
+ * `extractOnce`'s callers already get (`runTier`, below), extended to cover the critique step
+ * itself. Found via code review: only `extractOnce` was ever wrapped in `catchTag`, so a
+ * schema-invalid *critique* (e.g. the critic model replying in prose) still propagated straight
+ * out of `runTier` uncaught, skipping the frontier tier the same way the original bug did for
+ * extraction. Bounded to one retry rather than its own round budget — recovering a critique
+ * doesn't need a fresh extraction, unlike a genuinely rejected one.
+ */
+function critiqueWithRepair(
+  model: string,
+  prose: string,
+  candidate: ExtractedCsp,
+): Effect.Effect<CritiqueOutcome, ProviderError | SchemaRejected> {
+  return critiqueOnce(model, prose, candidate).pipe(
+    Effect.map((critique): CritiqueOutcome => ({ ok: true, critique })),
+    Effect.catchTag("SchemaViolation", (violation) =>
+      critiqueOnce(model, prose, candidate, { raw: violation.raw, detail: violation.detail }).pipe(
+        Effect.map((critique): CritiqueOutcome => ({ ok: true, critique })),
+        Effect.catchTag("SchemaViolation", (violation2) => Effect.succeed<CritiqueOutcome>({ ok: false, violation: violation2 })),
+      ),
+    ),
+  )
 }
 
 /**
@@ -295,7 +326,17 @@ function runTier(
       }
 
       repair = undefined
-      const critique = yield* critiqueOnce(model, prose, attempt.extractedCsp)
+      const critiqueOutcome = yield* critiqueWithRepair(model, prose, attempt.extractedCsp)
+      if (!critiqueOutcome.ok) {
+        // The critique itself never conformed, even after one repair retry — this round produced
+        // no attempt to record (no valid critique exists to pair with the extraction), but the
+        // extraction succeeded, so re-extracting fresh next round is still a reasonable recovery.
+        lastSchemaViolation = critiqueOutcome.violation
+        context = undefined
+        continue
+      }
+
+      const critique = critiqueOutcome.critique
       attempts.push({ model, extractedCsp: attempt.extractedCsp, critique })
 
       if (critique.accepted) {

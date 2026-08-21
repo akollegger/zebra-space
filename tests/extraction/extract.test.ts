@@ -294,3 +294,36 @@ test("A schema-invalid tool call is retried with a repair prompt and succeeds wi
     },
   )
 })
+
+test("A schema-invalid CRITIQUE response (not extraction) is also retried with a repair prompt, not just abandoned", async () => {
+  // Code review finding: only extractOnce's SchemaViolation was ever caught — a schema-invalid
+  // *critique* (e.g. the critic model replying in prose) still propagated straight out of
+  // runTier uncaught, skipping the frontier tier the same way the original bug did for
+  // extraction. The extraction itself always succeeds here; only the first critique call fails.
+  let critiqueCalls = 0
+  await withStub(
+    (exchange) => {
+      if (exchange.request.schemaName !== "FidelityCritique") {
+        exchange.respondWithJson(SAMPLE_CSP)
+        return
+      }
+      critiqueCalls += 1
+      if (critiqueCalls === 1) {
+        exchange.respondWithProse("Sure! Here's my judgment in plain text.")
+      } else {
+        exchange.respondWithJson({ accepted: true, issues: [] })
+      }
+    },
+    async (stub) => {
+      const result = await runExtract()
+      assert.equal(result.model, CHEAP_MODEL)
+      assert.deepEqual(result.extractedCsp, SAMPLE_CSP)
+      const critiqueRequests = stub.requests.filter((r) => r.schemaName === "FidelityCritique")
+      assert.equal(critiqueRequests.length, 2)
+      assert.match(critiqueRequests[1]?.userPrompt ?? "", /did not match the required schema/)
+      // Only ONE extraction call — the critique repair reused the same extractedCsp, no
+      // re-extraction was needed.
+      assert.equal(stub.requests.filter((r) => r.schemaName === "ExtractedCsp").length, 1)
+    },
+  )
+})
