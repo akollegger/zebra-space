@@ -12,9 +12,9 @@ specs:
 
 ## 1. Context
 
-RFC-003 scoped extracting a computable CSP from a puzzle's prose clues and compared a five-tier
-strategy spectrum (§5.2), evaluated empirically by four spikes (Appendix §9, `design/spikes/`)
-rather than left as guesses. The evidence converges cleanly enough to decide:
+Extracting a computable CSP from a puzzle's prose clues admits at least five candidate strategies
+(RFC-003 §5.2), evaluated empirically by four spikes (`design/spikes/`) rather than left as
+guesses. The evidence converges cleanly enough to decide:
 
 - **Rule-based/grammar (9.1)**: [SPIKE-001](../spikes/SPIKE-001-catalog-clue-audit/SPIKE.md)
   found only 4 of the seed catalog's 14 puzzles (~29%) reduce to simple flat clue patterns; the
@@ -47,9 +47,9 @@ shape), 7.2 (failure mode), and 7.3 — but 7.3 is resolved by *rejecting* round
 validation as the trust mechanism, not adopting it (see below) — and states how 7.6's boundary
 case (derived variables, non-binary outcomes) is accommodated at the representation level.
 
-**Why not round-trip solver validation** (this ADR's own earlier design, corrected before
-publication): solvability and translation correctness are orthogonal. A faithful extraction of a
-prose puzzle that is genuinely contradictory, as written, *should* compile to `Unsatisfiable` —
+**Why not round-trip solver validation**: solvability and translation correctness are
+orthogonal. A faithful extraction of a prose puzzle that is genuinely contradictory, as written,
+*should* compile to `Unsatisfiable` —
 that is a correct translation of an unsatisfiable problem, not a failure. A faithful extraction
 of a prose puzzle that genuinely under-constrains its answer *should* compile to
 `MultiplySatisfiable`, for the same reason. Gating trust on solve outcome would reject correct
@@ -91,10 +91,7 @@ second call, and never incrementally constructs the CSP via separate
 `addEntity`/`addDomain`/`addConstraint`-style calls. §2.3's "control flow is authored upfront"
 property is fully preserved.
 
-**This revises the mechanism this ADR originally chose, on evidence.** The history is worth
-stating plainly, because this section has now moved twice: it first said "tool/structured-output
-mode" (ambiguous); it was then clarified to mean `response_format` specifically, explicitly ruling
-tool calling *out*; that clarification is now **wrong** and is what this revision corrects.
+**Forced tool calling, not `response_format`, is the delivery mechanism.**
 [SPIKE-005](../spikes/SPIKE-005-tool-calling-conventions/SPIKE.md) tested both mechanisms across
 13 models x 8 schema shapes (208 probes against the live API) and found:
 
@@ -131,8 +128,8 @@ representation (entities/constraints as candidate nodes/edges).
 
 The decision is the constraint taxonomy below (drawn from SPIKE-001's shapes, per the rationale
 after the listing — originally six kinds, seven since `linkedAttributes` was added, nine since
-`ruleTable`/`ruleTableConstraint` was) — not the exact TypeScript syntax. The shape illustrates
-that taxonomy; field names and precise typing are implementation's call, not fixed by this ADR:
+`ruleTable`/`ruleTableConstraint` was) — not the exact TypeScript syntax. The shape below is
+illustrative only — field names and precise typing are implementation's call:
 
 ```ts
 interface ExtractedCsp {
@@ -174,9 +171,9 @@ constraint taxonomy while deferring the `ExtractedCsp` → `.mzn` compiler to
 [ADR-005](ADR-005-extractedcsp-mzn-compiler.md) — expected to grow as new constraint shapes are
 encountered, the same way ADR-003 names itself "deliberately incomplete by design."
 
-**`linkedAttributes` is a correction, added after implementation testing exposed a gap in the
-original six-kind taxonomy — this ADR's own motivating example for `assignment` doesn't actually
-fit `assignment`'s shape.** [SPIKE-001](../spikes/SPIKE-001-catalog-clue-audit/SPIKE.md)'s shape A
+**`linkedAttributes` is a taxonomy addition: implementation testing exposed a gap in the original
+six-kind taxonomy — the `assignment` kind's own motivating example doesn't actually fit
+`assignment`'s shape.** [SPIKE-001](../spikes/SPIKE-001-catalog-clue-audit/SPIKE.md)'s shape A
 ("Attribute-assignment") is literally "The Englishman lives in the red house" — but that clue
 never names *which* house. `assignment`'s `entity` field requires a known entity id, which this
 clue doesn't supply; running the full pipeline against real catalog puzzles (not SPIKE-004's
@@ -206,7 +203,7 @@ dedicated pre-parser, unlike every other tier.
 
 **`ruleTable` is a second taxonomy addition, found the same way `linkedAttributes` was — running
 the live pipeline (`eval/`'s harness, see `eval/README.md`) against a real catalog puzzle exposed
-a shape this ADR's original seven kinds had no home for.** PZL-0003 (Rock-Paper-Scissors) turns on
+a shape the original seven-kind taxonomy had no home for.** PZL-0003 (Rock-Paper-Scissors) turns on
 "paper beats rock, rock beats scissors, scissors beats paper" — a small, closed, static fact about
 *values*, true regardless of which entity holds them. `relation` facts look superficially similar
 but are about specific *entities* ("France shares a border with Spain"), consumed by
@@ -229,30 +226,12 @@ built on an agentic framework (Mastra, Vercel AI SDK) or `@effect/ai`.
 what happens next — it does **not** mean "no tool calls." §2.1 now uses a forced single tool call
 as its delivery mechanism precisely because that is the more reliably supported convention, while
 leaving every control-flow decision in this pipeline's hands. "Uses tools" and "is an agent" are
-independent properties, and an earlier version of this ADR conflated them.)
+independent properties, easy to conflate.)
 
-**This is a starting-point scoping choice for this MVP, not a general position that agentic
-techniques don't belong in this project.** "Hard-code a fixed workflow" and "let one monolithic
-agent do everything" are not the only two options — established agentic-workflow patterns mix
-techniques (tool-using subagents inside an otherwise-authored pipeline, multi-agent critique
-panels, retrieval-augmented prompting, and more), and nothing here forecloses adopting one of
-those later (§4). For now, three reasons converge on the simpler shape:
-
-1. The workflow's control flow (§2.4/§2.5) is authored upfront by this ADR, not decided
-   dynamically by an LLM at runtime, for *this* design — a workflow-orchestration problem, which
-   `Effect` already solves generally (typed errors, retries, concurrent fan-out) without needing
-   an agentic framework's help to implement the specific loop this ADR specifies.
-2. `@effect/ai` (and every `@effect/ai-*` provider package) peer-depends on `effect@^3.22.x`,
-   incompatible with this repo's `effect` 4.x pin regardless of which 4.x prerelease is in use —
-   confirmed by [SPIKE-004](../spikes/SPIKE-004-llm-based-extraction/SPIKE.md) and generalized in
-   `CLAUDE.md`'s dependency notes into a standing pattern to check for any `@effect/*` package.
-   This is the main reason richer, `Effect`-idiomatic agentic composition isn't adopted now —
-   not a judgment that it wouldn't be useful (§4).
-3. A full agentic framework would still need hand-wrapping to reach `@openrouter/sdk` the way
-   this project already hand-wraps external capabilities (`src/solver/solve.ts`'s treatment of
-   `node:child_process`) — trading "wrap a thin client" for "wrap a bigger, more opinionated
-   surface," without eliminating the wrapping work, for whatever benefit that framework would add
-   today.
+Richer agentic patterns (tool-using subagents inside an otherwise-authored pipeline, multi-agent
+critique panels, retrieval-augmented prompting) are deferred rather than rejected — see §3's "An
+agentic framework..." entry for the reasoning, and §4 for revisiting once `@effect/ai`'s
+peer-dependency conflict resolves.
 
 Concretely: `@openrouter/sdk` (zero peer dependencies, a thin API client — confirmed by
 SPIKE-004) is hand-wrapped in `Effect.tryPromise`, the same pattern `src/solver/solve.ts` already
@@ -322,7 +301,7 @@ model doesn't require a design change. The two model identifiers above are this 
 defaults, overridable via the CLI flags/environment variables
 [ADR-003](ADR-003-cli-interface.md) §2.6 decides (`--model`/`ZEBRA_MODEL` for this tier,
 `--frontier-model`/`ZEBRA_FRONTIER_MODEL` for the other) — OpenRouter itself is an
-implementation detail from a CLI user's perspective, not something this project's own interface
+implementation detail from a CLI user's perspective, not something the CLI's own interface
 should require knowing about. No third escalation tier is decided here; that's future work if
 two tiers prove insufficient.
 
@@ -336,20 +315,10 @@ specifically targeting the current default: 4 identical extraction requests each
 2.5 Flash Lite returned 2 timeouts, one 18.9s response, and one 1.1s response; `openai/gpt-4o-mini`
 returned 4 successes at ~1.5s each. `openai/gpt-4o-mini` is now the default cheap tier.
 
-This resolves one of the two open questions this section previously carried and leaves the other
-open on purpose:
-
-- Cheap-first tiering itself is **not** invalidated — a cheap tier is clearly viable, just not the
-  original choice of *which* one. Reliability under load is now part of what "cheap tier" needs to
-  mean, alongside price and extraction quality (SPIKE-004's original criteria).
-- Escalating *across vendors* remains a real, deliberate choice, not an oversight: a same-vendor
-  cheap→frontier pair (e.g. `openai/gpt-4o-mini` → an OpenAI frontier model) would eliminate the
-  provider-compatibility surface this ADR has now paid for twice (§2.7, this section) — but it
-  trades directly against §2.4's rationale for escalation, which wants a **materially different,
-  less-correlated** model as the second opinion. `openai/gpt-4o-mini` → `anthropic/claude-sonnet-4.5`
-  keeps that property. This tension is unresolved by construction, not by omission: nothing here
-  forces same-vendor tiering, and nothing here rules it out later if the compatibility surface
-  proves costlier than the correlation risk.
+The tier switch settles whether cheap-first tiering itself is viable: it is — a cheap tier
+clearly works, just not the original choice of *which* one. Reliability under load is now part
+of what "cheap tier" needs to mean, alongside price and extraction quality (SPIKE-004's original
+criteria). Whether tiering should stay cross-vendor is a separate, still-open question (§4).
 
 ### 2.6 Error model
 
@@ -357,8 +326,8 @@ Mirrors `src/solver/types.ts`'s tagged-error convention (same idiom), independen
 `SolverError` itself — this pipeline's errors are about extraction and critique, not solving,
 which stays a separate, optional, downstream concern (§4) with its own existing error handling.
 The decision is the three-category error taxonomy (provider failure, schema violation, critic
-rejection) — the shape below illustrates it; exact field names and typing are implementation's
-call, not fixed by this ADR:
+rejection) — the shape below is illustrative only, field names and typing are implementation's
+call:
 
 ```ts
 class ProviderError extends Data.TaggedError("ProviderError")<{ readonly message: string }> {}
@@ -488,17 +457,25 @@ an LLM provider is unaffected.
   `ExtractedCsp`'s solver-agnostic value (2.2) to solve a problem that no longer needs solving
   that way. Emitting gram specifically remains genuinely interesting on its own merits — it would
   address the constitution's graph-representation principle — but that is undesigned work
-  deserving its own RFC/ADR, not a reactive substitution made under bug pressure.
+  deserving its own RFC/ADR.
 - **An agentic framework (Mastra, Vercel AI SDK), or a richer agentic pattern generally
-  (multi-step tool-using subagents, multi-agent critique panels), for the workflow.** Deferred,
-  not rejected outright (2.3) — and note this is a distinct question from §2.1's forced single
-  tool call, which is a delivery mechanism rather than an agentic pattern: this ADR's workflow's control flow is authored upfront for its own specific
-  loop, and either named framework would still need hand-wrapping to reach `@openrouter/sdk`
-  today, trading one integration surface for a larger one — but the real blocker is `@effect/ai`'s
-  incompatibility with this repo's `effect` 4.x pin, not a belief that agentic techniques are the
-  wrong tool here. Revisit once that's resolved (§4).
-- **`@effect/ai`.** Rejected (2.3): peer-depends on `effect@^3.22.x`, incompatible with this
-  repo's `effect` 4.x pin regardless of prerelease (confirmed by SPIKE-004).
+  (multi-step tool-using subagents, multi-agent critique panels, retrieval-augmented prompting),
+  for the workflow (2.3).** Deferred, not rejected outright — and distinct from §2.1's forced
+  single tool call, which is a delivery mechanism rather than an agentic pattern. "Hard-code a
+  fixed workflow" and "let one monolithic agent do everything" are not the only two options, and
+  nothing here forecloses adopting a richer pattern later (§4); for now, three reasons converge on
+  the simpler shape. First, the workflow's control flow (§2.4/§2.5) is authored upfront rather
+  than decided dynamically by an LLM at runtime — a workflow-orchestration problem `Effect`
+  already solves generally (typed errors, retries, concurrent fan-out) without needing an agentic
+  framework's help to implement this specific loop. Second, `@effect/ai` (and every
+  `@effect/ai-*` provider package) peer-depends on `effect@^3.22.x`, incompatible with this repo's
+  `effect` 4.x pin regardless of prerelease (confirmed by SPIKE-004, generalized in `CLAUDE.md`'s
+  dependency notes into a standing pattern to check for any `@effect/*` package) — this is the
+  real blocker, not a judgment that agentic techniques are the wrong tool here. Third, either
+  named framework would still need hand-wrapping to reach `@openrouter/sdk` the way
+  `src/solver/solve.ts` already hand-wraps `node:child_process` — trading one integration surface
+  for a larger one, for whatever benefit that framework would add today. Revisit once the
+  `@effect/ai` peer-dependency conflict resolves (§4).
 - **Always use the frontier model; skip cost-tiering.** Rejected (2.5): SPIKE-004 found the cheap
   model matched frontier quality on most tested shapes, with no evidenced accuracy justification
   for paying frontier price on every call.
@@ -522,11 +499,11 @@ an LLM provider is unaffected.
   is both §2.7-compatible and a more honest model of the domain than "a second operand that is
   sometimes null." A pleasant outcome worth noting: the compatibility constraint pushed toward a
   better representation rather than away from one.
-- **The compatibility surface was self-inflicted, and is now understood rather than merely
-  patched.** Two failures were paid for before either was diagnosed. The generalizable lesson —
-  recorded here because it will recur — is that provider capability *declarations* are not
-  evidence, and that a mechanism which can fail with HTTP 200 (Anthropic ignoring
-  `response_format`) is materially worse than one that fails loudly, independent of success rates.
+- **Provider capability declarations are not evidence.** Two failures (the recursive-`$ref`
+  rejection, the silent `response_format` ignore) shipped before either was diagnosed by testing.
+  The generalizable lesson — recorded here because it will recur — is that a mechanism which can
+  fail with HTTP 200 (Anthropic ignoring `response_format`) is materially worse than one that
+  fails loudly, independent of success rates.
 - **`linkedAttributes` (§2.2) is a decided taxonomy addition, not yet implemented.** It hasn't
   reached `src/extraction/types.ts`, `src/compiler/compile.ts`, or the extraction prompt. Until it
   does, the pipeline cannot faithfully extract shape A's actual common form (co-occurring
@@ -561,9 +538,9 @@ an LLM provider is unaffected.
   from the validated-example corpus this section already motivates, or some mix of these — remain
   a live option this ADR deliberately doesn't foreclose. The concrete trigger to reassess is
   `@effect/ai` (or an equivalent `Effect`-idiomatic agent framework) landing support for `effect`
-  4.x, removing the peer-dependency blocker (§2.3 point 2) that's the actual reason this ADR
-  doesn't adopt one now — not evidence that the simpler shape is wrong, just that it's what's
-  buildable today without hand-wrapping a framework this project doesn't otherwise need.
+  4.x, removing the peer-dependency blocker (§3) that's the actual reason a richer framework
+  isn't adopted now: it's what's buildable today without hand-wrapping a framework nothing else
+  here needs.
 - Every extraction this pipeline accepts has been independently fidelity-checked by a second LLM
   call against the source prose — a meaningful second opinion, but not a formal guarantee the way
   solver validation would have been: the critic is itself an LLM and can share blind spots with
@@ -593,7 +570,7 @@ an LLM provider is unaffected.
   answering Open Question 7.4). This ADR does not commit to building that accumulation system;
   it's expected, motivated follow-up work, and whether it extends this ADR or becomes its own
   future RFC/ADR is an open scoping question, not decided here.
-- The `ExtractedCsp` representation (2.2) is a new schema this project now owns, coordinated with
+- The `ExtractedCsp` representation (§2.2) is a new schema, coordinated with
   both the MiniZinc compilation target ([ADR-002](ADR-002-adopt-minizinc-solver.md) §2.5,
   concretely realized by [ADR-005](ADR-005-extractedcsp-mzn-compiler.md)) and the
   still-undesigned graph-representation compiler (RFC-003 Non-Goal) — future ADRs touching either
@@ -601,6 +578,13 @@ an LLM provider is unaffected.
 - Cheap-model-first (2.5) assumes escalation is the exception path based on SPIKE-004's small
   sample; real usage volume may reveal a higher escalation rate than expected, eroding the
   intended cost savings — worth monitoring once built, not assumed indefinitely.
+- Escalating *across vendors* (2.5) is a deliberate choice: a same-vendor cheap→frontier pair
+  (e.g. `openai/gpt-4o-mini` → an OpenAI frontier model) would eliminate the
+  provider-compatibility surface paid for twice (§2.7, §2.5) — but it trades directly against
+  §2.4's rationale for escalation, which wants a **materially different, less-correlated** model
+  as the second opinion. `openai/gpt-4o-mini` → `anthropic/claude-sonnet-4.5` keeps that
+  property. The tension is unresolved: nothing here forces same-vendor tiering, and nothing here
+  rules it out later if the compatibility surface proves costlier than the correlation risk.
 - Whether feedback-informed same-tier revision (2.4) actually converges better than immediately
   escalating to a different tier is itself untested — SPIKE-004 only tested blind re-prompting
   (which doesn't help) and cold escalation (which does); informed revision is a new, reasonable

@@ -8,6 +8,18 @@ genuinely shared infrastructure (e.g. a CLI interface shape that multiple proble
 depend on); an ADR never creates or modifies anything under `specs/` itself — that happens when a
 `/speckit-specify` call references it.
 
+## Audience
+
+Same reader as the [RFCs](../rfc/README.md#audience): technically fluent, comfortable with
+constraint satisfaction as a general idea, and new to this project's specifics. An ADR necessarily
+carries more of those specifics than an RFC — so name each one on first use (`SolveResult` is the
+solver's three-way outcome type; `ExtractedCsp` is what extraction produces) rather than writing as
+though the reader has already been through the pipeline.
+
+Context should open on the technical forces, not on the paperwork: what situation makes a decision
+necessary, before any parent-RFC citation. `/adr-review` criterion 8 checks this, and
+`adr-create`'s "Voice and audience" section holds the rules.
+
 ## When to write an ADR
 
 - A parent RFC has settled the problem/direction and a specific technical decision now needs to

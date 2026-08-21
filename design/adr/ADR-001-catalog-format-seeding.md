@@ -12,20 +12,20 @@ specs:
 
 ## 1. Context
 
-RFC-001 (5.2, 9.1) identifies catalog selection as the foundational generation strategy — the
-shared substrate every other strategy (9.2–9.4) feeds output back into — and its Goals (3) treat
-the catalog as growing infrastructure for solver evaluation, difficulty/tier analysis, and human
-success/fail tracking, not just a lookup table. None of that exists yet: there's no puzzle file
-format, no directory, no index, and no seed content. This ADR settles the concrete format,
-location, and initial seeding approach for the catalog *substrate* — it does not decide the
-selection mechanism itself (e.g. random vs. filtered retrieval, or what interface exposes it),
-which is a separate decision a follow-up ADR should make once there's a substrate to select
-from. It likewise does not design solving, graph representation, or a live attempt-history
-logging system — those stay out of scope per RFC-001's Non-Goals (4) and are called out
-explicitly below. It also deliberately stops short of the solver-evaluation dataset RFC-001
-envisions long-term: there's no parent RFC yet for evaluation itself, so this ADR seeds the
-catalog with prose and basic metadata only, leaving the answer-key/solution representation for
-that future RFC to settle.
+Nothing about puzzle storage exists yet: no file format, no directory, no index, no seed content.
+Something has to fill that role before catalog selection — the foundational generation strategy
+other strategies build on and feed output back into (RFC-001 §5.2, §9.1) — can be exercised at
+all, and before the catalog can grow into infrastructure for solver evaluation, difficulty/tier
+analysis, and human success/fail tracking (RFC-001 §3), rather than staying a plain lookup table.
+
+This decision settles the concrete format, location, and initial seeding approach for that
+substrate. It stops short of several adjacent decisions: the selection mechanism itself (random
+vs. filtered retrieval, or what interface exposes it) is separate and belongs to a follow-up ADR
+once there's a substrate to select from; solving, graph representation, and a live
+attempt-history logging system stay out of scope per RFC-001's Non-Goals (§4) and are called out
+explicitly below; and the solver-evaluation dataset RFC-001 envisions long-term has no parent RFC
+yet for evaluation itself, so seeding covers prose and basic metadata only, leaving the
+answer-key/solution representation for that future RFC to settle.
 
 **Prior art surveyed**: existing zebra-puzzle resources fall into two categories relevant here —
 (a) published/canonical puzzles as natural-language prose (e.g. the original 1962 *Life
