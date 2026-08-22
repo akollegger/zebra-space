@@ -8,7 +8,7 @@
     "zebra": "./src/cli/main.ts"
   },
   "scripts": {
-    "test": "node --test tests/**/*.test.ts",
+    "test": "node --env-file-if-exists=.env --test tests/**/*.test.ts",
     "lint": "biome lint .",
     "eval": "node scripts/eval-extraction.ts"
   },
