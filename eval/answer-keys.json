@@ -1,5 +1,5 @@
 {
-  "$comment": "Private verification record, originally authored under specs/001-catalog-seeding/ per FR-009 (each seed puzzle has exactly one valid solution, confirming FR-008/SC-004), later moved to eval/ and reformatted from Markdown to JSON so it can double as machine-readable ground truth for eval/'s extraction eval (comparing a puzzle's compiled, solved output against the known-correct answer below). Not part of the public catalog schema -- not linked from catalog/README.md, not referenced by any puzzle's frontmatter. Each entry's `answer` is intentionally shaped to match that puzzle's own variables rather than a single uniform schema, since the seed catalog spans multiple constraint shapes (grid assignment, digit substitution, subset selection, ordering, single-value decision), not just zebra-grid puzzles.",
+  "$comment": "Private verification record, originally authored under specs/001-catalog-seeding/ per FR-009 (each seed puzzle has exactly one valid solution, confirming FR-008/SC-004), later moved to eval/ and reformatted from Markdown to JSON so it can double as machine-readable ground truth for eval/'s extraction eval (comparing a puzzle's compiled, solved output against the known-correct answer below). Not part of the public catalog schema -- not linked from catalog/README.md, not referenced by any puzzle's frontmatter. Each entry's `answer` is intentionally shaped to match that puzzle's own variables rather than a single uniform schema, since the seed catalog spans multiple constraint shapes (grid assignment, digit substitution, subset selection, ordering, single-value decision), not just zebra-grid puzzles. Starting with PZL-0015, entries also cover non-problems and optimization (COP) puzzles that don't fit the single-correct-assignment framing above -- for those, `answer` records a diagnosis or an optimum rather than a satisfying assignment, and `notes` says so explicitly. This is a deliberately provisional extension, not a redesign: RFC-004 §7.3 and root TODO.md item 2 own the eventual outcome taxonomy and answer-key format; these entries exist now so the gap they'll need to close is visible rather than silently absent.",
   "PZL-0001": {
     "title": "Life International 1962",
     "answer": {
@@ -103,5 +103,125 @@
     "title": "Packing the Box",
     "answer": { "items": ["hardcover book set", "cast-iron skillet", "first-aid kit"] },
     "notes": "Of the 32 possible item subsets, exactly two sum to 10 kg: {rice, toolbox} (4+6) and {book set, skillet, first-aid kit} (3+5+2). Only the second includes the first-aid kit, which the puzzle requires."
+  },
+  "PZL-0015": {
+    "title": "Extract a Solvable CSP",
+    "answer": {
+      "outcome": "non-problem",
+      "failing_condition": "Demand",
+      "diagnosis": "The only sentence is an imperative about the modeling act itself (\"extract a solvable CSP from this prose\"), not a demand about any scenario — the adversarial subtype RFC-004 §5.3 names. There is no scenario, no entities, and no constraints to extract; correct behavior is to report that no object-level demand is present, not to treat the imperative as the query."
+    },
+    "notes": "Non-problem, not a determinate puzzle (RFC-004 §5.1/§5.3). This entry is a provisional placeholder — the {title, answer, notes} shape above was designed for a single correct assignment, not a diagnosis, and there is no outcome taxonomy yet for non-problems (RFC-004 §7.3; root TODO.md item 2 owns closing this gap). Recorded now so the gap stays visible rather than silently absent."
+  },
+  "PZL-0016": {
+    "title": "Five Houses, No Question",
+    "answer": {
+      "outcome": "non-problem",
+      "failing_condition": "Demand",
+      "diagnosis": "The prose sets up five neighbors, house colors, and five clues but never asks a question — the other non-problem subtype RFC-004 §5.3 names alongside PZL-0015's. Correct behavior is to report that no demand is present, not to infer an implied 'who lives where' question."
+    },
+    "notes": "Non-problem, not a determinate puzzle (RFC-004 §5.1/§5.3). This entry is a provisional placeholder — the {title, answer, notes} shape above was designed for a single correct assignment, not a diagnosis, and there is no outcome taxonomy yet for non-problems (RFC-004 §7.3; root TODO.md item 2 owns closing this gap). Recorded now so the gap stays visible rather than silently absent."
+  },
+  "PZL-0017": {
+    "title": "The Bridge Collapse",
+    "answer": {
+      "outcome": "non-problem",
+      "failing_condition": "Determinate answer-space",
+      "diagnosis": "\"Why did the bridge collapse?\" ranges over an open, unenumerable set of possible causes (any combination of the stated facts, an unlisted cause, or contested causal weighting) rather than a determinate candidate set — RFC-004's own worked example for this condition. There is no finite answer-space to narrow, so no CSP can be extracted."
+    },
+    "notes": "Non-problem, not a determinate puzzle (RFC-004 §5.1/§5.3). This entry is a provisional placeholder — the {title, answer, notes} shape above was designed for a single correct assignment, not a diagnosis, and there is no outcome taxonomy yet for non-problems (RFC-004 §7.3; root TODO.md item 2 owns closing this gap). Recorded now so the gap stays visible rather than silently absent."
+  },
+  "PZL-0018": {
+    "title": "The Loudest Laugh",
+    "answer": {
+      "outcome": "non-problem",
+      "failing_condition": "Relevance",
+      "diagnosis": "The house assignment (Ana=1, Bo=3, Cy=2) is a genuine, uniquely solvable CSP, hand-verified. But no clue mentions laughter — the demanded unknown is not a projection of anything the constraints act on. A system that solves the housing model and reports one of the three names as 'the answer' would be confidently wrong; correct behavior is to report that the demand is unaddressed by the model, not to guess."
+    },
+    "notes": "Non-problem, not a determinate puzzle (RFC-004 §5.1/§5.3). This entry is a provisional placeholder — the {title, answer, notes} shape above was designed for a single correct assignment, not a diagnosis, and there is no outcome taxonomy yet for non-problems (RFC-004 §7.3; root TODO.md item 2 owns closing this gap). Recorded now so the gap stays visible rather than silently absent."
+  },
+  "PZL-0019": {
+    "title": "Office Tendencies",
+    "answer": {
+      "outcome": "non-problem",
+      "failing_condition": "Constitutive constraints",
+      "diagnosis": "Every clue is hedged (\"usually,\" \"tends to,\" \"often,\" \"as a rule\") and eliminates no assignment definitively — RFC-004's own \"Marta is often late\" case, repeated across the whole puzzle. There are no categorical constraints to extract, so no desk assignment is determinate."
+    },
+    "notes": "Non-problem, not a determinate puzzle (RFC-004 §5.1/§5.3). This entry is a provisional placeholder — the {title, answer, notes} shape above was designed for a single correct assignment, not a diagnosis, and there is no outcome taxonomy yet for non-problems (RFC-004 §7.3; root TODO.md item 2 owns closing this gap). Recorded now so the gap stays visible rather than silently absent."
+  },
+  "PZL-0020": {
+    "title": "Featured Apartment",
+    "answer": {
+      "outcome": "non-problem",
+      "failing_condition": "Determinate atoms",
+      "diagnosis": "\"Cozy,\" \"friendliest,\" \"quietest,\" \"best-value,\" and \"featured\" all require a valuer to evaluate — none is a lookup, arithmetic check, or structural fact. The constraints themselves are categorical (not hedged), so this fails only Determinate atoms, not Constitutive constraints, per RFC-004's note that the two conditions are orthogonal."
+    },
+    "notes": "Non-problem, not a determinate puzzle (RFC-004 §5.1/§5.3). This entry is a provisional placeholder — the {title, answer, notes} shape above was designed for a single correct assignment, not a diagnosis, and there is no outcome taxonomy yet for non-problems (RFC-004 §7.3; root TODO.md item 2 owns closing this gap). Recorded now so the gap stays visible rather than silently absent."
+  },
+  "PZL-0021": {
+    "title": "Which House Is Yellow",
+    "answer": {
+      "outcome": "non-problem",
+      "failing_condition": "Sufficiency",
+      "diagnosis": "Only one constraint (the red house isn't at either end) is given over a 5x5 assignment; the text has exactly one plain reading, but very many colorings satisfy that single constraint. For a definite-sounding demand ('who lives in the yellow house?'), this is underdetermination, not ambiguity — RFC-004 §5.3's own distinction: many models for one reading of the text, not many readings of the text."
+    },
+    "notes": "Non-problem, not a determinate puzzle (RFC-004 §5.1/§5.3). This entry is a provisional placeholder — the {title, answer, notes} shape above was designed for a single correct assignment, not a diagnosis, and there is no outcome taxonomy yet for non-problems (RFC-004 §7.3; root TODO.md item 2 owns closing this gap). Recorded now so the gap stays visible rather than silently absent."
+  },
+  "PZL-0022": {
+    "title": "Packing the Box, Wisely",
+    "answer": {
+      "items": ["first-aid kit", "hardcover book set", "cast-iron skillet"],
+      "total_weight_kg": 10,
+      "total_value": 18
+    },
+    "notes": "The first-aid kit is mandatory (2 kg, value 6), leaving 8 kg of capacity among the other four items. Checking every subset of those four within budget: book set + skillet (3+5=8 kg, value 4+8=12) beats every alternative (rice+book=9, skillet alone=8, toolbox alone=7). Optimal total: first-aid kit + book set + skillet, 10 kg, value 18, verified unique by exhaustive subset check. This is a constraint optimization problem (COP), not a satisfaction problem — SolveResult (src/solver/types.ts) has no optimization outcome and ExtractedCsp has no objective field yet (RFC-004 §5.2; root TODO.md item 3 owns closing this gap). This entry records the hand-verified optimum so it's available once that gap closes."
+  },
+  "PZL-0023": {
+    "title": "Who Does Which Task",
+    "answer": {
+      "Ana": "Testing",
+      "Ben": "Editing",
+      "Cara": "Design",
+      "Dev": "Docs",
+      "total_hours": 20
+    },
+    "notes": "Exhaustively enumerated all 24 possible assignments by hand. Minimum: Ana-Testing (5), Ben-Editing (6), Cara-Design (5), Dev-Docs (4), total 20 hours — the unique minimum (next-best is 22). This is a COP; see PZL-0022's note on the SolveResult/ExtractedCsp objective gap (RFC-004 §5.2, root TODO.md item 3)."
+  },
+  "PZL-0024": {
+    "title": "Cheapest Adequate Meal",
+    "answer": {
+      "Oats": 0,
+      "Beans": 5,
+      "Spinach": 0,
+      "total_cost": 15
+    },
+    "notes": "5 servings of beans alone meets both minimums exactly (protein 5x5=25>=20, iron 5x2=10>=10) at cost 5x3=15. Checked every combination adding a cheaper filler to fewer beans (e.g. 4 beans + 1 spinach = cost 16, 4 beans + 2 oats = cost 16) and every oats-plus-spinach-only combination (all cost 20 or more); none beats 15. Optimal: 5 beans, 0 oats, 0 spinach, cost 15. See PZL-0022's note on the SolveResult/ExtractedCsp objective gap (RFC-004 §5.2, root TODO.md item 3)."
+  },
+  "PZL-0025": {
+    "title": "How Many Crates",
+    "answer": {
+      "crate_1": [6, 4],
+      "crate_2": [5, 3, 2],
+      "crate_3": [4],
+      "num_crates": 3
+    },
+    "notes": "Total weight is 24 kg; 24/10 rounds up to 3, so no arrangement can use fewer than 3 crates regardless of grouping — a provable lower bound, not just a best-found result. 3 crates achieve it, e.g. {6,4}=10 kg, {5,3,2}=10 kg, {4}=4 kg; a brute-force check found at least one other valid 3-crate grouping ({6,4},{5,4},{3,2}), confirming the minimum *count* (3) is unique but the specific grouping is not — the puzzle text doesn't pin one down. See PZL-0022's note on the SolveResult/ExtractedCsp objective gap (RFC-004 §5.2, root TODO.md item 3)."
+  },
+  "PZL-0026": {
+    "title": "Which Candidates to Interview",
+    "answer": {
+      "scheduled": ["Amara", "Chen", "Elena"],
+      "skipped": ["Ben", "Deepak"],
+      "total_priority": 18
+    },
+    "notes": "Worked the weighted-interval-scheduling recurrence by hand (sorted by end time, computed each candidate's latest compatible predecessor). Optimal: Amara (9-10, priority 5) + Chen (10-11, priority 6) + Elena (11-12, priority 7), back-to-back with no overlap, total priority 18. The next-best combination (Ben + Elena, non-overlapping) only reaches 16. See PZL-0022's note on the SolveResult/ExtractedCsp objective gap (RFC-004 §5.2, root TODO.md item 3)."
+  },
+  "PZL-0027": {
+    "title": "The Shortest Delivery Route",
+    "answer": {
+      "route": ["Ashby", "Brindle", "Dunmore", "Caldwell", "Ashby"],
+      "total_distance_miles": 80
+    },
+    "notes": "With 4 towns there are only 3 distinct round trips; checked all three by hand: Ashby-Brindle-Caldwell-Dunmore-Ashby=95, Ashby-Brindle-Dunmore-Caldwell-Ashby=80, Ashby-Caldwell-Brindle-Dunmore-Ashby=95. Optimal: Ashby → Brindle → Dunmore → Caldwell → Ashby, 80 miles, the unique minimum. See PZL-0022's note on the SolveResult/ExtractedCsp objective gap (RFC-004 §5.2, root TODO.md item 3)."
   }
 }

@@ -32,6 +32,18 @@ natural-language prose.
 | [PZL-0013](puzzles/PZL-0013-picking-a-restaurant.md) | Picking a Restaurant | 1/1/7 | hand-authored | seeded |
 | [PZL-0014](puzzles/PZL-0014-packing-the-box.md) | Packing the Box | 5/1/2 | hand-authored | seeded |
 | [PZL-0015](puzzles/PZL-0015-extract-a-solvable-csp.md) | Extract a Solvable CSP | 0/0/0 | hand-authored | seeded |
+| [PZL-0016](puzzles/PZL-0016-five-houses-no-question.md) | Five Houses, No Question | 10/2/5 | hand-authored | seeded |
+| [PZL-0017](puzzles/PZL-0017-the-bridge-collapse.md) | The Bridge Collapse | 0/0/0 | hand-authored | seeded |
+| [PZL-0018](puzzles/PZL-0018-the-loudest-laugh.md) | The Loudest Laugh | 3/1/2 | hand-authored | seeded |
+| [PZL-0019](puzzles/PZL-0019-office-tendencies.md) | Office Tendencies | 5/1/4 | hand-authored | seeded |
+| [PZL-0020](puzzles/PZL-0020-featured-apartment.md) | Featured Apartment | 1/1/3 | hand-authored | seeded |
+| [PZL-0021](puzzles/PZL-0021-which-house-is-yellow.md) | Which House Is Yellow | 5/1/1 | hand-authored | seeded |
+| [PZL-0022](puzzles/PZL-0022-packing-the-box-wisely.md) | Packing the Box, Wisely | 5/1/2 | hand-authored | seeded |
+| [PZL-0023](puzzles/PZL-0023-who-does-which-task.md) | Who Does Which Task | 4/1/1 | hand-authored | seeded |
+| [PZL-0024](puzzles/PZL-0024-cheapest-adequate-meal.md) | Cheapest Adequate Meal | 3/1/2 | hand-authored | seeded |
+| [PZL-0025](puzzles/PZL-0025-how-many-crates.md) | How Many Crates | 6/1/1 | hand-authored | seeded |
+| [PZL-0026](puzzles/PZL-0026-which-candidates-to-interview.md) | Which Candidates to Interview | 5/1/1 | hand-authored | seeded |
+| [PZL-0027](puzzles/PZL-0027-the-shortest-delivery-route.md) | The Shortest Delivery Route | 4/1/1 | hand-authored | seeded |
 
 `Size` is `variables/domains/constraints` (ADR-001 §2.1) — a CSP-neutral profile, not a
 difficulty rating.
