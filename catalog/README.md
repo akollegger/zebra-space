@@ -44,6 +44,18 @@ natural-language prose.
 | [PZL-0025](puzzles/PZL-0025-how-many-crates.md) | How Many Crates | 6/1/1 | hand-authored | seeded |
 | [PZL-0026](puzzles/PZL-0026-which-candidates-to-interview.md) | Which Candidates to Interview | 5/1/1 | hand-authored | seeded |
 | [PZL-0027](puzzles/PZL-0027-the-shortest-delivery-route.md) | The Shortest Delivery Route | 4/1/1 | hand-authored | seeded |
+| [PZL-0028](puzzles/PZL-0028-the-green-house.md) | The Green House | 5/1/3 | hand-authored | seeded |
+| [PZL-0029](puzzles/PZL-0029-between-ten-and-twelve.md) | Between Ten and Twelve | 5/1/4 | hand-authored | seeded |
+| [PZL-0030](puzzles/PZL-0030-the-commute.md) | The Commute | 3/1/5 | hand-authored | seeded |
+| [PZL-0031](puzzles/PZL-0031-the-cheapest-bike.md) | The Cheapest Bike | 4/1/3 | hand-authored | seeded |
+| [PZL-0032](puzzles/PZL-0032-the-chemist-and-the-painter.md) | The Chemist and the Painter | 6/2/3 | hand-authored | seeded |
+| [PZL-0033](puzzles/PZL-0033-groceries-in-the-trunk.md) | Groceries in the Trunk | 4/1/1 | hand-authored | seeded |
+| [PZL-0034](puzzles/PZL-0034-the-evening-doses.md) | The Evening Doses | 3/1/2 | hand-authored | seeded |
+| [PZL-0035](puzzles/PZL-0035-the-head-of-the-table.md) | The Head of the Table | 5/1/3 | hand-authored | seeded |
+| [PZL-0036](puzzles/PZL-0036-the-cat-and-the-dog.md) | The Cat and the Dog | 4/1/4 | hand-authored | seeded |
+| [PZL-0037](puzzles/PZL-0037-holding-pens.md) | Holding Pens | 5/1/5 | hand-authored | seeded |
+| [PZL-0038](puzzles/PZL-0038-the-concrete-wall.md) | The Concrete Wall | 5/1/5 | hand-authored | seeded |
+| [PZL-0039](puzzles/PZL-0039-the-supply-closet.md) | The Supply Closet | 5/1/5 | hand-authored | seeded |
 
 `Size` is `variables/domains/constraints` (ADR-001 §2.1) — a CSP-neutral profile, not a
 difficulty rating.
