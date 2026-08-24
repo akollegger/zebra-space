@@ -23,7 +23,7 @@
  * row numbers, not entity ids), which remain a genuine, unaddressed blind spot.
  *
  * Usage:
- *   node scripts/eval-extraction.ts                  # all 14 catalog puzzles
+ *   node scripts/eval-extraction.ts                  # every catalog puzzle
  *   node scripts/eval-extraction.ts PZL-0004 PZL-0007 # just these
  *   node scripts/eval-extraction.ts --model openai/gpt-4o-mini --frontier-model anthropic/claude-sonnet-4.5
  */
@@ -33,7 +33,6 @@ import { existsSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { Effect } from "effect"
 import { compile, sanitizeIdentifier } from "../src/compiler/compile.ts"
-import type { CompileError } from "../src/compiler/types.ts"
 import { extract } from "../src/extraction/extract.ts"
 import type { ExtractedCsp, ExtractionAttempt, ExtractionError } from "../src/extraction/types.ts"
 import { loadEnvFileIfPresent } from "../src/cli/load-env.ts"
@@ -581,8 +580,10 @@ async function main(): Promise<void> {
     process.exit(1)
   }
   const modelOpts = {
-    model: args.model ?? process.env.ZEBRA_MODEL,
-    frontierModel: args.frontierModel ?? process.env.ZEBRA_FRONTIER_MODEL,
+    // `||`, not `??`: an env var set to the empty string must fall through to the built-in
+    // default, not override it with "".
+    model: args.model || process.env.ZEBRA_MODEL || undefined,
+    frontierModel: args.frontierModel || process.env.ZEBRA_FRONTIER_MODEL || undefined,
   }
 
   const startedAt = new Date()

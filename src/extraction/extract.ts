@@ -21,6 +21,12 @@ import {
 const DEFAULT_MODEL = "openai/gpt-4o-mini"
 const DEFAULT_FRONTIER_MODEL = "anthropic/claude-sonnet-4.5"
 
+// One timeout for every call regardless of tier let a slow-but-working frontier response get
+// killed by the same budget sized for the cheap tier's ~1.5s typical latency. The frontier model
+// gets a longer budget to match its higher latency on larger problems.
+const CHEAP_TIER_TIMEOUT_MS = 60_000
+const FRONTIER_TIER_TIMEOUT_MS = 180_000
+
 // ADR-004 §2.4: up to 2 informed revisions per tier — 3 total attempts per tier (1 initial + 2
 // revisions) before escalating.
 const MAX_REVISIONS_PER_TIER = 2
@@ -101,7 +107,7 @@ function extractionSystemPrompt(): string {
     'For a positional/ordering clue between two entities ("X is immediately right of Y", "X is ' +
     'next to Y"): use `adjacency`. Set its `variable` field to name the domain the ordering is ' +
     "over whenever that domain's values are not plain integers (e.g. time slots like " +
-    '\"9am\"/\"10am\", ordered by the sequence you declared them in) — leave `variable` null ' +
+    "\"9am\"/\"10am\", ordered by the sequence you declared them in) — leave `variable` null " +
     "ONLY when the two entities share exactly one domain whose values are already plain " +
     "integers. Guessing wrong here (naming a categorical, non-ordered domain like color, or " +
     "leaving `variable` null when it's needed) is not just a compile error — it can silently " +
@@ -141,7 +147,7 @@ function extractionSystemPrompt(): string {
     "arithmetic's operand order must match the prose's stated direction exactly, not just its " +
     'entities: nest val1 as the outer condition and val2 as the inner (as above), then "val1 ' +
     'is immediately after val2" becomes `position[$outer] - position[$this] == 1` — $outer ' +
-    "(val1, the entity stated to come after) MINUS \$this (val2, the entity it comes after), " +
+    "(val1, the entity stated to come after) MINUS $this (val2, the entity it comes after), " +
     'never the reverse. Getting this backwards ($this - $outer instead) is NOT a compile error ' +
     "— it silently produces the mirror-image (wrong) solution instead of the correct one, so " +
     "double-check which side of the subtraction is which before finishing.\n\n" +
@@ -232,6 +238,7 @@ function critiqueUserPrompt(prose: string, candidate: ExtractedCsp): string {
 function extractOnce(
   model: string,
   prose: string,
+  timeoutMs: number,
   context?: RevisionContext,
   repair?: SchemaRepairContext,
 ): Effect.Effect<ExtractedCsp, ProviderError | SchemaRejected | SchemaViolation> {
@@ -248,6 +255,7 @@ function extractOnce(
     schemaName: "ExtractedCsp",
     jsonSchema: extractedCspJsonSchema,
     schema: ExtractedCsp,
+    timeoutMs,
   })
 }
 
@@ -255,6 +263,7 @@ function critiqueOnce(
   model: string,
   prose: string,
   candidate: ExtractedCsp,
+  timeoutMs: number,
   repair?: SchemaRepairContext,
 ): Effect.Effect<FidelityCritique, ProviderError | SchemaRejected | SchemaViolation> {
   return requestStructuredCompletion({
@@ -264,6 +273,7 @@ function critiqueOnce(
     schemaName: "FidelityCritique",
     jsonSchema: fidelityCritiqueJsonSchema,
     schema: FidelityCritique,
+    timeoutMs,
   })
 }
 
@@ -285,11 +295,12 @@ function critiqueWithRepair(
   model: string,
   prose: string,
   candidate: ExtractedCsp,
+  timeoutMs: number,
 ): Effect.Effect<CritiqueOutcome, ProviderError | SchemaRejected> {
-  return critiqueOnce(model, prose, candidate).pipe(
+  return critiqueOnce(model, prose, candidate, timeoutMs).pipe(
     Effect.map((critique): CritiqueOutcome => ({ ok: true, critique })),
     Effect.catchTag("SchemaViolation", (violation) =>
-      critiqueOnce(model, prose, candidate, { raw: violation.raw, detail: violation.detail }).pipe(
+      critiqueOnce(model, prose, candidate, timeoutMs, { raw: violation.raw, detail: violation.detail }).pipe(
         Effect.map((critique): CritiqueOutcome => ({ ok: true, critique })),
         Effect.catchTag("SchemaViolation", (violation2) => Effect.succeed<CritiqueOutcome>({ ok: false, violation: violation2 })),
       ),
@@ -314,6 +325,7 @@ function critiqueWithRepair(
 function runTier(
   model: string,
   prose: string,
+  timeoutMs: number,
 ): Effect.Effect<TierOutcome, ProviderError | SchemaRejected | SchemaViolation> {
   return Effect.gen(function* () {
     const attempts: ExtractionAttempt[] = []
@@ -322,7 +334,7 @@ function runTier(
     let lastSchemaViolation: SchemaViolation | undefined
 
     for (let round = 0; round <= MAX_REVISIONS_PER_TIER; round++) {
-      const attempt = yield* extractOnce(model, prose, context, repair).pipe(
+      const attempt = yield* extractOnce(model, prose, timeoutMs, context, repair).pipe(
         Effect.map((extractedCsp) => ({ ok: true as const, extractedCsp })),
         Effect.catchTag("SchemaViolation", (violation) => Effect.succeed({ ok: false as const, violation })),
       )
@@ -335,7 +347,7 @@ function runTier(
       }
 
       repair = undefined
-      const critiqueOutcome = yield* critiqueWithRepair(model, prose, attempt.extractedCsp)
+      const critiqueOutcome = yield* critiqueWithRepair(model, prose, attempt.extractedCsp, timeoutMs)
       if (!critiqueOutcome.ok) {
         // The critique itself never conformed, even after one repair retry — this round produced
         // no attempt to record (no valid critique exists to pair with the extraction), but the
@@ -358,6 +370,28 @@ function runTier(
   })
 }
 
+type TierAttempt =
+  | { readonly ok: true; readonly outcome: TierOutcome }
+  | { readonly ok: false; readonly providerError: ProviderError }
+
+/**
+ * `runTier`, but a `ProviderError` (a transport failure surviving `requestStructuredCompletion`'s
+ * own bounded retry — see provider.ts) ends this tier rather than aborting the whole extraction.
+ * Without this, one persistent transport failure on the cheap tier propagated straight out of
+ * `extract()`'s `Effect.gen`, so the frontier tier — the entire reason a cross-vendor pair exists
+ * (ADR-004 §2.5) — was never even attempted.
+ */
+function runTierSafely(
+  model: string,
+  prose: string,
+  timeoutMs: number,
+): Effect.Effect<TierAttempt, SchemaRejected | SchemaViolation> {
+  return runTier(model, prose, timeoutMs).pipe(
+    Effect.map((outcome): TierAttempt => ({ ok: true, outcome })),
+    Effect.catchTag("ProviderError", (providerError) => Effect.succeed<TierAttempt>({ ok: false, providerError })),
+  )
+}
+
 /**
  * ADR-004's fidelity critic loop, end to end: cheap-tier extract→critique→revise, escalating to
  * the frontier tier on exhaustion, failing with CriticRejected (carrying every attempt from both
@@ -368,24 +402,41 @@ export function extract(prose: string, options?: ExtractOptions): Effect.Effect<
   const frontierModel = options?.frontierModel ?? DEFAULT_FRONTIER_MODEL
 
   return Effect.gen(function* () {
-    const cheapOutcome = yield* runTier(cheapModel, prose)
-    if (cheapOutcome.accepted !== undefined) {
-      return { extractedCsp: cheapOutcome.accepted.extractedCsp, model: cheapModel }
+    const cheapResult = yield* runTierSafely(cheapModel, prose, CHEAP_TIER_TIMEOUT_MS)
+    if (cheapResult.ok && cheapResult.outcome.accepted !== undefined) {
+      return { extractedCsp: cheapResult.outcome.accepted.extractedCsp, model: cheapModel }
     }
 
-    const frontierOutcome = yield* runTier(frontierModel, prose)
-    if (frontierOutcome.accepted !== undefined) {
-      return { extractedCsp: frontierOutcome.accepted.extractedCsp, model: frontierModel }
+    const frontierResult = yield* runTierSafely(frontierModel, prose, FRONTIER_TIER_TIMEOUT_MS)
+    if (frontierResult.ok && frontierResult.outcome.accepted !== undefined) {
+      return { extractedCsp: frontierResult.outcome.accepted.extractedCsp, model: frontierModel }
     }
 
-    const attempts = [...cheapOutcome.attempts, ...frontierOutcome.attempts]
+    // Both tiers failed on transport grounds — neither produced so much as a schema violation to
+    // diagnose. Surface the frontier tier's transport error (the more relevant, final one) rather
+    // than an empty, uninformative CriticRejected.
+    if (!cheapResult.ok && !frontierResult.ok) {
+      return yield* Effect.fail(frontierResult.providerError)
+    }
+
+    const cheapAttempts = cheapResult.ok ? cheapResult.outcome.attempts : []
+    const frontierAttempts = frontierResult.ok ? frontierResult.outcome.attempts : []
+    const attempts = [...cheapAttempts, ...frontierAttempts]
 
     // Neither tier ever decoded a candidate to critique — every round was a schema violation.
     // Surface the frontier tier's last one (the more relevant, final diagnostic) rather than a
     // CriticRejected carrying zero attempts, which would hide why extraction actually failed.
-    const lastSchemaViolation = frontierOutcome.lastSchemaViolation ?? cheapOutcome.lastSchemaViolation
+    const cheapSchemaViolation = cheapResult.ok ? cheapResult.outcome.lastSchemaViolation : undefined
+    const frontierSchemaViolation = frontierResult.ok ? frontierResult.outcome.lastSchemaViolation : undefined
+    const lastSchemaViolation = frontierSchemaViolation ?? cheapSchemaViolation
     if (attempts.length === 0 && lastSchemaViolation !== undefined) {
       return yield* Effect.fail(lastSchemaViolation)
+    }
+
+    // The frontier tier failed on transport grounds with nothing else to report — surface that
+    // rather than a CriticRejected with zero attempts and no diagnostic.
+    if (attempts.length === 0 && !frontierResult.ok) {
+      return yield* Effect.fail(frontierResult.providerError)
     }
 
     return yield* Effect.fail(new CriticRejected({ attempts }))

@@ -4,13 +4,15 @@ Runs every catalog puzzle (`catalog/puzzles/`) through the full extract → comp
 pipeline ([ADR-004](../design/adr/ADR-004-llm-extraction-critic-loop.md)/
 [ADR-005](../design/adr/ADR-005-extractedcsp-mzn-compiler.md)) and compares the result against
 `answer-keys.json`'s known-correct solutions — a broader, ground-truth-checked measurement than
-`tests/extraction/live.test.ts`, which only samples 5 of 14 puzzles and checks a weaker signal
-(the critic accepted it, not that it solves to the right answer).
+`tests/extraction/live.test.ts`, which only samples 5 of the catalog's 39 puzzles (all from the
+original 14 — the sample has not yet been rotated to include the newer non-problem, optimization,
+ambiguous, and subjective categories) and checks a weaker signal (the critic accepted it, not that
+it solves to the right answer).
 
 ## Running it
 
 ```bash
-pnpm eval                                   # all 14 catalog puzzles
+pnpm eval                                   # every catalog puzzle
 node scripts/eval-extraction.ts PZL-0004    # just one, for debugging
 node scripts/eval-extraction.ts --model openai/gpt-4o-mini --frontier-model anthropic/claude-sonnet-4.5
 ```
@@ -73,24 +75,16 @@ shape without per-puzzle logic — but it has real, documented blind spots:
 `ExtractedCsp`/ADR-005's compiler, not eval-script issues, found by running this harness against
 the full catalog (also noted in each ADR's Consequences section):
 
-- **Relational chaining between two anonymous entities** (e.g. "the green house is immediately
-  right of the ivory house," where neither house is otherwise named) — `adjacency` needs a shared
-  numeric positional domain between its two entities, which doesn't exist when both are only
-  identified by attribute rather than an ordinal fixed elsewhere. Affects PZL-0001/0002/0009
-  intermittently, depending on which clues a given extraction happens to lean on. Already flagged
-  in ADR-004 §2.2/§4.
-- **No "universal rule table" constraint kind** — puzzles whose logic is a small set of static,
-  entity-independent facts (Rock-Paper-Scissors' "paper beats rock, rock beats scissors, scissors
-  beats paper," PZL-0003) have no clean home in the current constraint-kind taxonomy. `relation`
-  facts exist but are only consumed by `derivedRule`'s fact-driven expansion mode, which expands
-  per matching *entity pair*, not per free-variable assignment against a static table.
-- **Residual model non-determinism** — even after this session's schema/compiler fixes (entity-
+- **Residual model non-determinism** — even after several rounds of schema/compiler fixes (entity-
   scoped `variableRef`, expression-valued `target`, more/n-ary arithmetic operators, adjacency
-  relation-name normalization, enum-collision fix — see ADR-005 §4), occasional extractions still
-  confuse an arithmetic `op` with the constraint's `comparator`, or reference an undeclared
-  variable. Consistent with SPIKE-004's already-documented non-determinism finding; a residual
-  rate is expected, not chased to zero within this branch's scope.
+  relation-name normalization, enum-collision fix, nested `derivedRule` for relational chaining
+  between two anonymous entities, the `ruleTable`/`ruleTableConstraint` kind — see ADR-004/ADR-005
+  Consequences), occasional extractions still confuse an arithmetic `op` with the constraint's
+  `comparator`, or reference an undeclared variable. Consistent with SPIKE-004's already-documented
+  non-determinism finding; a residual rate is expected, not chased to zero.
 
-Fixing any of the above is real follow-on work (a new constraint kind, a chaining-aware compiler
-pass, or a fuzzy comparison layer) — deliberately left for a future ADR/spec rather than expanding
-this branch's scope.
+Relational chaining between two anonymous entities and a universal rule-table constraint kind were
+both real gaps as of this section's earlier drafts — both are now addressed (nested `derivedRule`
+`$this`/`$outer` binding, and the `ruleTable`/`ruleTableConstraint` kind, respectively); see
+ADR-004's Consequences section for the fix history rather than relying on this file, which doesn't
+track resolved gaps.
