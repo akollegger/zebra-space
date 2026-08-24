@@ -50,7 +50,7 @@ Growing the catalog will surface schema/architecture requirements early (a "this
 The current pass rate overstates and understates at the same time:
 
 - **Grader fidelity**: `MATCH` on parallel-array puzzles (PZL-0001/0002/0006/0008/0010) verifies vocabulary only, not pairing/ordering. Subset-shaped answers (PZL-0014: 3 expected tokens vs 12 actual) are compared against full assignments and read as false MISMATCHes. The grader needs pairing-aware and answer-shape-aware comparison.
-- **Outcome taxonomy**: `SOLVE_MULTIPLY_SATISFIABLE` is currently always a failure; for subjective/ambiguous puzzles (workstream 1) it must be able to be the expected, passing outcome. Likewise non-problems need a passing "correctly declined to model" outcome.
+- **Outcome taxonomy**: `SOLVE_MULTIPLY_SATISFIABLE` is currently always a failure; for subjective/ambiguous puzzles (workstream 1) it must be able to be the expected, passing outcome. Likewise non-problems need a passing "correctly declined to model" outcome. [Issue #11](https://github.com/akollegger/zebra-space/issues/11) has a sharp concrete case: PZL-0018 (a non-problem) is built on a uniquely-solvable house model on purpose, so a system that correctly refuses to answer scores as MISMATCH today — the *correct* behavior is indistinguishable from a wrong one.
 - **Run stability**: extraction is stochastic — the same commit has historically scored anywhere from 0/14 to 3/14 across runs in a single day. Add repeat-run support (N runs per eval) and report per-puzzle pass *frequency* ("solves 7 reliably, 4 sometimes, 3 never") instead of single-snapshot pass rates, so we know whether the current 9/14 is a floor or a lucky draw.
 
 ## 3. Close structural expressiveness gaps in the extraction schema / compiler
@@ -80,3 +80,14 @@ Why it's worth its own consideration rather than folding into the critic loop:
 The real-world motivation is stronger than the puzzle framing suggests: the interesting everyday failure is a person (or a system) not accounting for a concern that looks obvious in retrospect. High agreement on a premise is exactly what makes its omission hard to notice in review — see `catalog/TODO.md`'s note on why the high-agreement/high-stakes cell is the sharpest test rather than the safest.
 
 Depends on [RFC-004](design/rfc/RFC-004-computational-decision-making.md) §5.4's provenance framing (an answer holds only conditional on premises supplied) and its §7.11 (whether that condition rides in-band with the answer) — a lint has nowhere to report to until that's settled. Also a candidate addition to RFC-004 §5.7's silent-promotion list, which currently names four flavors and omits *inventing a constraint from world knowledge*.
+
+## 5. Advisory hardening backlog (from issue #11)
+
+**Approach: plan+execute** — each item is small and independent; no design decision required.
+
+[Issue #11](https://github.com/akollegger/zebra-space/issues/11)'s significant findings (eval outcome taxonomy → item 2 above; stale `eval/README.md` gaps; `ProviderError` retry/escalation; per-tier timeouts) were fixed directly. Its advisory findings, deliberately left for later since none is urgent:
+
+- **Triple home for constraint-kind semantics** — the extraction system prompt in `src/extraction/extract.ts`, the JSON Schema `description` fields in `src/extraction/types.ts`, and ADR-005 all separately re-teach the same constraint-kind rules (arithmetic vs. linkedAttributes vs. assignment, adjacency's `variable` rule, ruleTable vs. relation, token families). Three sources of truth that have already drifted once; collapsing the prompt to a thin layer over the schema descriptions (or generating one from the other) would shrink the surface.
+- **`live.test.ts` samples only the original 14** — `pnpm test:live` still exercises zero of the 25 puzzles added by workstream 1 (non-problem/optimization/ambiguous/subjective). Rotate the stratified sample to cover the newer categories.
+- **Worst-case eval cost is unbounded** — 2 tiers × 3 rounds × (extract + critique) ≈ up to 12 calls per puzzle, ~900+ per full `pnpm eval` run, with no budget guard. A `--max-calls` flag and per-run request counts in the raw JSON output would make cost visible before a run, not just after.
+- **Small**: the extraction system prompt's "The examples below use placeholder names…" sentence no longer points at any real example block (removed in the de-overfitting rewrite); `eval/results.md` is append-only and committed, and will grow forever without a cap or trim policy.

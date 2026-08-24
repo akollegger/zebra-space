@@ -31,7 +31,7 @@ Package manager is **pnpm** (pinned via `packageManager` in `package.json`; Node
 
 ```bash
 pnpm install       # install dependencies
-pnpm test          # runs tests/**/*.test.ts via Node's built-in test runner (node --test)
+pnpm test          # runs every tests/**/*.test.ts via Node's built-in test runner (node --test)
 pnpm test:live     # same suite, but loads .env first — opts into the live extraction test
 ```
 

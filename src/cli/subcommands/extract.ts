@@ -18,7 +18,9 @@ interface ExtractFlags {
 }
 
 function resolveModel(flag: string | undefined, envVar: string): string | undefined {
-  return flag ?? process.env[envVar]
+  // `||`, not `??`: an env var set to the empty string (e.g. `ZEBRA_MODEL=` left blank in .env)
+  // must fall through to the built-in default, not override it with "".
+  return flag || process.env[envVar] || undefined
 }
 
 /**

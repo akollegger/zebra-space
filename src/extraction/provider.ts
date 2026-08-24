@@ -1,9 +1,17 @@
 import { OpenRouter } from "@openrouter/sdk"
 import { OpenRouterError } from "@openrouter/sdk/models/errors"
-import { Effect, Schema } from "effect"
+import { Effect, Schedule, Schema } from "effect"
 import { ProviderError, SchemaRejected, SchemaViolation } from "./types.ts"
 
 const DEFAULT_TIMEOUT_MS = 60_000
+
+// A transport failure (429, 5xx, a timeout) is often a single transient blip rather than a real
+// outage — retry it up to twice with exponential backoff before giving up on this call. Schema
+// rejections/violations are not retried here: they're about what the provider *understood*, not
+// whether the request got through, and retrying the same model won't change that.
+const PROVIDER_ERROR_RETRY_SCHEDULE = Schedule.max([Schedule.exponential("300 millis"), Schedule.recurs(2)])
+
+const MISSING_API_KEY_MESSAGE = "OPENROUTER_API_KEY is missing or invalid (401 Unauthorized)."
 
 export interface StructuredCompletionRequest<A> {
   readonly model: string
@@ -28,7 +36,7 @@ export interface StructuredCompletionRequest<A> {
  */
 function errorMessage(error: unknown): string {
   if (error instanceof OpenRouterError && error.statusCode === 401) {
-    return "OPENROUTER_API_KEY is missing or invalid (401 Unauthorized)."
+    return MISSING_API_KEY_MESSAGE
   }
   return error instanceof Error ? error.message : String(error)
 }
@@ -172,6 +180,11 @@ export function requestStructuredCompletion<A>(
           ),
         ),
       )
+    }),
+    Effect.retry({
+      // A missing/invalid API key will never succeed on retry — don't burn the retry budget on it.
+      while: (error) => error._tag === "ProviderError" && error.message !== MISSING_API_KEY_MESSAGE,
+      schedule: PROVIDER_ERROR_RETRY_SCHEDULE,
     }),
   )
 }
