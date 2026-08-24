@@ -1,5 +1,5 @@
 {
-  "$comment": "Private verification record, originally authored under specs/001-catalog-seeding/ per FR-009 (each seed puzzle has exactly one valid solution, confirming FR-008/SC-004), later moved to eval/ and reformatted from Markdown to JSON so it can double as machine-readable ground truth for eval/'s extraction eval (comparing a puzzle's compiled, solved output against the known-correct answer below). Not part of the public catalog schema -- not linked from catalog/README.md, not referenced by any puzzle's frontmatter. Each entry's `answer` is intentionally shaped to match that puzzle's own variables rather than a single uniform schema, since the seed catalog spans multiple constraint shapes (grid assignment, digit substitution, subset selection, ordering, single-value decision), not just zebra-grid puzzles.",
+  "$comment": "Private verification record, originally authored under specs/001-catalog-seeding/ per FR-009 (each seed puzzle has exactly one valid solution, confirming FR-008/SC-004), later moved to eval/ and reformatted from Markdown to JSON so it can double as machine-readable ground truth for eval/'s extraction eval (comparing a puzzle's compiled, solved output against the known-correct answer below). Not part of the public catalog schema -- not linked from catalog/README.md, not referenced by any puzzle's frontmatter. Each entry's `answer` is intentionally shaped to match that puzzle's own variables rather than a single uniform schema, since the seed catalog spans multiple constraint shapes (grid assignment, digit substitution, subset selection, ordering, single-value decision), not just zebra-grid puzzles. Starting with PZL-0015, entries also cover non-problems and optimization (COP) puzzles that don't fit the single-correct-assignment framing above -- for those, `answer` records a diagnosis or an optimum rather than a satisfying assignment, and `notes` says so explicitly. This is a deliberately provisional extension, not a redesign: RFC-004 §7.3 and root TODO.md item 2 own the eventual outcome taxonomy and answer-key format; these entries exist now so the gap they'll need to close is visible rather than silently absent.",
   "PZL-0001": {
     "title": "Life International 1962",
     "answer": {
@@ -103,5 +103,267 @@
     "title": "Packing the Box",
     "answer": { "items": ["hardcover book set", "cast-iron skillet", "first-aid kit"] },
     "notes": "Of the 32 possible item subsets, exactly two sum to 10 kg: {rice, toolbox} (4+6) and {book set, skillet, first-aid kit} (3+5+2). Only the second includes the first-aid kit, which the puzzle requires."
+  },
+  "PZL-0015": {
+    "title": "Extract a Solvable CSP",
+    "answer": {
+      "outcome": "non-problem",
+      "failing_condition": "Demand",
+      "diagnosis": "The only sentence is an imperative about the modeling act itself (\"extract a solvable CSP from this prose\"), not a demand about any scenario — the adversarial subtype RFC-004 §5.3 names. There is no scenario, no entities, and no constraints to extract; correct behavior is to report that no object-level demand is present, not to treat the imperative as the query."
+    },
+    "notes": "Non-problem, not a determinate puzzle (RFC-004 §5.1/§5.3). This entry is a provisional placeholder — the {title, answer, notes} shape above was designed for a single correct assignment, not a diagnosis, and there is no outcome taxonomy yet for non-problems (RFC-004 §7.3; root TODO.md item 2 owns closing this gap). Recorded now so the gap stays visible rather than silently absent."
+  },
+  "PZL-0016": {
+    "title": "Five Houses, No Question",
+    "answer": {
+      "outcome": "non-problem",
+      "failing_condition": "Demand",
+      "diagnosis": "The prose sets up five neighbors, house colors, and five clues but never asks a question — the other non-problem subtype RFC-004 §5.3 names alongside PZL-0015's. Correct behavior is to report that no demand is present, not to infer an implied 'who lives where' question."
+    },
+    "notes": "Non-problem, not a determinate puzzle (RFC-004 §5.1/§5.3). This entry is a provisional placeholder — the {title, answer, notes} shape above was designed for a single correct assignment, not a diagnosis, and there is no outcome taxonomy yet for non-problems (RFC-004 §7.3; root TODO.md item 2 owns closing this gap). Recorded now so the gap stays visible rather than silently absent."
+  },
+  "PZL-0017": {
+    "title": "The Bridge Collapse",
+    "answer": {
+      "outcome": "non-problem",
+      "failing_condition": "Determinate answer-space",
+      "diagnosis": "\"Why did the bridge collapse?\" ranges over an open, unenumerable set of possible causes (any combination of the stated facts, an unlisted cause, or contested causal weighting) rather than a determinate candidate set — RFC-004's own worked example for this condition. There is no finite answer-space to narrow, so no CSP can be extracted."
+    },
+    "notes": "Non-problem, not a determinate puzzle (RFC-004 §5.1/§5.3). This entry is a provisional placeholder — the {title, answer, notes} shape above was designed for a single correct assignment, not a diagnosis, and there is no outcome taxonomy yet for non-problems (RFC-004 §7.3; root TODO.md item 2 owns closing this gap). Recorded now so the gap stays visible rather than silently absent."
+  },
+  "PZL-0018": {
+    "title": "The Loudest Laugh",
+    "answer": {
+      "outcome": "non-problem",
+      "failing_condition": "Relevance",
+      "diagnosis": "The house assignment (Ana=1, Bo=3, Cy=2) is a genuine, uniquely solvable CSP, hand-verified. But no clue mentions laughter — the demanded unknown is not a projection of anything the constraints act on. A system that solves the housing model and reports one of the three names as 'the answer' would be confidently wrong; correct behavior is to report that the demand is unaddressed by the model, not to guess."
+    },
+    "notes": "Non-problem, not a determinate puzzle (RFC-004 §5.1/§5.3). This entry is a provisional placeholder — the {title, answer, notes} shape above was designed for a single correct assignment, not a diagnosis, and there is no outcome taxonomy yet for non-problems (RFC-004 §7.3; root TODO.md item 2 owns closing this gap). Recorded now so the gap stays visible rather than silently absent."
+  },
+  "PZL-0019": {
+    "title": "Office Tendencies",
+    "answer": {
+      "outcome": "non-problem",
+      "failing_condition": "Constitutive constraints",
+      "diagnosis": "Every clue is hedged (\"usually,\" \"tends to,\" \"often,\" \"as a rule\") and eliminates no assignment definitively — RFC-004's own \"Marta is often late\" case, repeated across the whole puzzle. There are no categorical constraints to extract, so no desk assignment is determinate. Note that Sufficiency also fails (with nothing eliminated, all 120 assignments remain admissible against a find-unique demand), but Constitutive constraints is the *lower* condition and so is the correct attribution per §5.1's ordering rule."
+    },
+    "notes": "The five desks are enumerated by name, and all four clues concern seating, deliberately: an earlier draft named no desks and spent two of its four clues on arrival/departure times, which made Determinate answer-space and Relevance fail *below* the condition this puzzle is supposed to isolate. Non-problem, not a determinate puzzle (RFC-004 §5.1/§5.3). This entry is a provisional placeholder — the {title, answer, notes} shape above was designed for a single correct assignment, not a diagnosis, and there is no outcome taxonomy yet for non-problems (RFC-004 §7.3; root TODO.md item 2 owns closing this gap). Recorded now so the gap stays visible rather than silently absent."
+  },
+  "PZL-0020": {
+    "title": "Featured Apartment",
+    "answer": {
+      "outcome": "non-problem",
+      "failing_condition": "Determinate atoms",
+      "diagnosis": "\"Cozy,\" \"friendliest,\" \"quietest,\" \"best-value,\" and \"featured\" all require a valuer to evaluate — none is a lookup, arithmetic check, or structural fact. The constraints themselves are categorical (not hedged), so this fails only Determinate atoms, not Constitutive constraints, per RFC-004's note that the two conditions are orthogonal."
+    },
+    "notes": "Non-problem, not a determinate puzzle (RFC-004 §5.1/§5.3). This entry is a provisional placeholder — the {title, answer, notes} shape above was designed for a single correct assignment, not a diagnosis, and there is no outcome taxonomy yet for non-problems (RFC-004 §7.3; root TODO.md item 2 owns closing this gap). Recorded now so the gap stays visible rather than silently absent."
+  },
+  "PZL-0021": {
+    "title": "Which House Is Yellow",
+    "answer": {
+      "outcome": "non-problem",
+      "failing_condition": "Sufficiency",
+      "diagnosis": "Only one constraint (the red house isn't at either end) is given over a 5x5 assignment; the text has exactly one plain reading, but very many colorings satisfy that single constraint. For a definite-sounding demand ('who lives in the yellow house?'), this is underdetermination, not ambiguity — RFC-004 §5.3's own distinction: many models for one reading of the text, not many readings of the text."
+    },
+    "notes": "Non-problem, not a determinate puzzle (RFC-004 §5.1/§5.3). This entry is a provisional placeholder — the {title, answer, notes} shape above was designed for a single correct assignment, not a diagnosis, and there is no outcome taxonomy yet for non-problems (RFC-004 §7.3; root TODO.md item 2 owns closing this gap). Recorded now so the gap stays visible rather than silently absent."
+  },
+  "PZL-0022": {
+    "title": "Packing the Box, Wisely",
+    "answer": {
+      "items": ["first-aid kit", "hardcover book set", "cast-iron skillet"],
+      "total_weight_kg": 10,
+      "total_value": 18
+    },
+    "notes": "The first-aid kit is mandatory (2 kg, value 6), leaving 8 kg of capacity among the other four items. Checking every subset of those four within budget: book set + skillet (3+5=8 kg, value 4+8=12) beats every alternative (rice+book=9, skillet alone=8, toolbox alone=7). Optimal total: first-aid kit + book set + skillet, 10 kg, value 18, verified unique by exhaustive subset check. This is a constraint optimization problem (COP), not a satisfaction problem — SolveResult (src/solver/types.ts) has no optimization outcome and ExtractedCsp has no objective field yet (RFC-004 §5.2; root TODO.md item 3 owns closing this gap). This entry records the hand-verified optimum so it's available once that gap closes."
+  },
+  "PZL-0023": {
+    "title": "Who Does Which Task",
+    "answer": {
+      "Ana": "Testing",
+      "Ben": "Editing",
+      "Cara": "Design",
+      "Dev": "Docs",
+      "total_hours": 20
+    },
+    "notes": "Exhaustively enumerated all 24 possible assignments by hand. Minimum: Ana-Testing (5), Ben-Editing (6), Cara-Design (5), Dev-Docs (4), total 20 hours — the unique minimum (next-best is 22). This is a COP; see PZL-0022's note on the SolveResult/ExtractedCsp objective gap (RFC-004 §5.2, root TODO.md item 3)."
+  },
+  "PZL-0024": {
+    "title": "Cheapest Adequate Meal",
+    "answer": {
+      "Oats": 0,
+      "Beans": 5,
+      "Spinach": 0,
+      "total_cost": 15
+    },
+    "notes": "5 servings of beans alone meets both minimums exactly (protein 5x5=25>=20, iron 5x2=10>=10) at cost 5x3=15. Checked every combination adding a cheaper filler to fewer beans (e.g. 4 beans + 1 spinach = cost 16, 4 beans + 2 oats = cost 16) and every oats-plus-spinach-only combination (all cost 20 or more); none beats 15. Optimal: 5 beans, 0 oats, 0 spinach, cost 15. See PZL-0022's note on the SolveResult/ExtractedCsp objective gap (RFC-004 §5.2, root TODO.md item 3)."
+  },
+  "PZL-0025": {
+    "title": "How Many Crates",
+    "answer": {
+      "crate_1": [6, 4],
+      "crate_2": [5, 3, 2],
+      "crate_3": [4],
+      "num_crates": 3
+    },
+    "notes": "Total weight is 24 kg; 24/10 rounds up to 3, so no arrangement can use fewer than 3 crates regardless of grouping — a provable lower bound, not just a best-found result. 3 crates achieve it, e.g. {6,4}=10 kg, {5,3,2}=10 kg, {4}=4 kg; a brute-force check found at least one other valid 3-crate grouping ({6,4},{5,4},{3,2}), confirming the minimum *count* (3) is unique but the specific grouping is not — the puzzle text doesn't pin one down. See PZL-0022's note on the SolveResult/ExtractedCsp objective gap (RFC-004 §5.2, root TODO.md item 3)."
+  },
+  "PZL-0026": {
+    "title": "Which Candidates to Interview",
+    "answer": {
+      "scheduled": ["Amara", "Chen", "Elena"],
+      "skipped": ["Ben", "Deepak"],
+      "total_priority": 18
+    },
+    "notes": "Worked the weighted-interval-scheduling recurrence by hand (sorted by end time, computed each candidate's latest compatible predecessor). Optimal: Amara (9-10, priority 5) + Chen (10-11, priority 6) + Elena (11-12, priority 7), back-to-back with no overlap, total priority 18. The next-best combination (Ben + Elena, non-overlapping) only reaches 16. See PZL-0022's note on the SolveResult/ExtractedCsp objective gap (RFC-004 §5.2, root TODO.md item 3)."
+  },
+  "PZL-0027": {
+    "title": "The Shortest Delivery Route",
+    "answer": {
+      "routes": [
+        ["Ashby", "Brindle", "Dunmore", "Caldwell", "Ashby"],
+        ["Ashby", "Caldwell", "Dunmore", "Brindle", "Ashby"]
+      ],
+      "total_distance_miles": 80,
+      "equivalence": "The two routes are the same undirected tour traversed in opposite directions. Either is a correct answer; a grader should accept both, or treat reversal-equivalent tours as one answer."
+    },
+    "notes": "The distance matrix is symmetric, so each undirected tour has two directed traversals of equal length. Enumerating all 6 directed round trips from Ashby: Brindle-Caldwell-Dunmore=95, Brindle-Dunmore-Caldwell=80, Caldwell-Brindle-Dunmore=95, Caldwell-Dunmore-Brindle=80, Dunmore-Brindle-Caldwell=95, Dunmore-Caldwell-Brindle=95. The optimal *value* (80 miles) is unique and corresponds to a unique undirected tour, but there are two optimal *orders* — and the puzzle asks \"in what order,\" which never states that a reversal counts as the same answer. Both are recorded above rather than silently collapsing them. See PZL-0022's note on the SolveResult/ExtractedCsp objective gap (RFC-004 §5.2, root TODO.md item 3), and PZL-0025 for the related case where the optimal count is unique but the arrangement achieving it is not."
+  },
+  "PZL-0028": {
+    "title": "The Green House",
+    "answer": {
+      "outcome": "ambiguous",
+      "ambiguous_phrase": "the green house is to the right of the blue house",
+      "readings": [
+        { "reading": "immediately to the right (green = blue + 1)", "result": "uniquely solvable", "answer": { "yellow_house": 5 } },
+        { "reading": "anywhere to the right (green > blue)", "result": "multiply satisfiable", "answer": { "yellow_house": [2, 3, 5] } }
+      ]
+    },
+    "notes": "Ambiguous-NL, not a determinate puzzle (RFC-004 §5.3 class 3) — RFC-001 §2's own \"to the right of\" example. red=1 and white=4 leave {2,3,5} for blue/green/yellow. Under the immediate reading only (blue=2, green=3) fits, so yellow=5 uniquely; under the anywhere reading (blue,green) can be (2,3), (2,5), or (3,5), so yellow is 5, 3, or 2. Both readings verified by brute force. Correct behavior is to surface the two readings, not to silently pick one (RFC-004 §7.4 owns which of enumerate/commit/refuse is right). This entry is a provisional placeholder: the {title, answer, notes} shape was designed for one correct assignment, and there is no outcome vocabulary yet for \"multiple faithful readings\" (RFC-004 §7.3; root TODO.md item 2)."
+  },
+  "PZL-0029": {
+    "title": "Between Ten and Twelve",
+    "answer": {
+      "outcome": "ambiguous",
+      "ambiguous_phrase": "the audit is between 10am and 12pm",
+      "readings": [
+        { "reading": "exclusive (10am < audit < 12pm)", "result": "uniquely solvable", "answer": { "briefing": "9am", "edit": "10am", "audit": "11am", "drafting": "12pm", "cleanup": "1pm" } },
+        { "reading": "inclusive (10am <= audit <= 12pm)", "result": "multiply satisfiable", "solution_count": 4 }
+      ]
+    },
+    "notes": "Ambiguous-NL (RFC-004 §5.3 class 3): whether \"between X and Y\" includes its endpoints. briefing=9am and cleanup=1pm leave {10am, 11am, 12pm} for audit/drafting/edit, with drafting != 10am. Exclusive reading forces audit=11am, hence drafting=12pm and edit=10am — unique. Inclusive reading allows audit at 10am, 11am, or 12pm, yielding 4 solutions. Both verified by brute force. See PZL-0028's note on the provisional shape of this entry."
+  },
+  "PZL-0030": {
+    "title": "The Commute",
+    "answer": {
+      "outcome": "ambiguous",
+      "ambiguous_phrase": "Dara uses the bus or the train",
+      "readings": [
+        { "reading": "inclusive or (at least one, possibly both)", "result": "uniquely solvable", "answer": { "Dara": ["bus", "train"] } },
+        { "reading": "exclusive or (exactly one, not both)", "result": "unsatisfiable" }
+      ]
+    },
+    "notes": "Ambiguous-NL (RFC-004 §5.3 class 3): inclusive vs exclusive \"or\". Ellis uses 1 mode and Fen 2, so the five-mode total forces Dara to use exactly 2; Dara also uses no bicycle, so both must come from {bus, train}. Under inclusive or that's satisfied (Dara uses bus and train) — unique. Under exclusive or, using both is forbidden, so Dara can only reach 1 mode and the puzzle is unsatisfiable. Both verified by brute force. The sharpest case in this group: choosing the wrong reading doesn't produce a wrong answer, it produces \"this puzzle is broken\" — a reading error masquerading as an ill-posed input. See PZL-0028's note on the provisional shape of this entry."
+  },
+  "PZL-0031": {
+    "title": "The Cheapest Bike",
+    "answer": {
+      "outcome": "ambiguous",
+      "ambiguous_phrase": "the blue bike is cheaper than the others",
+      "readings": [
+        { "reading": "cheaper than each of the others individually", "result": "uniquely solvable", "answer": { "red": 500, "blue": 100, "green": 200, "yellow": 150 } },
+        { "reading": "cheaper than the others combined", "result": "multiply satisfiable", "solution_count": 3 }
+      ]
+    },
+    "notes": "Ambiguous-NL (RFC-004 §5.3 class 3): a comparative with no stated baseline — cheaper than each rival, or cheaper than their sum. Under the per-item reading blue must be the minimum, 100, forcing green=200 and yellow=150 — unique. Under the combined reading blue can be 100, 150, or 200 (each is less than the sum of the other three), giving 3 solutions. Both verified by brute force. See PZL-0028's note on the provisional shape of this entry."
+  },
+  "PZL-0032": {
+    "title": "The Chemist and the Painter",
+    "answer": {
+      "outcome": "ambiguous",
+      "ambiguous_phrase": "The chemist lives next to the painter. He keeps the dog.",
+      "readings": [
+        { "reading": "\"he\" refers to the chemist", "result": "uniquely solvable", "answer": { "house_1": "painter", "house_2": "chemist", "house_3": "teacher" } },
+        { "reading": "\"he\" refers to the painter", "result": "uniquely solvable", "answer": { "house_1": "chemist", "house_2": "painter", "house_3": "teacher" } }
+      ]
+    },
+    "notes": "Ambiguous-NL (RFC-004 §5.3 class 3), and the purest instance of it in the catalog: an unresolved pronoun, where *both* readings are fully determinate and they contradict each other — exactly RFC-004's \"each of which may be perfectly determinate once fixed.\" The cat's owner is in house 1, so whoever keeps the dog cannot be in house 1; that pins the dog-keeper to house 2 and the other to house 1, and which one that is depends entirely on the referent of \"he.\" Both readings verified by brute force. A system reporting either answer alone looks completely confident and is 50% likely to be wrong. See PZL-0028's note on the provisional shape of this entry."
+  },
+  "PZL-0033": {
+    "title": "Groceries in the Trunk",
+    "answer": {
+      "outcome": "subjective",
+      "unstated_premise": "Perishable goods ought to be kept from spoiling, so the ice cream should go in the only compartment held below freezing.",
+      "contestability": "physical common sense — near-universal",
+      "without_premise": { "result": "unconstrained", "solution_count": 24, "ice_cream_compartment": [1, 2, 3, 4] },
+      "with_premise": { "result": "the demanded unknown is determined", "ice_cream_compartment": 1 }
+    },
+    "notes": "Subjective, not determinate (RFC-004 §5.3 class 4). \"The ice cream melts above freezing\" is a statement of fact, not a requirement — it constrains nothing until a premise the prose never states is imported (that spoilage should be avoided). Without it all 24 arrangements are admissible and the ice cream could be anywhere; with it the answer is compartment 1. Verified by brute force both ways. The prose specifies compartment 1 as a freezer held *below* freezing, not merely refrigerated, deliberately: a refrigerated compartment runs above freezing, so against a clue about melting above freezing it would not protect the ice cream, and the premise would then entail no compartment at all rather than compartment 1. Per constitution Principle VI the tool should report the premise it would need rather than supply it silently — RFC-004 §5.7 lists four flavors of silent promotion but not this one, inventing a constraint from world knowledge. This entry is provisional: there is no outcome vocabulary yet for \"answer conditional on a supplied premise\" (RFC-004 §7.3/§7.5; root TODO.md item 2)."
+  },
+  "PZL-0034": {
+    "title": "The Evening Doses",
+    "answer": {
+      "outcome": "subjective",
+      "unstated_premise": "Calcium impairs absorption of a calcium-binding antibiotic, so the two should not be taken together.",
+      "contestability": "domain expertise — universal given the domain, invisible without it",
+      "without_premise": { "result": "multiply satisfiable", "solution_count": 2 },
+      "with_premise": { "result": "uniquely solvable", "answer": { "thyroid tablet": "8am", "antibiotic": "1pm", "vitamin": "8pm" } }
+    },
+    "notes": "Subjective, not determinate (RFC-004 §5.3 class 4). \"The antibiotic binds to calcium\" is a pharmacological fact; that it *should therefore be separated from* the milk at breakfast and the cheese at dinner is the imported premise. The thyroid tablet takes 8am, leaving the antibiotic and vitamin to split 1pm and 8pm — 2 solutions without the premise, and only 1pm is calcium-free, so unique with it. Verified by brute force both ways. Distinct from PZL-0033 in that the premise isn't common sense but domain knowledge: a reader without it sees no constraint at all rather than an obvious one. See PZL-0033's note on the provisional shape of this entry."
+  },
+  "PZL-0035": {
+    "title": "The Head of the Table",
+    "answer": {
+      "outcome": "subjective",
+      "unstated_premise": "The guest of honor is seated at the head of the table.",
+      "contestability": "cultural convention — varies by culture and by table",
+      "without_premise": { "result": "underdetermined", "chair_1_candidates": ["mayor", "chef", "student", "admiral"] },
+      "with_premise": { "result": "the demanded unknown is determined", "chair_1": "mayor" }
+    },
+    "notes": "Subjective, not determinate (RFC-004 §5.3 class 4). \"The mayor is the guest of honor\" states a role, not a seat; connecting the role to chair 1 requires a seating convention the prose never states — and the prose has to explicitly tell you chair 1 *is* the head, which highlights that the convention is being imported rather than derived. Without the premise chair 1 could hold any of four guests; with it, the mayor. Verified by brute force both ways. More contestable than PZL-0033/PZL-0034: which seat counts as the head, and whether the honored guest sits there, both vary by tradition. See PZL-0033's note on the provisional shape of this entry."
+  },
+  "PZL-0036": {
+    "title": "The Cat and the Dog",
+    "answer": {
+      "outcome": "subjective",
+      "unstated_premise": "The arrangement ought to reduce the cat's fear, so the cat should not be placed beside the dog.",
+      "contestability": "normative / ethical — genuinely contested",
+      "without_premise": { "result": "multiply satisfiable", "solution_count": 3 },
+      "with_premise": { "result": "uniquely solvable", "answer": { "cage_1": "rabbit", "cage_2": "cat", "cage_3": "parrot", "cage_4": "dog" } }
+    },
+    "notes": "Subjective, not determinate (RFC-004 §5.3 class 4) — RFC-001 §2's own \"cats are terrified of dogs\" example. The clue reports an emotional state; that the arrangement should *act on* it is a normative premise the prose never states, and the most contested of the four in this group. Without it, rabbit=1 / parrot!=4 / dog!=2 leave 3 admissible arrangements; with it, only cat=2, dog=4, parrot=3 keeps the two apart. Verified by brute force both ways. Note this puzzle isolates question (a) — is the sentence a constraint at all — because the premise read as a hard constraint (\"not adjacent\") and as a soft objective (\"maximize cat-dog distance\") happen to select the same arrangement here; both were checked. A variant where those two readings diverge, exercising RFC-004 §5.2's hard-vs-soft modeling decision, is in catalog/TODO.md's backlog. See PZL-0033's note on the provisional shape of this entry."
+  },
+  "PZL-0037": {
+    "title": "Holding Pens",
+    "answer": {
+      "outcome": "subjective",
+      "unstated_premise": "Predators ought not be housed where they can reach their prey, so the wolf should not be in a pen adjacent to the rabbit.",
+      "agreement": "near-universal — very few readers would decline to import this",
+      "stakes": "high — life and death for the rabbit",
+      "without_premise": { "result": "multiply satisfiable", "solution_count": 2 },
+      "with_premise": { "result": "uniquely solvable", "answer": { "pen_1": "tortoise", "pen_2": "rabbit", "pen_3": "goat", "pen_4": "parrot", "pen_5": "wolf" } }
+    },
+    "notes": "Subjective, not determinate (RFC-004 §5.3 class 4), and the high-agreement/high-stakes corner of that class. \"The wolf preys on the rabbit\" decomposes into a lexical claim (wolves eat rabbits — arguably recoverable from the words) and a normative one (we ought to prevent it); only the second is imported. The wire mesh matters: it is what makes adjacency dangerous and the premise applicable — contrast PZL-0038, where solid walls defeat the same premise. Without the premise, tortoise=1 / goat=3 / parrot!=5 / rabbit!=5 leave 2 arrangements; with it, only pen order tortoise-rabbit-goat-parrot-wolf keeps wolf and rabbit non-adjacent. Verified by brute force both ways. Near-universal agreement makes silent promotion *harder* to detect here than in PZL-0036, not more acceptable: a human reviewer imports the same premise and will not notice the text never stated it. See PZL-0033's note on the provisional shape of this entry."
+  },
+  "PZL-0038": {
+    "title": "The Concrete Wall",
+    "answer": {
+      "outcome": "determinate",
+      "answer": { "pen_1": "tortoise", "pen_2": "parrot", "pen_3": "goat", "pen_4": "rabbit", "pen_5": "wolf" },
+      "defeated_premise": "Predators ought not be housed within reach of their prey — inapplicable here, because each pen is fully enclosed in solid concrete and no animal can reach, see, smell, or hear another.",
+      "if_premise_imported_anyway": { "result": "unsatisfiable", "why": "the unique correct answer places the rabbit in pen 4 and the wolf in pen 5, which a non-adjacency constraint forbids" }
+    },
+    "notes": "The odd one out: this puzzle is **determinate**, with one correct answer reachable from the stated clues alone (tortoise=1, parrot=2, goat=3, and rabbit in a lower-numbered pen than the wolf forces rabbit=4, wolf=5). It is filed with the subjective group because it tests the same faculty from the opposite direction — PZL-0037's near-twin, differing only in that solid concrete walls defeat the premise's rationale while leaving the trigger phrase (\"the wolf preys on the rabbit\") in place. A system that pattern-matches wolf+rabbit and imports non-adjacency reports a spurious UNSATISFIABLE for a puzzle that solves uniquely. Both readings verified by brute force: 1 solution as written, 0 with the premise imposed. This is the only catalog entry where importing a premise is affirmatively *wrong* rather than merely unwarranted, so it should be scored separately from PZL-0037 — passing both is what distinguishes reasoning about a premise from reflexively applying it. Clue 5 is a deliberate red herring, in the same spirit as PZL-0013's price column."
+  },
+  "PZL-0039": {
+    "title": "The Supply Closet",
+    "answer": {
+      "outcome": "subjective",
+      "unstated_premise": "Staff ought not be exposed to a toxic gas, so bleach and ammonia should not be stored in adjacent open bays.",
+      "agreement": "near-universal — the chemistry is a stated fact, the norm against gassing people is assumed",
+      "stakes": "high — chloramine exposure is a serious injury risk",
+      "without_premise": { "result": "multiply satisfiable", "solution_count": 2 },
+      "with_premise": { "result": "uniquely solvable", "answer": { "bay_1": "sponges", "bay_2": "ammonia", "bay_3": "vinegar", "bay_4": "detergent", "bay_5": "bleach" } }
+    },
+    "notes": "Subjective, not determinate (RFC-004 §5.3 class 4). Same cell as PZL-0037 (high agreement, high stakes) with a cleaner lexical/normative split and no animals: that bleach and ammonia produce chloramine gas is chemistry the prose states outright, while \"therefore don't store them where the gas can form and reach people\" is the imported norm. The open shelving is load-bearing, as the wire mesh is in PZL-0037 — sealed containers would defeat the premise the way PZL-0038's concrete does. Without the premise, sponges=1 / vinegar=3 / detergent!=5 / ammonia!=5 leave 2 arrangements; with it, only sponges-ammonia-vinegar-detergent-bleach separates the two reactants. Verified by brute force both ways. See PZL-0033's note on the provisional shape of this entry."
   }
 }

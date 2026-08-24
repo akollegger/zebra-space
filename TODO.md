@@ -64,3 +64,19 @@ Four of the five current failures are capability gaps, not tuning problems. Fix 
 - **Derived per-entity variables** (PZL-0011): extraction emits references like `priya_credit_score` with no declarable domain — either the schema needs derived/attribute variables or the extractor needs a supported way to express them.
 
 Guardrail for this workstream (and a standing rule elsewhere): an improvement is legitimate if it's stated in terms of a constraint-language feature; if it can only be stated in terms of a specific PZL, it's overfitting and doesn't belong here.
+
+## 4. Premise linting for extraction (noted, not yet scoped)
+
+**Approach: RFC/ADR** — a design question, not a known feature to build.
+
+Recorded from the discussion behind `catalog/`'s subjective puzzles (PZL-0033–PZL-0039), to pick up at implementation time. The idea: a check that audits the *gap between prose and model* rather than the model's internal consistency — flagging where an extraction invented a constraint the text never stated, or ignored a stated fact that a near-universally-held premise would have turned into one.
+
+Why it's worth its own consideration rather than folding into the critic loop:
+
+- **[ADR-004](design/adr/ADR-004-llm-extraction-critic-loop.md) §3 already rejected a lint layer**, but a different one — referential integrity (are constraint-referenced values members of their declared domains) — on the grounds that MiniZinc's own type system catches it downstream for free. **That reasoning does not transfer here.** Nothing downstream catches an invented premise: a model with a hallucinated constraint, and a model missing a premise-derived one, both compile and solve cleanly. The solver never sees the prose (the same argument ADR-004's Context uses to reject solver round-tripping as a trust gate).
+- The fidelity critic judges whether the extraction is faithful *to the prose*. A premise lint asks a different question: whether the prose alone was *sufficient*, and what had to be assumed to close the gap. Related but not the same check.
+- PZL-0038 shows the check has to cut both ways. Importing a premise can be affirmatively wrong, not merely unwarranted — so a lint that only flags *missing* constraints would pass a system that over-constrains, and vice versa.
+
+The real-world motivation is stronger than the puzzle framing suggests: the interesting everyday failure is a person (or a system) not accounting for a concern that looks obvious in retrospect. High agreement on a premise is exactly what makes its omission hard to notice in review — see `catalog/TODO.md`'s note on why the high-agreement/high-stakes cell is the sharpest test rather than the safest.
+
+Depends on [RFC-004](design/rfc/RFC-004-computational-decision-making.md) §5.4's provenance framing (an answer holds only conditional on premises supplied) and its §7.11 (whether that condition rides in-band with the answer) — a lint has nowhere to report to until that's settled. Also a candidate addition to RFC-004 §5.7's silent-promotion list, which currently names four flavors and omits *inventing a constraint from world knowledge*.
