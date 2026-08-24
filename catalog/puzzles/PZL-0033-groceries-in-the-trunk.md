@@ -12,7 +12,8 @@ created: 2026-08-22
 
 Four grocery items — a tub of ice cream, a can of beans, a bag of flour, and a bunch of bananas
 — are loaded into the four compartments of a delivery van, one item per compartment.
-Compartment 1 is refrigerated. Compartments 2, 3, and 4 are not.
+Compartment 1 is a freezer, held below freezing. Compartments 2, 3, and 4 are unrefrigerated and
+sit above freezing.
 
 The ice cream melts above freezing.
 

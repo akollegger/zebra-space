@@ -71,8 +71,23 @@ spec for each addition. To add one:
    puzzle is copied/adapted from somewhere, or `null` if it's original.
 3. Write the puzzle body as natural-language prose — any style, any length, no prescribed
    structure.
-4. Solve it yourself first and confirm it has **exactly one** valid solution — no puzzle should
-   be added without this check.
-5. Record that solution in `eval/answer-keys.json` (a private file, not part
-   of this public index — see that feature's spec for why).
-6. Add a row to the Index table above.
+4. Work out the expected outcome yourself first, and be explicit about which kind of outcome it
+   is — no puzzle should be added without this check. The catalog deliberately spans more than
+   determinate puzzles now, so "exactly one valid solution" is the right bar for only some of it:
+   - **Determinate** — confirm it has **exactly one** valid solution.
+   - **Non-problem** — confirm which condition of
+     [RFC-004](../design/rfc/RFC-004-computational-decision-making.md) §5.1 it fails, and that
+     no *lower* condition fails first (a failure attributed to the wrong condition is still a
+     failure, per §5.7).
+   - **Optimization** — confirm the optimum, and whether it is unique. Say so explicitly if the
+     optimal *value* is unique but the arrangement achieving it isn't.
+   - **Ambiguous** — confirm the competing readings give genuinely *different* results. An
+     ambiguity that lands on the same answer either way tests nothing.
+   - **Subjective** — confirm the outcome both with and without the premise the prose never
+     states, so "correctly declined to invent it" stays distinguishable from "failed to solve."
+5. Record that expected outcome in `eval/answer-keys.json` (a private file, not part of this
+   public index — see that feature's spec for why). For anything other than a determinate
+   puzzle that means a diagnosis, an optimum, a set of readings, or a with/without-premise pair
+   rather than a single assignment; that file's own `$comment` explains why its shape is still
+   provisional.
+6. Add a row to the Index table above, and update `TODO.md`'s coverage table alongside it.

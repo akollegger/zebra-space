@@ -32,7 +32,15 @@ Package manager is **pnpm** (pinned via `packageManager` in `package.json`; Node
 ```bash
 pnpm install       # install dependencies
 pnpm test          # runs tests/**/*.test.ts via Node's built-in test runner (node --test)
+pnpm test:live     # same suite, but loads .env first — opts into the live extraction test
 ```
+
+`pnpm test` stays **offline and free**: `specs/004-nl-csp-extraction/plan.md`'s Constraints make
+that a MUST NOT (no network access, no API key, no per-run cost), so the one live test
+(`tests/extraction/live.test.ts`) skips unless `OPENROUTER_API_KEY` is already exported in the
+environment. `pnpm test:live` loads `.env` via Node's `--env-file-if-exists` so a key kept there
+is enough to run it — that call is billed and takes a few minutes, which is why it isn't the
+default.
 
 `pnpm-workspace.yaml` currently only sets `allowBuilds` for `msgpackr-extract` (a transitive dependency's native build gate) — there are no workspace packages defined yet.
 

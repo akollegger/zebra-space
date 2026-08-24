@@ -145,9 +145,9 @@
     "answer": {
       "outcome": "non-problem",
       "failing_condition": "Constitutive constraints",
-      "diagnosis": "Every clue is hedged (\"usually,\" \"tends to,\" \"often,\" \"as a rule\") and eliminates no assignment definitively — RFC-004's own \"Marta is often late\" case, repeated across the whole puzzle. There are no categorical constraints to extract, so no desk assignment is determinate."
+      "diagnosis": "Every clue is hedged (\"usually,\" \"tends to,\" \"often,\" \"as a rule\") and eliminates no assignment definitively — RFC-004's own \"Marta is often late\" case, repeated across the whole puzzle. There are no categorical constraints to extract, so no desk assignment is determinate. Note that Sufficiency also fails (with nothing eliminated, all 120 assignments remain admissible against a find-unique demand), but Constitutive constraints is the *lower* condition and so is the correct attribution per §5.1's ordering rule."
     },
-    "notes": "Non-problem, not a determinate puzzle (RFC-004 §5.1/§5.3). This entry is a provisional placeholder — the {title, answer, notes} shape above was designed for a single correct assignment, not a diagnosis, and there is no outcome taxonomy yet for non-problems (RFC-004 §7.3; root TODO.md item 2 owns closing this gap). Recorded now so the gap stays visible rather than silently absent."
+    "notes": "The five desks are enumerated by name, and all four clues concern seating, deliberately: an earlier draft named no desks and spent two of its four clues on arrival/departure times, which made Determinate answer-space and Relevance fail *below* the condition this puzzle is supposed to isolate. Non-problem, not a determinate puzzle (RFC-004 §5.1/§5.3). This entry is a provisional placeholder — the {title, answer, notes} shape above was designed for a single correct assignment, not a diagnosis, and there is no outcome taxonomy yet for non-problems (RFC-004 §7.3; root TODO.md item 2 owns closing this gap). Recorded now so the gap stays visible rather than silently absent."
   },
   "PZL-0020": {
     "title": "Featured Apartment",
@@ -219,10 +219,14 @@
   "PZL-0027": {
     "title": "The Shortest Delivery Route",
     "answer": {
-      "route": ["Ashby", "Brindle", "Dunmore", "Caldwell", "Ashby"],
-      "total_distance_miles": 80
+      "routes": [
+        ["Ashby", "Brindle", "Dunmore", "Caldwell", "Ashby"],
+        ["Ashby", "Caldwell", "Dunmore", "Brindle", "Ashby"]
+      ],
+      "total_distance_miles": 80,
+      "equivalence": "The two routes are the same undirected tour traversed in opposite directions. Either is a correct answer; a grader should accept both, or treat reversal-equivalent tours as one answer."
     },
-    "notes": "With 4 towns there are only 3 distinct round trips; checked all three by hand: Ashby-Brindle-Caldwell-Dunmore-Ashby=95, Ashby-Brindle-Dunmore-Caldwell-Ashby=80, Ashby-Caldwell-Brindle-Dunmore-Ashby=95. Optimal: Ashby → Brindle → Dunmore → Caldwell → Ashby, 80 miles, the unique minimum. See PZL-0022's note on the SolveResult/ExtractedCsp objective gap (RFC-004 §5.2, root TODO.md item 3)."
+    "notes": "The distance matrix is symmetric, so each undirected tour has two directed traversals of equal length. Enumerating all 6 directed round trips from Ashby: Brindle-Caldwell-Dunmore=95, Brindle-Dunmore-Caldwell=80, Caldwell-Brindle-Dunmore=95, Caldwell-Dunmore-Brindle=80, Dunmore-Brindle-Caldwell=95, Dunmore-Caldwell-Brindle=95. The optimal *value* (80 miles) is unique and corresponds to a unique undirected tour, but there are two optimal *orders* — and the puzzle asks \"in what order,\" which never states that a reversal counts as the same answer. Both are recorded above rather than silently collapsing them. See PZL-0022's note on the SolveResult/ExtractedCsp objective gap (RFC-004 §5.2, root TODO.md item 3), and PZL-0025 for the related case where the optimal count is unique but the arrangement achieving it is not."
   },
   "PZL-0028": {
     "title": "The Green House",
@@ -288,12 +292,12 @@
     "title": "Groceries in the Trunk",
     "answer": {
       "outcome": "subjective",
-      "unstated_premise": "Perishable goods ought to be kept from spoiling, so the ice cream should go in the refrigerated compartment.",
+      "unstated_premise": "Perishable goods ought to be kept from spoiling, so the ice cream should go in the only compartment held below freezing.",
       "contestability": "physical common sense — near-universal",
       "without_premise": { "result": "unconstrained", "solution_count": 24, "ice_cream_compartment": [1, 2, 3, 4] },
       "with_premise": { "result": "the demanded unknown is determined", "ice_cream_compartment": 1 }
     },
-    "notes": "Subjective, not determinate (RFC-004 §5.3 class 4). \"The ice cream melts above freezing\" is a statement of fact, not a requirement — it constrains nothing until a premise the prose never states is imported (that spoilage should be avoided). Without it all 24 arrangements are admissible and the ice cream could be anywhere; with it the answer is compartment 1. Verified by brute force both ways. Per constitution Principle VI the tool should report the premise it would need rather than supply it silently — RFC-004 §5.7 lists four flavors of silent promotion but not this one, inventing a constraint from world knowledge. This entry is provisional: there is no outcome vocabulary yet for \"answer conditional on a supplied premise\" (RFC-004 §7.3/§7.5; root TODO.md item 2)."
+    "notes": "Subjective, not determinate (RFC-004 §5.3 class 4). \"The ice cream melts above freezing\" is a statement of fact, not a requirement — it constrains nothing until a premise the prose never states is imported (that spoilage should be avoided). Without it all 24 arrangements are admissible and the ice cream could be anywhere; with it the answer is compartment 1. Verified by brute force both ways. The prose specifies compartment 1 as a freezer held *below* freezing, not merely refrigerated, deliberately: a refrigerated compartment runs above freezing, so against a clue about melting above freezing it would not protect the ice cream, and the premise would then entail no compartment at all rather than compartment 1. Per constitution Principle VI the tool should report the premise it would need rather than supply it silently — RFC-004 §5.7 lists four flavors of silent promotion but not this one, inventing a constraint from world knowledge. This entry is provisional: there is no outcome vocabulary yet for \"answer conditional on a supplied premise\" (RFC-004 §7.3/§7.5; root TODO.md item 2)."
   },
   "PZL-0034": {
     "title": "The Evening Doses",
