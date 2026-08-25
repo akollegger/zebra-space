@@ -31,8 +31,12 @@ Two of its hardest prerequisites are commitments the project already made and ne
   `SolveResult` stops at two assignments by design, so no caller can ask "how many are left?"
   (item 7 below).
 
-The game's core loop is a live consumer for both. That is the strongest argument for doing them —
-not the game, but that the game proves they were load-bearing all along.
+The two are reached by different parts of the game, and the tiering below turns on that
+difference. The **core loop** consumes the second: every swipe recomputes the count, so there is
+no loop at all without it. The **Cartographer** — one advisor of three — consumes the first, which
+disables a named feature rather than the loop, and is why a two-advisor prototype is still a real
+prototype. That the game reaches both is the strongest argument for doing them: not the game
+itself, but that it shows they were load-bearing all along.
 
 Sequenced by what blocks what, if the game direction is pursued:
 
@@ -187,11 +191,20 @@ and `MultiplySatisfiable` carries exactly two assignments, deliberately: the sol
 as a second solution proves non-uniqueness, which is all "is this puzzle well-formed?" ever needed.
 No caller can ask **how many** solutions remain.
 
-RFC-005's entire turn loop is that number. Every swipe files or dismisses a constraint and
-recomputes the remaining solution count; it drives the hint economy, the advisors' honesty, the
-contradiction alert (count → 0), and the endgame trigger (count → 1). RFC-005 §7.7 raises the open
-question directly: is counting cheap enough at deck sizes (3–5 entities, 2–3 attribute categories),
-or does the design need the trichotomy plus an approximation?
+RFC-005's turn loop is that number. Every swipe files or dismisses a constraint and recomputes the
+remaining solution count; it drives the hint economy, the advisors' honesty, the contradiction
+alert (count → 0), and the endgame trigger (count → 1). RFC-005 §7.7 raises the open question
+directly: is counting cheap enough at deck sizes (3–5 entities, 2–3 attribute categories), or does
+the design need the trichotomy plus an approximation?
+
+**Counting is a satisfaction measure and does not cover the subjective tier.** Subjective cards
+file as weights, and a weight ranks grids rather than eliminating them (RFC-004 §5.2's CSP-versus-
+COP distinction), so the count can sit still as cards are filed and never reach 1 even when a
+unique optimum exists. That tier needs an optimization outcome — an optimum, and ideally a bound
+on how much better anything unexplored could be — which is the same gap RFC-004 §5.2 records
+against `ExtractedCsp` (no objective field) and `SolveResult` (no optimization outcome), and which
+RFC-005 §7.6 leaves open on the game side. Completing this item makes the strict and ambiguous
+tiers work; the subjective tier needs optimization support that is not scoped anywhere yet.
 
 Two distinct pieces of work, and only the first is strictly required:
 
@@ -218,17 +231,24 @@ The project's first stated purpose is generating prose puzzles. RFC-001 §5.2 la
 *complementary* strategies composing through a shared catalog — catalog selection, catalog
 modification, generate-from-solution, scenario generation — and is explicit that "the real decision
 isn't *which* to build, it's *what order* to build them in." Only the hub exists: ADR-001 built the
-catalog that strategy 1 selects from, and all 39 puzzles in it are hand-authored. Strategies 2–4
-were deferred to a child ADR that was never written.
+catalog that strategy 1 selects from, and none of the 39 puzzles in it came from a generator — 35
+are hand-authored (`source: null`) and 4 are adapted from published sources. Strategies 2–4 were
+deferred to a child ADR that was never written.
 
 **RFC-005 needs strategy 3 specifically, and that is the most useful thing this review surfaced.**
 Generate-from-solution — pick a valid answer grid, derive the clues that prove it, minimize to the
 smallest subset that still determines it uniquely — is precisely RFC-005 §5.1's solution-first case
 construction, arrived at independently from game-design reasoning. RFC-001 already noted the
 property that makes it the right choice: it "gives a uniqueness guarantee by construction rather
-than needing a separate solver pass to check it afterward," which is exactly what deck verification
-(§5.1 step 5) would otherwise pay for on every reachable swipe sequence. Two documents reaching the
-same construction from opposite directions is good evidence it is the one to build first.
+than needing a separate solver pass to check it afterward." Two documents reaching the same
+construction from opposite directions is good evidence it is the one to build first.
+
+That guarantee covers less than it first appears, though, and item 7 stays on the critical path
+because of it. Generate-from-solution establishes uniqueness for *one* complete, minimized clue
+set. RFC-005 §5.1 step 5 has to verify something broader: that intermediate subsets behave, that
+each reading of an ambiguous card leads somewhere recoverable, and that noise cards interact with
+none of it. Those are per-state solver questions the construction does not answer, so this item
+reduces deck verification's work without replacing it.
 
 Two additions RFC-005 would require beyond RFC-001's original scope, both worth recording now:
 

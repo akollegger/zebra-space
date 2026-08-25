@@ -155,13 +155,16 @@ that solved state, construction works backward into a deck:
    carrier — an interviewee's claim, a ledger entry, a memo. The same underlying constraint may
    appear on more than one card in different voices.
 3. **Salt the deck with noise.** Cards that are consistent with the solution but constrain
-   nothing (true trivia, redundant restatements, gossip). From the CSP view this is noise; it
-   is also RFC-004 §5.3's **non-problem class** made playable — the game is that vocabulary's
-   first consumer, at card rather than case granularity. A gossip card is to extraction what a
-   poem or a grocery list is: text from which no problem can be recovered, where the correct
-   output is that diagnosis rather than a constraint. Triage is therefore the same capability a
-   tool router needs when arbitrary text arrives and something must decide whether this tool has
-   any business processing it — the game is that judgment made into gameplay. From the player's
+   nothing (true trivia, redundant restatements, gossip). Noise is defined **relative to the
+   cover sheet**, which supplies the demand, the entities, and the domains (step 1): a card is
+   noise when it eliminates none of the grids still consistent with the filed record. In
+   RFC-004 §5.1's terms that is a **Relevance** and **Constitutive constraints** judgment, not a
+   **Demand** one — no card carries a demand of its own, so a constraint card and a gossip card
+   are equally question-less read in isolation, and only the cover sheet's question tells them
+   apart. The whole-file version of the same judgment is the ill-posed case (§5.5), where
+   RFC-004 §5.3's **non-problem class** applies to the case rather than to any card inside it —
+   the call a tool router makes when arbitrary text arrives (a poem, a grocery list) and
+   something must decide whether this tool has any business processing it. From the player's
    view, these are the cards where the world lives: color, humor, and perspective ride on
    exactly the material that constrains nothing, the way *Papers, Please* tells its stories
    through the passports that are fine. The authoring register sits deliberately between flat
@@ -174,14 +177,28 @@ that solved state, construction works backward into a deck:
    §5.1 and RFC-004 §5.3). The tier determines the card's swipe grammar (§5.2): strict cards
    resolve in one swipe; ambiguous cards cost one bounded follow-up; subjective cards file as
    weights.
-5. **Verify the deck.** For every reachable sequence of swipes, the solver confirms the case
-   remains completable — filing all and only the true constraints must determine the grid
-   uniquely, and no dismissal of pure noise may block that. Wrong swipes are survivable by
-   design: the file can be reopened (§5.2), and the endgame detects underdetermination.
+5. **Verify the deck.** Two invariants, and only the second ranges over every reachable
+   sequence. **Solvability**: filing all and only the true constraints, under their intended
+   readings, determines the grid uniquely, and no dismissal of pure noise blocks that.
+   **Recoverability**: every reachable state can be escaped by reopening cards (§5.2). The
+   second is deliberately weaker than "always completable," because contradiction is a designed
+   teaching moment rather than an authoring defect — a wrong reading of an ambiguous card is
+   *meant* to drive the count to zero and bounce the stamp. Verification confirms such states
+   are escapable, not that they never occur.
 
 Because the solved state is known, the system can compute, at any moment, the exact number of
 grids consistent with the filed record. That single number — the **remaining solution count** —
 drives the loop, the advisors' honesty, and the endgame trigger.
+
+**The count is a satisfaction measure, and it reaches only as far as the strict and ambiguous
+tiers.** Subjective cards file as weights, and a weight ranks grids rather than eliminating them
+— RFC-004 §5.2's distinction between a CSP and a COP. Filing one may not move the count at all,
+and the count need never reach 1 even when a unique optimum exists, so the "count = 1 unlocks
+submission" trigger has no meaning there. The subjective tier needs a different endgame signal
+(an optimum, and the shape of the frontier around it) and a different contradiction signal; §7.6
+leaves that contract open. Every description of the loop below that is phrased in terms of the
+count should be read as scoped to the CSP tiers until it is settled — which is a real hole in
+this design, not a detail deferred to tuning.
 
 ### 5.2 The card loop
 
@@ -343,11 +360,11 @@ Stated as consumer requirements, not designs. These sit at three different matur
 ADR should sequence against that rather than treating them as one shelf: **built** today,
 **designed but unbuilt**, and **not yet designed**.
 
-- From **generation** (*not built* — RFC-001 is `draft`, and every catalog puzzle is currently
-  hand-authored): puzzles with per-clue tier labels and a designated solved grid — plus, new to
-  this consumer, *noise generation*: RFC-004 §5.3's non-problem class rendered at card
-  granularity — claims consistent with the solution but constraining nothing, including
-  conditionally relevant ones — salted per §5.1 step 3, in the between-flat-and-poetry register
+- From **generation** (*not built* — RFC-001 is `draft`, and no catalog puzzle was produced by a
+  generator; each was written by hand or adapted from a published source): puzzles with per-clue
+  tier labels and a designated solved grid — plus, new to this consumer, *noise generation*:
+  claims consistent with the solution but constraining nothing against the cover sheet's demand
+  (§5.1 step 3), including conditionally relevant ones, in the between-flat-and-poetry register
   that step specifies. This RFC is a second demand signal for RFC-001's strategies, not a reason
   to redesign them.
 - From **solving** (*built* — ADR-002's `solve()` classifies unsat / unique / multiple today):
@@ -442,9 +459,17 @@ Determinate atoms, Sufficiency)? The latter is truer to the ladder, and to its r
 failure is attributed to the *lowest* failing condition, but may exceed the casual register; a
 bounded "reason for return" picker is the likely compromise, and its option set needs design.
 
-7.6. **Subjective-tier verdicts.** When no grid satisfies all weighted cards, what does the
-submission assert — a grid plus a bounded justification of which constraints were sacrificed?
-How is that scored, and by what (solver-computed cost, authored rubric, or both)?
+7.6. **Subjective-tier verdicts, and the loop signal they need.** When no grid satisfies all
+weighted cards, what does the submission assert — a grid plus a bounded justification of which
+constraints were sacrificed? How is that scored, and by what (solver-computed cost, authored
+rubric, or both)? This is the larger of the open questions here, because the remaining solution
+count that drives every other tier does not survive the move to weights (§5.1): a soft
+constraint ranks grids instead of eliminating them, so the count may not move when a card is
+filed and may never reach 1. The subjective tier needs its own progress signal, endgame trigger,
+and contradiction analogue — plausibly an optimum with a bound on how much better any
+unexplored grid could be, so "you have seen enough to decide" stays computable. Until this is
+answered the subjective tier is designed only in outline, and item 7 of the root `TODO.md`
+(solution counting) is not sufficient for it.
 
 7.7. **Solver latency budget.** The per-swipe remaining-solution-count call must feel
 instantaneous at §5.5 deck sizes. Is counting (not just deciding) solutions cheap enough, or
