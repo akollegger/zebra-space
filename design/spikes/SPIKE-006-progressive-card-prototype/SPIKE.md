@@ -8,6 +8,10 @@ created: 2026-08-26
 
 # SPIKE-006: Progressive Card-Loop Playable Prototype
 
+Want to just play it? See [README.md](README.md) for how to run it and how to play — this
+document is the design log: the question being investigated, the method, and a dated record of
+every revision playtesting drove.
+
 ## 1. Question
 
 [RFC-005](../../rfc/RFC-005-progressive-puzzle-game-mechanics.md) §9 (Appendix: Sample Scenarios)
