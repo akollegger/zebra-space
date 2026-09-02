@@ -11,7 +11,8 @@
     "test:live": "node --env-file-if-exists=.env --test",
     "lint": "biome lint .",
     "typecheck": "tsc --noEmit",
-    "eval": "node scripts/eval-extraction.ts"
+    "eval": "node scripts/eval-extraction.ts",
+    "spike:006": "web-dev-server --root-dir design/spikes/SPIKE-006-progressive-card-prototype --port 4173 --watch --open"
   },
   "keywords": [],
   "author": "Andreas Kollegger",
@@ -26,6 +27,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.5.8",
     "@types/node": "^26.2.0",
+    "@web/dev-server": "^1.0.0",
     "typescript": "^7.0.2"
   }
 }

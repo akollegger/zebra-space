@@ -26,6 +26,23 @@ no code (e.g. a manual audit). Any code/fixtures a spike produces live alongside
 the same directory, committed normally; spikes are kept for future reference, not deleted once
 concluded.
 
+A spike that ships a static, zero-build browser prototype (plain HTML/JS, no bundler) gets a
+`spike:NNN` script in the root `package.json`, running the `@web/dev-server` devDependency against
+that spike's directory on a fixed port — `pnpm run spike:NNN`. For example:
+
+```
+"spike:006": "web-dev-server --root-dir design/spikes/SPIKE-006-*/ --port 4173 --watch --open"
+```
+
+`@web/dev-server` is chosen over a bare static server for two properties that matter to buildless
+prototypes: it serves native ES modules untouched (no bundling, so the spike stays zero-build), and
+`--watch` reloads the browser on file change while sending `cache-control: no-cache`. Skipping the
+cache headers costs real debugging time — stale modules present as state-management bugs.
+
+This is the one exception to spikes staying unwired from root tooling: a generic dev server is dev
+tooling, not a spike-specific dependency, so it belongs at the root rather than duplicated per
+spike.
+
 **Front-matter** (YAML):
 
 | Field | Description |
@@ -60,3 +77,4 @@ into the RFC rather than copied verbatim.
 | [SPIKE-003](SPIKE-003-gliner2-capability/SPIKE.md) | GLiNER2 Extraction Capability | done | RFC-003 |
 | [SPIKE-004](SPIKE-004-llm-based-extraction/SPIKE.md) | LLM-Based Extraction (OpenRouter) | done | RFC-003 |
 | [SPIKE-005](SPIKE-005-tool-calling-conventions/SPIKE.md) | Tool-Calling and Structured-Output Conventions Across Providers | done | RFC-003 |
+| [SPIKE-006](SPIKE-006-progressive-card-prototype/SPIKE.md) | Progressive Card-Loop Playable Prototype | planned | RFC-005 |

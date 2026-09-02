@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "spike-006-dev-server",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["run", "spike:006"],
+      "port": 4173
+    }
+  ]
+}
