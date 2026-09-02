@@ -77,4 +77,4 @@ into the RFC rather than copied verbatim.
 | [SPIKE-003](SPIKE-003-gliner2-capability/SPIKE.md) | GLiNER2 Extraction Capability | done | RFC-003 |
 | [SPIKE-004](SPIKE-004-llm-based-extraction/SPIKE.md) | LLM-Based Extraction (OpenRouter) | done | RFC-003 |
 | [SPIKE-005](SPIKE-005-tool-calling-conventions/SPIKE.md) | Tool-Calling and Structured-Output Conventions Across Providers | done | RFC-003 |
-| [SPIKE-006](SPIKE-006-progressive-card-prototype/SPIKE.md) | Progressive Card-Loop Playable Prototype | planned | RFC-005 |
+| [SPIKE-006](SPIKE-006-progressive-card-prototype/SPIKE.md) | Progressive Card-Loop Playable Prototype | in-progress | RFC-005 |

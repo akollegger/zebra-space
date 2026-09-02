@@ -170,8 +170,10 @@ export const CARDS = {
 // penalties, so a perfect one-pass session with a correct answer produces the highest possible
 // number and nothing else can beat it.
 //
-// `consult` is deliberately absent — advisors are shelved (see advisors.js and the machine's
-// dead-but-intact CONSULT wiring), not deleted; reinstating them means restoring this key too.
+// A per-card `consult` cost is deliberately absent — the original per-card advisors are
+// shelved, not deleted (see advisors.js and machine.js), and reinstating them means restoring
+// a key like this one. What runs today instead is `preflight`, below: one bundled check over
+// the whole kept set, not a per-card consult.
 export const LEDGER = {
   start: 0,
   judgment: {

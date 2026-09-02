@@ -2,10 +2,13 @@ import { createMachine, assign } from 'https://esm.sh/xstate@5';
 import { DECK_ORDER, CARDS, LEDGER, KEEP_IS_CORRECT } from './puzzle-data.js';
 import { remainingGrids, SOLVED_GRID } from './solver.js';
 
-// Advisors (Scholar/Archivist/Cartographer) are shelved, not deleted: the hints didn't factor
-// into play even after being reframed as "do you know anything about this?" (see SPIKE.md
-// Notes). advisors.js is untouched and ready to revive; this machine simply no longer wires a
-// CONSULT event to anything, so it's unreachable without also restoring that wiring.
+// The original per-card advisors (Scholar/Archivist/Cartographer, asked about one card at a
+// time) are shelved, not deleted: the hints didn't factor into play even after being reframed
+// as "do you know anything about this?" (see SPIKE.md Notes). advisors.js is untouched and
+// ready to revive; this machine has no CONSULT event at all anymore, per-card or otherwise.
+// What DOES exist now is a different mechanic in the same spirit: a single bundled pre-flight
+// check (RUN_PREFLIGHT, in `readyToSubmit` below) standing in for three real retrieval tool
+// calls — web/vector/graph search — run once over the whole kept set rather than per card.
 
 function filedConstraintIds(filed) {
   return Object.keys(filed)
@@ -39,10 +42,13 @@ function runPreflightChecks(context) {
     findings.push({ tool: 'web search', text: "The file's picture of the block itself may be incomplete." });
   }
 
+  // Redundancy is a property of the KEPT SET, not of a card's role in isolation — a lone
+  // `redundant`-role card kept by itself (its original voice was, wrongly, ignored) isn't
+  // saying anything twice; it only becomes redundant once a second card shares its
+  // constraintId. Detect by actual collision, not by role.
   const seenConstraintIds = new Set();
   const hasRedundancy = Object.keys(context.filed).some((id) => {
     const card = CARDS[id];
-    if (card.role === 'redundant') return true;
     if (!card.constraintId) return false;
     if (seenConstraintIds.has(card.constraintId)) return true;
     seenConstraintIds.add(card.constraintId);
