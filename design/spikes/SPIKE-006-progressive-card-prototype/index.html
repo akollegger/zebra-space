@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>SPIKE-006 — Maple Street</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-stone-100 text-stone-900 min-h-screen">
+  <div id="app"></div>
+
+  <template id="app-template">
+    <div class="max-w-3xl mx-auto p-6 space-y-5">
+
+      <header class="bg-stone-900 text-white rounded px-5 py-3 flex items-start justify-between gap-4">
+        <div>
+          <div class="text-[11px] uppercase tracking-widest text-stone-400">{{ COVER_SHEET.caseId }}</div>
+          <div class="text-lg font-semibold">{{ COVER_SHEET.title }}</div>
+        </div>
+        <div class="flex items-center gap-4 text-sm shrink-0">
+          <!-- The ledger and the solution count are hidden during play by design: the clerk
+               does not see their own score mid-shift. Debug re-exposes them. -->
+          <template v-if="debug">
+            <div class="text-right">
+              <div class="text-stone-400 text-[11px] uppercase tracking-wide">Ledger</div>
+              <div class="text-xl font-mono">{{ context.ledger }}</div>
+            </div>
+            <div class="text-right">
+              <div class="text-stone-400 text-[11px] uppercase tracking-wide">Grids</div>
+              <div class="text-xl font-mono">{{ context.remainingCount }}</div>
+            </div>
+          </template>
+          <label class="text-[11px] text-stone-400 flex items-center gap-1.5 cursor-pointer select-none">
+            <input type="checkbox" :checked="debug" @change="toggleDebug" class="accent-stone-400" />
+            debug
+          </label>
+        </div>
+      </header>
+
+      <!-- ================= COVER SHEET ================= -->
+      <section v-if="!isSubmitted" class="bg-white rounded p-4 shadow-sm space-y-2 text-sm">
+        <p class="text-stone-800">{{ COVER_SHEET.problem }}</p>
+        <p class="text-stone-600 italic border-l-2 border-stone-300 pl-3">{{ COVER_SHEET.clue }}</p>
+        <p class="text-stone-900 font-medium">{{ COVER_SHEET.instruction }}</p>
+      </section>
+
+      <!-- ================= PLAY ================= -->
+      <template v-if="!isSubmitted">
+
+        <!-- Card in hand — presented automatically, one at a time. No tray, no choice of order,
+             no advisors: judge it on its own. -->
+        <section v-if="isCardOpen" class="bg-white rounded p-5 shadow-sm space-y-4">
+          <div>
+            <div class="text-[11px] uppercase tracking-widest text-stone-500">{{ currentCard.carrier }}</div>
+            <p class="mt-2 text-stone-800 leading-relaxed">{{ currentCard.text }}</p>
+            <p v-if="debug" class="mt-2 text-[11px] font-mono text-amber-700">
+              CSP: {{ currentCspSource }}
+            </p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button @click="keep" class="px-5 py-2 rounded bg-emerald-700 text-white text-sm font-medium hover:bg-emerald-800">
+              Keep
+            </button>
+            <button @click="ignore" class="px-5 py-2 rounded bg-stone-600 text-white text-sm font-medium hover:bg-stone-700">
+              Ignore
+            </button>
+          </div>
+        </section>
+
+        <!-- "Ready to submit?" — appears in the same slot once every card has been processed. -->
+        <section v-if="isReadyToSubmit" class="bg-white rounded p-5 shadow-sm space-y-4">
+          <div class="text-[11px] uppercase tracking-widest text-stone-500">Ready to submit?</div>
+          <p class="text-stone-800">Every card has been through the file. How do you want to close it?</p>
+
+          <!-- One bundled pre-flight check over the whole kept set — not per-card. Findings stay
+               vague on purpose: these are advisors, not omniscient evaluators. Re-run after any
+               "Keep?" change below; the old report is cleared as soon as the file moves. -->
+          <div class="border border-stone-200 rounded p-3 space-y-2 bg-stone-50">
+            <button
+              @click="runPreflight"
+              class="px-3 py-1.5 rounded border border-stone-300 text-sm bg-white hover:bg-stone-100"
+            >
+              Run a pre-flight check
+            </button>
+            <ul v-if="preflightReport" class="text-sm text-stone-700 space-y-1">
+              <li v-for="(finding, i) in preflightReport" :key="i">
+                <span v-if="finding.tool" class="text-stone-500 italic">{{ finding.tool }}:</span>
+                {{ finding.text }}
+              </li>
+            </ul>
+          </div>
+
+          <div class="flex flex-wrap gap-2">
+            <button
+              @click="chooseJustFacts"
+              class="px-5 py-2 rounded bg-stone-700 text-white text-sm font-medium hover:bg-stone-800"
+            >
+              Just the facts
+            </button>
+            <button
+              @click="chooseAnswer"
+              class="px-5 py-2 rounded border border-stone-400 text-sm font-medium hover:bg-stone-900 hover:text-white transition"
+            >
+              Facts + an Answer
+            </button>
+          </div>
+        </section>
+
+        <!-- Naming a house is a separate, deliberate step — and a real risk: a wrong answer
+             costs, it isn't a free guess. -->
+        <section v-if="isAnswering" class="bg-white rounded p-5 shadow-sm space-y-4">
+          <div class="text-[11px] uppercase tracking-widest text-stone-500">
+            Which house holds the unregistered animal?
+          </div>
+          <div class="flex gap-2">
+            <button
+              v-for="house in [1, 2, 3]"
+              :key="house"
+              @click="submitAnswer(house)"
+              class="px-5 py-2 rounded border border-stone-400 text-sm hover:bg-stone-900 hover:text-white transition"
+            >
+              House {{ house }}
+            </button>
+          </div>
+          <button @click="backToSubmitChoice" class="text-xs text-stone-500 underline hover:text-stone-800">
+            Back
+          </button>
+        </section>
+
+        <!-- The file: always here, even before anything's been judged. The "Keep?" toggle
+             reconsiders a card in place — no need to re-open it, its text is right here. -->
+        <section class="bg-white rounded p-4 shadow-sm">
+          <h2 class="text-[11px] uppercase tracking-widest text-stone-500 mb-2">The file</h2>
+          <p v-if="!keptCards.length && !ignoredCards.length" class="text-sm text-stone-400 italic">
+            Nothing filed yet.
+          </p>
+          <ul v-else class="divide-y divide-stone-100">
+            <li v-for="card in keptCards" :key="card.id" class="flex items-start justify-between gap-3 py-2">
+              <div class="text-sm">
+                <span class="text-emerald-700 font-medium">kept</span> — {{ card.text }}
+                <div class="text-[10px] uppercase tracking-wide text-stone-400 mt-0.5">{{ card.carrier }}</div>
+              </div>
+              <label class="text-xs text-stone-500 flex items-center gap-1.5 cursor-pointer select-none shrink-0">
+                <input type="checkbox" checked @change="toggleKeep(card.id, $event.target.checked)" />
+                Keep?
+              </label>
+            </li>
+            <li v-for="card in ignoredCards" :key="card.id" class="flex items-start justify-between gap-3 py-2">
+              <div class="text-sm text-stone-600">
+                <span class="text-stone-500 font-medium">ignored</span> — {{ card.text }}
+                <div class="text-[10px] uppercase tracking-wide text-stone-400 mt-0.5">{{ card.carrier }}</div>
+              </div>
+              <label class="text-xs text-stone-500 flex items-center gap-1.5 cursor-pointer select-none shrink-0">
+                <input type="checkbox" @change="toggleKeep(card.id, $event.target.checked)" />
+                Keep?
+              </label>
+            </li>
+          </ul>
+        </section>
+      </template>
+
+      <!-- ================= DEBRIEF ================= -->
+      <section v-if="isSubmitted" class="space-y-5">
+        <div class="bg-white rounded p-5 shadow-sm space-y-3">
+          <h2
+            v-if="context.verdict.mode === 'answer'"
+            class="text-lg font-semibold"
+            :class="context.verdict.correct ? 'text-emerald-800' : 'text-rose-800'"
+          >
+            {{ context.verdict.correct ? 'Verdict accepted.' : 'Verdict rejected.' }}
+          </h2>
+          <h2 v-else class="text-lg font-semibold text-stone-800">Facts filed. No verdict given.</h2>
+
+          <p class="text-sm text-stone-700">
+            <template v-if="context.verdict.mode === 'answer'">
+              You named House {{ context.verdict.house }}. The unregistered animal was at
+              <strong>House {{ context.verdict.correctHouse }}</strong>.
+              <template v-if="context.verdict.ambiguous">
+                The file still admitted {{ context.verdict.remainingCountAtAnswer }} possible arrangements at the time.
+              </template>
+            </template>
+            <template v-else>
+              You chose not to name a house. For the record, the unregistered animal was at
+              <strong>House {{ context.verdict.correctHouse }}</strong>.
+            </template>
+          </p>
+          <p class="text-sm text-stone-700">
+            And for the record — it was a zebra. Forty pounds of timothy hay a week, in a row house.
+          </p>
+          <div class="text-sm text-stone-700 border-t border-stone-100 pt-3">
+            <div class="text-[11px] uppercase tracking-wide text-stone-500 mb-1">The row, as it actually stood</div>
+            <div class="flex flex-wrap gap-2">
+              <span
+                v-for="h in solvedGrid"
+                :key="h.position"
+                class="font-mono text-xs bg-stone-100 border border-stone-200 rounded px-2 py-1"
+              >
+                House {{ h.position }} · {{ h.color }} · {{ h.animal }}
+              </span>
+            </div>
+          </div>
+          <div class="flex gap-6 border-t border-stone-100 pt-3 text-sm">
+            <div>
+              <div class="text-[11px] uppercase tracking-wide text-stone-500">Ledger opened at</div>
+              <div class="font-mono text-lg">{{ startingLedger }}</div>
+            </div>
+            <div>
+              <div class="text-[11px] uppercase tracking-wide text-stone-500">Ledger closed at</div>
+              <div class="font-mono text-lg" :class="context.ledger >= startingLedger ? 'text-emerald-800' : 'text-rose-800'">
+                {{ context.ledger }}
+              </div>
+            </div>
+            <div v-if="debug">
+              <div class="text-[11px] uppercase tracking-wide text-stone-500">Log sum</div>
+              <div class="font-mono text-lg" :class="logSumOk ? 'text-emerald-800' : 'text-rose-800'">
+                {{ logSum }} {{ logSumOk ? 'OK' : 'MISMATCH' }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded p-5 shadow-sm">
+          <h3 class="text-sm font-semibold mb-3">How it was scored</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs">
+              <thead class="text-stone-500 uppercase tracking-wide text-[10px]">
+                <tr class="border-b border-stone-200">
+                  <th class="text-left py-1.5 pr-3 font-medium">Action</th>
+                  <th class="text-left py-1.5 pr-3 font-medium">Subject</th>
+                  <th class="text-left py-1.5 pr-3 font-medium">Note</th>
+                  <th class="text-right py-1.5 pr-3 font-medium">Δ</th>
+                  <th class="text-right py-1.5 font-medium">Ledger</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-stone-100">
+                <tr v-for="(entry, i) in debriefEntries" :key="i" :class="entry.type === 'open' ? 'text-stone-400' : ''">
+                  <td class="py-1.5 pr-3 whitespace-nowrap">{{ entry.label }}</td>
+                  <td class="py-1.5 pr-3">{{ entry.subject }}</td>
+                  <td class="py-1.5 pr-3 text-stone-500">{{ entry.note }}</td>
+                  <td
+                    class="py-1.5 pr-3 text-right font-mono"
+                    :class="entry.delta > 0 ? 'text-emerald-700' : entry.delta < 0 ? 'text-rose-700' : 'text-stone-400'"
+                  >
+                    {{ entry.delta > 0 ? '+' : '' }}{{ entry.delta }}
+                  </td>
+                  <td class="py-1.5 text-right font-mono text-stone-500">{{ entry.ledgerAfter }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= DEBUG ================= -->
+      <section v-if="debug" class="bg-stone-900 text-stone-200 rounded p-4 text-xs space-y-2">
+        <div class="flex items-center justify-between">
+          <h3 class="uppercase tracking-widest text-[10px] text-stone-400">Debug — dependency graph</h3>
+          <span class="font-mono" :class="logSumOk ? 'text-emerald-400' : 'text-rose-400'">
+            start+Σδ = {{ logSum }} / ledger = {{ context.ledger }} {{ logSumOk ? 'OK' : 'MISMATCH' }}
+          </span>
+        </div>
+        <div class="font-mono text-[11px]">
+          state: {{ isSubmitted ? 'submitted' : isAnswering ? 'answering' : isReadyToSubmit ? 'readyToSubmit' : isCardOpen ? 'cardOpen' : 'tray' }} ·
+          queue {{ context.queue.length }} · readiness {{ readiness }}
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-[11px] font-mono">
+            <thead class="text-stone-500">
+              <tr>
+                <th class="text-left pr-3 font-normal">card</th>
+                <th class="text-left pr-3 font-normal">role</th>
+                <th class="text-left pr-3 font-normal">csp source</th>
+                <th class="text-left pr-3 font-normal">dependsOn</th>
+                <th class="text-left pr-3 font-normal">read</th>
+                <th class="text-left pr-3 font-normal">deps</th>
+                <th class="text-left pr-3 font-normal">judged</th>
+                <th class="text-right pr-3 font-normal">banked</th>
+                <th class="text-left font-normal">reop</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="c in debugCards" :key="c.id" class="border-t border-stone-800">
+                <td class="pr-3">{{ c.id }}</td>
+                <td class="pr-3 text-stone-400">{{ c.role }}</td>
+                <td class="pr-3 text-amber-200/80 max-w-[14rem] whitespace-normal">{{ c.cspSource }}</td>
+                <td class="pr-3 text-stone-500">{{ c.dependsOn.join(',') || '—' }}</td>
+                <td class="pr-3">{{ c.revealed ? 'y' : '·' }}</td>
+                <td class="pr-3" :class="c.depsSatisfied ? 'text-emerald-400' : 'text-amber-400'">
+                  {{ c.depsSatisfied ? 'sat' : 'unsat' }}
+                </td>
+                <td class="pr-3">{{ c.judged }}</td>
+                <td class="pr-3 text-right">{{ c.banked === undefined ? '—' : c.banked }}</td>
+                <td>{{ c.reopened ? 'y' : '·' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+  </template>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
