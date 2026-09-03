@@ -3,7 +3,7 @@ id: RFC-005
 title: Progressive Puzzle Game Mechanics
 status: draft
 created: 2026-08-24
-adrs: []
+adrs: [ADR-006]
 ---
 
 # RFC-005: Progressive Puzzle Game Mechanics
@@ -452,7 +452,7 @@ to precede image cards?
 
 ## 8. ADRs
 
-_(populated automatically as `/adr-create` links ADRs to this RFC)_
+- [ADR-006](../adr/ADR-006-deck-yaml-format.md) — Deck YAML Format
 
 ## 9. Appendix: Sample Scenarios
 

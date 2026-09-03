@@ -69,4 +69,4 @@ Use `/rfc-review` before moving a draft to `review`/`accepted`.
 | [RFC-002](RFC-002-constraint-solver-selection.md) | Constraint Solver Selection | draft | ADR-002, ADR-003, ADR-005 |
 | [RFC-003](RFC-003-natural-language-csp-extraction.md) | Natural-Language Puzzle to CSP Extraction | draft | ADR-004, ADR-005, ADR-003 |
 | [RFC-004](RFC-004-computational-decision-making.md) | Computational Decision Making | draft | — |
-| [RFC-005](RFC-005-progressive-puzzle-game-mechanics.md) | Progressive Puzzle Game Mechanics | draft | — |
+| [RFC-005](RFC-005-progressive-puzzle-game-mechanics.md) | Progressive Puzzle Game Mechanics | draft | ADR-006 |
