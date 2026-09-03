@@ -11,22 +11,18 @@ adrs: []
 ## 1. Summary
 
 A zebra puzzle is normally consumed as a static block of clues: the reader gets everything at
-once and works alone. This RFC proposes an interactive alternative — a short-session casual
-deduction game in which the player is a low-ranking clerk in a bureaucracy, handed a case file
-and a vague instruction to "sort this out." The case is fully solved behind the curtain — the
-truth exists above the clerk's clearance — and the player is evaluated on reconstructing it
-from limited access. Evidence arrives as a small deck of cards: claims presented by
-interviewees, records, and memos, in text or image — a photograph asserts nothing until someone
-commits to what it shows. For each card the player renders one binary judgment — swipe
-to file it as a real constraint on the case, or swipe to dismiss it as irrelevant — or, before
-swiping, spends reputation to consult one of three advisors. Each advisor embodies a distinct
-retrieval paradigm (parametric world knowledge, similarity search over the session's memory,
-multi-hop graph traversal over filed facts), each with a characteristic failure mode, so that
-learning which advisor to trust for which kind of card is itself the meta-game. When the filed
-constraints determine the case uniquely, the clerk submits a verdict. A session is designed to
-be played in minutes, not hours: a deck of a dozen-odd cards, seconds per swipe, one verdict.
-Because a card is just a constraint in costume, the same machinery hosts any puzzle domain —
-office assignments, cargo manifests, seating charts — as reskinned decks.
+once and works alone. This RFC proposes an interactive alternative — a short-session game about
+the two decisions an AI engineer makes when preparing a reasoning task: what belongs in the
+context window, and how much of the reasoning to complete before handing that context to a
+model. Evidence arrives as a small deck of claims in text or image. For each card the player
+renders one binary judgment — keep it as useful context or ignore it as irrelevant, redundant,
+or ungrounded material. The player may then spend a small ledger cost on a pre-flight audit of
+the assembled context: reference search detects missing grounding, similarity search detects
+duplication, and graph/constraint search detects an insufficient connection to an answer. The
+session closes by submitting curated facts alone, or curated facts plus a resolved answer. A
+session is designed to be played in minutes, not hours: a deck of a dozen-odd cards, seconds per
+judgment, and one closing choice. Because a card is a claim in costume, the same machinery hosts
+any puzzle domain — office assignments, cargo manifests, seating charts — as reskinned decks.
 
 ## 2. Problem / Motivation
 
@@ -45,31 +41,26 @@ Those three kinds are shorthand throughout this RFC for RFC-001 §5.1's clue-str
 [RFC-004](RFC-004-computational-decision-making.md) §5.3's problem classification; RFC-004 §9
 maps the two onto each other.
 
-A game is the forcing function, and this design stands on two shipped precedents. From *Lil'
-Guardsman* (Hilltop Studios, 2024) it borrows comedic advisors with costed advice and a
-forgiveness mechanic for wrong turns. From *Papers, Please* (Lucas Pope, 2013) — with *Reigns*
-(Nerial, 2016) as proof that a binary swipe can carry deep decisions — it borrows the frame: a
-clerk processing files under limited information, where each item gets a fast, consequential,
-binary judgment. Every mechanic proposed here has a beloved proof of existence.
+A game is the forcing function, and this design stands on two shipped precedents. From *Papers,
+Please* (Lucas Pope, 2013) — with *Reigns* (Nerial, 2016) as proof that a binary swipe can carry
+deep decisions — it borrows fast, consequential judgment under limited information. From *Lil'
+Guardsman* (Hilltop Studios, 2024) it retains costed escalation and forgiveness for wrong turns,
+but not its per-item advisor-selection structure. Every mechanic proposed here has a beloved
+proof of existence.
 
 The framing is chosen to do structural work, not just flavor:
 
-- **The clerk is a third-tier decision maker** (king → advisors → operatives) aspiring to rise.
-  The truth of each case already exists above their clearance; the player is not discovering
-  reality but being *evaluated on reconstruction*. This makes solution-first authoring
-  diegetically honest, and makes "limited access" the in-fiction name for the reveal budget.
-- **"Sort this out" is an underspecified demand.** Before any solving, the clerk's real job is
-  determining *what is being asked* — **Demand**, the first rung of RFC-004 §5.1's
-  well-posedness ladder. The bureaucratic frame therefore leaves room, in later levels, for
-  **ill-posed cases**: files with no determinate answer, missing constraints, or no real question
-  at all, where the correct verdict is "this file is unanswerable, and here is why" — RFC-004
-  §5.3's **non-problem** class, at case granularity. No detective framing supports that ending; a
-  bureaucracy absolutely does.
-- **Interviews verify; they do not interrogate.** NPCs come before the clerk to have claims
-  checked, not secrets extracted. Verifying a claim against the filed record is consistency
-  checking — the solver's native operation — surfaced as a swipe.
+- **The player curates rather than discovers.** The complete solution exists behind the deck;
+  the task is to select the smallest reliable context that supports the declared question. This
+  makes solution-first authoring honest and maps directly to context engineering.
+- **The declared question supplies Demand.** Each deck names one question before cards appear.
+  Later decks may instead be ill-posed: their correct closing move is to return an unanswerable
+  request with its defect named, applying RFC-004 §5.3's non-problem class at deck granularity.
+- **Claims are evaluated rather than interrogated.** Each card is a candidate context item.
+  Keeping it is a provisional relevance judgment; assessment of the selected set is consistency,
+  sufficiency, and redundancy checking — operations the solver and retrieval tools can support.
 - **Cards are constraints in costume.** The deck schema (entities, attributes, claims, one
-  verdict) is domain-neutral, so the puzzle catalog becomes a deck library and new domains are
+  closure) is domain-neutral, so the puzzle catalog becomes a deck library and new domains are
   reskins, not rebuilds.
 
 The casual register imposes the design's hardest constraint: interactions must be minimal
@@ -90,24 +81,22 @@ Whether it ships in this repository or a dependent one is left to a child ADR; i
 ## 3. Goals
 
 - Define a **card-processing turn loop** in which evidence arrives as a small deck, each card
-  receives one binary player judgment (file as constraint / dismiss as irrelevant), the solver
-  re-evaluates the solution space after every filed card, and the session ends in a single
-  submitted verdict.
-- Define a **reputation economy** in which swiping is free, advice costs standing, and
-  reputation *flows* — earned back by sound verdicts, bled by confident errors — so that
-  knowing when to ask is rewarded rather than punished.
-- Define the **three advisors** as distinct retrieval paradigms with characteristic strengths
-  *and* characteristic failure modes, such that choosing the right advisor for the card in hand
-  is a skill the game teaches.
-- Make **relevance a first-class challenge**: decks mix load-bearing constraints with
-  consistent-but-non-constraining noise, including *conditionally* relevant cards whose status
-  depends on earlier commitments.
+  receives one binary player judgment (keep as context / ignore), the selected record can be
+  reconsidered, and the session ends in one closing choice.
+- Define a **ledger economy** in which judgment is free, an optional pre-flight audit costs a
+  small amount, sound curation earns credit, and confidently wrong answers lose more.
+- Define a **pre-flight retrieval audit** over the assembled context: reference, similarity, and
+  graph/constraint checks report missing grounding, duplication, or insufficient connection
+  without naming the corrective card.
+- Make **context selection a first-class challenge**: decks mix required facts, redundant or
+  substitute carriers, and consistent-but-non-constraining noise. A card's final value may depend
+  on what other evidence the player retained.
 - Establish the **session-shape constraints** ("minutes, not hours"; casual, swipe-speed
   interaction) as hard design bounds that cap deck size, per-card decision weight, and UI
   complexity.
 - Make the clue-tier spectrum (strict → ambiguous → subjective) the game's difficulty
   progression, extended by the framing to a fourth stage: **ill-posed cases** whose correct
-  verdict is a classified refusal.
+  closure is a classified refusal.
 - Specify a **domain-neutral deck schema** so the same mechanics host multiple puzzle domains
   as content, not code — including **card modality** (text, image, or both), since a bureaucratic
   file naturally holds photographs and ledger scraps alongside testimony, and an image is
@@ -127,40 +116,38 @@ Whether it ships in this repository or a dependent one is left to a child ADR; i
 - Difficulty calibration methodology. The tier progression is named here as the difficulty
   axis; how decks are tuned within it is a later concern that consumes the solver-in-the-loop
   capability.
-- Career meta-progression design (promotions, rank titles, unlock cadence). The clerk's
-  aspiration to rise frames difficulty progression; designing that ladder is content work, out
-  of scope beyond noting it exists.
-- Multiplayer, leaderboards, or persistence beyond "harder cases unlock." A session is
-  self-contained by design.
+- Cross-session progression, leaderboards, or persistence. A session is self-contained by
+  design; progression, if any, is a later product concern rather than the meaning of this
+  session's ledger.
 - Free-text player input of any kind. Binary swipes plus occasional bounded follow-ups are a
   deliberate scope decision (§5.2), not a placeholder for future natural-language interaction.
-- Designing the advisors' underlying retrieval infrastructure (embedding model, graph store,
-  prompt design). This RFC specifies their observable behavior and failure modes; child ADRs
-  own implementation.
+- Designing the retrieval infrastructure behind the pre-flight audit (search indexes, graph
+  store, models, or prompts). This RFC specifies observable findings; child ADRs own it.
 - Monetization, platform targets, accessibility standards. Real concerns, out of scope for a
   mechanics RFC.
 
 ## 5. Proposed Approach (high-level)
 
-### 5.1 Solution-first case construction
+### 5.1 Solution-first deck construction
 
-A case begins as a completed grid — every entity assigned every attribute — plus a constraint
+A deck begins as a completed grid — every entity assigned every attribute — plus a constraint
 set that uniquely determines it, drawn from or generated alongside the existing catalog. From
 that solved state, construction works backward into a deck:
 
-1. **Write the cover sheet.** The case file opens with the givens: the entities, the attribute
-   domains, and the (deliberately vague) instruction from above. Enough to make the board
-   legible; never enough to solve.
+1. **Write the task brief.** It states the declared question, entities, and attribute domains.
+   It supplies enough grounding to make the task legible, never enough to solve.
 2. **Deal the constraints into cards.** Each earnable constraint becomes a card, voiced by a
    carrier — an interviewee's claim, a ledger entry, a memo. The same underlying constraint may
    appear on more than one card in different voices.
-3. **Salt the deck with noise.** Cards that are consistent with the solution but constrain
-   nothing (true trivia, redundant restatements, gossip). Noise is defined **relative to the
-   cover sheet**, which supplies the demand, the entities, and the domains (step 1): a card is
-   noise when it eliminates none of the grids still consistent with the filed record. In
+3. **Add irrelevant and substitute material.** Noise cards are consistent with the solution but
+   constrain nothing: true trivia, ungrounded detail, or gossip. A duplicate carrier is not
+   necessarily noise: it may be unnecessary only when an equivalent carrier was retained. These
+   judgments are defined **relative to the task brief**, which supplies the demand, entities,
+   and domains (step 1): a card is irrelevant when it adds no grounding or constraint to the
+   selected context. In
    RFC-004 §5.1's terms that is a **Relevance** and **Constitutive constraints** judgment, not a
    **Demand** one — no card carries a demand of its own, so a constraint card and a gossip card
-   are equally question-less read in isolation, and only the cover sheet's question tells them
+   are equally question-less read in isolation, and only the task brief's question tells them
    apart. The whole-file version of the same judgment is the ill-posed case (§5.5), where
    RFC-004 §5.3's **non-problem class** applies to the case rather than to any card inside it —
    the call a tool router makes when arbitrary text arrives (a poem, a grocery list) and
@@ -171,15 +158,14 @@ that solved state, construction works backward into a deck:
    statement and poetry — carrier voice with texture, never so ornamented that tone obscures
    whether anything is actually being claimed (and §5.7 gives that property a mechanical
    check). Triage is a core challenge, so noise is designed content, not filler — including
-   **conditionally relevant** cards, whose load-bearing status depends on how an earlier
-   ambiguous card was filed.
+   **conditionally useful** cards, whose final value depends on the rest of the selected context.
 4. **Assign each card a tier** (strict / ambiguous / subjective, per §2's shorthand for RFC-001
    §5.1 and RFC-004 §5.3). The tier determines the card's swipe grammar (§5.2): strict cards
    resolve in one swipe; ambiguous cards cost one bounded follow-up; subjective cards file as
    weights.
 5. **Verify the deck.** Two invariants, and only the second ranges over every reachable
-   sequence. **Solvability**: filing all and only the true constraints, under their intended
-   readings, determines the grid uniquely, and no dismissal of pure noise blocks that.
+   sequence. **Sufficiency**: retaining a valid set of required domains and constraints, under
+   their intended readings, determines the grid uniquely without redundant context.
    **Recoverability**: every reachable state can be escaped by reopening cards (§5.2). The
    second is deliberately weaker than "always completable," because contradiction is a designed
    teaching moment rather than an authoring defect — a wrong reading of an ambiguous card is
@@ -187,8 +173,9 @@ that solved state, construction works backward into a deck:
    are escapable, not that they never occur.
 
 Because the solved state is known, the system can compute, at any moment, the exact number of
-grids consistent with the filed record. That single number — the **remaining solution count** —
-drives the loop, the advisors' honesty, and the endgame trigger.
+grids consistent with the retained constraints. That number can inform the audit and answer
+scoring, but final assessment must also account for required domain grounding and redundancy:
+the selected context, not just its constraint IDs, is what the player submits.
 
 **The count is a satisfaction measure, and it reaches only as far as the strict and ambiguous
 tiers.** Subjective cards file as weights, and a weight ranks grids rather than eliminating them
@@ -202,113 +189,78 @@ this design, not a detail deferred to tuning.
 
 ### 5.2 The card loop
 
-A session is one pass through a deck, one card at a time, with a small amount of ordering
-agency:
+A session is one pass through a deck, one card at a time:
 
-1. **The tray.** Two or three cards lie face-up; the player chooses which to process next.
-   Order matters under constraint propagation — an early commitment changes what later cards
-   mean — so choosing order is real agency at zero added UI cost. Processing a card draws its
-   replacement from the deck.
-2. **Judge.** For the card in hand, the player renders one binary verdict:
-   - **File it** (swipe right): the claim enters the case record as a constraint. The solver
-     immediately recomputes the remaining solution count. If the count hits zero, the
-     contradiction is surfaced at once — the stamp bounces — signaling that something filed
-     (this card, or an earlier interpretation) is wrong.
-   - **Dismiss it** (swipe left): the claim is marked irrelevant and set aside. Dismissed cards
-     remain readable in the file; dismissal is a judgment, not deletion.
-3. **Ambiguity costs one more swipe.** Filing a tier-2 card triggers a single bounded
+1. **Present.** The deck presents one candidate context item. Its order may be authored or a
+   dependency-respecting shuffle; a deck must not force an uninformed judgment merely to create
+   variation.
+2. **Judge.** For the card in hand, the player makes one binary provisional judgment:
+   - **Keep**: retain the claim as context. Constraint claims enter the solver record, which may
+     recompute the remaining solution count and surface a contradiction immediately.
+   - **Ignore**: set the claim aside. Ignored cards remain readable and may later be retained.
+3. **Ambiguity costs one more swipe.** Keeping a tier-2 card triggers a single bounded
    follow-up — "file as: *adjacent* / *anywhere right*" — so the swipe grammar stays binary and
-   ambiguity is, thematically, just more paperwork. The commitment is recorded on the card and
-   is what the solver actually files.
-4. **Or ask first.** Before swiping, the player may show the card to one advisor (§5.4) at a
-   reputation cost (§5.3). The advisor responds in character and per paradigm; the swipe
-   remains the player's.
-5. **Reopen the file.** At any point the player may pull a processed card back and reverse its
-   judgment — the forgiveness valve, replacing the earlier design's rewind. Reopening is free
-   or cheap in actions but not in standing: each reversal costs a sliver of reputation
-   (clerks who re-stamp constantly get noticed). The solver recomputes on every reversal.
-6. **Submit the verdict.** When the filed record determines the grid uniquely (count = 1), the
-   file is stamped ready and submission is prominently unlocked. The player may also submit
-   *early*, at count > 1 — a deliberate risk that rewards strong intuition and punishes
-   guessing. In later, ill-posed cases (§5.5), a third submission exists: **return the file** as
-   unanswerable, citing what is missing or contradictory — and for those decks, that is the
-   correct verdict.
+   ambiguity is a bounded interpretation commitment. The commitment is what the solver retains.
+4. **Reconsider the selected set.** At any point the player may reverse a processed judgment.
+   The full card text remains visible, so this is a context edit rather than a rewind. The solver
+   recomputes on every retained-constraint change.
+5. **Run a pre-flight audit (optional).** Once the deck is processed, the player may pay a small
+   ledger cost for one audit of the current selected context (§5.4). It identifies a category of
+   concern, never the corrective card. Editing the set invalidates the report; the same state
+   cannot be charged twice for the same audit.
+6. **Close the task.** The player either submits **Just the facts**, asserting that their curated
+   context is correct and sufficient, or submits **Facts + an Answer**, naming the answer as an
+   additional, risk-bearing judgment. In later ill-posed decks (§5.5), a third close is
+   **return the request** with the defect named.
 
-The session ends at submission: the true grid (or the file's actual defect) is revealed, the
-verdict is scored, and a short debrief replays the decisive filings and dismissals — which is,
-not incidentally, a decision trace.
+The session ends at closure: the true grid (or the request's actual defect) is revealed, final
+context quality and any answer are scored, and a short debrief replays the decisive keeps and
+ignores — which is, not incidentally, a decision trace.
 
-### 5.3 The reputation economy
+### 5.3 The ledger economy
 
-Reputation is the game's single currency, and its design principle is that *judgment is free;
-help and error have costs* — tuned so the lesson is "knowing when to escalate is a skill,"
-never "never ask."
+The ledger is the session's visible-in-debrief tally. Its principle is that *judgment is free;
+tool use and error have costs* — tuned so the lesson is "knowing when to audit is a skill,"
+never "never call a tool."
 
-- **Swiping is free.** Filing, dismissing, reading the file, and rearranging the tray cost
-  nothing. The player is never taxed for thinking or deciding — only for consulting and for
-  being wrong.
-- **Advice costs reputation** — a visible, small, per-consultation debit. Different advisors
-  may carry different rates (a tuning question, §7.4).
-- **Reputation flows; it is not a fuse.** A sound verdict earns reputation back — scaled by
-  accuracy, deck difficulty, and unspent-consultation efficiency. Errors bleed it, and the
-  bleed is asymmetric by design: **confident-and-wrong costs more than advised-and-right nets
-  less.** A clerk who consulted, heeded, and got it right ends ahead of one who guessed
-  correctly by luck at count = 3; a clerk who never asked and stamped a contradiction pays the
-  most. This asymmetry is the direct counter to the known failure mode of advice-as-cost
-  systems: hoarding, where players never consult and the advisors become dead content.
-- **Occasionally, advice is visibly cheaper than the mistake it prevents.** Deck design should
-  guarantee moments where a consultation obviously paid for itself, so the economy *teaches*
-  escalation rather than merely permitting it.
-- **Reopening costs a sliver.** Reversing a processed card debits standing lightly (§5.2 step
-  5) — enough that swipes feel consequential, not enough to make experimentation frightening.
-- **Reputation is also the career.** Across sessions, accumulated standing is the clerk's rise
-  through the ranks, which is the fiction's name for difficulty progression. Within a session
-  it is the advice budget. One number, two readings.
-- **Submission is free.** Ending the case never competes with learning more; the tension is
-  *when* to submit and *which* verdict, not whether one can afford to.
+- **Judgment is free.** Keeping, ignoring, reading, and reconsidering context cost nothing by
+  default. The player is never taxed for thinking or editing.
+- **An audit costs a small, flat amount.** The price represents real tool latency or tokens even
+  when the audit is useful. It is charged once per unchanged selected set.
+- **The ledger flows; it is not a fuse.** Sound curation earns credit and wrong judgments lose
+  it. A wrong submitted answer costs materially more than a correct answer on an ambiguous file
+  earns, so guessing is not a free roll.
+- **Closure is free.** Ending the task never competes with learning more; the tension is whether
+  the selected context is ready and whether to supply an answer.
 
-### 5.4 The three advisors
+### 5.4 The pre-flight retrieval audit
 
-Each advisor is a retrieval paradigm with a personality, a strength, and — critically — a
-characteristic failure mode. Consultation is per-card: the player shows the card in hand and
-the advisor reacts to it in light of what their paradigm can see. Learning which advisor suits
-which card is the meta-game, and the paradigms are chosen so their failure modes are
-*instructive*, not arbitrary:
+Per-card selection among three fictional advisors was removed after SPIKE-006 found it interrupted
+the short-session triage loop. The replacement is one optional, costed audit of the assembled
+selected context, available after the deck has been processed. It makes the retrieval paradigms
+legible as the tools AI engineers actually call, at the point where a complete context exists to
+inspect:
 
-- **The Scholar (parametric world knowledge).** A language model consulted with the card and
-  the cover sheet. Excellent at priors and interpretation — "in cases like this, 'to the right
-  of' usually means anywhere right" — which makes it the natural organ for tier-2 ambiguity and
-  for smelling implausible noise. Failure mode: confident overgeneralization; it knows the
-  world in general and this case in particular not at all. It may assert something plausible
-  that is false here.
-- **The Archivist (vector search over the session's memory).** Similarity search over
-  everything seen this session — cards, testimony, the cover sheet. Perfect recall, zero
-  synthesis: "has anyone else mentioned the blue house?" surfaces the exact three passages —
-  sometimes including a similar-sounding but irrelevant one, because similarity is not
-  relevance. The natural organ for spotting redundant cards and near-duplicates. Failure mode:
-  cannot chain; two inferential hops and it is lost.
-- **The Cartographer (graph traversal over the filed record).** Multi-hop search over the
-  graph of facts and commitments the *player* has filed — route-finding through the case. The
-  only advisor that can connect dots — the natural organ for "does this card matter, given
-  what's already stamped?" — but a mapmaker by temperament: it shows **paths, never
-  conclusions** (the map, not the route you must take), and its hop count can be bounded per
-  case as a difficulty dial. Its refrain: *everything is connected.* Failure mode: scrupulous
-  fidelity to the record — it faithfully propagates the player's own wrong filings with total
-  confidence, because the graph is never wrong about the graph, only about a world that was
-  filed wrong. When it reports "your filed roads don't connect — these facts cannot coexist,"
-  the bug is upstream, in a swipe.
+- **Reference search** asks whether essential domain or reference grounding is missing. It can
+  report that the picture is incomplete, but must not identify the missing card or fabricate a
+  case-specific fact.
+- **Similarity search** asks whether selected cards duplicate or near-duplicate one another. It
+  distinguishes similarity from relevance: a duplicate can be harmless only when another
+  selected carrier supplies the same needed fact.
+- **Graph/constraint search** asks whether the selected facts connect to a determinate answer.
+  It reasons faithfully over the selected record, so a contradiction or gap identifies a
+  context problem without claiming to know the intended correction.
 
-Advisor **disagreement is content**: the Scholar's prior colliding with the Cartographer's
-propagation is tier-2 ambiguity resolution dramatized as an argument, and it falls out of the
-architecture rather than being scripted.
+The audit returns category-level findings, not solutions or card IDs. It is invalidated by every
+context edit, because an audit of stale context is less useful than no audit. Its cost teaches
+that tool calls consume latency or tokens, while its optionality preserves the principle that
+ordinary reading and judgment are never taxed.
 
-The Cartographer is also the first genuine consumer of the constitution's Principle III ("Graphs
-as the Constraint Representation"), which mandates `@relateby/pattern`'s graph primitives and
-which nothing implements today — graph representation is item 3 of the project's stated purpose
-and its least-exercised one. Its failure mode is worth noting as more than flavor: an advisor
-that reasons flawlessly over a record the player filled in wrong, and cannot see past it, is
-Principle VI's closed-world caveat dramatized — a tool reasoning only over what it was handed,
-reporting the contradiction rather than reaching outside its input to resolve it.
+Graph/constraint search is also the first genuine consumer of the constitution's Principle III
+("Graphs as the Constraint Representation"), which mandates `@relateby/pattern`'s graph
+primitives and which nothing implements today. Its closed-world behavior dramatizes Principle
+VI: a tool can reason flawlessly over the context it received while still being unable to repair
+a missing or wrong upstream selection.
 
 ### 5.5 Minutes, not hours: session-shape constraints
 
@@ -318,16 +270,16 @@ propagate into every mechanic:
 - **Deck size is capped.** Indicatively: 10–16 cards over a grid of 3–5 entities and 2–3
   attribute categories, of which roughly a third is noise. Large enough that inference chains
   and triage both exist; small enough that the file is holdable in working memory.
-- **Per-card interaction is seconds, not minutes.** One binary swipe; at most one bounded
-  follow-up (tier-2) or one consultation. No card may demand free-text, multi-step, or
-  scrollable interaction. The tray (2–3 face-up cards) is the entire extent of choice breadth —
-  serialized judgment is the paradox-of-choice defense, and it is load-bearing.
-- **One verdict per session.** No chapter structure, no multi-case arcs within a sitting. Depth
-  across sessions comes from the tier progression and the career, not from length within one.
+- **Per-card interaction is seconds, not minutes.** One binary swipe and, for tier-2, at most
+  one bounded follow-up. No card may demand free-text, multi-step, or scrollable interaction.
+  Serialized judgment is the paradox-of-choice defense; deck order may be authored or shuffled
+  only within dependency constraints.
+- **One closing choice per session.** No chapter structure or multi-case arcs within a sitting.
+  Depth across sessions comes from the tier progression, not from length within one.
 - **Difficulty grows by tier, not by size.** Early cases are all-strict (pure propagation and
   easy triage); mid cases introduce ambiguous cards (one-swipe interpretation commitments) and
   conditional relevance; late cases add subjective weighted cards, where no grid satisfies
-  everything and the verdict defends a trade-off; the final stage is the **ill-posed case**
+  everything and the answer defends a trade-off; the final stage is the **ill-posed case**
   (RFC-004 §5.3's non-problem class), where the winning move is returning the file with the
   defect named. The grid barely grows; the *kind of judgment* does.
 - **Target: a complete session in roughly 5–10 minutes**, including the debrief. Any proposed
@@ -338,7 +290,7 @@ propagate into every mechanic:
 A card is a constraint in costume, and the costume is the only domain-specific part. The deck
 schema is domain-neutral:
 
-- **Cover sheet**: entities, attribute domains, the instruction.
+- **Task brief**: declared question, entities, attribute domains, and grounding.
 - **Cards**: each carrying a claim (a constraint or noise), a carrier voice, a tier, a
   **modality** — text, image, or both; a bureaucratic file naturally holds photographs, seals,
   sketches, and ledger scraps alongside testimony — and, for ambiguous cards, a bounded set of
@@ -346,7 +298,8 @@ schema is domain-neutral:
   nothing until the player commits to what it shows, which makes images the most natural
   tier-2 material in the deck, and keeps them inside the swipe grammar (one bounded follow-up)
   rather than adding interaction weight.
-- **Verdict**: the grid assignment (or, for ill-posed decks, the named defect).
+- **Closure**: selected context alone, selected context plus a grid assignment, or, for
+  ill-posed decks, the named defect.
 
 Office assignments, cargo manifests, wedding seating for the duke, patrol rosters — all are the
 same CSP shapes under different art and prose. The existing puzzle catalog therefore becomes a
@@ -363,15 +316,15 @@ ADR should sequence against that rather than treating them as one shelf: **built
 - From **generation** (*not built* — RFC-001 is `draft`, and no catalog puzzle was produced by a
   generator; each was written by hand or adapted from a published source): puzzles with per-clue
   tier labels and a designated solved grid — plus, new to this consumer, *noise generation*:
-  claims consistent with the solution but constraining nothing against the cover sheet's demand
-  (§5.1 step 3), including conditionally relevant ones, in the between-flat-and-poetry register
-  that step specifies. This RFC is a second demand signal for RFC-001's strategies, not a reason
-  to redesign them.
+  claims consistent with the solution but adding no needed grounding or constraint against the
+  task brief's demand (§5.1 step 3), including conditionally useful substitute carriers, in the
+  between-flat-and-poetry register that step specifies. This RFC is a second demand signal for
+  RFC-001's strategies, not a reason to redesign them.
 - From **solving** (*built* — ADR-002's `solve()` classifies unsat / unique / multiple today):
-  an incremental interface — given the filed record, return the remaining solution count fast
-  enough for a per-swipe call — plus the ability to evaluate a *candidate* card for
-  constraint-vs-noise status against a record (powering deck verification and the Cartographer).
-  Both are extensions to a working capability, not new ground.
+  an incremental interface — given retained constraints, return the remaining solution count
+  fast enough for a per-swipe call — plus assessment of selected context for required domains,
+  sufficiency, equivalence, and redundancy (powering deck verification and graph/constraint
+  audit findings). Both are extensions to a working capability, not new ground.
 - From **well-posedness classification** (*designed, unbuilt, and incomplete*): the ill-posed
   stage needs RFC-004 §5.1's ladder as running code and a vocabulary for recording a diagnosis
   as an expected outcome. That vocabulary is RFC-004 §7.3, still open, and tracked as root
@@ -394,28 +347,27 @@ ADR should sequence against that rather than treating them as one shelf: **built
 ## 6. Alternatives Considered
 
 - **Static clue dump (the classic zebra puzzle).** Rejected as the *product*, though it remains
-  the substrate: it exercises no per-claim solver capability, has no economy, and teaches
-  nothing about triage or escalation.
+  the substrate: it exercises no per-claim assessment, has no economy, and teaches nothing about
+  context curation or escalation.
 - **Interrogation with question menus (this RFC's own earlier draft).** The player actively
   selects questions from per-character menus under an action budget — an information economy
   where *question selection* is the skill. Genuinely attractive, and closer to *Lil'
   Guardsman*'s surface. Rejected for the casual register: menu selection is a heavier
   interaction than a swipe, puts the pacing burden on the player, and courts paradox of choice
   in exactly the way serialized card judgment avoids. The trade is named honestly: cards make
-  *judgment per item* the skill and hand pacing to the deck. The tray's ordering choice (§5.2
-  step 1) preserves a deliberate residue of the older design's agency.
-- **Gate-keeper or detective framing.** Both imply the player extracts hidden truth from
-  adversaries. Rejected in favor of the clerk: verification is the solver's native operation,
-  the clearance hierarchy makes solution-first authoring diegetic, and only a bureaucracy makes
-  "this file is unanswerable" a winnable ending.
-- **Action budget as the currency (earlier draft).** A fixed pool of actions spent on
-  questions and advice. Rejected in favor of reputation: a spend-down pool is a fuse that
-  encourages hoarding and ends the session by exhaustion; reputation flows in both directions,
-  prices error as well as help, and doubles as the career meta-progression.
-- **Per-advisor charges.** Truer to *Lil' Guardsman*'s tools and forces variety. Rejected for
-  the initial design because multiple currencies complicate a minutes-long session; revisit if
-  playtesting shows advisor monoculture.
-- **A shift clock instead of (or alongside) reputation.** *Papers, Please*'s own pressure is
+  *judgment per item* the skill and hand pacing to the deck.
+- **Bureaucratic-clerk framing as the product explanation.** The Maple Street prototype proves it
+  is a workable skin, but SPIKE-006 found manual context engineering, tool calling, and prompt
+  engineering make the actions more legible to the intended audience. The fiction may remain as
+  content; it no longer defines the product's core metaphor.
+- **Action budget as the currency (earlier draft).** A fixed pool of actions spent on questions
+  and tools is a fuse that encourages hoarding and ends the session by exhaustion. Rejected in
+  favor of a ledger that prices error and optional audits without limiting ordinary thought.
+- **Per-card advisor selection.** SPIKE-006 found choosing among three advisors before each card
+  interrupted the central curation loop. Rejected for short casual play in favor of one bundled
+  audit over an assembled context; this retains retrieval assistance without adding a repeated
+  meta-decision.
+- **A shift clock instead of (or alongside) the ledger.** *Papers, Please*'s own pressure is
   time: process what you can before the day ends. It is the one mechanic borrowed from that
   precedent's frame and deliberately left behind. A clock taxes reading and deliberation, which
   directly contradicts §5.3's founding principle that the player is never charged for thinking —
@@ -427,39 +379,38 @@ ADR should sequence against that rather than treating them as one shelf: **built
   natural-language interpretation at runtime, makes the deck unverifiable, and blows both the
   session-length and casual-register bounds. Rejected; the extraction pipeline's ambiguity work
   belongs at authoring time, not in the player's critical path.
-- **Hours-scale campaign structure.** Rejected outright by the minutes-not-hours bound; the
-  career across sessions supplies the long arc instead.
-- **A single omniscient hint system instead of three advisors.** Simpler, but it collapses the
-  meta-game (which paradigm fits which card) and discards the pedagogical payload — the three
-  retrieval paradigms *are* the point.
+- **Hours-scale campaign structure.** Rejected outright by the minutes-not-hours bound.
+- **An omniscient completion checker.** Rejected in favor of a category-level audit: naming the
+  missing card or correct answer would turn tool use into an oracle and erase the curation task.
 
 ## 7. Open Questions
 
-7.1. **Conditional-relevance authoring.** Cards whose relevance depends on earlier commitments
-are the mechanism that gives triage depth (§5.1 step 3) — can they be generated systematically
-from the solver (e.g. constraints redundant under one reading of an ambiguous card and
-load-bearing under another), or are they hand-authored content for now?
+7.1. **Conditional-relevance authoring and scoring.** Can a deck represent substitute carriers
+systematically, so a card is required only when its equivalent fact was not retained? How should
+the game distinguish a locally sensible provisional judgment from final context quality? The
+next SPIKE-006 pass should test this with `cat-red` and its echo. Tier-2 ambiguity-driven
+conditional relevance remains a separate later question.
 
-7.2. **Early-submission scoring.** How should a correct verdict at solution-count > 1 be scored
-relative to one at count = 1? Rewarding it too much encourages guessing; not at all makes the
-subjective tier's judgment training toothless.
+7.2. **Closure scoring.** How should a correct but underdetermined answer be scored relative to
+a verified sufficient selected context? How should **Just the facts** assess correctness,
+sufficiency, and unnecessary duplication without requiring an answer?
 
-7.3. **Reopen pricing.** What sliver of reputation should a reversal cost, and should repeated
-reversals of the *same* card escalate? The answer sets how experimental play feels, and likely
-differs by tier.
+7.3. **Reconsideration pricing.** SPIKE-006's provisional answer is that ordinary context edits
+are free and only repeated churn after no new information merits a small penalty. Confirm whether
+that remains appropriate once final-context conditional relevance is scored.
 
-7.4. **Advisor pricing.** Flat rate per consultation, or differentiated (the Cartographer's
-multi-hop answer arguably worth more than the Archivist's lookup)? Differentiated rates deepen
-the escalation lesson but add a number to a casual UI.
+7.4. **Audit pricing and findings.** What flat cost makes the pre-flight audit worth calling
+without making it mandatory, and which category-level messages help without identifying the
+corrective card?
 
-7.5. **Ill-posed verdict scoring.** When the correct submission is "return the file," what
+7.5. **Ill-posed closure scoring.** When the correct submission is "return the file," what
 exactly must the player name — just *that* it is unanswerable, or *which* condition of RFC-004
 §5.1's ladder fails (Demand, Determinate answer-space, Relevance, Constitutive constraints,
 Determinate atoms, Sufficiency)? The latter is truer to the ladder, and to its rule that a
 failure is attributed to the *lowest* failing condition, but may exceed the casual register; a
 bounded "reason for return" picker is the likely compromise, and its option set needs design.
 
-7.6. **Subjective-tier verdicts, and the loop signal they need.** When no grid satisfies all
+7.6. **Subjective-tier closures, and the loop signal they need.** When no grid satisfies all
 weighted cards, what does the submission assert — a grid plus a bounded justification of which
 constraints were sacrificed? How is that scored, and by what (solver-computed cost, authored
 rubric, or both)? This is the larger of the open questions here, because the remaining solution
@@ -475,17 +426,18 @@ answered the subjective tier is designed only in outline, and item 7 of the root
 instantaneous at §5.5 deck sizes. Is counting (not just deciding) solutions cheap enough, or
 does the design need the unsat/unique/multiple trichotomy plus an approximate count?
 
-7.8. **Tray size and refill policy.** Two or three face-up cards, and does the deck's draw
-order adapt (e.g. hold conditionally relevant cards until their condition is settled) or stay
-fixed per deck? Adaptive draw is a pacing tool but complicates deck verification (§5.1 step 5).
+7.8. **Ordering policy.** Does an authored order or dependency-respecting random topological
+shuffle better balance comprehension and replayability? SPIKE-006 found a 2-3 card tray was
+friction at this scale; it did not establish that order never carries useful agency.
 
 7.9. **Does deck verification need to be exhaustive** over all swipe sequences, or is
 sampled/bounded verification acceptable given the reopen safety valve and underdetermination
 detection at submission?
 
-7.10. **Duplicate carriers.** When one constraint appears on two cards in different voices
-(§5.1 step 2), is the second card noise (dismiss: correct), confirmation (file: harmless), or
-either? The scoring answer teaches players what "redundant" means, so it should be principled.
+7.10. **Duplicate-carrier equivalence.** What makes two claims sufficiently equivalent to serve
+as substitutes, particularly once prose varies by carrier or modality? The selected context must
+retain at least one valid carrier of each required fact without treating an alternate carrier as
+permanent noise.
 
 7.11. **Image-card verification.** The extraction linter (§5.7) checks what text asserts —
 what checks an image? Candidates: multimodal extraction over the image plus its bounded
@@ -493,11 +445,10 @@ readings; an authored assertion manifest per image that verification trusts; or 
 images to material whose only assertions are the player-committed readings themselves. The
 answer gates how load-bearing images are allowed to be.
 
-7.12. **Advisor modality asymmetry.** The Scholar reads images natively; the Archivist needs
-multimodal embeddings to recall them; the Cartographer sees an image only through its filed
-reading — the graph knows only what has been committed to structure. Is that asymmetry
-acceptable at v1 (it is arguably instructive, being exactly the paradigms' honest behavior),
-or does the Archivist need image search before image cards ship?
+7.12. **Audit modality asymmetry.** Reference search may interpret images directly, similarity
+search needs multimodal embeddings to compare them, and graph/constraint search sees an image
+only through its selected reading. Is that asymmetry acceptable at v1, or does image search need
+to precede image cards?
 
 ## 8. ADRs
 
@@ -505,13 +456,12 @@ _(populated automatically as `/adr-create` links ADRs to this RFC)_
 
 ## 9. Appendix: Sample Scenarios
 
-_(reserved — worked end-to-end scenarios to be developed here: one all-strict Tier-1 case
-traced swipe-by-swipe against a real solved grid, including per-swipe remaining-solution
-counts and at least one noise card; one Tier-2 case with an ambiguity commitment, a
-conditionally relevant card, and a bounced stamp resolved by reopening; one Tier-3 case with a
-weighted-constraint verdict; one ill-posed case whose correct verdict is returning the file.
-At least one scenario should include an image card with its bounded readings, and every deck
-should be written in the §5.1 register so the color-vs-assertion linter has something real to
-check. Each scenario should also log every consultation with the advisor's in-paradigm
-response and its reputation cost, so the economy can be sanity-checked on paper before
-anything is built.)_
+_(reserved — worked end-to-end scenarios to be developed here: one all-strict Tier-1 case traced
+card-by-card against a real solved grid, including selected-context assessment and a noise card;
+one Tier-2 case with an ambiguity commitment, a conditionally useful card, and a contradiction
+resolved by reconsidering; one Tier-3 case with a weighted-constraint answer; one ill-posed case
+whose correct closure is returning the request. At least one scenario should include an image card with
+its bounded readings, and every deck should be written in the §5.1 register so the
+color-vs-assertion linter has something real to check. Each scenario should log its optional
+pre-flight audit findings and cost so the economy can be sanity-checked before anything is
+built.)_

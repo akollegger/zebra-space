@@ -1,7 +1,7 @@
 ---
 id: SPIKE-006
 title: Progressive Card-Loop Playable Prototype
-status: in-progress
+status: done
 rfcs: [RFC-005]
 created: 2026-08-26
 ---
@@ -57,8 +57,8 @@ payoff (a hay-delivery card plus the Scholar's world knowledge) rather than a sc
 
 Built as a static, zero-build single-page app, matching the tech direction settled earlier in
 this session: **Vue 3** (ESM, no SFC compile) for rendering, **Tailwind** (Play CDN) for layout,
-and an **XState v5** state machine (ESM, imported from a CDN) modeling the full §5.2 loop — tray →
-card in hand → judge (file/dismiss) → consult advisor → reopen → verdict — so the state graph
+and an **XState v5** state machine (ESM, imported from a CDN) modeling the full §5.2 loop — card
+in hand → judge (keep/ignore) → reconsider → closure — so the state graph
 stays explicit and inspectable rather than implicit in ad hoc component state. The remaining
 solution count is computed for real by brute-force enumeration over the puzzle's full 36-grid
 solution space (3! color permutations × 3! animal permutations) — small enough that no solver
@@ -72,12 +72,15 @@ every card carries exactly one `illuminating`, one `neutral`, and one `irrelevan
 the three. Cost is keyed to that outcome, not to advisor identity, so asking the right advisor is
 cheap and wasting the Deputy Director's time is not — which makes "who knows about what kind of
 thing" the learnable meta-game §5.4 describes. The division of labour is Scholar = world knowledge,
-Archivist = what else is in this file, Cartographer = position and adjacency.
+Archivist = what else is in this file, Cartographer = position and adjacency. This per-card
+mechanic was itself superseded by a later revision's bundled pre-flight audit (see Notes and the
+Conclusion) — kept here as the intermediate step that motivated it.
 
-Reputation and the remaining-solution count are **hidden during play** and revealed only in the
-post-submission debrief, on the grounds that a clerk does not see their own score mid-shift. A
-`?debug=1` flag (plus an in-page toggle) re-exposes them along with a live dependency-graph table
-and a running self-check that reputation always equals the starting value plus every logged delta.
+The ledger (initially called reputation) and the remaining-solution count are **hidden during
+play** and revealed only in the post-submission debrief, on the grounds that a clerk does not see
+their own score mid-shift. A `?debug=1` flag (plus an in-page toggle) re-exposes them along with a
+live dependency-graph table and a running self-check that the ledger always equals the starting
+value plus every logged delta.
 
 Explicitly out of scope for this pass, deferred to later spikes if this one's findings warrant
 them: ambiguous/subjective card tiers, animations/transitions, live advisor retrieval, and any
@@ -318,8 +321,69 @@ why this is a log kept during the work rather than reconstructed from memory at 
 
 ## 5. Findings
 
-_(filled in once the spike concludes)_
+1. **The playable loop is context curation.** Keep/ignore is a legible, short-form analogue of
+   deciding what belongs in an AI system's context window. The later choice between submitting
+   **Just the facts** and **Facts + an Answer** makes the second decision equally concrete:
+   whether to supply curated context for a model to reason over, or resolve the answer before
+   handing it off. This framing made the purpose of each interaction clearer than the original
+   clerk-and-case fiction. The bureaucracy remains a usable skin, but is not load-bearing.
+
+2. **A post-curation pre-flight audit earns its interaction cost; per-card advisor choice did
+   not in this deck.** The original Scholar, Archivist, and Cartographer were reframed several
+   times, but selecting one before a judgment remained an interruption to the central triage
+   loop. One optional, costed audit of the assembled kept set works better for a short session.
+   Its three checks map directly to useful retrieval operations: web/reference search detects
+   missing grounding, vector/similarity search detects duplicate context, and graph/constraint
+   search detects facts that do not yet determine an answer. This finding rejects the per-card
+   advisor mechanic, not retrieval assistance or its cost.
+
+3. **The ledger and debrief support recoverable learning.** Reclassifying a card in place avoids
+   turning a mistaken first pass into a dead end, while a logged tally makes the debrief explain
+   the consequences of every decision. Starting at zero makes the number a session outcome,
+   rather than an implied career reputation. The current values are placeholders, but the
+   reversible judgment ledger is a useful invariant for a later implementation.
+
+4. **A duplicate carrier should be treated as conditionally useful evidence, not permanently
+   fixed noise.** The current deck's echo card is ignore-correct when the original `cat-red`
+   card is retained. If the original is ignored, however, the echo is the only available carrier
+   of that needed fact and should be kept. This offers a narrow, Tier-1 form of conditional
+   relevance using the same deck scale: the final value of evidence depends on the selected
+   context. It is distinct from the RFC's still-unbuilt Tier-2 form, where relevance changes
+   under competing ambiguous readings.
+
+5. **The first fixed-order pass does not establish ordering agency.** Removing the 2-3 card tray
+   reduced friction in this small deck, but a fixed sequence cannot test whether order is useful
+   agency. A dependency-respecting random topological order is the next proportionate experiment:
+   it varies pacing without forcing players to judge claims before their prerequisite context.
+
+6. **The prototype validates interaction coherence, not player-population or pipeline claims.**
+   Author/developer playtesting established that the loop can be played and revised without
+   mechanical dead ends. It does not establish a measured 5-10 minute completion time, a broader
+   usability result, production solver latency, or that the retained context is solver-verified
+   as sufficient. The brute-force prototype intentionally hard-codes its domains, so its domain
+   cards are scored as essential evidence without participating in the remaining-grid count.
+
+7. **The final context must be assessed as a whole.** A per-swipe fixed truth label is insufficient
+   once duplicate or substitute carriers can be conditionally useful. Future scoring needs to
+   distinguish a provisional local judgment from final file quality: whether the selected context
+   is correct, sufficient to answer the declared question, and free of unnecessary duplication.
 
 ## 6. Conclusion
 
-_(filled in once the spike concludes)_
+**SPIKE-006 succeeds as a Tier-1 direction-finding prototype.** It establishes context curation,
+not bureaucratic case processing, as the primary gameplay metaphor; replaces the per-card
+three-advisor meta-game with an optional, costed pre-flight retrieval audit; and reframes the
+final move as submitting curated context alone or curated context plus a resolved answer.
+
+These findings require RFC-005 to be revised before an ADR is created. In particular, the RFC
+should no longer promise a tray, per-card advisor selection, reputation as career standing, or a
+clerk fiction as the product's load-bearing explanation. The retained principles are short,
+binary card triage; recoverable decisions; a single session-closing choice; solver-backed
+assessment; and escalation that costs something without taxing ordinary thought.
+
+The next bounded work is a follow-up pass, not product infrastructure: formalize a deck/solver
+contract that evaluates domains and retained context together; make `cat-red` and its echo
+conditionally substitutable; and use a dependency-respecting shuffled order. That tests
+final-context conditional relevance without claiming to solve Tier-2 ambiguity-driven relevance.
+Tier-2 ambiguity, subjective constraints, ill-posed cases, image verification, production solver
+latency, and measured external playtesting remain outside this spike's conclusion.
