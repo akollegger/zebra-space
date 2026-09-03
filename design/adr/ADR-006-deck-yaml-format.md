@@ -4,7 +4,7 @@ title: Deck YAML Format
 status: proposed
 rfcs: [RFC-005]
 created: 2026-09-03
-specs: []
+specs: [specs/005-deck-yaml-format]
 ---
 
 # ADR-006: Deck YAML Format
