@@ -66,3 +66,4 @@ Use `/adr-review` before moving a draft to `accepted`.
 | [ADR-003](ADR-003-cli-interface.md) | CLI Interface Shape | proposed | RFC-002, RFC-003 | specs/003-cli-interface, specs/004-nl-csp-extraction |
 | [ADR-004](ADR-004-llm-extraction-critic-loop.md) | Adopt LLM-Based Extraction with a Fidelity Critic Loop | proposed | RFC-003 | specs/004-nl-csp-extraction |
 | [ADR-005](ADR-005-extractedcsp-mzn-compiler.md) | ExtractedCsp to MiniZinc Compiler | proposed | RFC-002, RFC-003 | specs/004-nl-csp-extraction |
+| [ADR-006](ADR-006-deck-yaml-format.md) | Deck YAML Format | proposed | RFC-005 | |
