@@ -77,7 +77,7 @@ mechanic was itself superseded by a later revision's bundled pre-flight audit (s
 Conclusion) — kept here as the intermediate step that motivated it.
 
 The ledger (initially called reputation) and the remaining-solution count are **hidden during
-play** and revealed only in the post-submission debrief, on the grounds that a clerk does not see
+play** and revealed only in the post-closure debrief, on the grounds that a clerk does not see
 their own score mid-shift. A `?debug=1` flag (plus an in-page toggle) re-exposes them along with a
 live dependency-graph table and a running self-check that the ledger always equals the starting
 value plus every logged delta.

@@ -170,7 +170,7 @@ what lets puzzle generation, the solver, and graph rendering interoperate"), but
 isn't yet load-bearing, so the ad-hoc path won.
 
 RFC-005 §5.4's graph/constraint search is the first genuine consumer: multi-hop traversal over the
-graph of facts a player has filed, surfacing **paths, never conclusions**. It needs traversal over
+graph of facts a player has kept, surfacing **paths, never conclusions**. It needs traversal over
 a real graph of established constraints, which is exactly what Principle III mandates and nothing
 provides. Note the honest risk in leading with it: a pre-flight audit check is a *narrow* first
 consumer, and designing the graph representation around it could produce something that serves
