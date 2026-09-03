@@ -80,7 +80,7 @@ csp:
 cards:
   - id: <string>
     role: domain | constraint | redundant | noise
-    tier: strict                            # only 'strict' is defined; see Consequences
+    tier: strict                            # only value supported in v1; see Consequences
     dependsOn: [<card id>, ...]
     carrier: <string>                       # the in-fiction source, shown before opening
     text: <string>                          # the claim itself, shown on opening
@@ -143,6 +143,9 @@ Loading a deck checks, independent of any solver call:
 - No two cards with `role: constraint` or `role: domain` claim the same `constraint`/`reveals`
   target — a `redundant` card is exactly how a second card is allowed to point at an
   already-claimed constraint.
+- A `role: redundant` card's `constraint` equals its `duplicateOf` target's `constraint` — the two
+  must resolve to the same underlying claim, or the card isn't actually a duplicate of what it
+  names.
 - `order` is a permutation of every card id, each appearing once.
 
 This generalizes `puzzle-data.js`'s `validateDeck()` (which checked the same properties against
@@ -185,9 +188,10 @@ one hardcoded deck) into a schema-level check any deck must pass.
   constraint-vs-noise assessment are still designed but unbuilt (RFC-005 §5.7); this format makes
   a deck's CSP solvable in full, but does not itself deliver an incremental interface. A deck
   authored against this schema can be solved once (`SolveResult`), not queried interactively yet.
-- `tier` accepts `ambiguous` and `subjective` as values but only `strict` has a defined
-  `readings`/weighting shape — RFC-005 Open Question 7.1 stays open, and a deck using either
-  non-strict tier today has no specified behavior beyond what `strict` gives it.
+- `tier` supports only `strict` in v1 (per §2.1's schema comment). `ambiguous` and `subjective`
+  have no defined `readings`/weighting shape — RFC-005 Open Question 7.1 stays open, and both
+  remain unsupported values rather than partially-specified ones until a later ADR gives them a
+  shape.
 - Deal order is fully author-declared (`order`); RFC-005 Open Question 7.8 (an authored order vs.
   a dependency-respecting shuffle) stays open — this format supports either being layered on top
   later without a schema change, since `order` can be validated against the `dependsOn` graph
