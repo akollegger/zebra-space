@@ -11,10 +11,10 @@ specs: []
 
 ## 1. Context
 
-A card-loop puzzle session (cover sheet, cards with a role and a carrier, a dependency order, a
-closing question) currently exists only as `puzzle-data.js`, a hand-written JavaScript module in
-`design/spikes/SPIKE-006-progressive-card-prototype/`. Three concepts are hardcoded there in a way
-that resists reuse:
+A card-loop puzzle session (a cover sheet, cards that establish grounding or assert constraints,
+a dependency order, a closing question) currently exists only as `puzzle-data.js`, a hand-written
+JavaScript module in `design/spikes/SPIKE-006-progressive-card-prototype/`. Three concepts are
+hardcoded there in a way that resists reuse:
 
 - Each constraint-bearing card's `constraintId` (e.g. `'cat-red'`) is a pointer into
   `solver.js`, a bespoke, hand-written predicate function specific to that one deck's grid. There
@@ -37,30 +37,31 @@ scoring) against this one hardcoded deck; its Conclusion names the next step as 
 contract that evaluates domains and retained context together" — a contract this ADR now defines
 as a portable file format rather than a JavaScript module.
 
-The project already has a data-only, domain-neutral constraint representation:
-`ExtractedCsp` (`src/extraction/types.ts`) — `{ entities, domains, constraints }`, where
-`constraints` is a tagged union (`ExtractedConstraint`) covering assignment, linked attributes,
-all-different, adjacency, binary relations, derived rules, arithmetic, and rule tables. It already
-feeds a real solver: `src/solver/solve.ts` compiles it to MiniZinc (`src/compiler/compile.ts`, per
-[ADR-005](ADR-005-extractedcsp-mzn-compiler.md)) and reports `SolveResult` — `Unsatisfiable`,
-`UniquelySolvable`, or `MultiplySatisfiable` (capped at two witnessed assignments, not an exact
-count). No deck-specific format needs to reinvent constraint representation; it needs to give
-cards a stable way to point at entries in this existing shape.
+A format for this has to settle its own constraint vocabulary — the shapes a card can assert —
+without requiring an author to go read a TypeScript module to find out what's expressible. That
+vocabulary happens not to need inventing from scratch: `src/extraction/types.ts` already defines a
+data-only, domain-neutral one (`ExtractedCsp` — `{ entities, domains, constraints }`, where
+`constraints` is a nine-kind tagged union covering assignment, linked attributes, all-different,
+adjacency, named relations, derived rules, arithmetic, and rule tables), already wired to a real
+solver (`src/solver/solve.ts` compiles it to MiniZinc per [ADR-005](ADR-005-extractedcsp-mzn-compiler.md)
+and reports `SolveResult` — `Unsatisfiable`, `UniquelySolvable`, or `MultiplySatisfiable`, the last
+capped at two witnessed assignments rather than an exact count). Aligning this format's constraint
+vocabulary with that one, rather than a different one, means a deck's `csp` block is solvable by
+the existing pipeline with no translation step — but that's a reason to reuse the same shapes, not
+a reason to define this format *as* a reference to that module.
 
 ## 2. Decision
 
 A deck is a single YAML document under `catalog/decks/DECK-NNNN-shortname.yaml`, `NNNN`
-zero-padded, parallel to `catalog/puzzles/PZL-NNNN-*.md` (per
-[ADR-001](ADR-001-catalog-format-seeding.md) §2.2). It separates the underlying constraint
-satisfaction problem (`csp`) from how that problem is revealed to a player through cards
-(`cards`), matching RFC-005 §5.6's task-brief/cards/closure split.
+zero-padded. It separates the underlying constraint satisfaction problem (`csp`) from how that
+problem is revealed to a player through cards (`cards`), matching RFC-005 §5.6's task-brief/
+cards/closure split.
 
 ### 2.1 Format
 
 ```yaml
 id: DECK-0001
 title: <string>
-puzzle: PZL-0002            # source catalog puzzle this deck was authored from, or null
 created: <ISO date>
 
 brief:
@@ -75,20 +76,16 @@ csp:
   domains:
     - {variable: <string>, entityType: <string>, values: [<string>, ...]}
   constraints:
-    <constraintId>: <ExtractedConstraint>   # one entry per distinct logical claim
+    <constraintId>: <constraint>   # one entry per distinct logical claim; shapes in §2.2
 
 cards:
   - id: <string>
-    role: domain | constraint | redundant | noise
     tier: strict                            # only value supported in v1; see Consequences
     dependsOn: [<card id>, ...]
-    carrier: <string>                       # the in-fiction source, shown before opening
+    title: <string>                         # the in-fiction source, shown before opening
     text: <string>                          # the claim itself, shown on opening
-    reveals: <domains[].variable> | entities   # role: domain only
-    constraint: <constraintId>              # role: constraint | redundant only
-    duplicateOf: <card id>                  # role: redundant only
-
-order: [<card id>, ...]                     # authored deal order; every id exactly once
+    reveals: [<domains[].variable> | entities, ...]   # zero or more; see §2.3
+    constraints: [<constraintId>, ...]                # zero or more; see §2.3
 
 closure:
   question: <string>
@@ -99,79 +96,107 @@ closure:
     reveal: id                              # what to report: the matching entity's id
 ```
 
-`role: domain` cards reveal an entry in `csp.entities` or `csp.domains` (via `reveals`) without
-asserting a constraint; `role: constraint` and `role: redundant` cards point at one entry in
-`csp.constraints` (via `constraint`). A `redundant` card additionally names the card it echoes
-(`duplicateOf`) — this is how a deck expresses SPIKE-006 Finding 4's "conditionally useful
-duplicate" rather than a permanently-fixed noise card: the same `constraintId` reached through two
-different carriers.
+Deal order is the order cards appear under `cards:` — there is no separate ordering field. A
+loader that wants a different presentation sequence (a dependency-respecting shuffle, or iterating
+`csp.constraints` instead of the card list) computes one; it doesn't read a second authored field
+that could disagree with the first.
 
-A card is one presentation of a constraint — a constraint is what a card logically asserts, once
-its carrier voice is stripped away. Two cards are equivalent exactly when they resolve to the same
-`constraint` key, regardless of how differently they're worded. This settles RFC-005 Open Question
-7.10 (duplicate-carrier equivalence) at the schema level: equivalence is structural (same
-`constraint` reference), not a similarity judgment made over prose. It also gives Open Question
-7.1 (systematic substitute carriers) a concrete mechanism — a deck can carry more than one card per
-constraint — without settling that question's scoring half. One consequence worth naming: nothing
-in this schema requires presentation to follow `order`'s fixed sequence. A loader is free to iterate
-`csp.constraints` instead and select among the cards that reference each one, which is a different
-implementation than SPIKE-006's static deal but not a different deck format.
+### 2.2 Constraint shapes
 
-### 2.2 Constraint representation
+Each entry in `csp.constraints` is one of the following, discriminated by `kind`. This is the
+format's complete constraint vocabulary — an author needs nothing beyond this list to write one:
 
-`csp.constraints` is a map keyed by a deck-local constraint id, not the bare array
-`ExtractedCsp.constraints` uses — cards need a stable name to reference (`red-middle`,
-`cat-red-house`), and array position is not stable under reordering or editing. Loading a deck for
-solving flattens this map's values into an `ExtractedCsp.constraints` array (order does not affect
-solving); its `entities` and `domains` pass through unchanged. Each map value is exactly an
-`ExtractedConstraint`, so a deck author has every constraint kind extraction already produces
-available, not a subset invented for this format.
+- `{kind: assignment, entity, variable, value}` — fixes one named entity's variable to a value.
+- `{kind: linkedAttributes, entityType, attributes: [{variable, value}, ...]}` — some entity of
+  `entityType` has every listed `variable=value` simultaneously; no entity is named (positive
+  co-occurrence, e.g. "the cat lives in the red house").
+- `{kind: allDifferent, variable}` — every entity's value for this variable must be distinct.
+- `{kind: adjacency, relation, a, b, variable}` — an ordering/positional relation between two
+  entities (e.g. "immediately right of"). `variable` names the ordered domain when its values
+  aren't plain integers, `null` when `a`/`b` share exactly one numeric domain.
+- `{kind: relation, name, a, b}` — a named fact between two entities, consumed by a paired
+  `derivedRule` rather than producing a constraint on its own.
+- `{kind: arithmetic, expression, comparator, target}` — a numeric or enum-valued comparison
+  between a structured `expression` and a `target` (a plain value, or itself a structured
+  expression).
+- `{kind: ruleTable, name, a, b}` — one fact in a static, entity-independent rule table over
+  domain *values* (e.g. "Paper beats Rock"), consumed by a paired `ruleTableConstraint`.
+- `{kind: ruleTableConstraint, table, a, b}` — requires two operands (each a `variableRef` or a
+  `literal`) to be related by the named `ruleTable`.
+- `{kind: derivedRule, appliesTo, condition, thenConstraints: [...]}` — applies its
+  `thenConstraints` when `condition` holds.
 
-### 2.3 Location and index
+This is deliberately the same vocabulary `ExtractedConstraint` defines in
+`src/extraction/types.ts` — not because writing a deck requires opening that module, but because a
+`csp` block written against this list serializes losslessly to `ExtractedCsp`, which is how a
+deck's constraints reach the existing solver (§1) with no translation step.
+
+### 2.3 Card semantics
+
+A card carries zero or more claims against `csp`: `reveals` names entity/domain facts it
+establishes; `constraints` names constraints (by `csp.constraints` key) it asserts. Both are
+optional and independent — a card may carry either, both, or neither:
+
+- Empty `reveals` and empty `constraints`: the card is noise — consistent with the solution,
+  constraining nothing (RFC-005 §5.1 step 3).
+- Non-empty `reveals`: the card establishes domain grounding.
+- Non-empty `constraints`: the card asserts one or more constraints.
+
+**Redundancy is derived from position, not authored.** When more than one card names the same
+`reveals` target or the same `constraints` entry, the first such card under `cards:` is that
+target's primary presentation; every later card naming it is a redundant echo of the same
+underlying fact in a different carrier voice (SPIKE-006 Finding 4). This settles RFC-005 Open
+Question 7.10 structurally: two cards are equivalent exactly when they name the same target, never
+by a judgment over their prose. It also answers Open Question 7.1's authoring half — a deck can
+carry more than one card per fact — without settling that question's scoring half.
+
+There is no `role` field, and no `duplicateOf` field. A loader classifies each card
+(domain-establishing, constraint-asserting, redundant, or noise) from its `reveals`/`constraints`
+content and its position among cards naming the same targets, rather than trusting hand-authored
+labels that can drift out of sync with what a card actually claims.
+
+### 2.4 Location and index
 
 Decks live in `catalog/decks/`, alongside a `README.md` (created when the first deck is added)
-mirroring `catalog/puzzles/README.md`'s Format-and-Index structure: a table of `Deck | Title |
-Source Puzzle`.
+mirroring `catalog/puzzles/README.md`'s Format-and-Index structure: a table of `Deck | Title`.
 
-### 2.4 Validation
+### 2.5 Validation
 
 Loading a deck checks, independent of any solver call:
 
-- Every `dependsOn`, `reveals`, `constraint`, and `duplicateOf` reference resolves to an existing
-  id.
+- Every `dependsOn`, `reveals`, and `constraints` reference resolves to an existing id.
 - The `dependsOn` graph is acyclic.
-- No two cards with `role: constraint` or `role: domain` claim the same `constraint`/`reveals`
-  target — a `redundant` card is exactly how a second card is allowed to point at an
-  already-claimed constraint.
-- A `role: redundant` card's `constraint` equals its `duplicateOf` target's `constraint` — the two
-  must resolve to the same underlying claim, or the card isn't actually a duplicate of what it
-  names.
-- `order` is a permutation of every card id, each appearing once.
 
 This generalizes `puzzle-data.js`'s `validateDeck()` (which checked the same properties against
 one hardcoded deck) into a schema-level check any deck must pass.
 
 ## 3. Alternatives Considered
 
-- **A deck-native constraint DSL, invented for this format.** Rejected: `ExtractedConstraint`
-  already covers assignment, linked-attribute, all-different, adjacency, relation, derived-rule,
-  arithmetic, and rule-table shapes, compiled and solved end to end (ADR-002, ADR-005). A second
-  grammar for the same nine shapes would need its own compiler and would drift from the one
-  extraction already produces.
+- **A constraint vocabulary invented from scratch for this format**, rather than the one in §2.2.
+  Rejected: `ExtractedConstraint` already covers these nine shapes, compiled and solved end to end
+  (ADR-002, ADR-005). A different vocabulary would need its own compiler and would drift from the
+  one extraction produces.
 - **Continue writing a bespoke solver module per deck**, as `solver.js` does today. Rejected:
   this is the exact cost this format exists to remove — every new deck would still require
   hand-written enumeration code, not just content.
 - **Store `csp.constraints` as a flat array**, matching `ExtractedCsp` exactly with no adapter.
   Rejected: cards reference specific constraints by name; array indices shift under any edit to
   the deck, silently repointing a card at the wrong constraint.
-- **Attach `role`/`tier` to the constraint instead of the card.** Rejected: role and tier describe
-  how a fact is revealed to a player, not the fact's logical shape — the same constraint can be
-  echoed by more than one card (`redundant`), so the pedagogical metadata belongs on the card, not
-  the constraint it points at.
+- **Hand-author `role` and `duplicateOf` as explicit card fields**, rather than deriving both from
+  `reveals`/`constraints` (§2.3). Rejected: an explicit `duplicateOf` pointer needs its own
+  consistency rule (it must name a card sharing the same constraint) that can drift out of sync
+  with what the cards actually claim — exactly the gap review caught in an earlier draft of this
+  ADR that used explicit fields. Deriving both makes that drift structurally impossible instead of
+  needing to be validated against.
+- **A `puzzle` field recording the catalog puzzle a deck was adapted from.** Rejected: it presumes
+  every deck originates from a cataloged puzzle. A deck should be directly authorable without one.
+- **A separate authored `order` field, distinct from cards' position under `cards:`.** Rejected:
+  redundant with YAML's own list ordering. A loader wanting a different presentation sequence
+  computes one (§2.1); it doesn't need a second authored field to disagree with the first.
 - **Extend `catalog/puzzles/PZL-NNNN.md` in place, rather than a separate `catalog/decks/`
-  format.** Rejected: a card's carrier voice is prose, one narrative per file (ADR-001 §2.1); a
+  format.** Rejected: a card's title and text are prose, one narrative per file (ADR-001 §2.1); a
   deck's `csp` is explicit structure that supports more than one narrative over the same
-  constraints (multiple cards per `constraint` key, §2.1). Folding cards into the puzzle file
+  constraints (multiple cards per `constraints` entry, §2.3). Folding cards into the puzzle file
   would force every carrier variation to fork the puzzle itself, instead of letting one puzzle
   support several decks.
 
@@ -179,10 +204,10 @@ one hardcoded deck) into a schema-level check any deck must pass.
 
 - Deck loading gains a real solver path (`ExtractedCsp` → `solve()`) in place of a brute-force
   permutation enumerator written per deck. That enumerator implicitly treated every
-  `role: domain` fact, including all-different constraints, as free — it never affected a solution
-  count because permutation generation already excluded repeats. Under the real solver, an
-  all-different constraint is a genuine, counted constraint like any other: RFC-005 §5.3's
-  assumption that domain-role judgments don't move the remaining-solution count needs to be
+  domain-establishing fact, including all-different constraints, as free — it never affected a
+  solution count because permutation generation already excluded repeats. Under the real solver,
+  an all-different constraint is a genuine, counted constraint like any other: RFC-005 §5.3's
+  assumption that domain grounding doesn't move the remaining-solution count needs to be
   re-checked once a deck is actually solved this way, not assumed to carry over from SPIKE-006.
 - A fast, per-swipe "how many solutions remain now" call and a candidate-card
   constraint-vs-noise assessment are still designed but unbuilt (RFC-005 §5.7); this format makes
@@ -192,10 +217,17 @@ one hardcoded deck) into a schema-level check any deck must pass.
   have no defined `readings`/weighting shape — RFC-005 Open Question 7.1 stays open, and both
   remain unsupported values rather than partially-specified ones until a later ADR gives them a
   shape.
-- Deal order is fully author-declared (`order`); RFC-005 Open Question 7.8 (an authored order vs.
-  a dependency-respecting shuffle) stays open — this format supports either being layered on top
-  later without a schema change, since `order` can be validated against the `dependsOn` graph
-  either way.
+- Deriving role and redundancy (§2.3) pushes real classification logic into the loader that a
+  hand-authored `role` field previously gave for free: checking which of `reveals`/`constraints`
+  is non-empty, and finding the first card among those naming a shared target. A card that is
+  both domain-establishing and constraint-asserting at once — which this schema now permits — has
+  no defined ledger value under RFC-005 §5.3's per-role scoring table; that table needs to be
+  redefined over derived classifications, including the composite case, as follow-up work rather
+  than something this ADR resolves.
+- Redundancy detection now applies to `reveals` as well as `constraints` — two cards establishing
+  the same domain fact are echoes of each other by the same rule that governs duplicate
+  constraints. SPIKE-006 never exercised this (its domain cards were each authored once); it is
+  untested territory this format makes reachable.
 - Converting `puzzle-data.js`/`solver.js` into a `catalog/decks/DECK-0001-*.yaml` file conforming
   to this schema, and building the loader that flattens `csp.constraints` and calls `solve()`, is
   follow-up implementation work, not part of this decision.
