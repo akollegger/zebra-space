@@ -43,7 +43,7 @@ Sequenced by what blocks what, if the game direction is pursued:
 | Tier | Work | Blocks | State |
 |---|---|---|---|
 | **1** | **7.** Solution counting + per-call latency | The entire turn loop — every swipe recomputes the remaining-solution count | Not started; `SolveResult` caps at 2 assignments |
-| **2** | **6.** Graph representation | The Cartographer, one of three advisors (RFC-005 §5.4) | Not started; dependency present, unused |
+| **2** | **6.** Graph representation | Graph/constraint search, the pre-flight retrieval audit's graph check (RFC-005 §5.4) | Not started; dependency present, unused |
 | **2** | **0** + **2.** Expected-outcome vocabulary (RFC-004 §7.3) | The ill-posed stage — no way to record "correctly returned the file" as a pass | RFC-004 `draft`; vocabulary is an open question |
 | **3** | **8.** Generate-from-solution + per-clue tier labels | Decks at scale; hand-authoring can bootstrap a prototype | RFC-001 §5.2 strategy 3, never built; `tier:` is `unknown` in all 39 puzzles |
 | **3** | **4.** Premise linting / the "color linter" | Deck verification (RFC-005 §5.7); manual review can bootstrap | Noted, unscoped |
@@ -169,13 +169,13 @@ needs a graph. Principle III's own rationale anticipated this ("a single shared 
 what lets puzzle generation, the solver, and graph rendering interoperate"), but interoperation
 isn't yet load-bearing, so the ad-hoc path won.
 
-RFC-005 §5.4's Cartographer is the first genuine consumer: multi-hop traversal over the graph of
-facts a player has filed, surfacing **paths, never conclusions**. It needs traversal over a real
-graph of established constraints, which is exactly what Principle III mandates and nothing
-provides. Note the honest risk in leading with it: a game advisor is a *narrow* first consumer, and
-designing the graph representation around it could produce something that serves traversal well and
-generation or rendering badly. The ADR should treat the Cartographer as a forcing function, not as
-the requirements document.
+RFC-005 §5.4's graph/constraint search is the first genuine consumer: multi-hop traversal over the
+graph of facts a player has kept, surfacing **paths, never conclusions**. It needs traversal over
+a real graph of established constraints, which is exactly what Principle III mandates and nothing
+provides. Note the honest risk in leading with it: a pre-flight audit check is a *narrow* first
+consumer, and designing the graph representation around it could produce something that serves
+traversal well and generation or rendering badly. The ADR should treat this check as a forcing
+function, not as the requirements document.
 
 Worth doing on its own merits regardless of whether the game is built — an unimplemented MUST in
 the constitution is either a real obligation or a principle that should be amended, and the project
