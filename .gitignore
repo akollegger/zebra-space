@@ -31,3 +31,6 @@ coverage/
 
 # Eval run artifacts (raw per-run detail; the committed summary lives in eval/results.md)
 eval/results/
+
+# speckit extension catalog cache — local, machine-specific, redownloadable
+.specify/extensions/.cache/
