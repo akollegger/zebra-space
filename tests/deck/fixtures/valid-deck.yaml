@@ -1,0 +1,84 @@
+# Foundational fixture (tasks.md T003): a small, uniquely solvable deck reused across US1
+# (structural validity), US2 (solving), and US3 (classification + closure answer). By
+# construction: house-1 is Blue/Dog, house-2 is Red/Fish, house-3 is Green/Cat — see
+# specs/005-deck-yaml-format/tasks.md's T003 note for the worked derivation.
+id: DECK-0000
+title: Three Houses (test fixture)
+created: "2026-09-03"
+
+brief:
+  question: Which house has the fish?
+  problem: Three houses on a short street, each a different paint color, each keeping a
+    different pet.
+  clue: The colors and the pets are both drawn from small, fixed lists.
+  instruction: Work out who has what.
+
+csp:
+  entities:
+    - {id: house-1, type: house}
+    - {id: house-2, type: house}
+    - {id: house-3, type: house}
+  domains:
+    - {variable: color, entityType: house, values: [Red, Green, Blue]}
+    - {variable: pet, entityType: house, values: [Dog, Cat, Fish]}
+  constraints:
+    c-color-alldiff: {kind: allDifferent, variable: color}
+    c-pet-alldiff: {kind: allDifferent, variable: pet}
+    c-red-house2: {kind: assignment, entity: house-2, variable: color, value: Red}
+    c-dog-house1: {kind: assignment, entity: house-1, variable: pet, value: Dog}
+    c-cat-green:
+      kind: linkedAttributes
+      entityType: house
+      attributes:
+        - {variable: color, value: Green}
+        - {variable: pet, value: Cat}
+
+cards:
+  - id: domain-colors
+    tier: strict
+    title: Paint code
+    text: Only Red, Green, or Blue paint is approved on this street.
+    reveals: [color]
+  - id: domain-pets
+    tier: strict
+    title: Pet registry
+    text: Each house keeps exactly one of a Dog, a Cat, or a Fish.
+    reveals: [pet]
+  - id: colors-alldiff
+    tier: strict
+    dependsOn: [domain-colors]
+    title: Zoning note
+    text: No two houses on this street are painted the same color.
+    constraints: [c-color-alldiff]
+  - id: pets-alldiff
+    tier: strict
+    dependsOn: [domain-pets]
+    title: Registry note
+    text: No two houses keep the same kind of pet.
+    constraints: [c-pet-alldiff]
+  - id: red-house2
+    tier: strict
+    dependsOn: [domain-colors]
+    title: Survey record
+    text: The middle house is painted Red.
+    constraints: [c-red-house2]
+  - id: dog-house1
+    tier: strict
+    dependsOn: [domain-pets]
+    title: Vet record
+    text: The first house on the street keeps a Dog.
+    constraints: [c-dog-house1]
+  - id: cat-green
+    tier: strict
+    dependsOn: [domain-colors, domain-pets]
+    title: Neighbor interview
+    text: Whoever is painted Green keeps a Cat.
+    constraints: [c-cat-green]
+
+closure:
+  question: Which house has the fish?
+  answer:
+    entityType: house
+    variable: pet
+    equals: Fish
+    reveal: id

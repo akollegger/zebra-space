@@ -1,0 +1,37 @@
+# US3 fixture (T023): both houses are independently pinned to Red (no allDifferent), so the
+# grid is uniquely solvable, but the closure's condition (color = Red) matches both entities.
+id: DECK-0000
+title: Ambiguous answer (test fixture)
+created: "2026-09-03"
+
+brief:
+  question: N/A
+  problem: N/A
+  clue: N/A
+  instruction: N/A
+
+csp:
+  entities:
+    - {id: house-1, type: house}
+    - {id: house-2, type: house}
+  domains:
+    - {variable: color, entityType: house, values: [Red, Green]}
+  constraints:
+    c-red-1: {kind: assignment, entity: house-1, variable: color, value: Red}
+    c-red-2: {kind: assignment, entity: house-2, variable: color, value: Red}
+
+cards:
+  - id: red-house1
+    tier: strict
+    title: Survey record one
+    text: House one is Red.
+    constraints: [c-red-1]
+  - id: red-house2
+    tier: strict
+    title: Survey record two
+    text: House two is Red.
+    constraints: [c-red-2]
+
+closure:
+  question: N/A
+  answer: {entityType: house, variable: color, equals: Red, reveal: id}

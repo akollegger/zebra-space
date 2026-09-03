@@ -373,6 +373,62 @@ test("SC-003: a model ignoring the forced tool call is reported as a structure p
   )
 })
 
+const VALID_DECK = fileURLToPath(new URL("../deck/fixtures/valid-deck.yaml", import.meta.url))
+const UNSATISFIABLE_DECK = fileURLToPath(new URL("../deck/fixtures/unsatisfiable-deck.yaml", import.meta.url))
+const MULTIPLY_SATISFIABLE_DECK = fileURLToPath(
+  new URL("../deck/fixtures/multiply-satisfiable-deck.yaml", import.meta.url),
+)
+const AMBIGUOUS_ANSWER_DECK = fileURLToPath(new URL("../deck/fixtures/ambiguous-answer-deck.yaml", import.meta.url))
+const DANGLING_REFERENCE_DECK = fileURLToPath(new URL("../deck/fixtures/dangling-reference.yaml", import.meta.url))
+
+test("contracts/cli-contract.md: deck against a validation failure exits 1 and names the problem", async () => {
+  const result = await runCli(["deck", DANGLING_REFERENCE_DECK])
+  assert.equal(result.exitCode, 1)
+  assert.equal(result.stdout, "")
+  assert.match(result.stderr, /domain-colors/)
+  assert.match(result.stderr, /domain-registry/)
+})
+
+test("contracts/cli-contract.md: deck against a uniquely solvable deck exits 0 with the closure answer", async () => {
+  const result = await runCli(["deck", VALID_DECK])
+  assert.equal(result.exitCode, 0)
+  assert.match(result.stdout, /house-2/)
+  assert.match(result.stdout, /Card classifications/)
+})
+
+test("contracts/cli-contract.md: deck against an unsatisfiable deck exits 0 and reports no solution", async () => {
+  const result = await runCli(["deck", UNSATISFIABLE_DECK])
+  assert.equal(result.exitCode, 0)
+  assert.match(result.stdout, /no solution/i)
+})
+
+test("contracts/cli-contract.md: deck against a multiply satisfiable deck exits 0 and reports that outcome", async () => {
+  const result = await runCli(["deck", MULTIPLY_SATISFIABLE_DECK])
+  assert.equal(result.exitCode, 0)
+  assert.match(result.stdout, /more than one solution/i)
+})
+
+test("contracts/cli-contract.md: deck reports an AmbiguousMatch answer rather than guessing", async () => {
+  const result = await runCli(["deck", AMBIGUOUS_ANSWER_DECK])
+  assert.equal(result.exitCode, 0)
+  assert.match(result.stdout, /more than one entity/i)
+})
+
+test("contracts/cli-contract.md: deck --json prints the SolvedDeck shape", async () => {
+  const result = await runCli(["deck", VALID_DECK, "--json"])
+  assert.equal(result.exitCode, 0)
+  const parsed = JSON.parse(result.stdout)
+  assert.equal(parsed.outcome._tag, "UniquelySolvable")
+  assert.equal(parsed.answer, "house-2")
+  assert.equal(parsed.classifications["domain-colors"], "domain")
+})
+
+test("deck --help shows its own arguments, independent of top-level help", async () => {
+  const result = await runCli(["deck", "--help"])
+  assert.equal(result.exitCode, 0)
+  assert.match(result.stdout, /--json/)
+})
+
 test("SC-003: extract against a nonexistent puzzle file reports the path, not a JS stack trace", async () => {
   const result = await runCli(["extract", "/nonexistent/puzzle.md"])
   assert.equal(result.exitCode, 1)

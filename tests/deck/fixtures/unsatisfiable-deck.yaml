@@ -1,0 +1,35 @@
+# US2 fixture (T016): house-1 is fixed to both Red and Green — no solution.
+id: DECK-0000
+title: Unsatisfiable (test fixture)
+created: "2026-09-03"
+
+brief:
+  question: N/A
+  problem: N/A
+  clue: N/A
+  instruction: N/A
+
+csp:
+  entities:
+    - {id: house-1, type: house}
+  domains:
+    - {variable: color, entityType: house, values: [Red, Green]}
+  constraints:
+    c-red: {kind: assignment, entity: house-1, variable: color, value: Red}
+    c-green: {kind: assignment, entity: house-1, variable: color, value: Green}
+
+cards:
+  - id: red-card
+    tier: strict
+    title: First claim
+    text: House one is Red.
+    constraints: [c-red]
+  - id: green-card
+    tier: strict
+    title: Second claim
+    text: House one is Green.
+    constraints: [c-green]
+
+closure:
+  question: N/A
+  answer: {entityType: house, variable: color, equals: Red, reveal: id}

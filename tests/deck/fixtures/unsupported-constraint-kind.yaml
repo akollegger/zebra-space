@@ -1,0 +1,29 @@
+# US1 fixture (T008): a csp.constraints entry uses a `kind` outside ADR-006 §2.2's nine shapes.
+id: DECK-0000
+title: Unsupported constraint kind (test fixture)
+created: "2026-09-03"
+
+brief:
+  question: N/A
+  problem: N/A
+  clue: N/A
+  instruction: N/A
+
+csp:
+  entities:
+    - {id: house-1, type: house}
+  domains:
+    - {variable: color, entityType: house, values: [Red, Green, Blue]}
+  constraints:
+    c-bogus: {kind: exclusivity, entity: house-1, variable: color, value: Red}
+
+cards:
+  - id: bogus-card
+    tier: strict
+    title: Bogus
+    text: Not a real constraint kind.
+    constraints: [c-bogus]
+
+closure:
+  question: N/A
+  answer: {entityType: house, variable: color, equals: Red, reveal: id}

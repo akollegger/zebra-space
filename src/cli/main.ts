@@ -11,6 +11,7 @@ import {
   type StricliProcess,
 } from "@stricli/core"
 import { loadEnvFileIfPresent } from "./load-env.ts"
+import { deckCommand } from "./subcommands/deck.ts"
 import { extractCommand } from "./subcommands/extract.ts"
 import { solve } from "./subcommands/solve.ts"
 
@@ -27,7 +28,7 @@ const { version: currentVersion } = JSON.parse(readFileSync(packageJsonPath, "ut
 }
 
 const routes = buildRouteMap({
-  routes: { solve, extract: extractCommand },
+  routes: { solve, extract: extractCommand, deck: deckCommand },
   docs: { brief: "Tools for working with zebra puzzles" },
 })
 

@@ -1,0 +1,36 @@
+# US2 fixture (T017): two houses, two colors, only allDifferent — either assignment works.
+id: DECK-0000
+title: Multiply satisfiable (test fixture)
+created: "2026-09-03"
+
+brief:
+  question: N/A
+  problem: N/A
+  clue: N/A
+  instruction: N/A
+
+csp:
+  entities:
+    - {id: house-1, type: house}
+    - {id: house-2, type: house}
+  domains:
+    - {variable: color, entityType: house, values: [Red, Green]}
+  constraints:
+    c-color-alldiff: {kind: allDifferent, variable: color}
+
+cards:
+  - id: domain-colors
+    tier: strict
+    title: Paint code
+    text: Only Red or Green paint is approved.
+    reveals: [color]
+  - id: colors-alldiff
+    tier: strict
+    dependsOn: [domain-colors]
+    title: Zoning note
+    text: No two houses are painted the same color.
+    constraints: [c-color-alldiff]
+
+closure:
+  question: N/A
+  answer: {entityType: house, variable: color, equals: Red, reveal: id}
