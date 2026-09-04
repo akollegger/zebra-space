@@ -28,11 +28,21 @@ jobs:
       # needed; the bundle's Gecode is already on PATH via bin/.
       - name: Install MiniZinc
         run: |
+          set -e
+          BUNDLE=/opt/MiniZincIDE-2.10.1-x86_64-linux-gnu
           curl -sL -o /tmp/minizinc.tgz \
             "https://github.com/MiniZinc/MiniZincIDE/releases/download/2.10.1/MiniZincIDE-2.10.1-x86_64-linux-gnu.tgz"
           sudo tar -xzf /tmp/minizinc.tgz -C /opt
-          echo "/opt/MiniZincIDE-2.10.1-x86_64-linux-gnu/bin" >> "$GITHUB_PATH"
-          echo "LD_LIBRARY_PATH=/opt/MiniZincIDE-2.10.1-x86_64-linux-gnu/lib" >> "$GITHUB_ENV"
+          # Setting LD_LIBRARY_PATH job-wide (GITHUB_ENV) would apply it to every step's every
+          # process — sed, pnpm, node, curl — not just this bundle's own binaries, and it broke
+          # unrelated tools when tried that way. A wrapper scopes it to exactly the `minizinc`
+          # invocation instead; LD_LIBRARY_PATH set here is inherited by whatever `minizinc`
+          # itself spawns (fzn-gecode), so nothing else needs its own wrapper.
+          sudo mkdir -p /opt/minizinc-wrapper
+          printf '#!/bin/sh\nexport LD_LIBRARY_PATH="%s/lib"\nexec "%s/bin/minizinc" "$@"\n' "$BUNDLE" "$BUNDLE" \
+            | sudo tee /opt/minizinc-wrapper/minizinc > /dev/null
+          sudo chmod +x /opt/minizinc-wrapper/minizinc
+          echo "/opt/minizinc-wrapper" >> "$GITHUB_PATH"
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
