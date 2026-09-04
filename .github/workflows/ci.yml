@@ -18,31 +18,32 @@ jobs:
           node-version-file: .tool-versions
           cache: pnpm
 
-      # Required by src/solver/'s tests (CLAUDE.md's MiniZinc prerequisite). Installed from the
-      # official self-contained Linux bundle (bin/minizinc + bin/fzn-gecode + its own share/lib),
-      # not Ubuntu's apt package: apt's 2.8.2 build (Noble) has a standard-library `all_different`
-      # whose internal `global_cardinality` redefinition doesn't resolve for an enum-typed array
-      # (confirmed on PR #20's first-ever real `all_different` solve in CI — ModelSyntaxError,
-      # `global_cardinality(array[int] of var opt int, ...)` has no matching signature) — verified
-      # working locally against a newer version instead. No separate solver registration step is
-      # needed; the bundle's Gecode is already on PATH via bin/.
+      # Required by src/solver/'s tests (CLAUDE.md's MiniZinc prerequisite). Ubuntu's apt package
+      # (2.8.2, Noble) bundles Gecode and needs no separate solver registration — but its
+      # standard-library `all_different` has an internal `global_cardinality` redefinition that
+      # doesn't resolve for an enum-typed array (confirmed on PR #20's first-ever real
+      # `all_different` solve in CI: ModelSyntaxError, `global_cardinality(array[int] of var opt
+      # int, ...)` has no matching signature).
+      #
+      # Fixed by swapping in just the newer stdlib's *text* (share/minizinc/std/*.mzn — the
+      # redefinitions themselves, no binary involved) via `MZN_STDLIB_DIR`, rather than replacing
+      # the `minizinc`/`fzn-gecode` binaries with a newer official release: that release turned
+      # out to link `fzn-gecode` against the Qt IDE's GUI/GL stack (libEGL, libGL, …), which a
+      # bare ubuntu-latest runner doesn't have and which has no relation to solving at all — a
+      # packaging artifact of that bundle, not something worth chasing further. The bug here is
+      # purely a compile-time type-resolution failure in the stdlib text, and Gecode's FlatZinc
+      # interpreter never sees it (compilation fails before reaching FlatZinc), so swapping only
+      # the text and keeping every apt-installed binary is the minimal, surgical fix.
       - name: Install MiniZinc
         run: |
           set -e
-          BUNDLE=/opt/MiniZincIDE-2.10.1-x86_64-linux-gnu
-          curl -sL -o /tmp/minizinc.tgz \
-            "https://github.com/MiniZinc/MiniZincIDE/releases/download/2.10.1/MiniZincIDE-2.10.1-x86_64-linux-gnu.tgz"
-          sudo tar -xzf /tmp/minizinc.tgz -C /opt
-          # Setting LD_LIBRARY_PATH job-wide (GITHUB_ENV) would apply it to every step's every
-          # process — sed, pnpm, node, curl — not just this bundle's own binaries, and it broke
-          # unrelated tools when tried that way. A wrapper scopes it to exactly the `minizinc`
-          # invocation instead; LD_LIBRARY_PATH set here is inherited by whatever `minizinc`
-          # itself spawns (fzn-gecode), so nothing else needs its own wrapper.
-          sudo mkdir -p /opt/minizinc-wrapper
-          printf '#!/bin/sh\nexport LD_LIBRARY_PATH="%s/lib"\nexec "%s/bin/minizinc" "$@"\n' "$BUNDLE" "$BUNDLE" \
-            | sudo tee /opt/minizinc-wrapper/minizinc > /dev/null
-          sudo chmod +x /opt/minizinc-wrapper/minizinc
-          echo "/opt/minizinc-wrapper" >> "$GITHUB_PATH"
+          sudo apt-get update && sudo apt-get install -y minizinc
+          curl -sL -o /tmp/minizinc-std.tgz \
+            "https://github.com/MiniZinc/libminizinc/archive/refs/tags/2.10.1.tar.gz"
+          sudo mkdir -p /opt/minizinc-stdlib
+          sudo tar -xzf /tmp/minizinc-std.tgz -C /opt/minizinc-stdlib --strip-components=3 \
+            "libminizinc-2.10.1/share/minizinc"
+          echo "MZN_STDLIB_DIR=/opt/minizinc-stdlib" >> "$GITHUB_ENV"
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
