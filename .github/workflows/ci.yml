@@ -43,6 +43,10 @@ jobs:
           sudo mkdir -p /opt/minizinc-stdlib
           sudo tar -xzf /tmp/minizinc-std.tgz -C /opt/minizinc-stdlib --strip-components=3 \
             "libminizinc-2.10.1/share/minizinc"
+          # apt's Gecode solver config (gecode.msc) still expects an include dir literally named
+          # "gecode" — 2.10.1 renamed it to "gecode_presolver". Alias it rather than editing the
+          # solver config itself.
+          sudo cp -r /opt/minizinc-stdlib/gecode_presolver /opt/minizinc-stdlib/gecode
           echo "MZN_STDLIB_DIR=/opt/minizinc-stdlib" >> "$GITHUB_ENV"
 
       - run: pnpm install --frozen-lockfile
