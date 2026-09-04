@@ -25,7 +25,7 @@ test("US2: deckCsp flattens deck.csp.constraints into an ExtractedCsp array", as
   assert.deepEqual(csp.domains, deck.csp.domains)
   assert.equal(csp.constraints.length, Object.keys(deck.csp.constraints).length)
   for (const constraint of Object.values(deck.csp.constraints)) {
-    assert.ok(csp.constraints.some((c) => JSON.stringify(c) === JSON.stringify(constraint)))
+    assert.ok(csp.constraints.includes(constraint))
   }
 })
 

@@ -1,5 +1,7 @@
-# Review fixture: closure.answer.entityType ("street") disagrees with the entityType the
-# "color" domain was actually declared over ("house") — exercises InvalidClosure.
+# Review fixture: closure.answer.entityType ("car", a real entity type in this deck) disagrees
+# with the entityType the "color" domain was actually declared over ("house") — exercises
+# InvalidClosure's domain/entityType-mismatch check specifically, distinct from the
+# entityType-doesn't-exist-at-all check.
 id: DECK-0000
 title: Mismatched closure (test fixture)
 created: "2026-09-03"
@@ -13,6 +15,7 @@ brief:
 csp:
   entities:
     - {id: house-1, type: house}
+    - {id: car-1, type: car}
   domains:
     - {variable: color, entityType: house, values: [Red, Green]}
   constraints: {}
@@ -26,4 +29,4 @@ cards:
 
 closure:
   question: N/A
-  answer: {entityType: street, variable: color, equals: Red, reveal: id}
+  answer: {entityType: car, variable: color, equals: Red, reveal: id}

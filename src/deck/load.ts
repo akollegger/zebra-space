@@ -6,6 +6,7 @@ import {
   type DeckError,
   DanglingReference,
   DependencyCycle,
+  DuplicateCardId,
   InvalidClosure,
   MalformedDocument,
   UnsupportedConstraintKind,
@@ -77,13 +78,19 @@ function findUnsupportedConstraintKind(parsed: unknown): UnsupportedConstraintKi
  * schema-decoded `Deck`, since by this point every field has the right shape to inspect
  * directly. */
 function validateCards(deck: Deck): DeckError | undefined {
+  const seenCardIds = new Set<string>()
   for (const card of deck.cards) {
+    if (seenCardIds.has(card.id)) {
+      return new DuplicateCardId({ id: card.id })
+    }
+    seenCardIds.add(card.id)
+
     if (!SUPPORTED_TIERS.has(card.tier)) {
       return new UnsupportedTier({ card: card.id, tier: card.tier })
     }
   }
 
-  const cardIds = new Set(deck.cards.map((card) => card.id))
+  const cardIds = seenCardIds
   const domainVariables = new Set(deck.csp.domains.map((domain) => domain.variable))
   const constraintKeys = new Set(Object.keys(deck.csp.constraints))
 
@@ -113,7 +120,17 @@ function validateCards(deck: Deck): DeckError | undefined {
  * that's only meaningful when the domain actually exists and its `entityType` agrees with
  * `closure.answer.entityType`, so both are checked here rather than trusted at solve time. */
 function validateClosure(deck: Deck): InvalidClosure | undefined {
-  const { variable, entityType } = deck.closure.answer
+  const { variable, entityType, reveal } = deck.closure.answer
+
+  if (reveal !== "id") {
+    return new InvalidClosure({ reason: `closure.answer.reveal "${reveal}" — only "id" is supported` })
+  }
+  if (!deck.csp.entities.some((entity) => entity.type === entityType)) {
+    return new InvalidClosure({
+      reason: `closure.answer.entityType "${entityType}" names no entity in csp.entities`,
+    })
+  }
+
   const domain = deck.csp.domains.find((d) => d.variable === variable)
   if (domain === undefined) {
     return new InvalidClosure({ reason: `closure.answer.variable "${variable}" names no declared domain` })

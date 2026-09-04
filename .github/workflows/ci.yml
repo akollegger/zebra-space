@@ -37,10 +37,10 @@ jobs:
       # way setting it via GITHUB_ENV was first tried and found to.
       - name: Install MiniZinc
         run: |
-          set -e
+          set -euo pipefail
           sudo apt-get update && sudo apt-get install -y libegl1
           BUNDLE=/opt/MiniZincIDE-2.10.1-x86_64-linux-gnu
-          curl -sL -o /tmp/minizinc.tgz \
+          curl -fsSL -o /tmp/minizinc.tgz \
             "https://github.com/MiniZinc/MiniZincIDE/releases/download/2.10.1/MiniZincIDE-2.10.1-x86_64-linux-gnu.tgz"
           sudo tar -xzf /tmp/minizinc.tgz -C /opt
           sudo mkdir -p /opt/minizinc-wrapper

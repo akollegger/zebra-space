@@ -58,11 +58,29 @@ test("US1/FR-004: an unrecognized constraint kind is rejected, naming the constr
   }
 })
 
+test("two cards sharing the same id are rejected as DuplicateCardId", async () => {
+  const error = await Effect.runPromise(Effect.flip(loadDeck(readFixture("duplicate-card-id.yaml"))))
+  assert.equal(error._tag, "DuplicateCardId")
+  if (error._tag === "DuplicateCardId") {
+    assert.equal(error.id, "domain-colors")
+  }
+})
+
+test("closure.answer.entityType naming no entity type at all is rejected as InvalidClosure", async () => {
+  const error = await Effect.runPromise(
+    Effect.flip(loadDeck(readFixture("closure-unknown-entity-type.yaml"))),
+  )
+  assert.equal(error._tag, "InvalidClosure")
+  if (error._tag === "InvalidClosure") {
+    assert.match(error.reason, /street/)
+  }
+})
+
 test("closure.answer.entityType disagreeing with its variable's domain is rejected as InvalidClosure", async () => {
   const error = await Effect.runPromise(Effect.flip(loadDeck(readFixture("mismatched-closure.yaml"))))
   assert.equal(error._tag, "InvalidClosure")
   if (error._tag === "InvalidClosure") {
-    assert.match(error.reason, /street/)
+    assert.match(error.reason, /car/)
     assert.match(error.reason, /house/)
   }
 })

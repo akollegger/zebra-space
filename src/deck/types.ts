@@ -89,6 +89,13 @@ export class DanglingReference extends Data.TaggedError("DanglingReference")<{
   readonly target: string
 }> {}
 
+// Two cards sharing an id would silently collide in classifyCards' result map (one card's
+// classification overwriting the other's) and make dependsOn/reveals/constraints references
+// ambiguous about which card they actually name — caught before any of that can happen.
+export class DuplicateCardId extends Data.TaggedError("DuplicateCardId")<{
+  readonly id: string
+}> {}
+
 export class DependencyCycle extends Data.TaggedError("DependencyCycle")<{
   readonly cards: readonly string[]
 }> {}
@@ -115,6 +122,7 @@ export class InvalidClosure extends Data.TaggedError("InvalidClosure")<{
 export type DeckError =
   | MalformedDocument
   | DanglingReference
+  | DuplicateCardId
   | DependencyCycle
   | UnsupportedTier
   | UnsupportedConstraintKind

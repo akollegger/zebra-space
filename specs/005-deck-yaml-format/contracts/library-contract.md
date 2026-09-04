@@ -47,18 +47,19 @@ member by construction (data-model.md's `Constraint` union is a structural mirro
 ## `solveDeck`
 
 ```ts
-function solveDeck(deck: Deck): Effect.Effect<SolvedDeck, SolverError>
+function solveDeck(deck: Deck): Effect.Effect<SolvedDeck, SolverError | CompileError>
 ```
 
-Calls `deckCsp(deck)`, compiles and solves it via the project's existing capability (`solve()` in
-`src/solver/solve.ts`, itself unmodified — FR-006), and returns a `SolvedDeck`
-(data-model.md): the raw `SolveResult`, `classifyCards(deck)`'s output, and — only when the
-outcome is `UniquelySolvable` — the closure answer (FR-007, FR-008) or an `AnswerError`
-(FR-009) when `deck.closure.answer`'s condition matches zero or more than one entity in the
-solution.
+Calls `deckCsp(deck)`, compiles and solves it via the project's existing capabilities (`compile()`
+in `src/compiler/compile.ts` and `solve()` in `src/solver/solve.ts`, both unmodified — FR-006),
+and returns a `SolvedDeck` (data-model.md): the raw `SolveResult`, `classifyCards(deck)`'s
+output, and — only when the outcome is `UniquelySolvable` — the closure answer (FR-007, FR-008)
+or an `AnswerError` (FR-009) when `deck.closure.answer`'s condition matches zero or more than one
+entity in the solution.
 
-Failure mode is exactly the existing `SolverError` union — this feature introduces no new solver
-failure, consistent with FR-006's "no deck-specific solving code."
+Failure mode is exactly the existing `SolverError` and `CompileError` unions — this feature
+introduces no new solving or compiling failure, consistent with FR-006's "no deck-specific
+solving code."
 
 ## Types
 

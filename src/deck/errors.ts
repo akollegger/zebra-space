@@ -8,6 +8,8 @@ export function formatDeckError(error: DeckError): string {
       return `The deck could not be read as a valid document: ${error.message}`
     case "DanglingReference":
       return formatDanglingReference(error)
+    case "DuplicateCardId":
+      return `More than one card uses the id "${error.id}" — card ids must be unique.`
     case "DependencyCycle":
       return `These cards depend on each other in a cycle: ${error.cards.join(" -> ")}.`
     case "UnsupportedTier":

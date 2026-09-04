@@ -13,8 +13,13 @@ rules (dangling references, dependency cycles, unsupported tier/constraint value
 card's classification without any hand-authored role field, converts the deck's `csp` block to
 the project's existing `ExtractedCsp` representation, and solves it via the existing solving
 capability — producing a solved outcome and, when uniquely solvable, the closure's specific
-answer. A new `zebra deck` CLI subcommand exposes the whole pipeline as one command, satisfying
-Constitution Principle VI.
+answer. A new `zebra deck` CLI subcommand was planned to expose the whole pipeline as one
+command, satisfying Constitution Principle VI.
+
+**Superseded**: no `deck` subcommand exists in the shipped implementation. `zebra extract` was
+extended to accept a deck document directly instead (cli-contract.md's "Why no `deck`
+subcommand"); Constitution Principle VI is satisfied through that command instead. Kept below as
+the record of what was planned and why.
 
 ## Technical Context
 
