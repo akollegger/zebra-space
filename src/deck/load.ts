@@ -6,6 +6,7 @@ import {
   type DeckError,
   DanglingReference,
   DependencyCycle,
+  InvalidClosure,
   MalformedDocument,
   UnsupportedConstraintKind,
   UnsupportedTier,
@@ -104,7 +105,27 @@ function validateCards(deck: Deck): DeckError | undefined {
     }
   }
 
-  return findDependencyCycle(deck)
+  return findDependencyCycle(deck) ?? validateClosure(deck)
+}
+
+/** `computeAnswer` (solve.ts) reads the solved assignment's shape (scalar vs. entity-indexed)
+ * from the domain that owns `closure.answer.variable`, per compile.ts's own `isScalar` rule —
+ * that's only meaningful when the domain actually exists and its `entityType` agrees with
+ * `closure.answer.entityType`, so both are checked here rather than trusted at solve time. */
+function validateClosure(deck: Deck): InvalidClosure | undefined {
+  const { variable, entityType } = deck.closure.answer
+  const domain = deck.csp.domains.find((d) => d.variable === variable)
+  if (domain === undefined) {
+    return new InvalidClosure({ reason: `closure.answer.variable "${variable}" names no declared domain` })
+  }
+  if (domain.entityType !== entityType) {
+    return new InvalidClosure({
+      reason:
+        `closure.answer.entityType "${entityType}" does not match domain "${variable}"'s ` +
+        `entityType "${domain.entityType}"`,
+    })
+  }
+  return undefined
 }
 
 /** Depth-first cycle detection over the `dependsOn` graph (card -> each card it depends on). */

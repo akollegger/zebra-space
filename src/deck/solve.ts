@@ -28,15 +28,21 @@ function unwrapValue(value: unknown): string {
 }
 
 /** research.md Finding 4: `compile.ts` declares a domain scalar (not entity-indexed) exactly
- * when its entityType has one entity or fewer — mirrored here so the assignment is read back the
- * same shape the compiler declared it in. */
+ * when *the domain's own* `entityType` has one entity or fewer (compile.ts's `isScalar`) — keyed
+ * on the domain that owns `variable`, not on `closure.answer.entityType`, which `loadDeck`
+ * validates matches it but which this function doesn't need to trust to get the shape right. */
 function computeAnswer(deck: Deck, assignment: Assignment): string | AnswerError {
   const { entityType, variable, equals } = deck.closure.answer
-  const entities = deck.csp.entities.filter((entity) => entity.type === entityType)
+  const domain = deck.csp.domains.find((d) => d.variable === variable)
+  const domainEntities = deck.csp.entities.filter((entity) => entity.type === domain?.entityType)
   const raw = assignment[variable]
-  const values = entities.length <= 1 ? [raw] : (raw as readonly unknown[])
+  const values = domainEntities.length <= 1 ? [raw] : (raw as readonly unknown[])
 
-  const matches = entities.filter((_entity, index) => unwrapValue(values[index]) === equals)
+  const answerEntities = deck.csp.entities.filter((entity) => entity.type === entityType)
+  const matches = answerEntities.filter((entity) => {
+    const index = domainEntities.findIndex((e) => e.id === entity.id)
+    return index !== -1 && unwrapValue(values[index]) === equals
+  })
   if (matches.length === 0) return "NoMatchingEntity"
   if (matches.length > 1) return "AmbiguousMatch"
   return matches[0]!.id

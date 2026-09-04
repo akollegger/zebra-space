@@ -57,3 +57,12 @@ test("US1/FR-004: an unrecognized constraint kind is rejected, naming the constr
     assert.equal(error.kind, "exclusivity")
   }
 })
+
+test("closure.answer.entityType disagreeing with its variable's domain is rejected as InvalidClosure", async () => {
+  const error = await Effect.runPromise(Effect.flip(loadDeck(readFixture("mismatched-closure.yaml"))))
+  assert.equal(error._tag, "InvalidClosure")
+  if (error._tag === "InvalidClosure") {
+    assert.match(error.reason, /street/)
+    assert.match(error.reason, /house/)
+  }
+})

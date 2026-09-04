@@ -103,9 +103,19 @@ export class UnsupportedConstraintKind extends Data.TaggedError("UnsupportedCons
   readonly kind: string
 }> {}
 
+// `closure.answer.variable` must name a declared domain, and that domain's `entityType` must
+// match `closure.answer.entityType` — otherwise `computeAnswer` (solve.ts) has no principled way
+// to know whether the solved assignment for `variable` is scalar or entity-indexed (that shape
+// is keyed on the *domain's* entityType, per compile.ts's `isScalar`, not on whatever entityType
+// the closure happens to name).
+export class InvalidClosure extends Data.TaggedError("InvalidClosure")<{
+  readonly reason: string
+}> {}
+
 export type DeckError =
   | MalformedDocument
   | DanglingReference
   | DependencyCycle
   | UnsupportedTier
   | UnsupportedConstraintKind
+  | InvalidClosure
