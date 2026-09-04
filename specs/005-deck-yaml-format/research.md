@@ -72,7 +72,20 @@ requesting a new one.
 `closure.answer.equals` (a plain string) must compare against the wrapped value's `e` field, not
 the wrapper object itself.
 
-## Finding 5: A `zebra deck` CLI subcommand
+## Finding 5: A `zebra deck` CLI subcommand (superseded — see `contracts/cli-contract.md`)
+
+**This decision was reversed after implementation and review.** Once `extract` gained direct
+deck support (folding this finding's compile/solve half into the existing `extract | solve`
+pipeline), what remained — card classification and the closure answer — turned out to fail a
+sharper test than the one this finding applied: a CLI verb should operate on whatever input is
+viable for it, the way `extract`/`solve` now do regardless of source. Classification and the
+closure answer depend on *cards*, a concept only the deck format has, so no version of them
+would do anything meaningful given a prose puzzle or a compiled model — they were never a
+general verb narrowly implemented, they were deck-internal structure inspection wearing a
+command's clothes. The `deck` subcommand was removed; `classifyCards`/`solveDeck` remain
+library-only. Kept below as the record of what was decided at the time and why.
+
+### Original finding
 
 **Decision**: Add a `deck` subcommand (`zebra deck <deck.yaml> [--json]`) alongside the existing
 `extract`/`solve` subcommands (`src/cli/subcommands/`), running the full pipeline (load →

@@ -33,6 +33,28 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
 }
 
+/** Detects a deck document by shape (ADR-006 §2.1's top-level keys), not by file extension —
+ * `catalog/decks/DECK-NNNN-*.yaml` carries no distinguishing suffix. Used by `extract`
+ * (src/cli/subcommands/extract.ts) to route a deck.yaml around LLM translation entirely, since
+ * `csp.constraints` already IS an `ExtractedCsp`-shaped structure (ADR-006 §2.2) rather than
+ * prose that needs inferring. A parse failure or any other shape falls through to the normal
+ * prose path — this is a routing decision, not a validation one; `loadDeck` still does the real
+ * validation once a document is routed here.
+ */
+export function looksLikeDeckDocument(parsed: unknown): boolean {
+  return isRecord(parsed) && "csp" in parsed && "cards" in parsed && "closure" in parsed
+}
+
+/** Parses `text` as YAML, returning `undefined` (never throwing) on any failure — used only for
+ * `extract`'s deck-vs-prose routing sniff, where a parse failure just means "not a deck". */
+export function tryParseYaml(text: string): unknown {
+  try {
+    return parse(text)
+  } catch {
+    return undefined
+  }
+}
+
 /** T012's constraint-kind half: checked against the raw parsed value, not the decoded `Deck`,
  * so a bad `kind` is caught before the strict schema decode would otherwise reject the whole
  * document with a generic parse error. */

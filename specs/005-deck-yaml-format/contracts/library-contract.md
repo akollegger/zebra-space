@@ -1,7 +1,9 @@
 # Contract: Deck library (`src/deck/`)
 
 This is the primary contract for this feature — a TypeScript library other code (a future game
-loop, the `zebra deck` CLI subcommand, tests) calls directly. Function signatures below are the
+loop, tests) calls directly. `classifyCards` and `solveDeck`'s closure-answer projection have no
+CLI verb of their own (cli-contract.md's "Why no `deck` subcommand"); `loadDeck`/`deckCsp` are
+also reached indirectly via `zebra extract` (cli-contract.md). Function signatures below are the
 contract; internal file layout is an implementation detail of plan.md's Project Structure.
 
 ## `loadDeck`

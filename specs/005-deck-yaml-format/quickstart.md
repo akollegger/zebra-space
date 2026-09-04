@@ -40,15 +40,20 @@ outcomes with no fabricated answer.
 
 ## Validate and solve from the command line
 
+There is no dedicated `deck` subcommand (see `contracts/cli-contract.md`'s "Why no `deck`
+subcommand") — `extract` accepts a deck document directly, and its output feeds the existing
+`solve` unchanged:
+
 ```
-pnpm zebra deck catalog/decks/DECK-0001-maple-street.yaml
+pnpm zebra extract catalog/decks/DECK-0001-maple-street.yaml | tee /tmp/maple.mzn
+pnpm zebra solve /tmp/maple.mzn
 ```
 
-**Expected outcome**: human-readable output naming either a validation problem, or the solved
-outcome plus (when uniquely solvable) the closure's answer and every card's classification — per
-`contracts/cli-contract.md`. Add `--json` for machine-readable output; pipe to a script to
-confirm the exit code distinguishes a validation failure (1) from a reported classification
-outcome (0), per that contract's Exit codes section.
+**Expected outcome**: `extract` prints a validation problem (naming the offending card or
+reference) or a compiled `.mzn` model, with a provenance header noting no LLM was used; `--json`
+prints the raw `ExtractedCsp` instead. `solve` then reports the puzzle's outcome exactly as it
+would for any other compiled model — card classification and the closure answer aren't part of
+this path; call `classifyCards`/`solveDeck` directly (previous section) for those.
 
 ## Running the test suite
 
