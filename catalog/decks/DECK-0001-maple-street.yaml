@@ -1,0 +1,129 @@
+# Converted from design/spikes/SPIKE-006-progressive-card-prototype/puzzle-data.js and
+# solver.js (ADR-006 §4's named follow-up work) — the hand-written brute-force enumerator and
+# per-deck predicate function are gone; this deck's `csp` block is solved by the project's
+# existing capability (ADR-002/ADR-005) with no deck-specific code. Adapted from
+# catalog/puzzles/PZL-0002-context-graphs-example.md.
+#
+# `c-blue-left` encodes clue 3 ("the Blue house is directly left of the Red house") as a direct
+# `assignment` rather than a general spatial relation: with only 3 houses and clue 2 already
+# fixing Red at the middle, "directly left of Red" has exactly one possible house. This matches
+# the real, verified extraction on file for PZL-0002 (eval/results/2026-08-21T08-06-35-638Z.json)
+# — not a deck-specific shortcut.
+id: DECK-0001
+title: Maple Street — Unregistered Animal
+created: "2026-09-03"
+
+brief:
+  question: Which house holds the unregistered animal?
+  problem: Neighbors are discreetly complaining that someone on Maple Street is keeping an
+    unregistered animal. They will not say which house, or what kind of animal.
+  clue: Sort it out. All stuff, no fluff. — Deputy Director.
+  instruction: Evaluate each information card, determining whether to keep it in context.
+
+csp:
+  entities:
+    - {id: house-1, type: house}
+    - {id: house-2, type: house}
+    - {id: house-3, type: house}
+  domains:
+    - {variable: color, entityType: house, values: [Blue, Red, Green]}
+    - {variable: animal, entityType: house, values: [Dog, Cat, Zebra]}
+  constraints:
+    c-color-alldiff: {kind: allDifferent, variable: color}
+    c-red-middle: {kind: assignment, entity: house-2, variable: color, value: Red}
+    c-blue-left: {kind: assignment, entity: house-1, variable: color, value: Blue}
+    c-cat-red:
+      kind: linkedAttributes
+      entityType: house
+      attributes:
+        - {variable: animal, value: Cat}
+        - {variable: color, value: Red}
+    c-dog-blue:
+      kind: linkedAttributes
+      entityType: house
+      attributes:
+        - {variable: animal, value: Dog}
+        - {variable: color, value: Blue}
+
+cards:
+  - id: red-middle
+    tier: strict
+    dependsOn: [domain-colors, lots]
+    title: Zoning Memo #114 — lot survey
+    text: The red-painted unit occupies the center lot, per survey marker 2B.
+    constraints: [c-red-middle]
+  - id: noise-yellow-shutters
+    tier: strict
+    dependsOn: [domain-colors]
+    title: Maintenance log — spring
+    text: Replaced the yellow shutters on the end unit. Weather damage.
+  - id: domain-colors
+    tier: strict
+    title: Historic Preservation Society — standing mandate
+    text: Approved dwelling colours for this block are red, green, or blue.
+    reveals: [color]
+  - id: lots
+    tier: strict
+    title: Assessor — Maple Street plat
+    text: "Maple Street, this block: lots 1, 2, and 3, numbered left to right."
+    reveals: [entities]
+  - id: cat-red
+    tier: strict
+    dependsOn: [domain-colors, domain-registry]
+    title: Interview — R. Alvarez, block superintendent
+    text: The cat lives behind a red door.
+    constraints: [c-cat-red]
+  - id: domain-registry
+    tier: strict
+    title: Municipal Pet Registry — Maple Street extract
+    text: "Registered to this block: one dog, one cat."
+    reveals: [animal]
+  - id: hay-delivery
+    tier: strict
+    dependsOn: [domain-registry]
+    title: Freight manifest — Tuesday
+    text: Forty pounds of timothy hay, delivered to Maple Street. Signed for. No house number
+      given.
+  - id: colors-unique
+    tier: strict
+    dependsOn: [domain-colors]
+    title: Historic Preservation Society — enforcement note
+    text: No two dwellings on the block may share a colour.
+    constraints: [c-color-alldiff]
+  - id: blue-left-of-red
+    tier: strict
+    dependsOn: [domain-colors, lots]
+    title: Unsigned note, loose in the folder
+    text: Blue is one door down from red, on the low-number side.
+    constraints: [c-blue-left]
+  - id: noise-quiet-block
+    tier: strict
+    dependsOn: [domain-registry]
+    title: Interview — T. Okafor, mail carrier
+    text: Quietest block on my route. Whatever's back there, it doesn't bark.
+  - id: dog-blue
+    tier: strict
+    dependsOn: [domain-colors, domain-registry]
+    title: Vet Registry extract — tag #58
+    text: "Tag #58, dog class. Address on file: the blue house."
+    constraints: [c-dog-blue]
+  - id: noise-society
+    tier: strict
+    dependsOn: [domain-colors]
+    title: Maple Street Historical Society newsletter
+    text: The block has kept its three colours since 1958. We remain, as ever, the most
+      photographed street in the district.
+  - id: echo-cat-red
+    tier: strict
+    dependsOn: [cat-red]
+    title: Interview — R. Alvarez, follow-up call
+    text: Like I said. Cat, red door. I'm not going to keep saying it.
+    constraints: [c-cat-red]
+
+closure:
+  question: Which house holds the unregistered animal?
+  answer:
+    entityType: house
+    variable: animal
+    equals: Zebra
+    reveal: id

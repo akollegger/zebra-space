@@ -1,0 +1,51 @@
+# US3 fixture (T021): domain-colors/domain-colors-echo both reveal `color`; red-house1/
+# red-house1-echo both assert `c-red`. noise-card claims nothing.
+id: DECK-0000
+title: Redundant cards (test fixture)
+created: "2026-09-03"
+
+brief:
+  question: N/A
+  problem: N/A
+  clue: N/A
+  instruction: N/A
+
+csp:
+  entities:
+    - {id: house-1, type: house}
+  domains:
+    - {variable: color, entityType: house, values: [Red, Green]}
+  constraints:
+    c-red: {kind: assignment, entity: house-1, variable: color, value: Red}
+
+cards:
+  - id: domain-colors
+    tier: strict
+    title: Paint code
+    text: Only Red or Green paint is approved.
+    reveals: [color]
+  - id: domain-colors-echo
+    tier: strict
+    title: Second paint code sighting
+    text: The same approved colors, mentioned again.
+    reveals: [color]
+  - id: red-house1
+    tier: strict
+    dependsOn: [domain-colors]
+    title: Survey record
+    text: House one is Red.
+    constraints: [c-red]
+  - id: red-house1-echo
+    tier: strict
+    dependsOn: [domain-colors]
+    title: Follow-up interview
+    text: House one is definitely Red.
+    constraints: [c-red]
+  - id: noise-card
+    tier: strict
+    title: Weather report
+    text: It rained on Tuesday.
+
+closure:
+  question: N/A
+  answer: {entityType: house, variable: color, equals: Red, reveal: id}

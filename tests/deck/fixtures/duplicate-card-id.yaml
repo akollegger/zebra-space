@@ -1,0 +1,32 @@
+# Review fixture: two cards both use the id "domain-colors".
+id: DECK-0000
+title: Duplicate card id (test fixture)
+created: "2026-09-03"
+
+brief:
+  question: N/A
+  problem: N/A
+  clue: N/A
+  instruction: N/A
+
+csp:
+  entities:
+    - {id: house-1, type: house}
+  domains:
+    - {variable: color, entityType: house, values: [Red, Green]}
+  constraints: {}
+
+cards:
+  - id: domain-colors
+    tier: strict
+    title: Paint code
+    text: Only Red or Green paint is approved.
+    reveals: [color]
+  - id: domain-colors
+    tier: strict
+    title: A second card, same id
+    text: Repeated on purpose.
+
+closure:
+  question: N/A
+  answer: {entityType: house, variable: color, equals: Red, reveal: id}

@@ -373,6 +373,46 @@ test("SC-003: a model ignoring the forced tool call is reported as a structure p
   )
 })
 
+const VALID_DECK = fileURLToPath(new URL("../deck/fixtures/valid-deck.yaml", import.meta.url))
+const DANGLING_REFERENCE_DECK = fileURLToPath(new URL("../deck/fixtures/dangling-reference.yaml", import.meta.url))
+
+test("extract routes a deck YAML document around the LLM, per its csp/cards/closure shape", async () => {
+  const result = await runCli(["extract", VALID_DECK])
+  assert.equal(result.exitCode, 0)
+  assert.match(result.stdout, /no LLM/)
+  assert.match(result.stdout, /solve satisfy;/)
+})
+
+test("extract --json on a deck YAML document prints its ExtractedCsp with no model field", async () => {
+  const result = await runCli(["extract", VALID_DECK, "--json"])
+  assert.equal(result.exitCode, 0)
+  const parsed = JSON.parse(result.stdout)
+  assert.deepEqual(parsed.extractedCsp.entities, [
+    { id: "house-1", type: "house" },
+    { id: "house-2", type: "house" },
+    { id: "house-3", type: "house" },
+  ])
+  assert.equal(parsed.model, undefined)
+})
+
+test("extract on a deck YAML document, piped to solve, reproduces the deck's known answer", async () => {
+  const extractResult = await runCli(["extract", VALID_DECK])
+  assert.equal(extractResult.exitCode, 0)
+
+  const mznPath = writeTempFile(extractResult.stdout, "deck.mzn")
+  const solveResult = await runCli(["solve", mznPath])
+  assert.equal(solveResult.exitCode, 0)
+  assert.match(solveResult.stdout, /Fish/)
+})
+
+test("extract against an invalid deck YAML document reports the deck error, not a stack trace", async () => {
+  const result = await runCli(["extract", DANGLING_REFERENCE_DECK])
+  assert.equal(result.exitCode, 1)
+  assert.match(result.stderr, /domain-colors/)
+  assert.match(result.stderr, /domain-registry/)
+  assert.doesNotMatch(result.stderr, /\s+at .*node_modules/)
+})
+
 test("SC-003: extract against a nonexistent puzzle file reports the path, not a JS stack trace", async () => {
   const result = await runCli(["extract", "/nonexistent/puzzle.md"])
   assert.equal(result.exitCode, 1)

@@ -1,0 +1,29 @@
+# Review fixture: closure.answer.entityType ("street") names no entity type declared anywhere
+# in csp.entities at all — distinct from mismatched-closure.yaml's "wrong but real" entityType.
+id: DECK-0000
+title: Closure names an unknown entity type (test fixture)
+created: "2026-09-03"
+
+brief:
+  question: N/A
+  problem: N/A
+  clue: N/A
+  instruction: N/A
+
+csp:
+  entities:
+    - {id: house-1, type: house}
+  domains:
+    - {variable: color, entityType: house, values: [Red, Green]}
+  constraints: {}
+
+cards:
+  - id: domain-colors
+    tier: strict
+    title: Paint code
+    text: Only Red or Green paint is approved.
+    reveals: [color]
+
+closure:
+  question: N/A
+  answer: {entityType: street, variable: color, equals: Red, reveal: id}

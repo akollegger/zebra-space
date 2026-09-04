@@ -3,8 +3,11 @@ import { buildCommand } from "@stricli/core"
 import { Effect } from "effect"
 import { compile } from "../../compiler/compile.ts"
 import type { CompileError } from "../../compiler/types.ts"
+import { formatDeckError } from "../../deck/errors.ts"
+import { loadDeck, looksLikeDeckDocument, tryParseYaml } from "../../deck/load.ts"
+import { deckCsp } from "../../deck/solve.ts"
 import { extract } from "../../extraction/extract.ts"
-import type { ExtractionError } from "../../extraction/types.ts"
+import type { ExtractedCsp, ExtractionError } from "../../extraction/types.ts"
 import { UserFacingError } from "../user-facing-error.ts"
 
 // Stricli's default caseStyle ("original") does not auto-convert camelCase flag keys to
@@ -76,13 +79,32 @@ function formatCompileError(error: CompileError): string {
   return `The extraction was faithful, but could not be compiled to MiniZinc: ${error.reason}`
 }
 
-async function extractCommandFunc(flags: ExtractFlags, puzzlePath: string): Promise<void> {
-  let prose: string
-  try {
-    prose = await readFile(puzzlePath, "utf8")
-  } catch (error) {
-    throw new UserFacingError(`Could not read puzzle file "${puzzlePath}": ${(error as Error).message}`)
-  }
+/**
+ * A deck.yaml's `csp` block already IS an `ExtractedCsp` (ADR-006 §2.2) — no LLM translation is
+ * needed, only the structural trust-check `loadDeck` already performs (dangling references,
+ * cycles, unsupported tier/kind), which plays the same role here that the fidelity critic plays
+ * for prose (ADR-004): the check that must pass before an `ExtractedCsp` is handed onward.
+ * Detected by shape (`looksLikeDeckDocument`), not by file extension — `catalog/decks/` names
+ * carry no distinguishing suffix (ADR-006 §2.4).
+ */
+interface ExtractionSource {
+  readonly extractedCsp: ExtractedCsp
+  // Absent for a deck source — no LLM was involved, so there is no model to name (unlike the
+  // prose path, where the resolved model is always meaningful provenance).
+  readonly model?: string
+}
+
+async function extractFromDeck(source: string): Promise<ExtractionSource> {
+  const extractedCsp = await Effect.runPromise(
+    loadDeck(source).pipe(
+      Effect.map(deckCsp),
+      Effect.mapError((error) => new UserFacingError(formatDeckError(error))),
+    ),
+  )
+  return { extractedCsp }
+}
+
+async function extractFromProse(prose: string, flags: ExtractFlags): Promise<ExtractionSource> {
   const model = resolveModel(flags.model, "ZEBRA_MODEL")
   const frontierModel = resolveModel(flags["frontier-model"], "ZEBRA_FRONTIER_MODEL")
 
@@ -91,9 +113,22 @@ async function extractCommandFunc(flags: ExtractFlags, puzzlePath: string): Prom
       Effect.mapError((error) => new UserFacingError(formatExtractionError(error))),
     ),
   )
+  return { extractedCsp: result.extractedCsp, model: result.model }
+}
+
+async function extractCommandFunc(flags: ExtractFlags, puzzlePath: string): Promise<void> {
+  let source: string
+  try {
+    source = await readFile(puzzlePath, "utf8")
+  } catch (error) {
+    throw new UserFacingError(`Could not read puzzle file "${puzzlePath}": ${(error as Error).message}`)
+  }
+
+  const isDeck = looksLikeDeckDocument(tryParseYaml(source))
+  const result = isDeck ? await extractFromDeck(source) : await extractFromProse(source, flags)
 
   if (flags.json) {
-    console.log(JSON.stringify({ extractedCsp: result.extractedCsp, model: result.model }))
+    console.log(JSON.stringify(result))
     return
   }
 
@@ -101,7 +136,8 @@ async function extractCommandFunc(flags: ExtractFlags, puzzlePath: string): Prom
     compile(result.extractedCsp).pipe(Effect.mapError((error) => new UserFacingError(formatCompileError(error)))),
   )
 
-  console.log(`% Extracted from ${puzzlePath} using ${result.model}\n${mzn}`)
+  const provenance = result.model === undefined ? `${puzzlePath} (deck YAML, no LLM)` : `${puzzlePath} using ${result.model}`
+  console.log(`% Extracted from ${provenance}\n${mzn}`)
 }
 
 export const extractCommand = buildCommand({
@@ -110,7 +146,11 @@ export const extractCommand = buildCommand({
     positional: {
       kind: "tuple",
       parameters: [
-        { brief: "Path to a natural-language puzzle file", parse: String, placeholder: "puzzle.md" },
+        {
+          brief: "Path to a natural-language puzzle file, or a deck YAML document (ADR-006)",
+          parse: String,
+          placeholder: "puzzle.md",
+        },
       ],
     },
     flags: {
@@ -133,6 +173,6 @@ export const extractCommand = buildCommand({
     },
   },
   docs: {
-    brief: "Extract a solvable constraint model from a natural-language puzzle",
+    brief: "Extract a solvable constraint model from a natural-language puzzle or a deck YAML document",
   },
 })

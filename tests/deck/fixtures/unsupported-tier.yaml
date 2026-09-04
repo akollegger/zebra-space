@@ -1,0 +1,29 @@
+# US1 fixture (T007): a card declares a tier other than "strict" (ADR-006 §4 — v1 supports
+# only "strict"; "ambiguous"/"subjective" have no defined shape yet).
+id: DECK-0000
+title: Unsupported tier (test fixture)
+created: "2026-09-03"
+
+brief:
+  question: N/A
+  problem: N/A
+  clue: N/A
+  instruction: N/A
+
+csp:
+  entities:
+    - {id: house-1, type: house}
+  domains:
+    - {variable: color, entityType: house, values: [Red, Green, Blue]}
+  constraints: {}
+
+cards:
+  - id: domain-colors
+    tier: ambiguous
+    title: Paint code
+    text: Only Red, Green, or Blue paint is approved.
+    reveals: [color]
+
+closure:
+  question: N/A
+  answer: {entityType: house, variable: color, equals: Red, reveal: id}

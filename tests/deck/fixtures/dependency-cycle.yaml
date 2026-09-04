@@ -1,0 +1,33 @@
+# US1 fixture (T006): card-a depends on card-b, which depends on card-a.
+id: DECK-0000
+title: Dependency cycle (test fixture)
+created: "2026-09-03"
+
+brief:
+  question: N/A
+  problem: N/A
+  clue: N/A
+  instruction: N/A
+
+csp:
+  entities:
+    - {id: house-1, type: house}
+  domains:
+    - {variable: color, entityType: house, values: [Red, Green, Blue]}
+  constraints: {}
+
+cards:
+  - id: card-a
+    tier: strict
+    dependsOn: [card-b]
+    title: Card A
+    text: Card A's text.
+  - id: card-b
+    tier: strict
+    dependsOn: [card-a]
+    title: Card B
+    text: Card B's text.
+
+closure:
+  question: N/A
+  answer: {entityType: house, variable: color, equals: Red, reveal: id}

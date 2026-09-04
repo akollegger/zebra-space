@@ -18,10 +18,36 @@ jobs:
           node-version-file: .tool-versions
           cache: pnpm
 
-      # Required by src/solver/'s tests (CLAUDE.md's MiniZinc prerequisite) — Ubuntu's apt package
-      # bundles Gecode, so no separate solver registration step is needed here.
+      # Required by src/solver/'s tests (CLAUDE.md's MiniZinc prerequisite).
+      #
+      # Ubuntu's apt package (2.8.2, Noble) has a standard-library `all_different` whose
+      # `global_cardinality` redefinition doesn't resolve for an enum-typed array
+      # (ModelSyntaxError, confirmed on PR #20's first-ever real `all_different` solve in CI).
+      # Swapping in just the newer stdlib's text (via MZN_STDLIB_DIR), keeping apt's compiler and
+      # solver binaries, was tried and reverted: 2.10.1's `all_different.mzn` uses a language
+      # feature (default parameter values in a predicate signature) that 2.8.2's *parser* rejects
+      # outright ("syntax error, unexpected =, expecting ')'") — a real compiler/stdlib version
+      # pairing requirement, not a file/directory mismatch fixable by aliasing.
+      #
+      # So: install the fully version-matched official Linux bundle (compiler + stdlib + Gecode,
+      # all 2.10.1) instead of mixing versions. Its `fzn-gecode` links against the Qt IDE's
+      # GUI/GL stack as a packaging artifact (libEGL, unrelated to solving) — install libegl1 to
+      # satisfy that; LD_LIBRARY_PATH is set only inside a wrapper script that execs the bundled
+      # `minizinc`, not job-wide, so it can't affect unrelated tools (sed, pnpm, node, curl) the
+      # way setting it via GITHUB_ENV was first tried and found to.
       - name: Install MiniZinc
-        run: sudo apt-get update && sudo apt-get install -y minizinc
+        run: |
+          set -euo pipefail
+          sudo apt-get update && sudo apt-get install -y libegl1
+          BUNDLE=/opt/MiniZincIDE-2.10.1-x86_64-linux-gnu
+          curl -fsSL -o /tmp/minizinc.tgz \
+            "https://github.com/MiniZinc/MiniZincIDE/releases/download/2.10.1/MiniZincIDE-2.10.1-x86_64-linux-gnu.tgz"
+          sudo tar -xzf /tmp/minizinc.tgz -C /opt
+          sudo mkdir -p /opt/minizinc-wrapper
+          printf '#!/bin/sh\nexport LD_LIBRARY_PATH="%s/lib"\nexec "%s/bin/minizinc" "$@"\n' "$BUNDLE" "$BUNDLE" \
+            | sudo tee /opt/minizinc-wrapper/minizinc > /dev/null
+          sudo chmod +x /opt/minizinc-wrapper/minizinc
+          echo "/opt/minizinc-wrapper" >> "$GITHUB_PATH"
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
