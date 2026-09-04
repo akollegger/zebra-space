@@ -18,10 +18,21 @@ jobs:
           node-version-file: .tool-versions
           cache: pnpm
 
-      # Required by src/solver/'s tests (CLAUDE.md's MiniZinc prerequisite) — Ubuntu's apt package
-      # bundles Gecode, so no separate solver registration step is needed here.
+      # Required by src/solver/'s tests (CLAUDE.md's MiniZinc prerequisite). Installed from the
+      # official self-contained Linux bundle (bin/minizinc + bin/fzn-gecode + its own share/lib),
+      # not Ubuntu's apt package: apt's 2.8.2 build (Noble) has a standard-library `all_different`
+      # whose internal `global_cardinality` redefinition doesn't resolve for an enum-typed array
+      # (confirmed on PR #20's first-ever real `all_different` solve in CI — ModelSyntaxError,
+      # `global_cardinality(array[int] of var opt int, ...)` has no matching signature) — verified
+      # working locally against a newer version instead. No separate solver registration step is
+      # needed; the bundle's Gecode is already on PATH via bin/.
       - name: Install MiniZinc
-        run: sudo apt-get update && sudo apt-get install -y minizinc
+        run: |
+          curl -sL -o /tmp/minizinc.tgz \
+            "https://github.com/MiniZinc/MiniZincIDE/releases/download/2.10.1/MiniZincIDE-2.10.1-x86_64-linux-gnu.tgz"
+          sudo tar -xzf /tmp/minizinc.tgz -C /opt
+          echo "/opt/MiniZincIDE-2.10.1-x86_64-linux-gnu/bin" >> "$GITHUB_PATH"
+          echo "LD_LIBRARY_PATH=/opt/MiniZincIDE-2.10.1-x86_64-linux-gnu/lib" >> "$GITHUB_ENV"
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
