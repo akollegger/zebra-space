@@ -62,6 +62,14 @@ interface TierOutcome {
   readonly lastSchemaViolation?: SchemaViolation
 }
 
+/**
+ * Version stamp for this module's prompt set. Bump whenever any prompt text below changes,
+ * so eval raw JSON (`promptVersion` per run) can attribute a pass-rate shift to a prompt edit
+ * rather than a model or code change. Readers compare versions, never diffs — the full text of
+ * each version lives in git history.
+ */
+export const EXTRACTION_PROMPT_VERSION = 1
+
 function extractionSystemPrompt(): string {
   return (
     "You are extracting a constraint-satisfaction-problem representation from a " +
@@ -235,6 +243,24 @@ function critiqueUserPrompt(prose: string, candidate: ExtractedCsp): string {
   return `Puzzle prose:\n\n${prose}\n\nCandidate extraction:\n${JSON.stringify(candidate)}`
 }
 
+/**
+ * The exact prompt text this module sends, exposed for eval provenance (each harness records
+ * its `promptVersion` + prompt ids in the run's raw JSON) and for prompt A/B work: a variant
+ * prompt set is a new version or a new harness entry, never a silent edit — see
+ * `src/eval/harness.ts`.
+ */
+export function extractionPrompts(): {
+  readonly version: number
+  readonly extractionSystem: string
+  readonly critiqueSystem: string
+} {
+  return {
+    version: EXTRACTION_PROMPT_VERSION,
+    extractionSystem: extractionSystemPrompt(),
+    critiqueSystem: critiqueSystemPrompt(),
+  }
+}
+
 function extractOnce(
   model: string,
   prose: string,
@@ -389,6 +415,25 @@ function runTierSafely(
   return runTier(model, prose, timeoutMs).pipe(
     Effect.map((outcome): TierAttempt => ({ ok: true, outcome })),
     Effect.catchTag("ProviderError", (providerError) => Effect.succeed<TierAttempt>({ ok: false, providerError })),
+  )
+}
+
+/**
+ * ADR-007 §2.3 ablation (b): one cheap-tier extraction call with no critic, reusing
+ * `extractOnce`. Single-shot, never escalates — a SchemaViolation or ProviderError fails
+ * outright rather than consuming revision rounds, so the matrix can measure what the critic
+ * loop actually buys.
+ */
+export function extractSingleShot(
+  prose: string,
+  options?: ExtractOptions & { readonly timeoutMs?: number },
+): Effect.Effect<ExtractionResult, ProviderError | SchemaRejected | SchemaViolation> {
+  const model = options?.model ?? DEFAULT_MODEL
+  // Local models (LM Studio et al) generate an order of magnitude slower than hosted tiers —
+  // a 27B model needs minutes, not the cheap tier's 60s, for the full extraction schema.
+  const timeoutMs = options?.timeoutMs ?? CHEAP_TIER_TIMEOUT_MS
+  return extractOnce(model, prose, timeoutMs).pipe(
+    Effect.map((extractedCsp) => ({ extractedCsp, model })),
   )
 }
 

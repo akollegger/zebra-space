@@ -26,47 +26,102 @@
  *   node scripts/eval-extraction.ts                  # every catalog puzzle
  *   node scripts/eval-extraction.ts PZL-0004 PZL-0007 # just these
  *   node scripts/eval-extraction.ts --model openai/gpt-4o-mini --frontier-model anthropic/claude-sonnet-4.5
+ *   node scripts/eval-extraction.ts --runs 3          # repeat each puzzle 3x, report frequency
+ *   node scripts/eval-extraction.ts --budget-usd 5    # abort when estimated/actual spend exceeds $5
+ *   node scripts/eval-extraction.ts --no-critic        # ablation (b): single-shot, no critic
+ *   node scripts/eval-extraction.ts --compile-repair-only  # ablation (c): compile-repair loop, no critic
+ *   node scripts/eval-extraction.ts --harness <id>        # any registered harness by id
+ *                                                          # (src/eval/harness.ts); wins over the flags above
  */
 import { execFileSync } from "node:child_process"
 import { appendFile, mkdir, readFile, readdir, writeFile } from "node:fs/promises"
 import { existsSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { Effect } from "effect"
-import { compile, sanitizeIdentifier } from "../src/compiler/compile.ts"
-import { extract } from "../src/extraction/extract.ts"
-import type { ExtractedCsp, ExtractionAttempt, ExtractionError } from "../src/extraction/types.ts"
+import { sanitizeIdentifier } from "../src/compiler/compile.ts"
+import {
+  gradeAmbiguous,
+  gradeCop,
+  gradeDeterminate,
+  gradeNonProblem,
+  gradeSubjective,
+  isExcludedVerdict,
+  isPassingVerdict,
+  type AliasTable,
+  type AmbiguousReading,
+  type GraderVerdict,
+  type OutcomeClass,
+  type SubjectiveEntry,
+} from "../src/eval/grader.ts"
+import {
+  WORKFLOW_TO_HARNESS_ID,
+  lookupHarness,
+  type EvalHarness,
+} from "../src/eval/harness.ts"
+import type { ExtractedCsp } from "../src/extraction/types.ts"
 import { loadEnvFileIfPresent } from "../src/cli/load-env.ts"
-import { solve } from "../src/solver/solve.ts"
-import type { Assignment, SolverError } from "../src/solver/types.ts"
+import type { Assignment, SolveResult } from "../src/solver/types.ts"
 
 const REPO_ROOT = fileURLToPath(new URL("..", import.meta.url))
 const PUZZLES_DIR = new URL("../catalog/puzzles/", import.meta.url)
 const ANSWER_KEYS_PATH = new URL("../eval/answer-keys.json", import.meta.url)
+const ALIASES_PATH = new URL("../eval/aliases.json", import.meta.url)
+const MODELS_PATH = new URL("../eval/models.json", import.meta.url)
 const RESULTS_DIR = new URL("../eval/results/", import.meta.url)
 const RESULTS_MD_PATH = new URL("../eval/results.md", import.meta.url)
 
-const ARRAY_PAIRING_BLIND_SPOT_IDS = ["PZL-0001", "PZL-0002", "PZL-0006", "PZL-0008", "PZL-0010"]
-
 // --- CLI args ----------------------------------------------------------------------------------
+
+/**
+ * The old ablation flag values. Preserved verbatim so existing invocations keep working;
+ * each maps to a harness id (WORKFLOW_TO_HARNESS_ID). `--harness` takes precedence when both
+ * are given; a future harness is selected by id directly.
+ */
+type Workflow = "full" | "no-critic" | "compile-repair-only"
 
 interface ParsedArgs {
   readonly puzzleIds: readonly string[]
   readonly model?: string | undefined
   readonly frontierModel?: string | undefined
+  readonly runs: number
+  readonly budgetUsd?: number | undefined
+  readonly workflow: Workflow
+  readonly harnessId?: string | undefined
 }
 
 function parseArgs(argv: readonly string[]): ParsedArgs {
   const puzzleIds: string[] = []
   let model: string | undefined
   let frontierModel: string | undefined
+  let runs = 1
+  let budgetUsd: number | undefined
+  let workflow: Workflow = "full"
+  let harnessId: string | undefined
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]
     if (arg === "--model") model = argv[++i]
     else if (arg === "--frontier-model") frontierModel = argv[++i]
+    else if (arg === "--harness") harnessId = argv[++i]
+    else if (arg === "--runs") {
+      const parsed = Number(argv[++i])
+      if (!Number.isInteger(parsed) || parsed < 1) throw new Error(`--runs needs a positive integer, got "${argv[i]}"`)
+      runs = parsed
+    } else if (arg === "--budget-usd") {
+      const parsed = Number(argv[++i])
+      if (!(parsed > 0)) throw new Error(`--budget-usd needs a positive number, got "${argv[i]}"`)
+      budgetUsd = parsed
+    } else if (arg === "--no-critic") workflow = "no-critic"
+    else if (arg === "--compile-repair-only") workflow = "compile-repair-only"
     else if (arg?.startsWith("--")) throw new Error(`Unknown flag: ${arg}`)
     else if (arg !== undefined) puzzleIds.push(arg)
   }
-  return { puzzleIds, model, frontierModel }
+  return { puzzleIds, model, frontierModel, runs, budgetUsd, workflow, harnessId }
+}
+
+/** Resolves the harness for a run: explicit --harness wins, else the legacy workflow flag. */
+export function resolveHarnessId(args: Pick<ParsedArgs, "workflow" | "harnessId">): string {
+  if (args.harnessId !== undefined) return args.harnessId
+  return WORKFLOW_TO_HARNESS_ID[args.workflow] ?? "full-critic"
 }
 
 // --- Puzzle + answer-key loading ----------------------------------------------------------------
@@ -81,12 +136,34 @@ interface AnswerKeyEntry {
   readonly title: string
   readonly answer: unknown
   readonly notes: string
+  readonly outcome?: OutcomeClass | undefined
+  readonly failing_condition?: string | undefined
+  readonly readings?: readonly AmbiguousReading[] | undefined
+  readonly without_premise?: SubjectiveEntry["without_premise"] | undefined
+  readonly with_premise?: SubjectiveEntry["with_premise"] | undefined
 }
 
 async function loadAnswerKeys(): Promise<Record<string, AnswerKeyEntry>> {
   const raw = JSON.parse(await readFile(ANSWER_KEYS_PATH, "utf8")) as Record<string, unknown>
   const { $comment: _ignored, ...entries } = raw
   return entries as Record<string, AnswerKeyEntry>
+}
+
+async function loadAliases(): Promise<AliasTable> {
+  const raw = JSON.parse(await readFile(ALIASES_PATH, "utf8")) as { aliases?: AliasTable }
+  return raw.aliases ?? {}
+}
+
+interface ModelRegistryEntry {
+  readonly id: string
+  readonly tier: string
+  readonly cost_per_call_usd: number
+  readonly verified: boolean
+}
+
+async function loadModelRegistry(): Promise<readonly ModelRegistryEntry[]> {
+  const raw = JSON.parse(await readFile(MODELS_PATH, "utf8")) as { models?: ModelRegistryEntry[] }
+  return raw.models ?? []
 }
 
 async function listPuzzleFiles(filterIds: readonly string[]): Promise<Puzzle[]> {
@@ -101,92 +178,7 @@ async function listPuzzleFiles(filterIds: readonly string[]): Promise<Puzzle[]> 
   return puzzles.filter((p) => wanted.has(p.id))
 }
 
-// --- Comparison ----------------------------------------------------------------------------------
-
-type Scalar = string | number | boolean | null
-
-function isScalar(value: unknown): value is Scalar {
-  return value === null || typeof value === "string" || typeof value === "number" || typeof value === "boolean"
-}
-
-function isFlatScalarRecord(value: unknown): value is Record<string, Scalar> {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    !Array.isArray(value) &&
-    Object.values(value as Record<string, unknown>).every(isScalar)
-  )
-}
-
-// Mirrors src/compiler/compile.ts's renderScalar() exactly: the compiler renders a string
-// constant as a MiniZinc enum member via sanitizeIdentifier(), so the answer key's natural-
-// language values ("Professor Plum") must go through the same transform as the solved
-// assignment's values ("Professor_Plum") before comparing, or every non-identifier-safe value
-// falsely mismatches. Reuses the compiler's actual sanitizeIdentifier() directly — this used to
-// be a hand-duplicated copy, and the duplicate already drifted out of sync once (the reserved-
-// word suffix, added after a live "true" collision, was never mirrored here, so a genuinely
-// correct solved value like "true_" scored as MISMATCH against the answer key's "true"). Only
-// the integer passthrough (renderScalar's OTHER branch, never reaching sanitizeIdentifier at
-// all) still needs restating here, since renderScalar itself isn't exported.
-function normalizeToken(raw: string): string {
-  return /^-?\d+$/.test(raw) ? raw : sanitizeIdentifier(raw)
-}
-
-/**
- * Flattens any JSON-like value into a Set of stringified tokens: every scalar leaf, every object
- * key, and — for a "flat record" (an object whose own values are all scalars, e.g. {"S":9,...} or
- * {"suspect":"Plum",...}) — an additional "key=value" compound token per property, so a direct
- * field pairing must actually match, not just each side's vocabulary independently. Every token
- * is passed through normalizeToken() so identifier-sanitized solver output compares equal to the
- * answer key's natural-language strings. See this file's header for the known array-pairing
- * limitation this does NOT cover.
- */
-function flattenValue(value: unknown, tokens: Set<string> = new Set()): Set<string> {
-  if (value === null || value === undefined) return tokens
-  if (Array.isArray(value)) {
-    for (const item of value) flattenValue(item, tokens)
-    return tokens
-  }
-  if (typeof value === "object") {
-    const record = value as Record<string, unknown>
-    const flat = isFlatScalarRecord(record)
-    for (const [key, val] of Object.entries(record)) {
-      const normKey = normalizeToken(key)
-      tokens.add(normKey)
-      if (flat) tokens.add(`${normKey}=${normalizeToken(String(val))}`)
-      flattenValue(val, tokens)
-    }
-    return tokens
-  }
-  tokens.add(normalizeToken(String(value)))
-  return tokens
-}
-
-/**
- * Entry point for comparison: both the answer key's `answer` object and solve()'s `assignment`
- * are always a top-level object whose OWN keys are just their author's field-name choices — the
- * answer key's are our own organizational labels ("grid", "suspect", "row_to_column"), and
- * solve()'s are the LLM's independently-chosen domain variable names ("digit", "culprit"). Neither
- * side's top-level keys are reliably cross-comparable puzzle vocabulary, so only their VALUES are
- * flattened at this level; nested structure below that uses flattenValue's full key+value(+compound)
- * treatment, since deeper keys (an entity id, a letter, a row number) usually are recoverable
- * puzzle vocabulary.
- */
-function flatten(value: unknown): Set<string> {
-  const tokens = new Set<string>()
-  if (value !== null && typeof value === "object" && !Array.isArray(value)) {
-    for (const val of Object.values(value as Record<string, unknown>)) flattenValue(val, tokens)
-    return tokens
-  }
-  return flattenValue(value, tokens)
-}
-
-interface Comparison {
-  readonly verdict: "MATCH" | "MISMATCH"
-  readonly missing: readonly string[]
-  readonly expectedTokenCount: number
-  readonly actualTokenCount: number
-}
+// --- Entity recovery ------------------------------------------------------------------------------
 
 /**
  * Recovers entity-name vocabulary for an array-typed (entity-indexed) domain variable's solved
@@ -196,10 +188,10 @@ interface Comparison {
  * key is exactly that vocabulary in declared order, and the puzzle solved correctly. Zips each
  * array against the SAME entities, in the SAME declared order, `src/compiler/compile.ts` itself
  * indexes that array by (`csp.entities` filtered by the domain's `entityType`), so those ids
- * appear in the flattened comparison. This recovers VOCABULARY only — it does not verify ordinal
- * pairing (`compareAnswer`'s existing known limitation, this file's header) — so it fixes cases
- * like PZL-0010 (a flat array of entity names) but not PZL-0006 (a mapping keyed by row NUMBERS
- * that don't match any entity id), which stays a genuine remaining blind spot.
+ * appear in the solved assignment the grader compares. Pairing verification itself lives in
+ * src/eval/grader.ts — this only restores missing vocabulary. Does not cover PZL-0006 (a
+ * mapping keyed by row NUMBERS that don't match any entity id): the grader owns that shape
+ * explicitly instead.
  */
 function recoverEntityKeyedArrays(assignment: Assignment, extractedCsp: ExtractedCsp): Assignment {
   const recovered: Record<string, unknown> = { ...assignment }
@@ -218,57 +210,6 @@ function recoverEntityKeyedArrays(assignment: Assignment, extractedCsp: Extracte
   return recovered
 }
 
-function compareAnswer(expected: unknown, actualAssignment: Assignment): Comparison {
-  const expectedTokens = flatten(expected)
-  const actualTokens = flatten(actualAssignment)
-  const missing = [...expectedTokens].filter((t) => !actualTokens.has(t))
-  return {
-    verdict: missing.length === 0 ? "MATCH" : "MISMATCH",
-    missing,
-    expectedTokenCount: expectedTokens.size,
-    actualTokenCount: actualTokens.size,
-  }
-}
-
-// --- Error summarizing (fresh, one-line — NOT the multi-paragraph CLI prose in
-// src/cli/subcommands/extract.ts, which is aimed at an interactive human, not a batch report) ---
-
-function summarizeExtractionError(error: ExtractionError): string {
-  switch (error._tag) {
-    case "ProviderError":
-      return error.message
-    case "SchemaRejected":
-      return `model rejected schema: ${error.providerMessage.slice(0, 200)}`
-    case "SchemaViolation":
-      return `schema violation: ${error.detail}`
-    case "CriticRejected":
-      return `critic rejected after ${error.attempts.length} attempt(s): ${summarizeAttempts(error.attempts)}`
-  }
-}
-
-function summarizeAttempts(attempts: readonly ExtractionAttempt[]): string {
-  return attempts.map((a) => a.critique.issues.join("; ")).join(" | ")
-}
-
-function summarizeSolverError(error: SolverError): string {
-  switch (error._tag) {
-    case "ToolchainUnavailable":
-      return error.message
-    case "ModelSyntaxError":
-      return error.stderr.slice(0, 200)
-    case "SolverConfigError":
-      return `solver "${error.solverId}": ${error.stderr.slice(0, 200)}`
-    case "Timeout":
-      return `timed out after ${error.timeoutMs}ms`
-    case "UnexpectedExit":
-      return `exit ${error.exitCode}: ${error.stderr.slice(0, 200)}`
-    case "UnexpectedOutput":
-      return error.message
-    case "FilesystemError":
-      return error.message
-  }
-}
-
 // --- Per-puzzle run ------------------------------------------------------------------------------
 
 type Outcome =
@@ -279,6 +220,14 @@ type Outcome =
   | "SOLVE_MULTIPLY_SATISFIABLE"
   | "MATCH"
   | "MISMATCH"
+  | "OPTIMUM_ATTAINED"
+  | "FEASIBLE_ONLY"
+  | "READING_MATCHED"
+  | "NO_MATCHING_READING"
+  | "PREMISE_FREE_MATCH"
+  | "PREMISE_SILENTLY_PROMOTED"
+  | "DECLINED_CORRECTLY"
+  | "UNDECLINED"
   | "NO_ANSWER_KEY"
 
 interface PuzzleRunRecord {
@@ -287,23 +236,35 @@ interface PuzzleRunRecord {
   readonly title: string
   readonly outcome: Outcome
   readonly durationMs: number
+  readonly runIndex: number
+  readonly workflow: Workflow
+  readonly harnessId: string
+  readonly promptVersion: number
   readonly resolvedModel: string | null
   readonly extractedCsp: unknown
   readonly mzn: string | null
   readonly solveResultTag: string | null
   readonly assignment: unknown
-  readonly comparison: Comparison | null
+  readonly graderDetail: string | null
+  readonly aliasesApplied: number
   readonly extractionError: { readonly tag: string; readonly detail: string; readonly criticAttempts: number | null } | null
   readonly compileError: { readonly reason: string } | null
   readonly solveError: { readonly tag: string; readonly detail: string } | null
+}
+
+interface RecordContext {
+  readonly runIndex: number
+  readonly workflow: Workflow
+  readonly harness: EvalHarness
 }
 
 function record(
   puzzle: Puzzle,
   outcome: Outcome,
   durationMs: number,
-  extra: Partial<Omit<PuzzleRunRecord, "id" | "file" | "title" | "outcome" | "durationMs">> = {},
+  extra: Partial<Omit<PuzzleRunRecord, "id" | "file" | "title" | "outcome" | "durationMs" | "runIndex" | "workflow" | "harnessId" | "promptVersion">> = {},
   title: string,
+  ctx: RecordContext,
 ): PuzzleRunRecord {
   return {
     id: puzzle.id,
@@ -311,12 +272,17 @@ function record(
     title,
     outcome,
     durationMs,
+    runIndex: ctx.runIndex,
+    workflow: ctx.workflow,
+    harnessId: ctx.harness.id,
+    promptVersion: ctx.harness.promptVersion,
     resolvedModel: extra.resolvedModel ?? null,
     extractedCsp: extra.extractedCsp ?? null,
     mzn: extra.mzn ?? null,
     solveResultTag: extra.solveResultTag ?? null,
     assignment: extra.assignment ?? null,
-    comparison: extra.comparison ?? null,
+    graderDetail: extra.graderDetail ?? null,
+    aliasesApplied: extra.aliasesApplied ?? 0,
     extractionError: extra.extractionError ?? null,
     compileError: extra.compileError ?? null,
     solveError: extra.solveError ?? null,
@@ -338,17 +304,58 @@ function runStage<A, E>(effect: Effect.Effect<A, E>): Promise<StageOutcome<A, E>
   )
 }
 
+/** ADR-007 §2.1: grades a reached SolveResult against the entry's outcome class. */
+function gradeSolved(
+  outcomeClass: OutcomeClass,
+  puzzleId: string,
+  entry: AnswerKeyEntry | undefined,
+  solveResult: SolveResult,
+  aliases: AliasTable,
+): { readonly verdict: GraderVerdict | "NO_ANSWER_KEY" | "MISMATCH"; readonly detail: string; readonly aliasesApplied: number } {
+  if (entry === undefined) return { verdict: "NO_ANSWER_KEY", detail: "no answer key", aliasesApplied: 0 }
+  switch (outcomeClass) {
+    case "cop":
+      return { ...gradeCop(puzzleId, solveResult), aliasesApplied: 0 }
+    case "ambiguous":
+      return { ...gradeAmbiguous(entry.readings ?? [], solveResult, puzzleId, aliases), aliasesApplied: 0 }
+    case "subjective":
+      return {
+        ...gradeSubjective(
+          { without_premise: entry.without_premise, with_premise: entry.with_premise },
+          solveResult,
+          puzzleId,
+          aliases,
+        ),
+        aliasesApplied: 0,
+      }
+    case "non-problem":
+      return { ...gradeNonProblem(entry.failing_condition), aliasesApplied: 0 }
+    case "determinate": {
+      if (solveResult._tag !== "UniquelySolvable") {
+        return { verdict: "MISMATCH", detail: `expected unique solution, got ${solveResult._tag}`, aliasesApplied: 0 }
+      }
+      return gradeDeterminate(puzzleId, entry.answer, solveResult.assignment, aliases)
+    }
+  }
+}
+
 async function runOnePuzzle(
   puzzle: Puzzle,
   answerKeyEntry: AnswerKeyEntry | undefined,
   modelOpts: { model?: string | undefined; frontierModel?: string | undefined },
+  aliases: AliasTable,
+  ctx: RecordContext,
 ): Promise<PuzzleRunRecord> {
   const startedAt = Date.now()
   const prose = await readFile(puzzle.path, "utf8")
   const title = answerKeyEntry?.title ?? puzzle.file
+  const outcomeClass: OutcomeClass = answerKeyEntry?.outcome ?? "determinate"
   const durationMs = () => Date.now() - startedAt
 
-  const extractOutcome = await runStage(extract(prose, modelOpts))
+  // Each harness stage runs (and is caught) independently, so a later stage's failure doesn't
+  // discard an earlier stage's already-succeeded result — a SOLVE_ERROR without the
+  // extractedCsp/mzn that produced it is undiagnosable from the raw JSON alone.
+  const extractOutcome = await runStage(ctx.harness.extract(prose, modelOpts))
   if (extractOutcome._tag === "Err") {
     const error = extractOutcome.error
     return record(
@@ -356,85 +363,111 @@ async function runOnePuzzle(
       "EXTRACT_FAILED",
       durationMs(),
       {
-        extractionError: {
-          tag: error._tag,
-          detail: summarizeExtractionError(error),
-          criticAttempts: error._tag === "CriticRejected" ? error.attempts.length : null,
-        },
+        extractionError: { tag: error.tag, detail: error.detail, criticAttempts: error.criticAttempts },
       },
       title,
+      ctx,
     )
   }
-  const { extractedCsp, model } = extractOutcome.value
+  const extraction = extractOutcome.value
 
-  const compileOutcome = await runStage(compile(extractedCsp))
+  const compileOutcome = await runStage(ctx.harness.compile(extraction))
   if (compileOutcome._tag === "Err") {
     return record(
       puzzle,
       "COMPILE_FAILED",
       durationMs(),
-      { extractedCsp, resolvedModel: model, compileError: { reason: compileOutcome.error.reason } },
+      {
+        extractedCsp: extraction.extractedCsp,
+        resolvedModel: extraction.model,
+        compileError: { reason: compileOutcome.error.reason },
+      },
       title,
+      ctx,
     )
   }
-  const mzn = compileOutcome.value
+  const compilation = compileOutcome.value
 
-  const solveOutcome = await runStage(solve({ model: mzn }))
+  const solveOutcome = await runStage(ctx.harness.solve(compilation))
   if (solveOutcome._tag === "Err") {
     const error = solveOutcome.error
     return record(
       puzzle,
       "SOLVE_ERROR",
       durationMs(),
-      { extractedCsp, mzn, resolvedModel: model, solveError: { tag: error._tag, detail: summarizeSolverError(error) } },
+      {
+        extractedCsp: compilation.extractedCsp,
+        mzn: compilation.mzn,
+        resolvedModel: compilation.model,
+        solveError: { tag: error.tag, detail: error.detail },
+      },
       title,
+      ctx,
     )
   }
-  const solveResult = solveOutcome.value
+  const { solveResult, extractedCsp, model, mzn } = solveOutcome.value
   const finalDurationMs = durationMs()
-
-  if (solveResult._tag === "Unsatisfiable") {
-    return record(puzzle, "SOLVE_UNSATISFIABLE", finalDurationMs, { extractedCsp, mzn, resolvedModel: model, solveResultTag: solveResult._tag }, title)
-  }
-  if (solveResult._tag === "MultiplySatisfiable") {
-    return record(
-      puzzle,
-      "SOLVE_MULTIPLY_SATISFIABLE",
-      finalDurationMs,
-      { extractedCsp, mzn, resolvedModel: model, solveResultTag: solveResult._tag, assignment: solveResult.assignments },
-      title,
-    )
-  }
-
-  // UniquelySolvable
-  if (!answerKeyEntry) {
-    return record(
-      puzzle,
-      "NO_ANSWER_KEY",
-      finalDurationMs,
-      { extractedCsp, mzn, resolvedModel: model, solveResultTag: solveResult._tag, assignment: solveResult.assignment },
-      title,
-    )
-  }
-
-  const comparison = compareAnswer(
-    answerKeyEntry.answer,
-    recoverEntityKeyedArrays(solveResult.assignment, extractedCsp),
+  const recovered =
+    solveResult._tag === "UniquelySolvable" ? recoverEntityKeyedArrays(solveResult.assignment, extractedCsp as ExtractedCsp) : null
+  const graded = gradeSolved(
+    outcomeClass,
+    puzzle.id,
+    answerKeyEntry,
+    recovered !== null ? { _tag: "UniquelySolvable", assignment: recovered } : solveResult,
+    aliases,
   )
+
   return record(
     puzzle,
-    comparison.verdict,
+    graded.verdict,
     finalDurationMs,
     {
       extractedCsp,
       mzn,
       resolvedModel: model,
       solveResultTag: solveResult._tag,
-      assignment: solveResult.assignment,
-      comparison,
+      assignment:
+        solveResult._tag === "Unsatisfiable"
+          ? null
+          : solveResult._tag === "UniquelySolvable"
+            ? solveResult.assignment
+            : solveResult.assignments,
+      graderDetail: graded.detail,
+      aliasesApplied: graded.aliasesApplied,
     },
     title,
+    ctx,
   )
+}
+
+// --- Budget (ADR-007 §2.3) ------------------------------------------------------------------------
+
+interface BudgetState {
+  spendUsd: number
+  calls: number
+  readonly budgetUsd: number | undefined
+  readonly costPerCallUsd: number
+  readonly maxCallsPerPuzzle: number
+}
+
+function createBudget(budgetUsd: number | undefined, costPerCallUsd: number, maxCallsPerPuzzle: number): BudgetState {
+  return { spendUsd: 0, calls: 0, budgetUsd, costPerCallUsd, maxCallsPerPuzzle }
+}
+
+/** Pre-run estimate: registry cost x harness worst-case calls x puzzles x repeats. Aborts when over budget. */
+function checkBudgetEstimate(budget: BudgetState, puzzleCount: number, runs: number): string | null {
+  if (budget.budgetUsd === undefined) return null
+  const estimate = budget.costPerCallUsd * budget.maxCallsPerPuzzle * puzzleCount * runs
+  return estimate > budget.budgetUsd
+    ? `estimated spend $${estimate.toFixed(2)} exceeds --budget-usd $${budget.budgetUsd.toFixed(2)} (${puzzleCount} puzzles x ${runs} runs x ${budget.maxCallsPerPuzzle} worst-case calls x $${budget.costPerCallUsd}/call) — refusing to start`
+    : null
+}
+
+/** Per-puzzle spend accumulator. Returns false when the budget is exceeded (caller stops). */
+function chargePuzzle(budget: BudgetState): boolean {
+  budget.calls += budget.maxCallsPerPuzzle
+  budget.spendUsd += budget.costPerCallUsd * budget.maxCallsPerPuzzle
+  return budget.budgetUsd === undefined || budget.spendUsd <= budget.budgetUsd
 }
 
 // --- Reporting -------------------------------------------------------------------------------
@@ -450,6 +483,8 @@ function getGitCommitSha(): string {
 interface Summary {
   readonly total: number
   readonly byOutcome: Record<Outcome, number>
+  readonly passes: number
+  readonly excluded: number
   readonly passRate: number
 }
 
@@ -462,11 +497,38 @@ function summarize(records: readonly PuzzleRunRecord[]): Summary {
     SOLVE_MULTIPLY_SATISFIABLE: 0,
     MATCH: 0,
     MISMATCH: 0,
+    OPTIMUM_ATTAINED: 0,
+    FEASIBLE_ONLY: 0,
+    READING_MATCHED: 0,
+    NO_MATCHING_READING: 0,
+    PREMISE_FREE_MATCH: 0,
+    PREMISE_SILENTLY_PROMOTED: 0,
+    DECLINED_CORRECTLY: 0,
+    UNDECLINED: 0,
     NO_ANSWER_KEY: 0,
   }
   for (const r of records) byOutcome[r.outcome] += 1
-  const total = records.length
-  return { total, byOutcome, passRate: total === 0 ? 0 : byOutcome.MATCH / total }
+  const passes = records.filter((r) => isPassingVerdict(r.outcome as GraderVerdict)).length
+  const excluded = records.filter((r) => isExcludedVerdict(r.outcome as GraderVerdict)).length
+  const graded = records.length - excluded
+  return { total: records.length, byOutcome, passes, excluded, passRate: graded === 0 ? 0 : passes / graded }
+}
+
+/** Per-puzzle pass frequency across repeats: "2/3 runs passed (MATCH, MISMATCH, MATCH)". */
+function frequencyTable(records: readonly PuzzleRunRecord[]): string {
+  const byPuzzle = new Map<string, PuzzleRunRecord[]>()
+  for (const r of records) {
+    const group = byPuzzle.get(r.id) ?? []
+    group.push(r)
+    byPuzzle.set(r.id, group)
+  }
+  return [...byPuzzle.entries()]
+    .map(([id, group]) => {
+      const passed = group.filter((r) => isPassingVerdict(r.outcome as GraderVerdict)).length
+      const outcomes = group.map((r) => r.outcome).join(", ")
+      return `| ${id} | ${passed}/${group.length} | ${outcomes} |`
+    })
+    .join("\n")
 }
 
 function outcomeDetail(r: PuzzleRunRecord): string {
@@ -476,6 +538,12 @@ function outcomeDetail(r: PuzzleRunRecord): string {
   }
   if (r.outcome === "COMPILE_FAILED" && r.compileError) return `${r.outcome} (${r.compileError.reason.slice(0, 80)})`
   if (r.outcome === "SOLVE_ERROR" && r.solveError) return `${r.outcome} (${r.solveError.tag})`
+  if (
+    r.graderDetail !== null &&
+    (r.outcome === "MISMATCH" || r.outcome === "NO_MATCHING_READING" || r.outcome === "PREMISE_SILENTLY_PROMOTED")
+  ) {
+    return `${r.outcome} (${r.graderDetail.slice(0, 100)})`
+  }
   return r.outcome
 }
 
@@ -486,6 +554,11 @@ async function writeRawResults(
     finishedAt: Date
     gitCommit: string
     modelOpts: ParsedArgs
+    harness: EvalHarness
+    runs: number
+    spendUsd: number
+    llmCalls: number
+    aliasesVersion: number
     records: readonly PuzzleRunRecord[]
     summary: Summary
   },
@@ -498,6 +571,14 @@ async function writeRawResults(
     finishedAt: data.finishedAt.toISOString(),
     gitCommit: data.gitCommit,
     modelConfig: { model: data.modelOpts.model ?? null, frontierModel: data.modelOpts.frontierModel ?? null },
+    workflow: data.modelOpts.workflow,
+    harnessId: data.harness.id,
+    harnessDescription: data.harness.description,
+    promptVersion: data.harness.promptVersion,
+    runsPerPuzzle: data.runs,
+    spendUsd: data.spendUsd,
+    llmCalls: data.llmCalls,
+    aliasesVersion: data.aliasesVersion,
     concurrency: "sequential",
     puzzles: data.records,
     summary: data.summary,
@@ -509,16 +590,18 @@ async function writeRawResults(
 const RESULTS_MD_HEADER = `# Extraction Eval Results
 
 Append-only log — newest run at the bottom. Raw per-puzzle detail (extracted CSP, compiled
-MiniZinc, solver output, and comparison detail) for every run lives in the gitignored
+MiniZinc, solver output, and grader detail) for every run lives in the gitignored
 \`eval/results/<run-id>.json\`; this file is the committed, human-readable summary only.
 Produced by \`scripts/eval-extraction.ts\` (\`pnpm eval\` or \`node scripts/eval-extraction.ts\`).
 
-**Legend:** \`MATCH\`/\`MISMATCH\` require \`solve()\` to report \`UniquelySolvable\`, then compare its
-assignment against \`eval/answer-keys.json\` via \`flatten\`/\`compareAnswer\` (see the script's header
-comment for the exact algorithm and its known limitation). For puzzles whose answer is a set of
-parallel arrays — ${ARRAY_PAIRING_BLIND_SPOT_IDS.join(", ")} — this verifies vocabulary only, not
-pairing or ordering; treat a \`MATCH\` there as "uniquely solved, used the right values," not a full
-correctness proof.
+**Legend:** \`MATCH\` requires \`solve()\` to report \`UniquelySolvable\` and the assignment to equal
+the answer key under the pairing-aware rules in \`src/eval/grader.ts\` (ADR-007 §2.2:
+parallel-array rows compared as multisets, PZL-0006's row-keyed mapping, PZL-0014's subset
+semantics, flat-record token subsets). Other passing verdicts: \`OPTIMUM_ATTAINED\` (COP optimum
+found), \`READING_MATCHED\` (ambiguous reading matched), \`PREMISE_FREE_MATCH\` (subjective,
+premise-free outcome), \`DECLINED_CORRECTLY\` (non-problem declined with defect — no run can pass
+this yet). \`FEASIBLE_ONLY\` and \`UNDECLINED\` are reported but excluded from the pass-rate
+denominator. Pass rate is passes over graded runs.
 `
 
 async function appendResultsMarkdown(data: {
@@ -526,8 +609,11 @@ async function appendResultsMarkdown(data: {
   startedAt: Date
   gitCommit: string
   modelOpts: ParsedArgs
+  harnessId: string
+  promptVersion: number
   records: readonly PuzzleRunRecord[]
   summary: Summary
+  spendUsd: number
   rawResultsPath: URL
 }): Promise<void> {
   if (!existsSync(RESULTS_MD_PATH)) {
@@ -535,20 +621,25 @@ async function appendResultsMarkdown(data: {
   }
 
   const modelLine = `Model: \`${data.modelOpts.model ?? "openai/gpt-4o-mini (default)"}\` (frontier: \`${data.modelOpts.frontierModel ?? "anthropic/claude-sonnet-4.5 (default)"}\`)`
+  const harnessLine = data.harnessId === "full-critic" ? "" : ` · harness \`${data.harnessId}\` (prompt v${data.promptVersion})`
+  const runsLine = data.modelOpts.runs > 1 ? ` · ${data.modelOpts.runs} runs/puzzle` : ""
   const rows = data.records.map((r) => `| ${r.id} | ${outcomeDetail(r)} |`).join("\n")
   const rawResultsRelPath = fileURLToPath(data.rawResultsPath).replace(`${REPO_ROOT}`, "")
+
+  const frequencySection =
+    data.modelOpts.runs > 1 ? `\n| Puzzle | Passed | Outcomes |\n|---|---|---|\n${frequencyTable(data.records)}\n` : ""
 
   const section = `
 ---
 
 ## ${data.startedAt.toISOString().replace(/\.\d+Z$/, "Z")} — commit \`${data.gitCommit}\`
 
-${modelLine} · ${data.summary.total} puzzles · pass rate **${data.summary.byOutcome.MATCH}/${data.summary.total} (${Math.round(data.summary.passRate * 100)}%)**
+${modelLine}${harnessLine}${runsLine} · ${data.summary.total} puzzle-runs · pass rate **${data.summary.passes}/${data.summary.total - data.summary.excluded} (${Math.round(data.summary.passRate * 100)}%)** · spend ~$${data.spendUsd.toFixed(2)}
 
 | Puzzle | Outcome |
 |---|---|
 ${rows}
-
+${frequencySection}
 Full detail: \`${rawResultsRelPath}\`
 `
   await appendFile(RESULTS_MD_PATH, section)
@@ -557,10 +648,14 @@ Full detail: \`${rawResultsRelPath}\`
 function printSummary(records: readonly PuzzleRunRecord[], summary: Summary, gitCommit: string): void {
   console.log(`\n=== Eval summary — ${new Date().toISOString()}, commit ${gitCommit} ===\n`)
   for (const r of records) {
-    const status = r.outcome === "MATCH" ? "OK  " : "FAIL"
+    const status = isPassingVerdict(r.outcome as GraderVerdict)
+      ? "OK  "
+      : isExcludedVerdict(r.outcome as GraderVerdict)
+        ? "SKIP"
+        : "FAIL"
     console.log(`  ${status} ${r.id}  ${outcomeDetail(r)}`)
   }
-  console.log(`\nPass rate: ${summary.byOutcome.MATCH}/${summary.total} (${Math.round(summary.passRate * 100)}%)`)
+  console.log(`\nPass rate: ${summary.passes}/${summary.total - summary.excluded} (${Math.round(summary.passRate * 100)}%)`)
 }
 
 // --- Main ----------------------------------------------------------------------------------------
@@ -573,7 +668,15 @@ async function main(): Promise<void> {
   }
 
   const args = parseArgs(process.argv.slice(2))
+  const harnessId = resolveHarnessId(args)
+  const harness = lookupHarness(harnessId)
+  if (harness === undefined) {
+    console.error(`Unknown harness: "${harnessId}". Built-in: full-critic, single-shot, compile-repair.`)
+    process.exit(1)
+  }
   const answerKeys = await loadAnswerKeys()
+  const aliases = await loadAliases()
+  const registry = await loadModelRegistry()
   const puzzles = await listPuzzleFiles(args.puzzleIds)
   if (puzzles.length === 0) {
     console.error("No matching puzzles found in catalog/puzzles/.")
@@ -585,14 +688,33 @@ async function main(): Promise<void> {
     model: args.model || process.env.ZEBRA_MODEL || undefined,
     frontierModel: args.frontierModel || process.env.ZEBRA_FRONTIER_MODEL || undefined,
   }
+  const resolvedModel = modelOpts.model ?? "openai/gpt-4o-mini"
+  const registryEntry = registry.find((m) => m.id === resolvedModel)
+  const budget = createBudget(args.budgetUsd, registryEntry?.cost_per_call_usd ?? 0.002, harness.maxCallsPerPuzzle)
+
+  const estimateRefusal = checkBudgetEstimate(budget, puzzles.length, args.runs)
+  if (estimateRefusal !== null) {
+    console.error(estimateRefusal)
+    process.exit(1)
+  }
 
   const startedAt = new Date()
   const records: PuzzleRunRecord[] = []
-  for (const puzzle of puzzles) {
-    process.stdout.write(`Running ${puzzle.id} (${answerKeys[puzzle.id]?.title ?? puzzle.file})... `)
-    const rec = await runOnePuzzle(puzzle, answerKeys[puzzle.id], modelOpts)
-    records.push(rec)
-    console.log(`${outcomeDetail(rec)} (${(rec.durationMs / 1000).toFixed(1)}s)`)
+  const ctx = { runIndex: 0, workflow: args.workflow, harness }
+  let stoppedByBudget = false
+  for (let runIndex = 0; runIndex < args.runs && !stoppedByBudget; runIndex++) {
+    for (const puzzle of puzzles) {
+      if (!chargePuzzle(budget)) {
+        console.log(`\nBudget $${budget.budgetUsd?.toFixed(2)} exceeded after ~$${budget.spendUsd.toFixed(2)} — stopping.`)
+        stoppedByBudget = true
+        break
+      }
+      const runLabel = args.runs > 1 ? ` run ${runIndex + 1}/${args.runs}` : ""
+      process.stdout.write(`Running ${puzzle.id} (${answerKeys[puzzle.id]?.title ?? puzzle.file})${runLabel}... `)
+      const rec = await runOnePuzzle(puzzle, answerKeys[puzzle.id], modelOpts, aliases, { ...ctx, runIndex })
+      records.push(rec)
+      console.log(`${outcomeDetail(rec)} (${(rec.durationMs / 1000).toFixed(1)}s)`)
+    }
   }
   const finishedAt = new Date()
   const gitCommit = getGitCommitSha()
@@ -601,8 +723,32 @@ async function main(): Promise<void> {
   printSummary(records, summary, gitCommit)
 
   const runId = startedAt.toISOString().replace(/[:.]/g, "-")
-  const rawResultsPath = await writeRawResults(runId, { startedAt, finishedAt, gitCommit, modelOpts: args, records, summary })
-  await appendResultsMarkdown({ runId, startedAt, gitCommit, modelOpts: args, records, summary, rawResultsPath })
+  const aliasesVersion = (JSON.parse(await readFile(ALIASES_PATH, "utf8")) as { version?: number }).version ?? 0
+  const rawResultsPath = await writeRawResults(runId, {
+    startedAt,
+    finishedAt,
+    gitCommit,
+    modelOpts: args,
+    harness,
+    runs: args.runs,
+    spendUsd: budget.spendUsd,
+    llmCalls: budget.calls,
+    aliasesVersion,
+    records,
+    summary,
+  })
+  await appendResultsMarkdown({
+    runId,
+    startedAt,
+    gitCommit,
+    modelOpts: args,
+    harnessId: harness.id,
+    promptVersion: harness.promptVersion,
+    records,
+    summary,
+    spendUsd: budget.spendUsd,
+    rawResultsPath,
+  })
 
   console.log(`\nRaw detail: ${fileURLToPath(rawResultsPath)}`)
   console.log(`Summary appended to: ${fileURLToPath(RESULTS_MD_PATH)}`)

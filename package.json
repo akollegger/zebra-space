@@ -12,6 +12,7 @@
     "lint": "biome lint .",
     "typecheck": "tsc --noEmit",
     "eval": "node scripts/eval-extraction.ts",
+    "eval:matrix": "node scripts/eval-matrix.ts",
     "spike:006": "web-dev-server --root-dir design/spikes/SPIKE-006-progressive-card-prototype --port 4173 --watch --open"
   },
   "keywords": [],
