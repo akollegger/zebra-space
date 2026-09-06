@@ -91,6 +91,14 @@
       "notes": "Test-only route via ZEBRA_OPENROUTER_BASE_URL_OVERRIDE (stub server); $0 estimate still counts calls. For real local models use the qwen3.8 entry below."
     },
     {
+      "id": "google/gemma-4-26b-a4b-qat",
+      "tier": "local",
+      "role": "candidate",
+      "cost_per_call_usd": 0,
+      "verified": false,
+      "notes": "Local model via ZEBRA_LOCAL_BASE_URL. Pilot 2026-09-06: 0/2 single-shot (PZL-0003, PZL-0004), both SchemaViolation — prose instead of the forced tool call, failing fast (~50s each). Small-schema tool probe succeeds, so tool-calling works but does not hold at the full extraction schema's scale. Not viable for this pipeline without mitigations (simplified prompt/schema variant, grammar-enforced output)."
+    },
+    {
       "id": "qwen/qwen3.8-27b",
       "tier": "local",
       "role": "local-default",
