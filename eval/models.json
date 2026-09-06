@@ -88,7 +88,7 @@
       "role": "judge-default",
       "cost_per_call_usd": 0.0009,
       "verified": false,
-      "notes": "Default judge model for the direct-solve baseline (ADR-008). Pricing $0.075/M in, $0.25/M out (promo rate ending 2026-09-09; list $0.15/$0.50 — re-verify), 1.3M ctx, tool support confirmed. Pilot 2026-09-06: judged 2/2 correctly (PZL-0003, PZL-0004, solver gpt-4o-mini) after a judge-prompt fix for case fidelity ('paper' vs 'Paper' — grader is case-sensitive). Over-acceptance on fluent wrong answers still unmeasured."
+      "notes": "Default judge model for the direct-solve baseline (ADR-008). Pricing $0.075/M in, $0.25/M out (promo rate ending 2026-09-09; list $0.15/$0.50 — re-verify), 1.3M ctx, tool support confirmed. Calibration 2026-09-06 (judge-as-grader revision): 4/4 correct judgments on gpt-4o-mini solutions (PZL-0002/0003/0004 accepts with grid-level reasons; PZL-0005 reject localizing the solver's self-contradiction). Baseline subset: mini 6/6 determinate, sonnet 4/6 (2 JudgeUnclear on PZL-0002 — judge variance, solver correct)."
     },
     {
       "id": "local/stub-via-base-url-override",

@@ -57,6 +57,31 @@ test("baseline: missing file or missing puzzle fails loudly, never silently unca
   )
 })
 
+test("gradeJudged: verdicts fan out to class-appropriate outcomes", async () => {
+  const { gradeJudged } = await import("../../scripts/eval-extraction.ts")
+  const det = { title: "t", answer: { x: 1 }, notes: "" }
+  assert.deepEqual(gradeJudged("P", det, { verdict: "correct", reason: "all match" }).verdict, "MATCH")
+  assert.deepEqual(gradeJudged("P", det, { verdict: "incorrect", reason: "wrong value" }).verdict, "MISMATCH")
+  const unclear = gradeJudged("P", det, { verdict: "unclear", reason: "no result" })
+  assert.equal(unclear.verdict, "EXTRACT_FAILED")
+  assert.match(unclear.detail, /JudgeUnclear/)
+  const nonProblem = { title: "t", answer: { outcome: "non-problem", failing_condition: "Demand" }, notes: "" }
+  assert.deepEqual(
+    gradeJudged("P", nonProblem, { verdict: "correct", reason: "declined" }).verdict,
+    "DECLINED_CORRECTLY",
+  )
+  assert.deepEqual(
+    gradeJudged("P", nonProblem, { verdict: "incorrect", reason: "solved anyway" }).verdict,
+    "UNDECLINED",
+  )
+  const cop = { title: "t", answer: {}, notes: "", outcome: "cop" as const }
+  assert.deepEqual(gradeJudged("P", cop, { verdict: "correct", reason: "optimum" }).verdict, "OPTIMUM_ATTAINED")
+  // COP incorrect stays a failure in the denominator, never FEASIBLE_ONLY-shaped pass.
+  assert.deepEqual(gradeJudged("P", cop, { verdict: "incorrect", reason: "wrong" }).verdict, "MISMATCH")
+  assert.deepEqual(gradeJudged("P", undefined, { verdict: "correct", reason: "" }).verdict, "NO_ANSWER_KEY")
+  assert.deepEqual(gradeJudged("P", det, { verdict: "bogus", reason: "" }).verdict, "EXTRACT_FAILED")
+})
+
 test("matrix dry-run: plans verified cells, skips unverified tiers, estimates spend", () => {
   const stdout = execFileSync("node", ["scripts/eval-matrix.ts", "--dry-run"], { cwd: REPO_ROOT, encoding: "utf8" })
   assert.match(stdout, /openai\/gpt-4o-mini \[cheap\] x full-critic/)

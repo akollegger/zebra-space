@@ -86,3 +86,35 @@ test("local route: local-single-shot harness is registered with zero-cost budget
   assert.ok(harness !== undefined)
   assert.equal(harness.maxCallsPerPuzzle, 1)
 })
+
+test("timeout enforcement: a hung server fails in ~timeoutMs, not forever", async () => {
+  // Regression guard for the 50-minute PZL-0001 hang against a 10-minute timeout: if neither
+  // Effect.timeout nor the SDK's timeoutMs can interrupt a stalled local connection, this
+  // test hangs the suite instead of failing fast.
+  const Payload = Schema.Struct({ colors: Schema.Array(Schema.String) })
+  await withLocalStub(
+    (_exchange) => {
+      // Never respond — hold the connection open like a wedged local server.
+    },
+    async () => {
+      const started = Date.now()
+      const outcome = await Effect.runPromise(
+        requestStructuredCompletion({
+          model: "local/test-model",
+          systemPrompt: "sys",
+          userPrompt: "user",
+          schemaName: "extract",
+          jsonSchema: { type: "object" },
+          schema: Payload,
+          timeoutMs: 2_000,
+        }).pipe(
+          Effect.map(() => ({ _tag: "Ok" as const })),
+          Effect.catch((e) => Effect.succeed({ _tag: "Err" as const, tag: e._tag })),
+        ),
+      )
+      const elapsed = Date.now() - started
+      assert.equal(outcome._tag, "Err")
+      assert.ok(elapsed < 30_000, `timeout took ${elapsed}ms, expected ~2s`)
+    },
+  )
+})

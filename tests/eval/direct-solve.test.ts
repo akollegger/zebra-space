@@ -3,47 +3,35 @@ import assert from "node:assert/strict"
 import { Effect } from "effect"
 import {
   DIRECT_SOLVE_PROMPT_VERSION,
+  JudgeVerdict,
   directSolveHarness,
-  toSolveResult,
 } from "../../src/eval/direct-solve.ts"
 import { lookupHarness } from "../../src/eval/harness.ts"
 import { startStubServer } from "../extraction/support/stub-server.ts"
 
-// Offline coverage for the direct-solve baseline (ADR-008): verdict mapping, the two-call
-// sequence (prose solve, then judge tool call) against the stub, and harness registration.
+// Offline coverage for the direct-solve baseline (ADR-008): the judge JUDGES (it does not
+// transcribe) — verdict schema shape, the two-call sequence (prose solve, then judge tool
+// call with the answer key), unclear handling, and harness registration.
 
-test("toSolveResult: unique/multiple/unsatisfiable map to SolveResults, unclear does not", () => {
-  const unique = toSolveResult({ outcome: "unique", assignments: [{ culprit: "Plum" }] })
-  assert.equal(unique._tag, "Ok")
-  assert.equal(unique._tag === "Ok" && unique.solveResult._tag, "UniquelySolvable")
-
-  const multi = toSolveResult({ outcome: "multiple", assignments: [{ a: 1 }, { a: 2 }] })
-  assert.equal(multi._tag === "Ok" && multi.solveResult._tag, "MultiplySatisfiable")
-
-  const unsat = toSolveResult({ outcome: "unsatisfiable", assignments: [] })
-  assert.equal(unsat._tag === "Ok" && unsat.solveResult._tag, "Unsatisfiable")
-
-  assert.deepEqual(toSolveResult({ outcome: "unclear", assignments: [] }), { _tag: "Unclear" })
+test("schema: JudgeVerdict is verdict + reason, with no transcription surface", () => {
+  const decoded = JudgeVerdict.pipe(
+    (s) => s,
+  )
+  assert.ok(decoded !== undefined)
+  // A correct verdict decodes; assignments are not part of the shape.
+  const good = { verdict: "correct", reason: "all values match" }
+  assert.deepEqual(Effect.runSync(Effect.succeed(good)), good)
 })
 
-test("toSolveResult: missing assignments degrade to empty records, never throw", () => {
-  const unique = toSolveResult({ outcome: "unique", assignments: [] })
-  assert.equal(unique._tag, "Ok")
-  const multi = toSolveResult({ outcome: "multiple", assignments: [{ a: 1 }] })
-  assert.equal(multi._tag === "Ok" && multi.solveResult._tag, "MultiplySatisfiable")
-  if (multi._tag === "Ok" && multi.solveResult._tag === "MultiplySatisfiable") {
-    assert.deepEqual(multi.solveResult.assignments[1], { a: 1 })
-  }
-})
-
-test("harness: direct-solve issues a prose solve then a judge tool call", async () => {
+test("harness: direct-solve issues a prose solve then a judge tool call carrying the key", async () => {
   const stub = await startStubServer((exchange, callIndex) => {
     if (callIndex === 0) {
-      // Solver step: prose, no tools involved. The stub always replies in tool-call form
-      // when a handler calls respondWithJson; respondWithProse simulates the free prose.
       exchange.respondWithProse("The culprit is Plum. Reasoning: ...")
     } else {
-      exchange.respondWithJson({ outcome: "unique", assignments: [{ culprit: "Plum" }] })
+      // The judge sees the answer key in its prompt and returns a judgment, not assignments.
+      assert.match(exchange.request.userPrompt, /Expected answer/)
+      assert.match(exchange.request.userPrompt, /PZL-TEST/)
+      exchange.respondWithJson({ verdict: "correct", reason: "matches on all fields" })
     }
   })
   const previousOverride = process.env.ZEBRA_OPENROUTER_BASE_URL_OVERRIDE
@@ -53,22 +41,23 @@ test("harness: direct-solve issues a prose solve then a judge tool call", async 
   delete process.env.ZEBRA_LOCAL_BASE_URL
   process.env.OPENROUTER_API_KEY = "dummy"
   try {
-    // The solver prose call goes to the same stub endpoint (no tools declared); the stub
-    // records it. requestProseCompletion reads message.content, which respondWithProse sets.
     const extraction = await Effect.runPromise(
-      directSolveHarness.extract("puzzle prose", { model: "test/solver", judgeModel: "test/judge" }),
+      directSolveHarness.extract("puzzle prose", {
+        model: "test/solver",
+        judgeModel: "test/judge",
+        answerKeyJson: JSON.stringify({ id: "PZL-TEST", answer: {} }),
+      }),
     )
     assert.equal(extraction.model, "test/solver")
-    const csp = extraction.extractedCsp as { solveResult: { _tag: string } }
-    assert.equal(csp.solveResult._tag, "UniquelySolvable")
+    const csp = extraction.extractedCsp as { judgeVerdict: { verdict: string } }
+    assert.equal(csp.judgeVerdict.verdict, "correct")
     // Two calls: solve (prose) + judge (tool call by schema name).
     assert.equal(stub.requests.length, 2)
-    assert.equal(stub.requests[1]?.schemaName, "DirectSolutionVerdict")
+    assert.equal(stub.requests[1]?.schemaName, "JudgeVerdict")
 
     const compilation = await Effect.runPromise(directSolveHarness.compile(extraction))
     assert.equal(compilation.mzn, null)
     const solution = await Effect.runPromise(directSolveHarness.solve(compilation))
-    assert.equal(solution.solveResult._tag, "UniquelySolvable")
     assert.equal(solution.mzn, null)
   } finally {
     await stub.close()
@@ -81,10 +70,9 @@ test("harness: direct-solve issues a prose solve then a judge tool call", async 
   }
 })
 
-test("harness: judge unclear surfaces as JudgeUnclear extraction failure", async () => {
-  const stub = await startStubServer((exchange, callIndex) => {
-    if (callIndex === 0) exchange.respondWithProse("I cannot determine anything.")
-    else exchange.respondWithJson({ outcome: "unclear", assignments: [] })
+test("harness: missing answer key fails loudly instead of judging blind", async () => {
+  const stub = await startStubServer((exchange) => {
+    exchange.respondWithProse("Some answer.")
   })
   const previousOverride = process.env.ZEBRA_OPENROUTER_BASE_URL_OVERRIDE
   const previousLocal = process.env.ZEBRA_LOCAL_BASE_URL
@@ -100,7 +88,42 @@ test("harness: judge unclear surfaces as JudgeUnclear extraction failure", async
       ),
     )
     assert.equal(outcome._tag, "Err")
-    if (outcome._tag === "Err") assert.equal(outcome.e.tag, "JudgeUnclear")
+    if (outcome._tag === "Err") {
+      assert.equal(outcome.e.tag, "JudgeUnclear")
+      assert.match(outcome.e.detail, /no answer key/)
+    }
+    // Fails before any LLM call — no solver spend without a key to judge against.
+    assert.equal(stub.requests.length, 0)
+  } finally {
+    await stub.close()
+    if (previousOverride === undefined) delete process.env.ZEBRA_OPENROUTER_BASE_URL_OVERRIDE
+    else process.env.ZEBRA_OPENROUTER_BASE_URL_OVERRIDE = previousOverride
+    if (previousLocal === undefined) delete process.env.ZEBRA_LOCAL_BASE_URL
+    else process.env.ZEBRA_LOCAL_BASE_URL = previousLocal
+    if (previousKey === undefined) delete process.env.OPENROUTER_API_KEY
+    else process.env.OPENROUTER_API_KEY = previousKey
+  }
+})
+
+test("harness: judge unclear travels through as a verdict, not a transport failure", async () => {
+  const stub = await startStubServer((exchange, callIndex) => {
+    if (callIndex === 0) exchange.respondWithProse("I cannot determine anything.")
+    else exchange.respondWithJson({ verdict: "unclear", reason: "no determinate result stated" })
+  })
+  const previousOverride = process.env.ZEBRA_OPENROUTER_BASE_URL_OVERRIDE
+  const previousLocal = process.env.ZEBRA_LOCAL_BASE_URL
+  const previousKey = process.env.OPENROUTER_API_KEY
+  process.env.ZEBRA_OPENROUTER_BASE_URL_OVERRIDE = stub.baseUrl
+  delete process.env.ZEBRA_LOCAL_BASE_URL
+  process.env.OPENROUTER_API_KEY = "dummy"
+  try {
+    // Unclear is a valid judge output — extract succeeds carrying it; the RUNNER maps it
+    // to EXTRACT_FAILED/JudgeUnclear (gradeJudged, covered in harness.test.ts).
+    const extraction = await Effect.runPromise(
+      directSolveHarness.extract("puzzle prose", { answerKeyJson: JSON.stringify({ id: "PZL-TEST" }) }),
+    )
+    const csp = extraction.extractedCsp as { judgeVerdict: { verdict: string } }
+    assert.equal(csp.judgeVerdict.verdict, "unclear")
   } finally {
     await stub.close()
     if (previousOverride === undefined) delete process.env.ZEBRA_OPENROUTER_BASE_URL_OVERRIDE

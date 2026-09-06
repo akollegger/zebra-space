@@ -42,8 +42,9 @@ test("registry: legacy workflow flags map to harness ids", () => {
   })
 })
 
-test("registry: all built-ins share the current extraction prompt version", () => {
-  for (const harness of listHarnesses()) {
+test("registry: extraction harnesses share the current extraction prompt version", () => {
+  // direct-solve carries its own DIRECT_SOLVE_PROMPT_VERSION (own prompts, own assertion below).
+  for (const harness of listHarnesses().filter((h) => h.id !== "direct-solve")) {
     assert.equal(harness.promptVersion, EXTRACTION_PROMPT_VERSION)
   }
 })

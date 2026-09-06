@@ -348,24 +348,53 @@ function runStage<A, E>(effect: Effect.Effect<A, E>): Promise<StageOutcome<A, E>
   )
 }
 
-/** ADR-007 §2.1: grades a reached SolveResult against the entry's outcome class. */
+/**
+ * ADR-007 §2.1: grades a reached SolveResult against the entry's outcome class.
+ *
+ * Two answer-key shapes exist: newer entries carry the class marker at top level
+ * (`outcome`, `readings`, ...), while the PZL-0015–0038 provisional entries nest it inside
+ * `answer` (`answer.outcome`, `answer.readings`, and PZL-0038's doubly-nested
+ * `answer.answer`). Both normalize here so the grader sees one shape — rewriting 20+
+ * authored entries to a single shape is migration work, not grading work. Found live: the
+ * direct-solve baseline graded non-problems as determinate until this normalization landed.
+ */
 function gradeSolved(
-  outcomeClass: OutcomeClass,
   puzzleId: string,
   entry: AnswerKeyEntry | undefined,
   solveResult: SolveResult,
   aliases: AliasTable,
 ): { readonly verdict: GraderVerdict | "NO_ANSWER_KEY" | "MISMATCH"; readonly detail: string; readonly aliasesApplied: number } {
   if (entry === undefined) return { verdict: "NO_ANSWER_KEY", detail: "no answer key", aliasesApplied: 0 }
-  switch (outcomeClass) {
+  const nested = (entry.answer !== null && typeof entry.answer === "object" && !Array.isArray(entry.answer)
+    ? (entry.answer as Record<string, unknown>)
+    : undefined) as
+    | {
+        outcome?: unknown
+        readings?: readonly AmbiguousReading[]
+        failing_condition?: string
+        without_premise?: SubjectiveEntry["without_premise"]
+        with_premise?: SubjectiveEntry["with_premise"]
+        answer?: unknown
+      }
+    | undefined
+  const effectiveOutcome = (entry.outcome ?? nested?.outcome ?? "determinate") as OutcomeClass
+  // PZL-0038 nests the assignment one level deeper (answer.answer); flat answers pass through.
+  const effectiveAnswer = nested?.answer !== undefined ? nested.answer : entry.answer
+  switch (effectiveOutcome) {
     case "cop":
       return { ...gradeCop(puzzleId, solveResult), aliasesApplied: 0 }
     case "ambiguous":
-      return { ...gradeAmbiguous(entry.readings ?? [], solveResult, puzzleId, aliases), aliasesApplied: 0 }
+      return {
+        ...gradeAmbiguous(entry.readings ?? nested?.readings ?? [], solveResult, puzzleId, aliases),
+        aliasesApplied: 0,
+      }
     case "subjective":
       return {
         ...gradeSubjective(
-          { without_premise: entry.without_premise, with_premise: entry.with_premise },
+          {
+            without_premise: entry.without_premise ?? nested?.without_premise,
+            with_premise: entry.with_premise ?? nested?.with_premise,
+          },
           solveResult,
           puzzleId,
           aliases,
@@ -373,12 +402,12 @@ function gradeSolved(
         aliasesApplied: 0,
       }
     case "non-problem":
-      return { ...gradeNonProblem(entry.failing_condition), aliasesApplied: 0 }
+      return { ...gradeNonProblem(entry.failing_condition ?? nested?.failing_condition), aliasesApplied: 0 }
     case "determinate": {
       if (solveResult._tag !== "UniquelySolvable") {
         return { verdict: "MISMATCH", detail: `expected unique solution, got ${solveResult._tag}`, aliasesApplied: 0 }
       }
-      return gradeDeterminate(puzzleId, entry.answer, solveResult.assignment, aliases)
+      return gradeDeterminate(puzzleId, effectiveAnswer, solveResult.assignment, aliases)
     }
   }
 }
@@ -386,20 +415,26 @@ function gradeSolved(
 async function runOnePuzzle(
   puzzle: Puzzle,
   answerKeyEntry: AnswerKeyEntry | undefined,
-  modelOpts: { model?: string | undefined; frontierModel?: string | undefined },
+  modelOpts: { model?: string | undefined; frontierModel?: string | undefined; judgeModel?: string | undefined },
   aliases: AliasTable,
   ctx: RecordContext,
 ): Promise<PuzzleRunRecord> {
   const startedAt = Date.now()
   const prose = await readFile(puzzle.path, "utf8")
   const title = answerKeyEntry?.title ?? puzzle.file
-  const outcomeClass: OutcomeClass = answerKeyEntry?.outcome ?? "determinate"
   const durationMs = () => Date.now() - startedAt
+
+  // The direct-solve judge grades against the answer key, so it receives the entry
+  // serialized; other harnesses ignore the field. Absent keys fail loudly in the harness.
+  const harnessOpts =
+    ctx.harness.id === "direct-solve"
+      ? { ...modelOpts, answerKeyJson: JSON.stringify({ id: puzzle.id, ...answerKeyEntry }) }
+      : modelOpts
 
   // Each harness stage runs (and is caught) independently, so a later stage's failure doesn't
   // discard an earlier stage's already-succeeded result — a SOLVE_ERROR without the
   // extractedCsp/mzn that produced it is undiagnosable from the raw JSON alone.
-  const extractOutcome = await runStage(ctx.harness.extract(prose, modelOpts))
+  const extractOutcome = await runStage(ctx.harness.extract(prose, harnessOpts))
   if (extractOutcome._tag === "Err") {
     const error = extractOutcome.error
     return record(
@@ -451,16 +486,41 @@ async function runOnePuzzle(
   }
   const { solveResult, extractedCsp, model, mzn } = solveOutcome.value
   const finalDurationMs = durationMs()
+
+  // The direct-solve baseline carries a judge's verdict, not a SolveResult to grade:
+  // map it to an outcome directly (ADR-008 §2.2). Every other harness grades here.
+  if (ctx.harness.id === "direct-solve") {
+    const judged = gradeJudged(
+      puzzle.id,
+      answerKeyEntry,
+      (extractedCsp as { judgeVerdict?: unknown }).judgeVerdict,
+    )
+    return record(
+      puzzle,
+      judged.verdict,
+      finalDurationMs,
+      {
+        extractedCsp,
+        mzn,
+        resolvedModel: model,
+        solveResultTag: solveResult._tag,
+        assignment: null,
+        graderDetail: judged.detail,
+        aliasesApplied: 0,
+      },
+      title,
+      ctx,
+    )
+  }
+
   // Entity-vocabulary recovery assumes this pipeline's ExtractedCsp (a domains array).
-  // Harnesses with their own representation (e.g. direct-solve) skip it — the grader
-  // compares their assignments as-is.
+  // Harnesses with their own representation skip it.
   const csp = extractedCsp as { domains?: unknown }
   const recovered =
     solveResult._tag === "UniquelySolvable" && Array.isArray(csp.domains)
       ? recoverEntityKeyedArrays(solveResult.assignment, extractedCsp as ExtractedCsp)
       : null
   const graded = gradeSolved(
-    outcomeClass,
     puzzle.id,
     answerKeyEntry,
     recovered !== null ? { _tag: "UniquelySolvable", assignment: recovered } : solveResult,
@@ -488,6 +548,75 @@ async function runOnePuzzle(
     title,
     ctx,
   )
+}
+
+/**
+ * Maps a direct-solve judge verdict to a display outcome (ADR-008 §2.2). The judge already
+ * applied the per-class semantics from the answer key; this only translates its vocabulary
+ * into the shared outcome taxonomy. 'correct'/'incorrect' fan out to the class-appropriate
+ * pass/fail verdicts so pass-rate accounting treats baseline and pipeline verdicts alike.
+ */
+export function gradeJudged(
+  puzzleId: string,
+  entry: AnswerKeyEntry | undefined,
+  judgeVerdict: unknown,
+): { readonly verdict: Outcome; readonly detail: string } {
+  const fail = (detail: string): { readonly verdict: Outcome; readonly detail: string } => ({
+    verdict: "EXTRACT_FAILED",
+    detail,
+  })
+  if (entry === undefined) return { verdict: "NO_ANSWER_KEY", detail: "no answer key" }
+  const verdict = judgeVerdict as { verdict?: unknown; reason?: unknown } | undefined
+  if (verdict?.verdict !== "correct" && verdict?.verdict !== "incorrect" && verdict?.verdict !== "unclear") {
+    return fail(`judge returned no usable verdict for ${puzzleId}`)
+  }
+  const reason = typeof verdict.reason === "string" ? verdict.reason.slice(0, 300) : ""
+  const outcomeClass = effectiveOutcomeClass(entry)
+  if (verdict.verdict === "unclear") {
+    return {
+      verdict: "EXTRACT_FAILED",
+      detail: `JudgeUnclear: ${reason}`,
+    }
+  }
+  const pass: Record<OutcomeClass, Outcome> = {
+    determinate: "MATCH",
+    cop: "OPTIMUM_ATTAINED",
+    ambiguous: "READING_MATCHED",
+    subjective: "PREMISE_FREE_MATCH",
+    "non-problem": "DECLINED_CORRECTLY",
+  }
+  const failOutcome: Record<OutcomeClass, Outcome> = {
+    determinate: "MISMATCH",
+    cop: "FEASIBLE_ONLY",
+    ambiguous: "NO_MATCHING_READING",
+    subjective: "PREMISE_SILENTLY_PROMOTED",
+    "non-problem": "UNDECLINED",
+  }
+  // A COP 'incorrect' (wrong optimum, no solution found) is FEASIBLE_ONLY-shaped but still a
+  // failure for pass-rate purposes — except genuine FEASIBLE_ONLY never passes through here,
+  // so map it to MISMATCH to keep it in the denominator as a failure.
+  if (verdict.verdict === "correct") return { verdict: pass[outcomeClass], detail: reason }
+  if (outcomeClass === "cop") return { verdict: "MISMATCH", detail: reason }
+  return { verdict: failOutcome[outcomeClass], detail: reason }
+}
+
+/** The entry's outcome class, honoring both the top-level and the nested provisional shape. */
+function effectiveOutcomeClass(entry: AnswerKeyEntry): OutcomeClass {
+  if (entry.outcome !== undefined) return entry.outcome
+  const answer = entry.answer
+  if (answer !== null && typeof answer === "object" && !Array.isArray(answer)) {
+    const outcome = (answer as Record<string, unknown>).outcome
+    if (
+      outcome === "determinate" ||
+      outcome === "cop" ||
+      outcome === "ambiguous" ||
+      outcome === "subjective" ||
+      outcome === "non-problem"
+    ) {
+      return outcome
+    }
+  }
+  return "determinate"
 }
 
 // --- Budget (ADR-007 §2.3) ------------------------------------------------------------------------
@@ -839,7 +968,12 @@ async function main(): Promise<void> {
   console.log(`Summary appended to: ${fileURLToPath(RESULTS_MD_PATH)}`)
 }
 
-main().catch((error: unknown) => {
-  console.error(error)
-  process.exit(1)
-})
+// Importable for unit tests (gradeJudged, loadBaselineCaps, resolveHarnessId) without running
+// the full CLI — main() only fires when this file is the entrypoint.
+const isEntrypoint = process.argv[1] !== undefined && import.meta.url.endsWith(process.argv[1].split("/").pop() ?? "")
+if (isEntrypoint) {
+  main().catch((error: unknown) => {
+    console.error(error)
+    process.exit(1)
+  })
+}

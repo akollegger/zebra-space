@@ -44,12 +44,15 @@ always runs all 39, and `--full` opts every cell in. Only `verified` registry en
 
 Every extraction number needs a baseline answering "can the model solve this at all, schema
 aside?" `direct-solve` asks the model to solve in free prose, then a judge model (default
-`z-ai/glm-5.3-flash`, override `--judge-model` / `ZEBRA_JUDGE_MODEL`) converts the prose to
-a structured verdict our grader scores — judge proposes, grader disposes, same strict
-semantics as the pipeline. The gap between baseline solve rate and extraction pass rate is
-the measured schema tax. `--baseline` + `--timeout-factor` (default 3) caps each puzzle at
-a multiple of its baseline wall-clock; overruns record `TIMEOUT`. Judge over-acceptance on
-fluent wrong answers is not yet calibrated — treat baseline numbers as a ballpark.
+`z-ai/glm-5.3-flash`, override `--judge-model` / `ZEBRA_JUDGE_MODEL`) grades the prose
+against the answer key — the judge judges, it does not transcribe (an earlier
+transcription design failed as a lossy serializer; see ADR-008 §2.1). The runner maps
+`correct`/`incorrect` to the class-appropriate pass/fail outcomes. The gap between
+baseline solve rate and extraction pass rate is the measured schema tax. `--baseline` +
+`--timeout-factor` (default 3) caps each puzzle at a multiple of its baseline wall-clock;
+overruns record `TIMEOUT`. Calibration 2026-09-06: 4/4 correct judgments (3 accepts,
+1 reject localizing a self-contradiction); judge variance remains (~2/3 faithful on
+repeats) — read frequency, not snapshots.
 
 ## Harnesses (`src/eval/harness.ts`)
 

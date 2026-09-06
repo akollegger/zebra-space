@@ -31,24 +31,31 @@ A new `direct-solve` harness id (registered in `src/eval/harness.ts`, implemente
 `src/eval/direct-solve.ts`): the solver model receives matched fixed prompts (identical
 wording for every model, versioned as `DIRECT_SOLVE_PROMPT_VERSION`) and answers in free
 prose — no forced tool call, no schema. A judge model (default `z-ai/glm-5.3-flash`,
-overridden by `--judge-model` / `ZEBRA_JUDGE_MODEL`) then converts that prose into a
-`DirectSolutionVerdict` forced tool call: `outcome` (`unique` / `multiple` /
-`unsatisfiable` / `unclear`) plus up to two free-form assignments (field → scalar). The
-verdict maps to the solver's existing `SolveResult` trichotomy (`unique` →
-`UniquelySolvable`, `multiple` → `MultiplySatisfiable`, `unsatisfiable` →
-`Unsatisfiable`), and the existing per-class grading in `grader.ts` scores it. `unclear`
-has no `SolveResult` equivalent and surfaces as `JudgeUnclear` (an extraction-stage
-failure, alongside `ProviderError`/`SchemaRejected`/`SchemaViolation`). Two LLM calls per
-puzzle; no MiniZinc (`mzn: null`, which records already accept).
+overridden by `--judge-model` / `ZEBRA_JUDGE_MODEL`) then grades that prose against the
+answer key — which the runner serializes into the judge prompt — and returns a
+`JudgeVerdict` forced tool call: `verdict` (`correct` / `incorrect` / `unclear`) plus a
+`reason`. The runner maps verdicts into the shared outcome taxonomy (§2.2). Two LLM calls
+per puzzle; no MiniZinc (`mzn: null`, which records already accept).
 
-### 2.2 Judge proposes, grader disposes
+The judge judges; it does not transcribe. An earlier revision had the judge emit the
+solution as structured assignments for `grader.ts` to score — that reduced the judge to a
+lossy serializer (empty records, comma-joined strings, incoherent keys, puzzle prose
+transcribed as answers), and three prompt revisions changed failure shape without changing
+rate. Semantic comparison with paraphrase tolerance is what LLMs do well; lossless
+structured emission is what they do poorly. The verdict schema has no transcription
+surface by design.
 
-The judge transcribes what the solver claimed; it never solves, never fills gaps, and a
-fluent but answer-free response is `unclear`. All comparison semantics stay in `grader.ts`
-— the pairing-aware determinate rules, COP optima, ambiguous readings, subjective
-premise detection — so baseline numbers are strict in exactly the same places pipeline
-numbers are. A loose "does this look right" judge would inflate the baseline precisely
-where the pipeline is strict and make the gap meaningless.
+### 2.2 Judge grades against the key; the runner maps verdicts to outcomes
+
+The judge receives prose, solution, and the answer-key entry, and applies the entry's
+per-class expectation itself (determinate full-grid match with paraphrase tolerance,
+COP optimum value only, ambiguous some-reading match, subjective premise-free vs silent
+promotion, non-problem decline expected — the rules live in the judge prompt). It never
+solves, never fills gaps, and a fluent but answer-free response is `unclear`. The runner
+(`gradeJudged`) translates `correct`/`incorrect` into the class-appropriate pass/fail
+outcomes so pass-rate accounting treats baseline and pipeline verdicts alike
+(`unclear` → `EXTRACT_FAILED` with `JudgeUnclear` detail). `grader.ts` stays the
+pipeline's scorer; the baseline no longer routes through it.
 
 ### 2.3 Timeout calibration
 

@@ -26,13 +26,15 @@ import type { SolveResult, SolverError } from "../solver/types.ts"
 
 /**
  * Model selection, resolved by the CLI layer (flags > env > defaults) before harnesses run.
- * `judgeModel` is direct-solve-specific (other harnesses ignore it): --judge-model wins,
- * then ZEBRA_JUDGE_MODEL, then the default judge.
+ * `judgeModel`/`answerKeyJson` are direct-solve-specific (other harnesses ignore them):
+ * --judge-model wins, then ZEBRA_JUDGE_MODEL, then the default judge; the runner serializes
+ * the puzzle's answer-key entry for the judge to grade against.
  */
 export interface HarnessModelOpts {
   readonly model?: string | undefined
   readonly frontierModel?: string | undefined
   readonly judgeModel?: string | undefined
+  readonly answerKeyJson?: string | undefined
 }
 
 /** One stage's output: the value plus what the next stage needs. */
