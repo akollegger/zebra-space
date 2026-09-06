@@ -83,6 +83,14 @@
       "notes": "Leaderboard #8 by traffic (3.65T tokens), 1M ctx, tool support confirmed. Free-tier rate limits apply. Needs a pilot: schema-compat + pass frequency unverified."
     },
     {
+      "id": "z-ai/glm-5.3-flash",
+      "tier": "cheap",
+      "role": "judge-default",
+      "cost_per_call_usd": 0.0009,
+      "verified": false,
+      "notes": "Default judge model for the direct-solve baseline (ADR-008). Pricing $0.075/M in, $0.25/M out (promo rate ending 2026-09-09; list $0.15/$0.50 — re-verify), 1.3M ctx, tool support confirmed. Pilot 2026-09-06: judged 2/2 correctly (PZL-0003, PZL-0004, solver gpt-4o-mini) after a judge-prompt fix for case fidelity ('paper' vs 'Paper' — grader is case-sensitive). Over-acceptance on fluent wrong answers still unmeasured."
+    },
+    {
       "id": "local/stub-via-base-url-override",
       "tier": "local",
       "role": "candidate",

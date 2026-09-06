@@ -3,7 +3,7 @@ id: RFC-004
 title: Computational Decision Making
 status: draft
 created: 2026-08-21
-adrs: [ADR-007]
+adrs: [ADR-007, ADR-008]
 ---
 
 # RFC-004: Computational Decision Making
@@ -541,6 +541,7 @@ axis has to reference this vocabulary directly.
 ## 8. ADRs
 
 - [ADR-007](../adr/ADR-007-eval-outcome-grader-semantics.md) — Eval Outcome Taxonomy and Grader Semantics
+- [ADR-008](../adr/ADR-008-direct-solve-baseline.md) — Direct-Solve Baseline with LLM Judge
 
 ## 9. Appendix: Vocabulary Reconciliation
 

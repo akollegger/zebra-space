@@ -24,10 +24,15 @@ import type { SolveResult, SolverError } from "../solver/types.ts"
 //   its own `runStage` so one stage's failure keeps the earlier stages' already-succeeded
 //   results for the raw JSON.
 
-/** Model selection, resolved by the CLI layer (flags > env > defaults) before harnesses run. */
+/**
+ * Model selection, resolved by the CLI layer (flags > env > defaults) before harnesses run.
+ * `judgeModel` is direct-solve-specific (other harnesses ignore it): --judge-model wins,
+ * then ZEBRA_JUDGE_MODEL, then the default judge.
+ */
 export interface HarnessModelOpts {
   readonly model?: string | undefined
   readonly frontierModel?: string | undefined
+  readonly judgeModel?: string | undefined
 }
 
 /** One stage's output: the value plus what the next stage needs. */
@@ -39,13 +44,14 @@ export interface HarnessExtraction {
 export interface HarnessCompilation {
   readonly extractedCsp: unknown
   readonly model: string
-  readonly mzn: string
+  /** Null for harnesses with no MiniZinc (e.g. direct-solve) — records already accept null. */
+  readonly mzn: string | null
 }
 
 export interface HarnessSolution {
   readonly extractedCsp: unknown
   readonly model: string
-  readonly mzn: string
+  readonly mzn: string | null
   readonly solveResult: SolveResult
 }
 
@@ -141,7 +147,11 @@ function compileExtractedCsp(extraction: HarnessExtraction): Effect.Effect<Harne
 }
 
 function solveMzn(compilation: HarnessCompilation): Effect.Effect<HarnessSolution, HarnessSolveError> {
-  return solve({ model: compilation.mzn }).pipe(
+  if (compilation.mzn === null) {
+    return Effect.fail({ _tag: "SolveFailed", tag: "UnexpectedOutput", detail: "harness produced no MiniZinc model" } as HarnessSolveError)
+  }
+  const mzn: string = compilation.mzn
+  return solve({ model: mzn }).pipe(
     Effect.map((solveResult): HarnessSolution => ({ ...compilation, solveResult })),
     Effect.catch((error) => Effect.fail(toSolveError(error))),
   )
@@ -259,12 +269,17 @@ export const localSingleShotHarness: EvalHarness = {
 }
 
 // --- Registry ---------------------------------------------------------------------------------------
+// directSolveHarness lives in ./direct-solve.ts (imported here to avoid a cycle: it needs the
+// EvalHarness type, the registry needs the harness value).
+
+import { directSolveHarness } from "./direct-solve.ts"
 
 const BUILT_IN_HARNESSES: readonly EvalHarness[] = [
   fullCriticHarness,
   singleShotHarness,
   compileRepairHarness,
   localSingleShotHarness,
+  directSolveHarness,
 ]
 
 /** CLI flag (old `Workflow` values) → harness id, preserving existing flag behavior. */

@@ -80,22 +80,33 @@ export interface ProviderRoute {
 }
 
 export function resolveProviderRoute(schemaName: string): ProviderRoute {
-  const localBaseUrl = process.env.ZEBRA_LOCAL_BASE_URL
-  if (localBaseUrl !== undefined && localBaseUrl !== "") {
+  const base = resolveBaseRoute()
+  if (base.serverURL !== undefined && base.serverURL === process.env.ZEBRA_LOCAL_BASE_URL) {
     return {
-      serverURL: localBaseUrl,
-      apiKey: "local",
+      ...base,
       toolChoice: "required",
-      missingKeyMessage: `ZEBRA_LOCAL_BASE_URL is set (${localBaseUrl}) but the server refused the request (401 Unauthorized). Check the local server is running and reachable.`,
+      missingKeyMessage: `ZEBRA_LOCAL_BASE_URL is set (${base.serverURL}) but the server refused the request (401 Unauthorized). Check the local server is running and reachable.`,
     }
   }
-  const override = process.env.ZEBRA_OPENROUTER_BASE_URL_OVERRIDE
   return {
-    serverURL: override,
-    apiKey: process.env.OPENROUTER_API_KEY,
+    ...base,
     toolChoice: { type: "function", function: { name: schemaName } },
     missingKeyMessage: MISSING_API_KEY_MESSAGE,
   }
+}
+
+/**
+ * Server + credential only, no tool-choice. Shared by the forced-tool-call path above and
+ * callers that need plain prose (the direct-solve baseline) — both must honor
+ * ZEBRA_LOCAL_BASE_URL and the test-only ZEBRA_OPENROUTER_BASE_URL_OVERRIDE identically,
+ * or tests can't route prose calls at the stub.
+ */
+export function resolveBaseRoute(): { readonly serverURL: string | undefined; readonly apiKey: string | undefined } {
+  const localBaseUrl = process.env.ZEBRA_LOCAL_BASE_URL
+  if (localBaseUrl !== undefined && localBaseUrl !== "") {
+    return { serverURL: localBaseUrl, apiKey: "local" }
+  }
+  return { serverURL: process.env.ZEBRA_OPENROUTER_BASE_URL_OVERRIDE, apiKey: process.env.OPENROUTER_API_KEY }
 }
 
 /**

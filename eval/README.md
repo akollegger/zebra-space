@@ -19,6 +19,8 @@ node scripts/eval-extraction.ts --runs 3 --budget-usd 5   # repeat 3x with a $5 
 node scripts/eval-extraction.ts --no-critic               # ablation: single-shot, no critic
 node scripts/eval-extraction.ts --compile-repair-only     # ablation: compile-repair loop, no critic
 node scripts/eval-extraction.ts --harness <id>            # any registered harness by id (wins over the flags above)
+node scripts/eval-extraction.ts --harness direct-solve    # baseline: solve in prose, judge to verdict
+node scripts/eval-extraction.ts --baseline <run-id>.json --timeout-factor 3  # cap each puzzle at 3x its baseline time
 node scripts/eval-matrix.ts --dry-run       # plan the model x harness matrix without spending
 node scripts/eval-matrix.ts                 # subset cells + full baseline, 3 repeats each
 node scripts/eval-matrix.ts --harness single-shot  # only cells using this harness
@@ -37,6 +39,17 @@ the `eval/models.json` estimate. The comparative matrix (`scripts/eval-matrix.ts
 verified registry models (at least one per tier) with registered harnesses; each cell
 defaults to a stratified 8-puzzle subset spanning all five outcome classes, the baseline cell
 always runs all 39, and `--full` opts every cell in. Only `verified` registry entries run.
+
+## Baseline (`direct-solve`, ADR-008)
+
+Every extraction number needs a baseline answering "can the model solve this at all, schema
+aside?" `direct-solve` asks the model to solve in free prose, then a judge model (default
+`z-ai/glm-5.3-flash`, override `--judge-model` / `ZEBRA_JUDGE_MODEL`) converts the prose to
+a structured verdict our grader scores — judge proposes, grader disposes, same strict
+semantics as the pipeline. The gap between baseline solve rate and extraction pass rate is
+the measured schema tax. `--baseline` + `--timeout-factor` (default 3) caps each puzzle at
+a multiple of its baseline wall-clock; overruns record `TIMEOUT`. Judge over-acceptance on
+fluent wrong answers is not yet calibrated — treat baseline numbers as a ballpark.
 
 ## Harnesses (`src/eval/harness.ts`)
 

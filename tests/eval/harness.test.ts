@@ -45,11 +45,24 @@ test("harness flags: --harness selects by id, unknown ids are rejected", () => {
   assert.match(runEval(["--harness", "no-such-harness", "PZL-0004"]).stderr, /Unknown harness: "no-such-harness"/)
 })
 
+test("arg parsing: --timeout-factor needs --baseline and a positive number", () => {
+  assert.match(runEval(["--timeout-factor", "5", "PZL-0004"]).stderr, /--timeout-factor needs --baseline/)
+  assert.match(runEval(["--timeout-factor", "0", "--baseline", "x.json", "PZL-0004"]).stderr, /--timeout-factor needs a positive number/)
+})
+
+test("baseline: missing file or missing puzzle fails loudly, never silently uncapped", () => {
+  assert.match(
+    runEval(["--harness", "direct-solve", "--baseline", "no-such-file.json", "PZL-0004"]).stderr,
+    /ENOENT|no such file/i,
+  )
+})
+
 test("matrix dry-run: plans verified cells, skips unverified tiers, estimates spend", () => {
   const stdout = execFileSync("node", ["scripts/eval-matrix.ts", "--dry-run"], { cwd: REPO_ROOT, encoding: "utf8" })
   assert.match(stdout, /openai\/gpt-4o-mini \[cheap\] x full-critic/)
   assert.match(stdout, /x single-shot/)
   assert.match(stdout, /x compile-repair/)
+  assert.match(stdout, /x direct-solve/)
   assert.match(stdout, /PZL-0022 PZL-0028 PZL-0033 PZL-0038 PZL-0015 PZL-0018/)
   assert.match(stdout, /SKIP minimax\/minimax-m3:free \[free\]: unverified/)
   assert.match(stdout, /SKIP nvidia\/nemotron-3-ultra-550b-a55b:free \[free\]: unverified/)

@@ -32,6 +32,10 @@
  *   node scripts/eval-extraction.ts --compile-repair-only  # ablation (c): compile-repair loop, no critic
  *   node scripts/eval-extraction.ts --harness <id>        # any registered harness by id
  *                                                          # (src/eval/harness.ts); wins over the flags above
+ *   node scripts/eval-extraction.ts --harness direct-solve # baseline: solve in prose, judge to verdict
+ *   node scripts/eval-extraction.ts --baseline <run-id>.json --timeout-factor 3
+ *                                                          # wall-clock cap per puzzle at 3x its baseline
+ *                                                          # duration; overruns record TIMEOUT
  */
 import { execFileSync } from "node:child_process"
 import { appendFile, mkdir, readFile, readdir, writeFile } from "node:fs/promises"
@@ -83,26 +87,38 @@ interface ParsedArgs {
   readonly puzzleIds: readonly string[]
   readonly model?: string | undefined
   readonly frontierModel?: string | undefined
+  readonly judgeModel?: string | undefined
   readonly runs: number
   readonly budgetUsd?: number | undefined
   readonly workflow: Workflow
   readonly harnessId?: string | undefined
+  readonly baselinePath?: string | undefined
+  readonly timeoutFactor: number
 }
 
 function parseArgs(argv: readonly string[]): ParsedArgs {
   const puzzleIds: string[] = []
   let model: string | undefined
   let frontierModel: string | undefined
+  let judgeModel: string | undefined
   let runs = 1
   let budgetUsd: number | undefined
   let workflow: Workflow = "full"
   let harnessId: string | undefined
+  let baselinePath: string | undefined
+  let timeoutFactor = 3
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]
     if (arg === "--model") model = argv[++i]
     else if (arg === "--frontier-model") frontierModel = argv[++i]
+    else if (arg === "--judge-model") judgeModel = argv[++i]
     else if (arg === "--harness") harnessId = argv[++i]
-    else if (arg === "--runs") {
+    else if (arg === "--baseline") baselinePath = argv[++i]
+    else if (arg === "--timeout-factor") {
+      const parsed = Number(argv[++i])
+      if (!(parsed > 0)) throw new Error(`--timeout-factor needs a positive number, got "${argv[i]}"`)
+      timeoutFactor = parsed
+    } else if (arg === "--runs") {
       const parsed = Number(argv[++i])
       if (!Number.isInteger(parsed) || parsed < 1) throw new Error(`--runs needs a positive integer, got "${argv[i]}"`)
       runs = parsed
@@ -115,7 +131,34 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     else if (arg?.startsWith("--")) throw new Error(`Unknown flag: ${arg}`)
     else if (arg !== undefined) puzzleIds.push(arg)
   }
-  return { puzzleIds, model, frontierModel, runs, budgetUsd, workflow, harnessId }
+  if (timeoutFactor !== 3 && baselinePath === undefined) {
+    throw new Error("--timeout-factor needs --baseline (it scales baseline durations)")
+  }
+  return { puzzleIds, model, frontierModel, judgeModel, runs, budgetUsd, workflow, harnessId, baselinePath, timeoutFactor }
+}
+
+/**
+ * Loads per-puzzle wall-clock caps from a previous run's raw JSON: cap[puzzle] =
+ * timeoutFactor x that puzzle's slowest recorded durationMs. A puzzle missing from the
+ * baseline, a missing file, or an unreadable record fails loudly — a silent unbounded
+ * fallback would defeat the purpose of the cap.
+ */
+export async function loadBaselineCaps(
+  baselinePath: string,
+  timeoutFactor: number,
+): Promise<Record<string, number>> {
+  const raw = JSON.parse(await readFile(baselinePath, "utf8")) as {
+    puzzles?: ReadonlyArray<{ id?: unknown; durationMs?: unknown }>
+  }
+  if (!Array.isArray(raw.puzzles)) throw new Error(`Baseline "${baselinePath}" has no puzzles array`)
+  const slowest: Record<string, number> = {}
+  for (const puzzle of raw.puzzles) {
+    if (typeof puzzle.id !== "string" || typeof puzzle.durationMs !== "number") {
+      throw new Error(`Baseline "${baselinePath}" has a record without id/durationMs`)
+    }
+    slowest[puzzle.id] = Math.max(slowest[puzzle.id] ?? 0, puzzle.durationMs)
+  }
+  return Object.fromEntries(Object.entries(slowest).map(([id, ms]) => [id, Math.ceil(ms * timeoutFactor)]))
 }
 
 /** Resolves the harness for a run: explicit --harness wins, else the legacy workflow flag. */
@@ -215,6 +258,7 @@ function recoverEntityKeyedArrays(assignment: Assignment, extractedCsp: Extracte
 type Outcome =
   | "EXTRACT_FAILED"
   | "COMPILE_FAILED"
+  | "TIMEOUT"
   | "SOLVE_ERROR"
   | "SOLVE_UNSATISFIABLE"
   | "SOLVE_MULTIPLY_SATISFIABLE"
@@ -407,8 +451,14 @@ async function runOnePuzzle(
   }
   const { solveResult, extractedCsp, model, mzn } = solveOutcome.value
   const finalDurationMs = durationMs()
+  // Entity-vocabulary recovery assumes this pipeline's ExtractedCsp (a domains array).
+  // Harnesses with their own representation (e.g. direct-solve) skip it — the grader
+  // compares their assignments as-is.
+  const csp = extractedCsp as { domains?: unknown }
   const recovered =
-    solveResult._tag === "UniquelySolvable" ? recoverEntityKeyedArrays(solveResult.assignment, extractedCsp as ExtractedCsp) : null
+    solveResult._tag === "UniquelySolvable" && Array.isArray(csp.domains)
+      ? recoverEntityKeyedArrays(solveResult.assignment, extractedCsp as ExtractedCsp)
+      : null
   const graded = gradeSolved(
     outcomeClass,
     puzzle.id,
@@ -492,6 +542,7 @@ function summarize(records: readonly PuzzleRunRecord[]): Summary {
   const byOutcome: Record<Outcome, number> = {
     EXTRACT_FAILED: 0,
     COMPILE_FAILED: 0,
+    TIMEOUT: 0,
     SOLVE_ERROR: 0,
     SOLVE_UNSATISFIABLE: 0,
     SOLVE_MULTIPLY_SATISFIABLE: 0,
@@ -687,7 +738,10 @@ async function main(): Promise<void> {
     // default, not override it with "".
     model: args.model || process.env.ZEBRA_MODEL || undefined,
     frontierModel: args.frontierModel || process.env.ZEBRA_FRONTIER_MODEL || undefined,
+    judgeModel: args.judgeModel || process.env.ZEBRA_JUDGE_MODEL || undefined,
   }
+  const baselineCaps =
+    args.baselinePath !== undefined ? await loadBaselineCaps(args.baselinePath, args.timeoutFactor) : undefined
   const resolvedModel = modelOpts.model ?? "openai/gpt-4o-mini"
   const registryEntry = registry.find((m) => m.id === resolvedModel)
   const budget = createBudget(args.budgetUsd, registryEntry?.cost_per_call_usd ?? 0.002, harness.maxCallsPerPuzzle)
@@ -711,7 +765,38 @@ async function main(): Promise<void> {
       }
       const runLabel = args.runs > 1 ? ` run ${runIndex + 1}/${args.runs}` : ""
       process.stdout.write(`Running ${puzzle.id} (${answerKeys[puzzle.id]?.title ?? puzzle.file})${runLabel}... `)
-      const rec = await runOnePuzzle(puzzle, answerKeys[puzzle.id], modelOpts, aliases, { ...ctx, runIndex })
+      // ADR-008 §2.5: wall-clock cap at timeoutFactor x the puzzle's baseline duration.
+      // Raced here (not inside the harness) so one mechanism covers every harness uniformly;
+      // the in-flight run keeps going in the background, but its record is TIMEOUT and the
+      // runner moves on instead of hanging.
+      const capMs = baselineCaps?.[puzzle.id]
+      if (baselineCaps !== undefined && capMs === undefined) {
+        console.log(`\nNo baseline duration for ${puzzle.id} — refusing to run uncapped.`)
+        process.exit(1)
+      }
+      const runPromise = runOnePuzzle(puzzle, answerKeys[puzzle.id], modelOpts, aliases, { ...ctx, runIndex })
+      const rec =
+        capMs === undefined
+          ? await runPromise
+          : await Promise.race([
+              runPromise,
+              new Promise<PuzzleRunRecord>((resolve) =>
+                setTimeout(
+                  () =>
+                    resolve(
+                      record(
+                        puzzle,
+                        "TIMEOUT",
+                        capMs,
+                        { resolvedModel: modelOpts.model ?? null },
+                        answerKeys[puzzle.id]?.title ?? puzzle.file,
+                        { ...ctx, runIndex },
+                      ),
+                    ),
+                  capMs,
+                ),
+              ),
+            ])
       records.push(rec)
       console.log(`${outcomeDetail(rec)} (${(rec.durationMs / 1000).toFixed(1)}s)`)
     }
