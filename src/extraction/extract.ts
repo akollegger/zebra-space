@@ -2,15 +2,19 @@ import { Effect } from "effect"
 import { requestStructuredCompletion } from "./provider.ts"
 import {
   CriticRejected,
+  ExtractedConstraints,
+  extractedConstraintsJsonSchema,
   ExtractedCsp,
   extractedCspJsonSchema,
   type ExtractionAttempt,
   type ExtractionError,
+  ExtractedVocabulary,
+  extractedVocabularyJsonSchema,
   FidelityCritique,
   fidelityCritiqueJsonSchema,
-  type ProviderError,
-  type SchemaRejected,
-  type SchemaViolation,
+  ProviderError,
+  SchemaRejected,
+  SchemaViolation,
 } from "./types.ts"
 
 // ADR-004 §2.5 defaults — overridable via ExtractOptions (ADR-003 §2.6's --model/--frontier-model
@@ -435,6 +439,143 @@ export function extractSingleShot(
   return extractOnce(model, prose, timeoutMs).pipe(
     Effect.map((extractedCsp) => ({ extractedCsp, model })),
   )
+}
+
+/**
+ * Version stamp for the staged prompt set (ADR-009). Separate from EXTRACTION_PROMPT_VERSION:
+ * either stage's wording change bumps this, and staged runs record it, so staged vs monolith
+ * comparisons attribute correctly.
+ */
+export const STAGED_PROMPT_VERSION = 1
+
+function vocabularySystemPrompt(): string {
+  return (
+    "You are extracting the vocabulary of a constraint-satisfaction problem from a " +
+    "natural-language logic puzzle. Identify the entities (each with a stable id and a type) " +
+    "and the decision-variable domains (each with a variable name, the entity type it ranges " +
+    "over, and its finite set of values). Represent every distinct attribute group as one " +
+    "domain; invent no values beyond what the prose states. No constraints yet — vocabulary only."
+  )
+}
+
+function constraintsSystemPrompt(vocabulary: ExtractedVocabulary): string {
+  const entityIds = vocabulary.entities.map((e) => e.id).join(", ")
+  const domainNames = vocabulary.domains.map((d) => `${d.variable}=[${d.values.join(", ")}]`).join("; ")
+  return (
+    "You are extracting the constraints of a constraint-satisfaction problem from a " +
+    "natural-language logic puzzle. The vocabulary is FIXED — use exactly these entities, " +
+    "variables, and values, and invent no others:\n" +
+    `Entities: ${entityIds}\n` +
+    `Domains: ${domainNames}\n\n` +
+    "Represent every clue as one constraint, clue by clue. The constraint kinds are CLOSED — " +
+    "exactly these nine exist, and no other kind is valid: assignment, linkedAttributes, " +
+    "allDifferent, adjacency, relation, arithmetic, ruleTable, ruleTableConstraint, " +
+    "derivedRule. Emitting any other kind (e.g. inventing a name like \"rightOf\") is a " +
+    "structural error, not a creative choice.\n\n" +
+    "For `adjacency`, the `relation` field must be one of these plain-English phrases " +
+    "exactly (lowercase, spaces, no camelCase): \"immediately right of\", \"directly right " +
+    "of\", \"immediately left of\", \"directly left of\", \"immediately before\", " +
+    "\"immediately after\", \"next to\", \"adjacent to\". A bare direction like \"leftOf\" " +
+    "or \"left of\" is NOT valid — say whether it is immediate/direct or just adjacency.\n\n" +
+    "Three cross-stage integrity rules — violating any of them is a structural error:\n" +
+    "- Every `variableRef` on an entity-indexed domain (a domain WITH an entityType) MUST " +
+    "name an entity: `entity` is the exact entity id from the vocabulary above, never null. " +
+    "`entity: null` is valid ONLY for scalar domains (no entityType). Values likewise use " +
+    "the domain's declared `values` verbatim — never a qualified variant of an entity id.\n" +
+    "- A `ruleTable` declares static facts and constrains NOTHING by itself: every puzzle " +
+    "using one needs exactly one paired `ruleTableConstraint` requiring the actual values " +
+    "satisfy the table. Emitting the table without its constraint leaves the puzzle " +
+    "underdetermined.\n" +
+    "- `assignment` fixes ONE entity's variable: `entity` names that entity, `variable` " +
+    "names that entity's own domain variable. Never assign another entity's variable.\n\n" +
+    "Three easily-confused clue shapes need different kinds — pick by what the clue asserts:\n" +
+    '- Exclusion/negation ("X is not val1"): `arithmetic` with comparator "!=" — never ' +
+    "`linkedAttributes`, which links co-occurring values, not exclusions.\n" +
+    "- Attribute co-occurrence with no entity named: `linkedAttributes`.\n" +
+    "- A specific, already-known entity (\"the first one\", or one named directly): " +
+    "`assignment`.\n" +
+    "For positional/ordering clues between two entities: `adjacency`. " +
+    "`arithmetic`'s `comparator` (e.g. \"=\", \"!=\", \">=\") is ALWAYS separate from " +
+    "`expression`'s `op` (+ - * / min max abs) — never put a comparator inside `op`."
+  )
+}
+
+function constraintsUserPrompt(prose: string, vocabulary: ExtractedVocabulary): string {
+  return (
+    `Puzzle:\n\n${prose}\n\n` +
+    `Fixed vocabulary:\n${JSON.stringify(vocabulary)}\n\n` +
+    "Emit one constraint per clue, referencing only the entities, variables, and values above."
+  )
+}
+
+export interface StagedExtractionResult extends ExtractionResult {
+  readonly vocabulary: ExtractedVocabulary
+}
+
+/**
+ * ADR-009's staged extraction: vocabulary first (small schema, short prompt), constraints
+ * second against that fixed vocabulary, assembly by deterministic concatenation. Either
+ * stage failing fails the whole extraction with the stage named in the error detail, so
+ * raw JSON attributes blame correctly. No critic loop — single-shot per stage, matching
+ * the ablation semantics of extractSingleShot.
+ */
+export function extractStaged(
+  prose: string,
+  options?: ExtractOptions & { readonly timeoutMs?: number },
+): Effect.Effect<StagedExtractionResult, ProviderError | SchemaRejected | SchemaViolation> {
+  const model = options?.model ?? DEFAULT_MODEL
+  const timeoutMs = options?.timeoutMs ?? CHEAP_TIER_TIMEOUT_MS
+  // Either stage failing fails the whole extraction with the stage named in the detail.
+  // Errors are reconstructed per type — never spread: Data.TaggedError fields (message,
+  // providerMessage, raw, detail) are non-enumerable, so {...e} silently drops them and
+  // the detail vanishes from raw JSON (found live on the PZL-0028 staged pilot).
+  const stageTag = (
+    stage: string,
+    error: ProviderError | SchemaRejected | SchemaViolation,
+  ): ProviderError | SchemaRejected | SchemaViolation => {
+    const prefix = `stage ${stage}: `
+    switch (error._tag) {
+      case "ProviderError":
+        return new ProviderError({ message: `${prefix}${error.message}` })
+      case "SchemaRejected":
+        return new SchemaRejected({ model: error.model, providerMessage: `${prefix}${error.providerMessage}` })
+      case "SchemaViolation":
+        return new SchemaViolation({ model: error.model, raw: error.raw, detail: `${prefix}${error.detail}` })
+    }
+  }
+  return Effect.gen(function* () {
+    const vocabulary = yield* requestStructuredCompletion({
+      model,
+      systemPrompt: vocabularySystemPrompt(),
+      userPrompt: `Puzzle:\n\n${prose}`,
+      schemaName: "ExtractedVocabulary",
+      jsonSchema: extractedVocabularyJsonSchema,
+      schema: ExtractedVocabulary,
+      timeoutMs,
+    }).pipe(Effect.catch((e) => Effect.fail(stageTag("1-vocabulary", e as ProviderError | SchemaRejected | SchemaViolation))))
+    const constraints = yield* requestStructuredCompletion({
+      model,
+      systemPrompt: constraintsSystemPrompt(vocabulary),
+      userPrompt: constraintsUserPrompt(prose, vocabulary),
+      schemaName: "ExtractedConstraints",
+      jsonSchema: extractedConstraintsJsonSchema,
+      schema: ExtractedConstraints,
+      timeoutMs,
+    }).pipe(Effect.catch((e) => Effect.fail(stageTag("2-constraints", e as ProviderError | SchemaRejected | SchemaViolation))))
+    // Closed-kind note (ADR-009 §4): the ExtractedConstraint union decodes `kind` against
+    // the nine literals, so an invented kind (the live "rightOf" failure) fails decode as a
+    // SchemaViolation carrying the stage-2 tag — failing here with the stage named, not
+    // downstream at compile time. No separate assertion needed; decode is the assertion.
+    return {
+      extractedCsp: {
+        entities: vocabulary.entities,
+        domains: vocabulary.domains,
+        constraints: constraints.constraints,
+      },
+      model,
+      vocabulary,
+    }
+  })
 }
 
 /**

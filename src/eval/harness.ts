@@ -1,7 +1,14 @@
 import { Effect } from "effect"
 import { compile } from "../compiler/compile.ts"
 import type { ExtractedCsp, ExtractionError } from "../extraction/types.ts"
-import { EXTRACTION_PROMPT_VERSION, extract, extractSingleShot, type ExtractOptions } from "../extraction/extract.ts"
+import {
+  EXTRACTION_PROMPT_VERSION,
+  STAGED_PROMPT_VERSION,
+  extract,
+  extractSingleShot,
+  extractStaged,
+  type ExtractOptions,
+} from "../extraction/extract.ts"
 import { solve } from "../solver/solve.ts"
 import type { SolveResult, SolverError } from "../solver/types.ts"
 
@@ -270,6 +277,31 @@ export const localSingleShotHarness: EvalHarness = {
   solve: solveMzn,
 }
 
+/**
+ * Staged single-shot harness (ADR-009): vocabulary first, constraints second against that
+ * fixed vocabulary, assembly deterministic. Two LLM calls per puzzle; same single-shot
+ * failure semantics as (b) — either stage failing fails outright with the stage named.
+ * Local inference is slow, so the same generous timeout env as local-single-shot applies
+ * (ZEBRA_LOCAL_TIMEOUT_MS, default 10 minutes).
+ */
+export const stagedSingleShotHarness: EvalHarness = {
+  id: "staged-single-shot",
+  description: "vocabulary then constraints against fixed vocabulary (ADR-009), no critic",
+  promptVersion: STAGED_PROMPT_VERSION,
+  maxCallsPerPuzzle: 2,
+  extract: (prose, modelOpts) =>
+    extractWith((p, o) => {
+      // Generous timeouts only on the local route (slow inference); hosted keeps the
+      // cheap-tier default so a wedged call fails fast.
+      const local = process.env.ZEBRA_LOCAL_BASE_URL
+      const timeoutMs =
+        local !== undefined && local !== "" ? Number(process.env.ZEBRA_LOCAL_TIMEOUT_MS ?? 600_000) : undefined
+      return extractStaged(p, timeoutMs === undefined ? o : { ...o, timeoutMs })
+    })(prose, modelOpts),
+  compile: compileExtractedCsp,
+  solve: solveMzn,
+}
+
 // --- Registry ---------------------------------------------------------------------------------------
 // directSolveHarness lives in ./direct-solve.ts (imported here to avoid a cycle: it needs the
 // EvalHarness type, the registry needs the harness value).
@@ -282,6 +314,7 @@ const BUILT_IN_HARNESSES: readonly EvalHarness[] = [
   compileRepairHarness,
   localSingleShotHarness,
   directSolveHarness,
+  stagedSingleShotHarness,
 ]
 
 /** CLI flag (old `Workflow` values) → harness id, preserving existing flag behavior. */

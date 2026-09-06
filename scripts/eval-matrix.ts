@@ -35,7 +35,7 @@ const RESULTS_DIR = new URL("../eval/results/", import.meta.url)
 const STRATIFIED_SUBSET = ["PZL-0002", "PZL-0004", "PZL-0022", "PZL-0028", "PZL-0033", "PZL-0038", "PZL-0015", "PZL-0018"]
 
 /** Harness ids in matrix order. Read live from the registry so new harnesses just appear. */
-const HARNESS_IDS = ["full-critic", "single-shot", "compile-repair", "direct-solve"] as const
+const HARNESS_IDS = ["full-critic", "single-shot", "compile-repair", "direct-solve", "staged-single-shot"] as const
 
 /** Worst-case calls per puzzle per harness, for the pre-run estimate. */
 const HARNESS_MAX_CALLS: Record<string, number> = {
@@ -43,6 +43,7 @@ const HARNESS_MAX_CALLS: Record<string, number> = {
   "single-shot": 1,
   "compile-repair": 2,
   "direct-solve": 2,
+  "staged-single-shot": 2,
 }
 
 interface RegistryModel {

@@ -340,6 +340,38 @@ export const ExtractedCsp = Schema.Struct({
 })
 export type ExtractedCsp = Schema.Schema.Type<typeof ExtractedCsp>
 
+/**
+ * Stage 1 of staged extraction (ADR-009): vocabulary only — entities and domains as flat
+ * string lists. A fraction of the monolithic schema surface, no nesting, no vocabulary
+ * decisions beyond names. Derived from the same Entity/Domain schemas the full
+ * ExtractedCsp uses, so stage-1 output plugs into assembly without conversion.
+ */
+export const ExtractedVocabulary = Schema.Struct({
+  entities: Schema.Array(Entity),
+  domains: Schema.Array(Domain),
+}).annotate({
+  description:
+    "A puzzle's vocabulary: its entities and each decision variable's domain. No " +
+    "constraints — those come in stage 2, against these exact ids and values.",
+})
+export type ExtractedVocabulary = Schema.Schema.Type<typeof ExtractedVocabulary>
+
+/**
+ * Stage 2 of staged extraction (ADR-009): constraints only, against a fixed vocabulary
+ * supplied in the prompt. Same ExtractedConstraint union as the monolith — no new
+ * constraint semantics — so stage-2 output assembles with stage-1 output deterministically.
+ */
+export const ExtractedConstraints = Schema.Struct({
+  constraints: Schema.Array(ExtractedConstraint),
+}).annotate({
+  description:
+    "A puzzle's constraints, one per clue, referencing only the entities, variables, and " +
+    "values from the supplied vocabulary. The constraint kinds are closed: assignment, " +
+    "linkedAttributes, allDifferent, adjacency, relation, arithmetic, ruleTable, " +
+    "ruleTableConstraint, derivedRule — no other kind exists.",
+})
+export type ExtractedConstraints = Schema.Schema.Type<typeof ExtractedConstraints>
+
 export const FidelityCritique = Schema.Struct({
   accepted: Schema.Boolean,
   issues: Schema.Array(Schema.String),
@@ -444,6 +476,8 @@ export function toProviderSchema(schema: Schema.Schema<unknown>): Record<string,
 
 export const extractedCspJsonSchema = toProviderSchema(ExtractedCsp)
 export const fidelityCritiqueJsonSchema = toProviderSchema(FidelityCritique)
+export const extractedVocabularyJsonSchema = toProviderSchema(ExtractedVocabulary)
+export const extractedConstraintsJsonSchema = toProviderSchema(ExtractedConstraints)
 
 // ADR-004 §2.6 error taxonomy, mirroring src/solver/types.ts's tagged-error convention.
 // Independent of SolverError — this pipeline's errors are about extraction and critique, not

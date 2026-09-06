@@ -88,6 +88,7 @@ test("matrix dry-run: plans verified cells, skips unverified tiers, estimates sp
   assert.match(stdout, /x single-shot/)
   assert.match(stdout, /x compile-repair/)
   assert.match(stdout, /x direct-solve/)
+  assert.match(stdout, /x staged-single-shot/)
   assert.match(stdout, /PZL-0022 PZL-0028 PZL-0033 PZL-0038 PZL-0015 PZL-0018/)
   assert.match(stdout, /SKIP minimax\/minimax-m3:free \[free\]: unverified/)
   assert.match(stdout, /SKIP nvidia\/nemotron-3-ultra-550b-a55b:free \[free\]: unverified/)

@@ -489,11 +489,16 @@ const ADJACENCY_TEMPLATES: Record<string, (a: string, b: string) => string> = {
   "adjacent to": (a, b) => `abs(${a} - ${b}) = 1`,
 }
 
-// Relation names come from an LLM, which varies formatting (spaces vs. underscores/hyphens) for
-// the same phrasing (e.g. "immediately before" vs. "immediately_before") — normalize before
-// registry lookup rather than growing the registry with every formatting variant.
+// Relation names come from an LLM, which varies formatting (spaces vs. underscores/hyphens
+// vs. camelCase) for the same phrasing (e.g. "immediately before" vs. "immediately_before"
+// vs. "immediatelyBefore") — normalize before registry lookup rather than growing the
+// registry with every formatting variant. Found live: staged extraction emitted "leftOf".
 function normalizeRelationName(name: string): string {
-  return name.toLowerCase().replace(/[_-]+/g, " ").trim()
+  return name
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .trim()
 }
 
 function compileAdjacency(
