@@ -1,7 +1,7 @@
 ---
 id: SPIKE-007
 title: "effect/unstable/ai + @effect/ai-openrouter Viability"
-status: planned
+status: done
 rfcs: [RFC-003, RFC-004]
 created: 2026-09-07
 ---
@@ -77,17 +77,127 @@ abandoned` with a note on what was still open, rather than extending scope.
 
 ## 4. Notes
 
-_(dated log, kept during the work — filled in as the spike runs)_
+**2026-09-07.** Installed `effect@4.0.0-rc.112` and `@effect/ai-openrouter@4.0.0-rc.112` in
+the worktree (bumped from the pinned `4.0.0-rc.110`; both packages' `rc` dist-tags matched at
+install time). `pnpm-workspace.yaml` has no `packages:` glob, so the nested worktree's own
+`node_modules`/`package.json` never touched pnpm's workspace resolution.
+
+The package ships its own `AGENTS.md`/`CLAUDE.md` (and a bundled `ai-docs/src/` example tree)
+directly in `node_modules/@effect/ai-openrouter/` — this is the *only* usable v4 documentation
+found anywhere; effect.website's public docs still target v3, confirming CLAUDE.md's
+description of the ecosystem is accurate for published guides, just not for what's already
+shipped in the package itself. All three scripts below were written against that bundled
+documentation and the installed `.d.ts`/`.js` source, not the public website.
+
+**Sub-question 1 (structured output), first attempt — `LanguageModel.generateObject`.** Ran
+`scripts/structured-output.ts` against PZL-0002 and PZL-0004 on both verified models: 1/4
+succeeded (`openai/gpt-4o-mini` × PZL-0004). Failures:
+- `openai/gpt-4o-mini` × PZL-0002: `StructuredOutputError`, "Missing key at
+  `constraints[0][\"entity\"]`" — the model's own JSON omitted a required field. A real schema
+  violation, structurally identical to what `provider.ts`'s `SchemaViolation` already reports.
+- `anthropic/claude-sonnet-4.5` × both puzzles: `StructuredOutputError`, "Expected a valid JSON
+  string" — the model replied in prose/markdown instead of JSON at all.
+
+Read `OpenRouterLanguageModel.js` to find why: `generateObject` builds
+`response_format: {type: "json_schema", ...}` (`getResponseFormat` in the source), **not** a
+forced tool call. This is exactly the delivery mechanism SPIKE-005 (this project's own earlier
+spike) found unreliable — ADR-004 §2.1 chose a forced tool call specifically because
+`response_format` is "accepted and then silently ignored" by some providers/models. Claude
+Sonnet 4.5 via OpenRouter did exactly that here.
+
+**Sub-question 1, second attempt — forcing a tool call.** Wrote
+`scripts/structured-output-tool.ts`: defined the same schema as a `Tool.make(...)`, grouped in
+a `Toolkit`, called `LanguageModel.generateText({toolkit, toolChoice: {tool: "ExtractCsp"}})` —
+the tool-calling equivalent of `provider.ts`'s forced `tool_choice`. This crashed immediately,
+before any network call, with:
+```
+TypeError: Cannot read properties of undefined (reading 'encoding')
+  at .../effect/dist/SchemaAST.js:2710 (out)
+  at .../effect/dist/unstable/ai/Tool.js (getJsonSchemaFromSchemaWith / getJsonSchema)
+```
+Isolated with a 6-line repro (`scripts/repro-nullor.ts`): a tool parameter field typed
+`Schema.NullOr(Schema.String)` — the *exact* shape `src/extraction/types.ts`'s real
+`adjacency` constraint already uses for its `variable` field — crashes `Tool.getJsonSchema`
+outright. This is not a hypothetical edge case; it is a real, non-optional shape in the
+production schema this spike is standing in for. `generateObject`'s `response_format` path
+(first attempt, above) did not hit this crash on the same nullable shape — the two
+structured-output code paths use different, differently-robust schema-to-JSON-schema
+conversion internally.
+
+**Sub-question 2 (actual cost).** `scripts/cost-check.ts` made one plain `generateText` call
+(`openai/gpt-4o-mini`) and inspected the response. First attempt read the wrong field
+(`finishPart.providerMetadata` — guessed from memory) and got `undefined`; the real field,
+confirmed from `Response.d.ts`'s `BasePart` interface, is `.metadata`. Corrected, the finish
+part's `metadata.openrouter.usage` carries the complete raw OpenRouter usage object —
+`cost: 0.00006615`, plus `cost_details` (upstream inference/completion/prompt cost
+breakdown) — with **no request-level flag needed**; it's present by default on every call.
+Reading it is two property accesses:
+```ts
+const finishPart = response.content.find((p) => p.type === "finish")
+const costUsd = finishPart?.metadata?.openrouter?.usage?.cost
+```
+
+**Sub-question 3 (retry/escalation).** `scripts/retry-escalation.ts`: built an `ExecutionPlan`
+with a deliberately-broken cheap tier (`openai/does-not-exist-9000`, 2 attempts) falling back
+to a working tier (`openai/gpt-4o-mini`, 1 attempt), wrapped the whole
+`Effect.withExecutionPlan(...)` call in `Effect.retry({schedule: Schedule.exponential(...)})` —
+the same combinator `provider.ts`'s `PROVIDER_ERROR_RETRY_SCHEDULE` already uses. Ran clean on
+the first try: escalated past the broken tier and returned a real completion
+(`finishReason: "stop"`). `Effect.retry`/`Schedule` composed around `ExecutionPlan` with no
+friction, exactly as ordinary Effect code would predict.
 
 ## 5. Findings
 
-_(filled in once the spike concludes)_
+1. **Structured output is not reliable via the default `generateObject` path** (1/4 real
+   puzzle × model combinations succeeded) **because that path uses OpenRouter's
+   `response_format: json_schema` mode, not a forced tool call** — the same failure mode
+   SPIKE-005 already identified and ADR-004 §2.1 already designed around. This is a design
+   choice in `@effect/ai-openrouter`, not a flake.
+2. **The tool-calling alternative — the one that *would* match `provider.ts`'s forced-tool-call
+   design — crashes outright on `Schema.NullOr`**, a shape this project's real `ExtractedCsp`
+   schema already depends on (`adjacency.variable`). This is a confirmed bug/gap in
+   `effect/unstable/ai`'s `Tool.getJsonSchema` at `4.0.0-rc.112`, reproduced in 6 lines with no
+   OpenRouter dependency at all — it's in `effect` core's own `SchemaAST`, not the provider
+   package.
+3. **Real per-call dollar cost is trivially accessible** — `response.content.find(p => p.type
+   === "finish")?.metadata.openrouter.usage.cost` — present on every call with no request
+   configuration, and includes a cost breakdown ADR-010's design never asked for. This is a
+   clear win over ADR-010 §2.1's `onCost`-callback plumbing *if* the module were otherwise
+   adopted.
+4. **`ExecutionPlan` + ordinary `Effect.retry`/`Schedule` reproduces ADR-004's cheap-then-
+   frontier escalation cleanly**, with no friction between the module's own abstractions and
+   the retry pattern `provider.ts` already uses. This part of the premise holds.
+5. The only usable documentation for any of this is bundled inside the npm package itself
+   (`node_modules/@effect/ai-openrouter/AGENTS.md` + `ai-docs/`) — effect.website has none of
+   it yet. Anyone adopting this today is reading source and package-bundled docs, not a
+   published guide.
 
 ## 6. Conclusion
 
-_(filled in once the spike concludes — including explicit language for whichever of these
-turns out true, ready to paste into ADR-010 or a new superseding ADR: (a) adopt
-`effect/unstable/ai` and rewrite ADR-010 around `FinishPartMetadata.usage.cost`; (b) adopt it
-for structured output/tool calling but keep ADR-010's cost design since the metadata path
-didn't pan out; (c) it doesn't hold up yet — implement ADR-010 as drafted and revisit once
-effect 4.0 and the AI packages are closer to stable.)_
+**Adopt for cost accounting (ADR-010), not yet for structured output.** Findings 1 and 2 are
+decisive and don't cancel out: the module's structured-output story is not viable as-is for
+this project's actual schema (either it silently degrades to unreliable `response_format`
+prompting, or the tool-forcing alternative that would fix that crashes on a shape the real
+schema requires) — so `src/extraction/provider.ts`'s hand-rolled forced-tool-call
+`requestStructuredCompletion` should **not** be replaced right now. But finding 3 stands
+entirely on its own: reading `finishPart.metadata.openrouter.usage.cost` from the *existing*
+`@openrouter/sdk` response (not `@effect/ai-openrouter` — `@openrouter/sdk`'s own
+`ChatResult.usage.cost`, which this spike confirms is the same field, just reached through a
+different client) requires no new dependency and no `effect` version bump at all. **This
+supersedes ADR-010 as drafted**: rewrite it around reading `usage.cost` directly off the
+existing `@openrouter/sdk` response in `src/extraction/provider.ts`'s
+`requestStructuredCompletion` (and `direct-solve.ts`'s `requestProseCompletion`), dropping the
+`onCost`-callback design in §2.1 entirely — the SDK already returns this on every call; no
+side channel is needed.
+
+Finding 4 (`ExecutionPlan`) is worth remembering but not worth adopting alone: this project's
+existing tier-escalation code in `extract.ts`'s `runTier`/`runTierSafely` already does the
+same job, and adopting `effect/unstable/ai` for retry/escalation only, while keeping
+`provider.ts`'s hand-rolled structured-output path, would mean depending on an `unstable`
+namespace for a benefit this project doesn't currently lack.
+
+**Revisit finding 2 (structured output) once**: (a) `Tool.getJsonSchema`'s `NullOr` crash is
+fixed upstream (worth filing against `Effect-TS/effect`, since the 6-line repro has no
+OpenRouter dependency), and (b) `effect/unstable/ai` reaches a stable (non-`rc`, non-`unstable`
+namespace) release — effect.website's own post targets Q3/Q4 2026 for that. Until both hold,
+this project's forced-tool-call extraction pipeline (ADR-004 §2.1) stays hand-rolled.
