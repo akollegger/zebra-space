@@ -65,6 +65,7 @@ import {
 import type { ExtractedCsp } from "../src/extraction/types.ts"
 import { loadEnvFileIfPresent } from "../src/cli/load-env.ts"
 import type { Assignment, SolveResult } from "../src/solver/types.ts"
+import { DEFAULT_JUDGE_MODEL } from "../src/eval/direct-solve.ts"
 
 const REPO_ROOT = fileURLToPath(new URL("..", import.meta.url))
 const PUZZLES_DIR = new URL("../catalog/puzzles/", import.meta.url)
@@ -202,6 +203,7 @@ interface ModelRegistryEntry {
   readonly tier: string
   readonly cost_per_call_usd: number
   readonly verified: boolean
+  readonly notes?: string
 }
 
 async function loadModelRegistry(): Promise<readonly ModelRegistryEntry[]> {
@@ -266,6 +268,7 @@ type Outcome =
   | "MISMATCH"
   | "OPTIMUM_ATTAINED"
   | "FEASIBLE_ONLY"
+  | "INFEASIBLE"
   | "READING_MATCHED"
   | "NO_MATCHING_READING"
   | "PREMISE_FREE_MATCH"
@@ -592,11 +595,15 @@ export function gradeJudged(
     subjective: "PREMISE_SILENTLY_PROMOTED",
     "non-problem": "UNDECLINED",
   }
-  // A COP 'incorrect' (wrong optimum, no solution found) is FEASIBLE_ONLY-shaped but still a
-  // failure for pass-rate purposes — except genuine FEASIBLE_ONLY never passes through here,
-  // so map it to MISMATCH to keep it in the denominator as a failure.
+  // A COP 'incorrect' (wrong optimum, no solution found) is FEASIBLE_ONLY-shaped, and a
+  // non-problem 'incorrect' is UNDECLINED-shaped — both are still failures for pass-rate
+  // purposes here, unlike the deterministic pipeline's genuine FEASIBLE_ONLY/UNDECLINED
+  // (no optimum in capped output; no decline mechanism exists at all). This harness's judge
+  // IS a decline mechanism, so an incorrect verdict means it was used and got it wrong — a
+  // real, attributable failure (ADR-007 §2.1) — so map both to MISMATCH to keep them in the
+  // denominator as failures.
   if (verdict.verdict === "correct") return { verdict: pass[outcomeClass], detail: reason }
-  if (outcomeClass === "cop") return { verdict: "MISMATCH", detail: reason }
+  if (outcomeClass === "cop" || outcomeClass === "non-problem") return { verdict: "MISMATCH", detail: reason }
   return { verdict: failOutcome[outcomeClass], detail: reason }
 }
 
@@ -625,27 +632,31 @@ interface BudgetState {
   spendUsd: number
   calls: number
   readonly budgetUsd: number | undefined
-  readonly costPerCallUsd: number
+  // Worst-case dollars for one puzzle's full set of calls. Not always
+  // `solverCostPerCall * maxCallsPerPuzzle`: a harness whose calls have different per-role
+  // costs (e.g. direct-solve's judge, ADR-008 §2.4) sums each call's own rate instead — see
+  // where this is constructed in main().
+  readonly costPerPuzzleUsd: number
   readonly maxCallsPerPuzzle: number
 }
 
-function createBudget(budgetUsd: number | undefined, costPerCallUsd: number, maxCallsPerPuzzle: number): BudgetState {
-  return { spendUsd: 0, calls: 0, budgetUsd, costPerCallUsd, maxCallsPerPuzzle }
+function createBudget(budgetUsd: number | undefined, costPerPuzzleUsd: number, maxCallsPerPuzzle: number): BudgetState {
+  return { spendUsd: 0, calls: 0, budgetUsd, costPerPuzzleUsd, maxCallsPerPuzzle }
 }
 
-/** Pre-run estimate: registry cost x harness worst-case calls x puzzles x repeats. Aborts when over budget. */
+/** Pre-run estimate: registry cost x puzzles x repeats. Aborts when over budget. */
 function checkBudgetEstimate(budget: BudgetState, puzzleCount: number, runs: number): string | null {
   if (budget.budgetUsd === undefined) return null
-  const estimate = budget.costPerCallUsd * budget.maxCallsPerPuzzle * puzzleCount * runs
+  const estimate = budget.costPerPuzzleUsd * puzzleCount * runs
   return estimate > budget.budgetUsd
-    ? `estimated spend $${estimate.toFixed(2)} exceeds --budget-usd $${budget.budgetUsd.toFixed(2)} (${puzzleCount} puzzles x ${runs} runs x ${budget.maxCallsPerPuzzle} worst-case calls x $${budget.costPerCallUsd}/call) — refusing to start`
+    ? `estimated spend $${estimate.toFixed(2)} exceeds --budget-usd $${budget.budgetUsd.toFixed(2)} (${puzzleCount} puzzles x ${runs} runs x $${budget.costPerPuzzleUsd.toFixed(4)}/puzzle worst-case) — refusing to start`
     : null
 }
 
 /** Per-puzzle spend accumulator. Returns false when the budget is exceeded (caller stops). */
 function chargePuzzle(budget: BudgetState): boolean {
   budget.calls += budget.maxCallsPerPuzzle
-  budget.spendUsd += budget.costPerCallUsd * budget.maxCallsPerPuzzle
+  budget.spendUsd += budget.costPerPuzzleUsd
   return budget.budgetUsd === undefined || budget.spendUsd <= budget.budgetUsd
 }
 
@@ -679,6 +690,7 @@ function summarize(records: readonly PuzzleRunRecord[]): Summary {
     MISMATCH: 0,
     OPTIMUM_ATTAINED: 0,
     FEASIBLE_ONLY: 0,
+    INFEASIBLE: 0,
     READING_MATCHED: 0,
     NO_MATCHING_READING: 0,
     PREMISE_FREE_MATCH: 0,
@@ -873,7 +885,26 @@ async function main(): Promise<void> {
     args.baselinePath !== undefined ? await loadBaselineCaps(args.baselinePath, args.timeoutFactor) : undefined
   const resolvedModel = modelOpts.model ?? "openai/gpt-4o-mini"
   const registryEntry = registry.find((m) => m.id === resolvedModel)
-  const budget = createBudget(args.budgetUsd, registryEntry?.cost_per_call_usd ?? 0.002, harness.maxCallsPerPuzzle)
+  const solverCostPerCall = registryEntry?.cost_per_call_usd ?? 0.002
+
+  // ADR-008 §2.4: the judge is a call like any other — it must be a verified registry entry
+  // before a run uses it, and its cost counts toward the budget alongside the solver's.
+  let costPerPuzzleUsd = solverCostPerCall * harness.maxCallsPerPuzzle
+  if (harness.id === "direct-solve") {
+    const judgeModel = modelOpts.judgeModel ?? DEFAULT_JUDGE_MODEL
+    const judgeEntry = registry.find((m) => m.id === judgeModel)
+    if (judgeEntry === undefined || !judgeEntry.verified) {
+      console.error(
+        `Judge model "${judgeModel}" is not a verified entry in eval/models.json — refusing to run ` +
+          `direct-solve with an unverified judge (ADR-008 §2.4). Verify it in the registry first, or ` +
+          `pass --judge-model with one that already is.` +
+          (judgeEntry?.notes !== undefined ? ` (${judgeEntry.notes})` : ""),
+      )
+      process.exit(1)
+    }
+    costPerPuzzleUsd = solverCostPerCall + judgeEntry.cost_per_call_usd
+  }
+  const budget = createBudget(args.budgetUsd, costPerPuzzleUsd, harness.maxCallsPerPuzzle)
 
   const estimateRefusal = checkBudgetEstimate(budget, puzzles.length, args.runs)
   if (estimateRefusal !== null) {

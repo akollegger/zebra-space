@@ -98,6 +98,12 @@ test("gradeDeterminate: dispatches PZL-0006, subset, parallel arrays, flat recor
   assert.equal(flat.verdict, "MATCH")
 })
 
+test("gradeDeterminate: a non-scalar subset item grades MISMATCH, never throws", () => {
+  const result = gradeDeterminate("PZL-0014", { items: [["Rice"]] }, { item: ["Rice"] })
+  assert.equal(result.verdict, "MISMATCH")
+  assert.match(result.detail, /non-scalar/)
+})
+
 test("gradeFlatRecord: single-key wrapped values ({e: value}) unwrap before comparing", () => {
   const wrapped = gradeFlatRecord({ culprit: "Professor Plum" }, { culprit: { e: "Professor_Plum" } })
   assert.equal(wrapped.verdict, "MATCH")
@@ -114,7 +120,7 @@ test("gradeFlatRecord: paraphrase resolves through the alias table and is counte
   assert.equal(result.aliasesApplied, 1)
 })
 
-test("gradeCop: optimum attained in any enumerated solution; otherwise FEASIBLE_ONLY", () => {
+test("gradeCop: optimum attained in any enumerated solution; otherwise FEASIBLE_ONLY; unsatisfiable is INFEASIBLE", () => {
   for (const [puzzleId, optimum] of Object.entries(COP_OPTIMA)) {
     const attained = gradeCop(puzzleId, { _tag: "UniquelySolvable", assignment: { [optimum.optimumField]: optimum.optimumValue } })
     assert.equal(attained.verdict, "OPTIMUM_ATTAINED", puzzleId)
@@ -125,7 +131,13 @@ test("gradeCop: optimum attained in any enumerated solution; otherwise FEASIBLE_
       assignments: [{ [optimum.optimumField]: 0 }, { [optimum.optimumField]: optimum.optimumValue }],
     })
     assert.equal(multi.verdict, "OPTIMUM_ATTAINED", puzzleId)
+    // An infeasible model is a wrong extraction, never a variant of feasible-but-suboptimal —
+    // it must be a counted failure (ADR-007 §2.1), distinct from the excluded FEASIBLE_ONLY.
+    const infeasible = gradeCop(puzzleId, { _tag: "Unsatisfiable" })
+    assert.equal(infeasible.verdict, "INFEASIBLE", puzzleId)
   }
+  // A puzzle with no recorded optimum stays FEASIBLE_ONLY regardless of solve result — that
+  // branch is about missing grading data, not about the solve outcome.
   assert.equal(gradeCop("PZL-9999", { _tag: "Unsatisfiable" }).verdict, "FEASIBLE_ONLY")
 })
 

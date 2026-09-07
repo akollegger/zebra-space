@@ -9,7 +9,7 @@ import type { Assignment, SolveResult } from "../solver/types.ts"
 export type OutcomeClass = "determinate" | "cop" | "ambiguous" | "subjective" | "non-problem"
 
 export type DeterminateVerdict = "MATCH" | "MISMATCH"
-export type CopVerdict = "OPTIMUM_ATTAINED" | "FEASIBLE_ONLY"
+export type CopVerdict = "OPTIMUM_ATTAINED" | "FEASIBLE_ONLY" | "INFEASIBLE"
 export type AmbiguousVerdict = "READING_MATCHED" | "NO_MATCHING_READING"
 export type SubjectiveVerdict = "PREMISE_FREE_MATCH" | "PREMISE_SILENTLY_PROMOTED"
 export type NonProblemVerdict = "DECLINED_CORRECTLY" | "UNDECLINED"
@@ -294,11 +294,14 @@ export function gradeDeterminate(
 
   const keys = Object.keys(expectedRecord)
   if (keys.length === 1 && keys[0] === "items" && Array.isArray(expectedRecord.items)) {
-    const items = (expectedRecord.items as unknown[]).map((i) => {
-      const token = tokenOf(i)
-      if (token === undefined) throw new Error("subset answer contains a non-scalar item")
-      return token
-    })
+    const items: string[] = []
+    for (const item of expectedRecord.items as unknown[]) {
+      const token = tokenOf(item)
+      if (token === undefined) {
+        return { verdict: "MISMATCH", detail: "subset answer contains a non-scalar item", aliasesApplied: 0 }
+      }
+      items.push(token)
+    }
     const result = gradeSubset(items, assignment, aliases)
     return { ...result, aliasesApplied: 0 }
   }
@@ -398,9 +401,11 @@ function solvedNumber(assignment: Assignment, field: string): number | undefined
 }
 
 /**
- * COP grading: attains the recorded optimum value in any enumerated solution →
- * OPTIMUM_ATTAINED; solves without it in capped output → FEASIBLE_ONLY (excluded from the
- * pass rate, never a silent pass or fail). Arrangement is never compared.
+ * COP grading (ADR-007 §2.1): attains the recorded optimum value in any enumerated solution →
+ * OPTIMUM_ATTAINED; solves successfully without it in capped output → FEASIBLE_ONLY (excluded
+ * from the pass rate, never a silent pass or fail); the solve result is Unsatisfiable →
+ * INFEASIBLE (a counted failure — an infeasible model is a wrong extraction, not a variant of
+ * feasible-but-suboptimal). Arrangement is never compared.
  */
 export function gradeCop(
   puzzleId: string,
@@ -408,12 +413,11 @@ export function gradeCop(
 ): { readonly verdict: CopVerdict; readonly detail: string } {
   const optimum = COP_OPTIMA[puzzleId]
   if (optimum === undefined) return { verdict: "FEASIBLE_ONLY", detail: `no recorded optimum for ${puzzleId}` }
+  if (solveResult._tag === "Unsatisfiable") {
+    return { verdict: "INFEASIBLE", detail: "no solution enumerated" }
+  }
   const assignments: readonly Assignment[] =
-    solveResult._tag === "UniquelySolvable"
-      ? [solveResult.assignment]
-      : solveResult._tag === "MultiplySatisfiable"
-        ? solveResult.assignments
-        : []
+    solveResult._tag === "UniquelySolvable" ? [solveResult.assignment] : solveResult.assignments
   for (const assignment of assignments) {
     if (solvedNumber(assignment, optimum.optimumField) === optimum.optimumValue) {
       return { verdict: "OPTIMUM_ATTAINED", detail: `${optimum.optimumField}=${optimum.optimumValue} attained` }
@@ -421,10 +425,7 @@ export function gradeCop(
   }
   return {
     verdict: "FEASIBLE_ONLY",
-    detail:
-      solveResult._tag === "Unsatisfiable"
-        ? "no solution enumerated"
-        : `optimum ${optimum.optimumField}=${optimum.optimumValue} not in capped output`,
+    detail: `optimum ${optimum.optimumField}=${optimum.optimumValue} not in capped output`,
   }
 }
 

@@ -187,3 +187,17 @@ Model: `openai/gpt-4o-mini (default)` (frontier: `anthropic/claude-sonnet-4.5 (d
 | PZL-0014 | MISMATCH |
 
 Full detail: `eval/results/2026-08-20T21-16-29-386Z.json`
+
+---
+
+## 2026-09-06T20:40:53Z — commit `f8bfef6`
+
+Model: `qwen/qwen3.8-27b` (frontier: `anthropic/claude-sonnet-4.5 (default)`) · harness `staged-single-shot` (prompt v1) · 3 puzzle-runs · pass rate **0/3 (0%)** · spend ~$0.00
+
+| Puzzle | Outcome |
+|---|---|
+| PZL-0003 | MISMATCH (missing tokens: Paper) |
+| PZL-0004 | COMPILE_FAILED (Variable "culprit" is entity-indexed but no entity was given.) |
+| PZL-0028 | EXTRACT_FAILED (ProviderError) |
+
+Full detail: `eval/results/2026-09-06T20-40-53-716Z.json`

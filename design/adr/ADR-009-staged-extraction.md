@@ -2,7 +2,7 @@
 id: ADR-009
 title: Staged Extraction (Vocabulary then Constraints)
 status: proposed
-rfcs: [RFC-004]
+rfcs: [RFC-004, RFC-003]
 created: 2026-09-06
 specs: []
 ---
@@ -22,6 +22,11 @@ PZL-0028), and critic-loop waste (each revision re-emits the already-correct voc
 alongside the broken constraints). Meanwhile a free-form session extracted all six
 attribute groups of a novel puzzle flawlessly in one pass: flat string lists are cheap
 and reliable; nested constraint JSON is where time and fidelity go.
+[RFC-003](../rfc/RFC-003-natural-language-csp-extraction.md) is the extraction pipeline this
+decision changes; nothing here touches well-posedness, problem classification, or any
+other concern [RFC-004](../rfc/RFC-004-computational-decision-making.md) governs — this ADR
+carries RFC-004 as a parent only because it was authored alongside ADR-007/ADR-008 on the
+same eval-hardening workstream, not because its decision serves an RFC-004 goal.
 
 ## 2. Decision
 
@@ -91,5 +96,8 @@ decides — the matrix compares them.
 
 ## 5. Related
 
-- RFCs: RFC-004
+- RFCs: RFC-004, RFC-003
 - Specs: _(populated automatically by the speckit ADR-link hook once `/speckit-specify` references this ADR)_
+- Implementation: `.kilo/plans/1788691671220-eval-framework-improvements.md` — this branch
+  was built against a kilocode-tracked plan rather than a speckit spec; see CLAUDE.md's
+  Design process section for the recorded exception.

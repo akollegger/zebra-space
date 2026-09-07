@@ -55,6 +55,25 @@ test("resolveProviderRoute: empty local base URL falls through to OpenRouter def
   }
 })
 
+test("resolveProviderRoute: forceOpenRouter ignores ZEBRA_LOCAL_BASE_URL (ADR-008 §2.4 judge routing)", () => {
+  process.env.ZEBRA_LOCAL_BASE_URL = "http://localhost:1234/v1"
+  process.env.OPENROUTER_API_KEY = "test-key"
+  try {
+    // Without the flag, local mode wins — this is the exact silent-rerouting risk the flag exists to close.
+    const local = resolveProviderRoute("JudgeVerdict")
+    assert.equal(local.serverURL, "http://localhost:1234/v1")
+    assert.equal(local.apiKey, "local")
+
+    const forced = resolveProviderRoute("JudgeVerdict", { forceOpenRouter: true })
+    assert.equal(forced.serverURL, undefined)
+    assert.equal(forced.apiKey, "test-key")
+    assert.deepEqual(forced.toolChoice, { type: "function", function: { name: "JudgeVerdict" } })
+  } finally {
+    delete process.env.ZEBRA_LOCAL_BASE_URL
+    delete process.env.OPENROUTER_API_KEY
+  }
+})
+
 test("local route: completion succeeds with no API key and sends tool_choice required", async () => {
   const Payload = Schema.Struct({ colors: Schema.Array(Schema.String) })
   await withLocalStub(

@@ -21,6 +21,8 @@ export interface StructuredCompletionRequest<A> {
   readonly jsonSchema: Record<string, unknown>
   readonly schema: Schema.Codec<A>
   readonly timeoutMs?: number
+  /** ADR-008 §2.4: route this call to OpenRouter even when ZEBRA_LOCAL_BASE_URL is set. */
+  readonly forceOpenRouter?: boolean | undefined
 }
 
 /**
@@ -79,8 +81,8 @@ export interface ProviderRoute {
   readonly missingKeyMessage: string
 }
 
-export function resolveProviderRoute(schemaName: string): ProviderRoute {
-  const base = resolveBaseRoute()
+export function resolveProviderRoute(schemaName: string, opts?: { readonly forceOpenRouter?: boolean | undefined }): ProviderRoute {
+  const base = resolveBaseRoute(opts)
   if (base.serverURL !== undefined && base.serverURL === process.env.ZEBRA_LOCAL_BASE_URL) {
     return {
       ...base,
@@ -100,10 +102,18 @@ export function resolveProviderRoute(schemaName: string): ProviderRoute {
  * callers that need plain prose (the direct-solve baseline) — both must honor
  * ZEBRA_LOCAL_BASE_URL and the test-only ZEBRA_OPENROUTER_BASE_URL_OVERRIDE identically,
  * or tests can't route prose calls at the stub.
+ *
+ * `forceOpenRouter` (ADR-008 §2.4) skips `ZEBRA_LOCAL_BASE_URL` even when it's set — for a
+ * call that must never be silently answered by the local model under test, e.g. the
+ * direct-solve baseline's judge. The test-only `ZEBRA_OPENROUTER_BASE_URL_OVERRIDE` still
+ * applies either way, since it exists to route OpenRouter-shaped calls at a stub, not to
+ * express "use the local model."
  */
-export function resolveBaseRoute(): { readonly serverURL: string | undefined; readonly apiKey: string | undefined } {
+export function resolveBaseRoute(opts?: {
+  readonly forceOpenRouter?: boolean | undefined
+}): { readonly serverURL: string | undefined; readonly apiKey: string | undefined } {
   const localBaseUrl = process.env.ZEBRA_LOCAL_BASE_URL
-  if (localBaseUrl !== undefined && localBaseUrl !== "") {
+  if (!opts?.forceOpenRouter && localBaseUrl !== undefined && localBaseUrl !== "") {
     return { serverURL: localBaseUrl, apiKey: "local" }
   }
   return { serverURL: process.env.ZEBRA_OPENROUTER_BASE_URL_OVERRIDE, apiKey: process.env.OPENROUTER_API_KEY }
@@ -136,7 +146,7 @@ export function requestStructuredCompletion<A>(
   request: StructuredCompletionRequest<A>,
 ): Effect.Effect<A, ProviderError | SchemaRejected | SchemaViolation> {
   const timeoutMs = request.timeoutMs ?? DEFAULT_TIMEOUT_MS
-  const route = resolveProviderRoute(request.schemaName)
+  const route = resolveProviderRoute(request.schemaName, { forceOpenRouter: request.forceOpenRouter })
 
   return Effect.tryPromise({
     try: () =>

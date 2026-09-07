@@ -21,10 +21,12 @@
  *   node scripts/eval-matrix.ts --harness single-shot  # only cells using this harness id
  */
 import { execFileSync } from "node:child_process"
-import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises"
+import { appendFile, mkdir, readdir, readFile, writeFile } from "node:fs/promises"
 import { existsSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { loadEnvFileIfPresent } from "../src/cli/load-env.ts"
+import { DEFAULT_JUDGE_MODEL } from "../src/eval/direct-solve.ts"
+import { listHarnesses } from "../src/eval/harness.ts"
 
 const REPO_ROOT = fileURLToPath(new URL("..", import.meta.url))
 const MODELS_PATH = new URL("../eval/models.json", import.meta.url)
@@ -34,17 +36,6 @@ const RESULTS_DIR = new URL("../eval/results/", import.meta.url)
 /** ADR-007 §2.3: stratified 8-puzzle subset spanning all five outcome classes. */
 const STRATIFIED_SUBSET = ["PZL-0002", "PZL-0004", "PZL-0022", "PZL-0028", "PZL-0033", "PZL-0038", "PZL-0015", "PZL-0018"]
 
-/** Harness ids in matrix order. Read live from the registry so new harnesses just appear. */
-const HARNESS_IDS = ["full-critic", "single-shot", "compile-repair", "direct-solve", "staged-single-shot"] as const
-
-/** Worst-case calls per puzzle per harness, for the pre-run estimate. */
-const HARNESS_MAX_CALLS: Record<string, number> = {
-  "full-critic": 12,
-  "single-shot": 1,
-  "compile-repair": 2,
-  "direct-solve": 2,
-  "staged-single-shot": 2,
-}
 
 interface RegistryModel {
   readonly id: string
@@ -55,12 +46,24 @@ interface RegistryModel {
   readonly notes?: string | undefined
 }
 
-interface CellPlan {
+export interface CellPlan {
   readonly model: RegistryModel
   readonly harnessId: string
   readonly puzzles: readonly string[]
   readonly runs: number
   readonly estimatedUsd: number
+}
+
+interface BlockedCell {
+  readonly model: RegistryModel
+  readonly harnessId: string
+  readonly reason: string
+}
+
+/** The slice of a cell's raw JSON (written by scripts/eval-extraction.ts) the verdict grid needs. */
+export interface RawCellResult {
+  readonly puzzles: readonly { readonly id: string; readonly outcome: string }[]
+  readonly summary: { readonly total: number; readonly excluded: number; readonly passRate: number }
 }
 
 interface MatrixArgs {
@@ -105,27 +108,53 @@ function isBaselineCell(model: RegistryModel, harnessId: string): boolean {
   return (model.role === "default" || model.id === "openai/gpt-4o-mini") && harnessId === "full-critic"
 }
 
-/** Verified models only; unverified tiers are reported as skipped-with-reason, never run. */
-function planCells(models: readonly RegistryModel[], args: MatrixArgs): { readonly cells: readonly CellPlan[]; readonly skipped: readonly RegistryModel[] } {
+/**
+ * Verified models only; unverified tiers are reported as skipped-with-reason, never run.
+ * A direct-solve cell additionally needs its judge model verified (ADR-008 §2.4) — this
+ * runner never passes --judge-model, so the effective judge is always
+ * ZEBRA_JUDGE_MODEL || DEFAULT_JUDGE_MODEL, checked once here rather than letting every
+ * direct-solve cell fail loudly (and abort the whole matrix) inside its own subprocess.
+ */
+function planCells(
+  models: readonly RegistryModel[],
+  args: MatrixArgs,
+): { readonly cells: readonly CellPlan[]; readonly skipped: readonly RegistryModel[]; readonly blocked: readonly BlockedCell[] } {
   const verified = models.filter((m) => m.verified)
   const skipped = models.filter((m) => !m.verified)
-  const harnessIds = args.harnessId !== undefined ? [args.harnessId] : [...HARNESS_IDS]
+  const harnesses = listHarnesses()
+  const harnessIds = args.harnessId !== undefined ? [args.harnessId] : harnesses.map((h) => h.id)
+  const judgeModel = process.env.ZEBRA_JUDGE_MODEL || DEFAULT_JUDGE_MODEL
+  const judgeEntry = models.find((m) => m.id === judgeModel)
+  const judgeVerified = judgeEntry?.verified === true
   const cells: CellPlan[] = []
+  const blocked: BlockedCell[] = []
   for (const model of verified) {
     for (const harnessId of harnessIds) {
+      if (harnessId === "direct-solve" && !judgeVerified) {
+        blocked.push({
+          model,
+          harnessId,
+          reason: `judge model "${judgeModel}" is not a verified entry in eval/models.json`,
+        })
+        continue
+      }
       const baseline = !args.full && isBaselineCell(model, harnessId)
       const puzzles: readonly string[] = args.full || baseline ? [] : STRATIFIED_SUBSET
-      const maxCalls = HARNESS_MAX_CALLS[harnessId] ?? 12
+      // Falls back to the full-critic worst case only if `--harness` names an id the
+      // registry doesn't have — unreachable for the default (registry-derived) id list.
+      const maxCalls = harnesses.find((h) => h.id === harnessId)?.maxCallsPerPuzzle ?? 12
+      const judgeCostPerCall = harnessId === "direct-solve" ? judgeEntry?.cost_per_call_usd ?? 0 : 0
+      const costPerPuzzle = harnessId === "direct-solve" ? model.cost_per_call_usd + judgeCostPerCall : model.cost_per_call_usd * maxCalls
       cells.push({
         model,
         harnessId,
         puzzles,
         runs: args.runs,
-        estimatedUsd: model.cost_per_call_usd * maxCalls * (puzzles.length === 0 ? 39 : puzzles.length) * args.runs,
+        estimatedUsd: costPerPuzzle * (puzzles.length === 0 ? 39 : puzzles.length) * args.runs,
       })
     }
   }
-  return { cells, skipped }
+  return { cells, skipped, blocked }
 }
 
 function cellArgs(cell: CellPlan, budgetUsd: number | undefined): string[] {
@@ -135,7 +164,12 @@ function cellArgs(cell: CellPlan, budgetUsd: number | undefined): string[] {
   return args
 }
 
-function printPlan(cells: readonly CellPlan[], skipped: readonly RegistryModel[], budgetUsd: number | undefined): void {
+function printPlan(
+  cells: readonly CellPlan[],
+  skipped: readonly RegistryModel[],
+  blocked: readonly BlockedCell[],
+  budgetUsd: number | undefined,
+): void {
   console.log("\n=== Matrix plan ===\n")
   for (const cell of cells) {
     const scope = cell.puzzles.length === 0 ? "all 39" : `${cell.puzzles.length} puzzles (${cell.puzzles.join(" ")})`
@@ -144,8 +178,67 @@ function printPlan(cells: readonly CellPlan[], skipped: readonly RegistryModel[]
   for (const model of skipped) {
     console.log(`  SKIP ${model.id} [${model.tier}]: unverified — ${model.notes ?? "no notes"}`)
   }
+  for (const cell of blocked) {
+    console.log(`  SKIP ${cell.model.id} [${cell.model.tier}] x ${cell.harnessId}: ${cell.reason}`)
+  }
   const total = cells.reduce((sum, c) => sum + c.estimatedUsd, 0)
   console.log(`\nEstimated total: ~$${total.toFixed(2)}${budgetUsd !== undefined ? ` (budget $${budgetUsd.toFixed(2)})` : ""}`)
+}
+
+/** Filenames currently in eval/results/, so a cell's own raw JSON can be spotted by what's new. */
+async function listResultsSnapshot(): Promise<ReadonlySet<string>> {
+  try {
+    return new Set(await readdir(RESULTS_DIR))
+  } catch {
+    return new Set()
+  }
+}
+
+/**
+ * Finds the raw JSON a cell just wrote (scripts/eval-extraction.ts always writes exactly one
+ * per invocation, named by its run id) by diffing eval/results/ against a snapshot taken right
+ * before the cell ran, rather than parsing the cell's stdout — so the subprocess can keep
+ * `stdio: "inherit"` and stream live instead of being buffered and re-printed after the fact.
+ */
+async function readNewCellResult(before: ReadonlySet<string>): Promise<RawCellResult | undefined> {
+  let files: readonly string[]
+  try {
+    files = await readdir(RESULTS_DIR)
+  } catch {
+    return undefined
+  }
+  const added = files.filter((f) => !before.has(f) && f.endsWith(".json")).sort()
+  // Exactly one file should be new; a run id is an ISO timestamp, so lexicographic order is
+  // also chronological if more than one somehow appeared.
+  const newest = added.at(-1)
+  if (newest === undefined) return undefined
+  return JSON.parse(await readFile(new URL(newest, RESULTS_DIR), "utf8")) as RawCellResult
+}
+
+/** Per-puzzle × cell verdict grid plus pass rates (ADR-007 §2.3), for cells that actually ran. */
+export function renderVerdictGrid(cells: readonly CellPlan[], cellResults: ReadonlyMap<CellPlan, RawCellResult>): string {
+  const completed = cells.flatMap((cell) => {
+    const result = cellResults.get(cell)
+    return result === undefined ? [] : [{ cell, result }]
+  })
+  if (completed.length === 0) {
+    return "_No cells completed with a raw result to compare (dry run, every cell failed, or every cell was blocked)._"
+  }
+  const puzzleIds = Array.from(new Set(completed.flatMap(({ result }) => result.puzzles.map((p) => p.id)))).sort()
+  const columnLabel = ({ cell }: { readonly cell: CellPlan }) => `${cell.model.id} x ${cell.harnessId}`
+  const header = `| Puzzle | ${completed.map(columnLabel).join(" | ")} |`
+  const divider = `|---|${completed.map(() => "---").join("|")}|`
+  const rows = puzzleIds.map((id) => {
+    const cols = completed.map(({ result }) => result.puzzles.find((p) => p.id === id)?.outcome ?? "—").join(" | ")
+    return `| ${id} | ${cols} |`
+  })
+  const passRates = completed
+    .map(
+      ({ cell, result }) =>
+        `- ${columnLabel({ cell })}: ${(result.summary.passRate * 100).toFixed(0)}% (excluded ${result.summary.excluded}/${result.summary.total})`,
+    )
+    .join("\n")
+  return `${passRates}\n\n${header}\n${divider}\n${rows.join("\n")}`
 }
 
 const MATRIX_MD_HEADER = `# Eval Matrix Results
@@ -161,15 +254,27 @@ async function appendMatrixMarkdown(data: {
   gitCommit: string
   cells: readonly CellPlan[]
   skipped: readonly RegistryModel[]
+  blocked: readonly BlockedCell[]
+  cellFailures: readonly { readonly cell: CellPlan; readonly error: string }[]
+  cellResults: ReadonlyMap<CellPlan, RawCellResult>
   runs: number
 }): Promise<void> {
   if (!existsSync(MATRIX_MD_PATH)) {
     await writeFile(MATRIX_MD_PATH, MATRIX_MD_HEADER)
   }
+  const failedLabels = new Set(data.cellFailures.map(({ cell }) => `${cell.model.id} ${cell.harnessId}`))
   const rows = data.cells
-    .map((c) => `| ${c.model.id} [${c.model.tier}] | ${c.harnessId} | ${c.puzzles.length === 0 ? "all 39" : c.puzzles.join(" ")} | ${c.runs} | ~$${c.estimatedUsd.toFixed(2)} |`)
+    .map((c) => {
+      const failed = failedLabels.has(`${c.model.id} ${c.harnessId}`)
+      const scope = c.puzzles.length === 0 ? "all 39" : c.puzzles.join(" ")
+      const estimate = failed ? `~$${c.estimatedUsd.toFixed(2)} (FAILED)` : `~$${c.estimatedUsd.toFixed(2)}`
+      return `| ${c.model.id} [${c.model.tier}] | ${c.harnessId} | ${scope} | ${c.runs} | ${estimate} |`
+    })
     .join("\n")
-  const skippedRows = data.skipped.map((m) => `| ${m.id} [${m.tier}] | unverified — ${m.notes ?? "no notes"} |`).join("\n")
+  const skippedRows = [
+    ...data.skipped.map((m) => `| ${m.id} [${m.tier}] | unverified — ${m.notes ?? "no notes"} |`),
+    ...data.blocked.map((c) => `| ${c.model.id} [${c.model.tier}] x ${c.harnessId} | ${c.reason} |`),
+  ].join("\n")
   const section = `
 ---
 
@@ -184,6 +289,10 @@ Skipped tiers:
 | Model | Reason |
 |---|---|
 ${skippedRows || "| — | — |"}
+
+Results:
+
+${renderVerdictGrid(data.cells, data.cellResults)}
 `
   await appendFile(MATRIX_MD_PATH, section)
   await mkdir(RESULTS_DIR, { recursive: true })
@@ -201,13 +310,17 @@ async function main(): Promise<void> {
   loadEnvFileIfPresent(new URL("../.env", import.meta.url).pathname)
   const args = parseArgs(process.argv.slice(2))
   const models = await loadRegistry()
-  const { cells, skipped } = planCells(models, args)
+  const { cells, skipped, blocked } = planCells(models, args)
   if (cells.length === 0) {
-    console.error("No verified models in eval/models.json — nothing to run.")
+    if (blocked.length > 0) {
+      console.error(`Every matching cell is blocked: ${blocked[0]?.reason} — nothing to run.`)
+    } else {
+      console.error("No verified models in eval/models.json — nothing to run.")
+    }
     process.exit(1)
   }
 
-  printPlan(cells, skipped, args.budgetUsd)
+  printPlan(cells, skipped, blocked, args.budgetUsd)
   if (args.dryRun) return
 
   if (!process.env.OPENROUTER_API_KEY) {
@@ -216,17 +329,40 @@ async function main(): Promise<void> {
   }
 
   const startedAt = new Date()
+  // Each cell runs in its own subprocess; one cell's failure (e.g. a mid-run refusal) must
+  // not throw away the matrix.md entry for every cell that already succeeded, so failures
+  // are recorded and the loop continues rather than propagating to main()'s catch.
+  const cellFailures: { readonly cell: CellPlan; readonly error: string }[] = []
+  const cellResults = new Map<CellPlan, RawCellResult>()
   for (const cell of cells) {
     const label = `${cell.model.id} x ${cell.harnessId}`
     console.log(`\n===== Cell: ${label} =====`)
-    execFileSync("node", cellArgs(cell, args.budgetUsd), { cwd: REPO_ROOT, stdio: "inherit" })
+    const before = await listResultsSnapshot()
+    try {
+      execFileSync("node", cellArgs(cell, args.budgetUsd), { cwd: REPO_ROOT, stdio: "inherit" })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      console.error(`Cell ${label} failed: ${message}`)
+      cellFailures.push({ cell, error: message })
+    }
+    const result = await readNewCellResult(before)
+    if (result !== undefined) cellResults.set(cell, result)
   }
 
-  await appendMatrixMarkdown({ startedAt, gitCommit: getGitCommitSha(), cells, skipped, runs: args.runs })
+  await appendMatrixMarkdown({ startedAt, gitCommit: getGitCommitSha(), cells, skipped, blocked, cellFailures, cellResults, runs: args.runs })
   console.log(`\nMatrix summary appended to: ${fileURLToPath(MATRIX_MD_PATH)}`)
+  if (cellFailures.length > 0) {
+    console.error(`\n${cellFailures.length} of ${cells.length} cell(s) failed — see matrix.md and cell output above.`)
+    process.exitCode = 1
+  }
 }
 
-main().catch((error: unknown) => {
-  console.error(error)
-  process.exit(1)
-})
+// Importable for unit tests (renderVerdictGrid) without running the full CLI — main() only
+// fires when this file is the entrypoint, mirroring eval-extraction.ts's same guard.
+const isEntrypoint = process.argv[1] !== undefined && import.meta.url.endsWith(process.argv[1].split("/").pop() ?? "")
+if (isEntrypoint) {
+  main().catch((error: unknown) => {
+    console.error(error)
+    process.exit(1)
+  })
+}

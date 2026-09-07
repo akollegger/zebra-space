@@ -95,7 +95,10 @@ export { JudgeVerdict as DirectSolutionVerdict }
 
 // --- Harness ----------------------------------------------------------------------------------
 
-const DEFAULT_JUDGE_MODEL = "z-ai/glm-5.3-flash"
+/** ADR-008 §2.4: the runner resolves this same fallback to check the judge against the
+ * model registry's `verified` gate before a run uses it — exported so that check never
+ * drifts from the harness's own default. */
+export const DEFAULT_JUDGE_MODEL = "z-ai/glm-5.3-flash"
 
 export interface DirectSolveFailure {
   readonly _tag: "ExtractionFailed"
@@ -139,6 +142,8 @@ export const directSolveHarness: EvalHarness = {
         systemPrompt: solveSystemPrompt(),
         userPrompt: solveUserPrompt(prose),
       })
+      // ADR-008 §2.4: the judge must never be silently answered by the model under test —
+      // force OpenRouter even when ZEBRA_LOCAL_BASE_URL is set for the solver call above.
       const verdict = yield* requestStructuredCompletion({
         model: judgeModel,
         systemPrompt: judgeSystemPrompt(),
@@ -146,6 +151,7 @@ export const directSolveHarness: EvalHarness = {
         schemaName: "JudgeVerdict",
         jsonSchema: judgeVerdictJsonSchema,
         schema: JudgeVerdict,
+        forceOpenRouter: true,
       })
       // The verdict travels inside extractedCsp (this harness has no MiniZinc);
       // compile passes it through, solve lifts it out for the runner to record.

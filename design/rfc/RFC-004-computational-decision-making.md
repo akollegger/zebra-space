@@ -3,7 +3,7 @@ id: RFC-004
 title: Computational Decision Making
 status: draft
 created: 2026-08-21
-adrs: [ADR-007, ADR-008, ADR-009]
+adrs: [ADR-007, ADR-008, ADR-009, ADR-010]
 ---
 
 # RFC-004: Computational Decision Making
@@ -543,6 +543,7 @@ axis has to reference this vocabulary directly.
 - [ADR-007](../adr/ADR-007-eval-outcome-grader-semantics.md) — Eval Outcome Taxonomy and Grader Semantics
 - [ADR-008](../adr/ADR-008-direct-solve-baseline.md) — Direct-Solve Baseline with LLM Judge
 - [ADR-009](../adr/ADR-009-staged-extraction.md) — Staged Extraction (Vocabulary then Constraints)
+- [ADR-010](../adr/ADR-010-actual-llm-cost-accounting.md) — Actual LLM Cost Accounting for the Eval Harness
 
 ## 9. Appendix: Vocabulary Reconciliation
 

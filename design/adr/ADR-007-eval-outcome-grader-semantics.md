@@ -35,7 +35,7 @@ commit has scored anywhere from 0/14 to 3/14 in a day. No repeat runs, no freque
 cost accounting, no budget guard — a full matrix across models and workflows would spend
 blindly (roughly 700 billed puzzle-runs at current defaults).
 
-[RFC-004](RFC-004-computational-decision-making.md) §5 supplies the vocabulary this decision
+[RFC-004](../rfc/RFC-004-computational-decision-making.md) §5 supplies the vocabulary this decision
 applies: four problem classes (§5.3), two solving regimes (§5.2), and the rule that
 multiplicity must be expressible as an expected, passing outcome (§3). Its open question
 §7.3 (expected-outcome vocabulary) is what this ADR resolves; §7.4 (correct behavior on
@@ -58,10 +58,12 @@ entry already carries one. Per-class expectations:
   PZL-0023 `total_hours` 20, PZL-0024 `total_cost` 15, PZL-0025 `num_crates` 3, PZL-0026
   `total_priority` 18, PZL-0027 `total_distance_miles` 80. Verdict `OPTIMUM_ATTAINED` (a pass)
   when an enumerated solution attains the optimum value; `FEASIBLE_ONLY` (reported, excluded
-  from the pass-rate denominator) when the pipeline solves without the optimum appearing in
-  its capped output. Arrangement is never compared: PZL-0025's notes record the minimum count
-  as unique but the grouping as not, and PZL-0027 records two reversal-equivalent optimal
-  tours as one answer.
+  from the pass-rate denominator) when the pipeline solves *successfully* but the optimum
+  does not appear in its capped output. `INFEASIBLE` (a failure, counted in the denominator)
+  when the solve result is `Unsatisfiable` — an infeasible model is a wrong extraction, not a
+  variant of feasible-but-suboptimal, and `FEASIBLE_ONLY` never covers it. Arrangement is
+  never compared: PZL-0025's notes record the minimum count as unique but the grouping as
+  not, and PZL-0027 records two reversal-equivalent optimal tours as one answer.
 - **ambiguous**: the entry's `readings[]` each record a `result` (`uniquely solvable`,
   `multiply satisfiable`, `unsatisfiable`) plus an `answer` or `solution_count` where
   determinate. The pipeline silently picks one reading; verdict `READING_MATCHED` (a pass)
@@ -83,13 +85,19 @@ entry already carries one. Per-class expectations:
   Determinate answer-space, PZL-0018 Relevance, PZL-0019 Constitutive constraints, PZL-0020
   Determinate atoms, PZL-0021 Sufficiency). The pipeline has no decline path, so no run can
   pass yet: runs report `UNDECLINED` (excluded from the pass-rate denominator, never a
-  silent MATCH — the PZL-0018 trap stays visibly open rather than miscounted).
-  `DECLINED_CORRECTLY` is the reserved pass verdict for a future decline path.
+  silent MATCH — the PZL-0018 trap stays visibly open rather than miscounted). This exclusion
+  covers only the case where no decline mechanism exists at all. A harness that does have one
+  — [ADR-008](ADR-008-direct-solve-baseline.md)'s direct-solve judge can determine a model
+  failed to decline and was wrong — must map that outcome to a counted failure, never to
+  `UNDECLINED`: conflating "no mechanism" with "mechanism present but wrong" would let a real,
+  attributable failure disappear from the denominator. `DECLINED_CORRECTLY` is the reserved
+  pass verdict for a future decline path.
 
 Pass rate is passes over graded runs: `MATCH`, `OPTIMUM_ATTAINED`, `READING_MATCHED`,
 `PREMISE_FREE_MATCH`, and `DECLINED_CORRECTLY` count; `FEASIBLE_ONLY` and `UNDECLINED` are
-reported alongside, not inside, the rate. Declining to count an ungradable run is what makes
-the rate honest; counting it either way would reintroduce the false verdicts this ADR removes.
+reported alongside, not inside, the rate. `INFEASIBLE` counts as a failure like `MISMATCH`,
+never excluded. Declining to count an ungradable run is what makes the rate honest; counting
+it either way would reintroduce the false verdicts this ADR removes.
 
 ### 2.2 Grader comparison semantics for determinate answers
 
@@ -183,7 +191,11 @@ diagnostics survive without the runner knowing the stages. Consequences of the s
 - **Legacy flags are preserved.** `--no-critic` / `--compile-repair-only` map to harness
   ids; `--harness <id>` (and `--harness` on the matrix runner as a cell filter) selects any
   registered harness directly. A new harness is a new file plus a registry entry — the
-  runner, grader, frequency, budget, and matrix table all work unchanged.
+  runner, grader, frequency, budget, and matrix table all work unchanged. Holding that
+  guarantee requires the matrix runner to enumerate harnesses and their `maxCallsPerPuzzle`
+  programmatically from the registry (`listHarnesses()`), never through a separately
+  maintained id list — a hardcoded copy is exactly how a new harness would silently fail to
+  appear.
 
 ## 3. Alternatives Considered
 
@@ -236,3 +248,6 @@ diagnostics survive without the runner knowing the stages. Consequences of the s
 - RFCs: RFC-004
 - Specs: _(populated automatically by the speckit ADR-link hook once `/speckit-specify`
   references this ADR)_
+- Implementation: `.kilo/plans/1788691671220-eval-framework-improvements.md` — this branch
+  was built against a kilocode-tracked plan rather than a speckit spec; see CLAUDE.md's
+  Design process section for the recorded exception.
