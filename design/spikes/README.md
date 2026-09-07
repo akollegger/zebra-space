@@ -78,4 +78,4 @@ into the RFC rather than copied verbatim.
 | [SPIKE-004](SPIKE-004-llm-based-extraction/SPIKE.md) | LLM-Based Extraction (OpenRouter) | done | RFC-003 |
 | [SPIKE-005](SPIKE-005-tool-calling-conventions/SPIKE.md) | Tool-Calling and Structured-Output Conventions Across Providers | done | RFC-003 |
 | [SPIKE-006](SPIKE-006-progressive-card-prototype/SPIKE.md) | Progressive Card-Loop Playable Prototype | done | RFC-005 |
-| [SPIKE-007](SPIKE-007-effect-unstable-ai-viability/SPIKE.md) | effect/unstable/ai + @effect/ai-openrouter Viability | planned | RFC-003, RFC-004 |
+| [SPIKE-007](SPIKE-007-effect-unstable-ai-viability/SPIKE.md) | effect/unstable/ai + @effect/ai-openrouter Viability | done | RFC-003, RFC-004 |
