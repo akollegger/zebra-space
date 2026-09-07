@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@effect/ai-openrouter':
+        specifier: 4.0.0-rc.112
+        version: 4.0.0-rc.112(effect@4.0.0-rc.112)
       '@openrouter/sdk':
         specifier: ^1.2.42
         version: 1.2.42
@@ -18,8 +21,8 @@ importers:
         specifier: ^1.3.0
         version: 1.3.0
       effect:
-        specifier: 4.0.0-rc.110
-        version: 4.0.0-rc.110
+        specifier: 4.0.0-rc.112
+        version: 4.0.0-rc.112
       yaml:
         specifier: ^2.9.0
         version: 2.9.0
@@ -103,6 +106,11 @@ packages:
     engines: {node: '>=14.21.3'}
     cpu: [x64]
     os: [win32]
+
+  '@effect/ai-openrouter@4.0.0-rc.112':
+    resolution: {integrity: sha512-wgMy6v4P5SsvMoZRcDBBozgHyQ1YujRD8U3ggYt/fkyVXvCIrh28lNEbqLKM2NLojc43kVM3hk2Fe7LKhaEqcw==}
+    peerDependencies:
+      effect: ^4.0.0-rc.112
 
   '@msgpackr-extract/msgpackr-extract-darwin-arm64@3.0.4':
     resolution: {integrity: sha512-LCkGo6JDfaBhgST7UpPWgNgLINpcpabaHfyz5OBx75nUYxBsaEPxjnyNjWpeb/xBup/682QnBfRBy2/LvPutZQ==}
@@ -302,9 +310,6 @@ packages:
     resolution: {integrity: sha512-hncn90N4sOky0L2LKE5oESKLbxCPeVo4eLA2LSMoDzM+879ml4WSr+Rr4DWknNIVVvS1Hirkc9hx02W6YxS8rQ==}
     cpu: [x64]
     os: [win32]
-
-  '@standard-schema/spec@1.1.0':
-    resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
 
   '@stricli/core@1.3.0':
     resolution: {integrity: sha512-LnBe2HntygaLDU5trtjiC3J4C/YkmIZuM0XB52IF4qaLqJH09kgD1fnZiS2gaYUnt0nAN2a+1b4PSOBcfPrN4Q==}
@@ -663,8 +668,8 @@ packages:
   ee-first@1.1.1:
     resolution: {integrity: sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==}
 
-  effect@4.0.0-rc.110:
-    resolution: {integrity: sha512-ega6FTJ8CS2of7tHZiADvgyJyV999Q6tZ9juE56V81O0jw6flRwydaPNtyfvP2a5LL9PZrse8A1jnNUD5sWVHg==}
+  effect@4.0.0-rc.112:
+    resolution: {integrity: sha512-wXxwuh1Ywnv4cPRM3Wfa0vDwuOHnZ1TsTgHJkG9XgzND6inhBH9n1vBxhg3iIXOia/OrpmvVmd3lrD4vq6bF3A==}
 
   encodeurl@1.0.2:
     resolution: {integrity: sha512-TPJXq8JqFaVYm2CWmPvnP2Iyo4ZSM7/QKcSmuMLDObfpH5fi7RUGmd/rTDf+rut/saiDiQEeVTNgAmJEdAOx0w==}
@@ -1163,6 +1168,10 @@ snapshots:
   '@biomejs/cli-win32-x64@2.5.8':
     optional: true
 
+  '@effect/ai-openrouter@4.0.0-rc.112(effect@4.0.0-rc.112)':
+    dependencies:
+      effect: 4.0.0-rc.112
+
   '@msgpackr-extract/msgpackr-extract-darwin-arm64@3.0.4':
     optional: true
 
@@ -1282,8 +1291,6 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.63.0':
     optional: true
-
-  '@standard-schema/spec@1.1.0': {}
 
   '@stricli/core@1.3.0': {}
 
@@ -1627,9 +1634,8 @@ snapshots:
 
   ee-first@1.1.1: {}
 
-  effect@4.0.0-rc.110:
+  effect@4.0.0-rc.112:
     dependencies:
-      '@standard-schema/spec': 1.1.0
       fast-check: 4.9.0
       msgpackr: 2.0.5
 
