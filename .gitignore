@@ -34,3 +34,6 @@ eval/results/
 
 # speckit extension catalog cache — local, machine-specific, redownloadable
 .specify/extensions/.cache/
+
+# Spike worktrees — nested git worktrees for disposable spike investigations
+design/spikes/*/worktree/
