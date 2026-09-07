@@ -201,3 +201,22 @@ Model: `qwen/qwen3.8-27b` (frontier: `anthropic/claude-sonnet-4.5 (default)`) ·
 | PZL-0028 | EXTRACT_FAILED (ProviderError) |
 
 Full detail: `eval/results/2026-09-06T20-40-53-716Z.json`
+
+---
+
+## 2026-09-07T14:39:36Z — commit `fb8ba19`
+
+Model: `qwen/qwen3.8-27b` (frontier: `anthropic/claude-sonnet-4.5 (default)`) · harness `local-single-shot` (prompt v1) · 8 puzzle-runs · pass rate **1/5 (20%)** · spend ~$0.00
+
+| Puzzle | Outcome |
+|---|---|
+| PZL-0002 | TIMEOUT |
+| PZL-0004 | MATCH |
+| PZL-0015 | UNDECLINED |
+| PZL-0018 | UNDECLINED |
+| PZL-0022 | FEASIBLE_ONLY |
+| PZL-0028 | TIMEOUT |
+| PZL-0033 | TIMEOUT |
+| PZL-0038 | TIMEOUT |
+
+Full detail: `eval/results/2026-09-07T14-39-36-024Z.json`

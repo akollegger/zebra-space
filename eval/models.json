@@ -112,7 +112,7 @@
       "role": "local-default",
       "cost_per_call_usd": 0,
       "verified": false,
-      "notes": "Local model via ZEBRA_LOCAL_BASE_URL (LM Studio OpenAI-compatible server). Pilot 2026-09-06: 2/2 MATCH single-shot (PZL-0004 in 94s, PZL-0003 in 859s) — schema-reliable on the full extraction schema, but ~1-14 min/puzzle. Requires ZEBRA_LOCAL_TIMEOUT_MS-scale timeouts (default 10 min). Run: --harness local-single-shot --model qwen/qwen3.8-27b."
+      "notes": "Local model via ZEBRA_LOCAL_BASE_URL (LM Studio OpenAI-compatible server). Pilot 2026-09-06: 2/2 MATCH single-shot (PZL-0004 in 94s, PZL-0003 in 859s). Subset runs (stratified 8, local-single-shot, 30x hosted-baseline caps) 2026-09-06: 1/6; 2026-09-07: 1/5 — 4 of 8 puzzles flipped verdicts between the two identical runs (TIMEOUT/MATCH/COMPILE_FAILED/FEASIBLE_ONLY). Non-problems stable (UNDECLINED x4); everything else is latency variance, not reasoning variance. Local runs need local-anchored caps, not hosted-baseline multiples. Run: --harness local-single-shot --model qwen/qwen3.8-27b."
     }
   ]
 }

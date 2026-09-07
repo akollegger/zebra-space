@@ -1,8 +1,15 @@
-# Eval Framework Improvements — Plan (saved 2026-09-06)
+# Eval Framework Improvements — Plan (saved 2026-09-06, updated 2026-09-07)
 
-Source of truth for implementation. Status: steps 1–3 in progress, 4–6 queued.
+Source of truth for implementation. Status: steps 1–4 done, 5–6 queued.
 
-## Completed (branch `eval-framework-improvements`, commits up to `ed8f0f1`)
+## Completed (branch `eval-framework-improvements`)
+
+Review-fix pass (post-f8bfef6, by others — see git log): INFEASIBLE for COP-unsat,
+subset-throw→MISMATCH, non-problem judge-incorrect counted, local-single-shot in matrix
+registry, key gate skipped for local runs, per-puzzle budget shape, judge must be
+verified, matrix.md verdict grids, ADR-010 drafted then superseded by SPIKE-007 (do not
+implement; usage.cost lives on finishPart.metadata.openrouter.usage.cost). SPIKE-008
+(per-clue decomposition) planned, untouched — do not start unprompted.
 
 - ADR-007 (outcome taxonomy + grader semantics) + §2.4 harness seam addendum
 - Pairing-aware grader (`src/eval/grader.ts`), versioned aliases, per-class verdicts
@@ -24,9 +31,16 @@ Source of truth for implementation. Status: steps 1–3 in progress, 4–6 queue
 3. **Timeout enforcement proof** (one test): stub server that never responds + short timeout;
    confirm failure in ~timeout. Unexplained 50-min PZL-0001 hang vs 10-min timeout.
    Required before any long local run.
-4. **Local subset on Qwen** (~1h, $0): 8-puzzle subset via local-single-shot with baseline caps.
-5. **Schema-tax attack**: staged extraction or reduced-prompt harness variant; Gemma 0/2 is the
-   lower bound; baseline-vs-extraction gap says where to aim.
-6. **Full matrix** (~$47): only after 1–3 + one harness improvement.
+4. **Local subset on Qwen** — DONE 2026-09-07 (raw: eval/results/2026-09-07T14-39-36-024Z.json):
+   1/5 with local caps; 4 of 8 puzzles flipped vs the identical 2026-09-06 run. Non-problems
+   stable; all else is latency variance. Local runs need local-anchored caps. Framework held
+   throughout (caps fired, no key needed, no crashes).
+5. **Schema-tax attack**: staged extraction (ADR-009, staged-single-shot harness) already
+   built; local pilot 0/3 exposed cross-stage interface failures (naming, entity-indexing,
+   missing glue) — needs prompt hardening or critic-loop, not more single-shot coverage.
+   Gemma 0/2 remains the lower bound.
+6. **Full matrix** (~$47): only after judge calibration on known-wrongs + one harness
+   improvement.
 
-Decision rule after 1–3: gap small → local coverage; gap large → schema work dominates.
+Decision rule: gap large on local (latency, not reasoning) → schema/payload work dominates;
+local coverage beyond the subset is not worth repeating until per-call payloads shrink.
