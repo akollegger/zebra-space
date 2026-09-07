@@ -23,6 +23,33 @@ function runEval(args: readonly string[]): { stdout: string; stderr: string; exi
   }
 }
 
+/** Like runEval, but with full control over env (no dummy key auto-injected) — for the
+ * local-mode API-key-gate tests, which need OPENROUTER_API_KEY genuinely unset. Set to "",
+ * not deleted: loadEnvFileIfPresent only fills in vars that aren't already set, so deleting it
+ * would let the repo root's real .env quietly supply a real key and defeat the test. */
+function runEvalWithEnv(
+  script: "eval-extraction" | "eval-matrix",
+  args: readonly string[],
+  env: Record<string, string | undefined>,
+): { stdout: string; stderr: string; exitCode: number } {
+  const fullEnv: Record<string, string | undefined> = { ...process.env, OPENROUTER_API_KEY: "" }
+  for (const [key, value] of Object.entries(env)) {
+    if (value === undefined) delete fullEnv[key]
+    else fullEnv[key] = value
+  }
+  try {
+    const stdout = execFileSync("node", [`scripts/${script}.ts`, ...args], {
+      cwd: REPO_ROOT,
+      encoding: "utf8",
+      env: fullEnv,
+    })
+    return { stdout, stderr: "", exitCode: 0 }
+  } catch (error: unknown) {
+    const err = error as { stdout?: string; stderr?: string; status?: number }
+    return { stdout: err.stdout ?? "", stderr: err.stderr ?? "", exitCode: err.status ?? 1 }
+  }
+}
+
 test("budget gate: a pre-run estimate over --budget-usd refuses to start", () => {
   const result = runEval(["--budget-usd", "0.01", "PZL-0004"])
   assert.notEqual(result.exitCode, 0)
@@ -69,6 +96,24 @@ test("direct-solve: --judge-model override is checked against the same verified 
   assert.notEqual(result.exitCode, 0)
   assert.match(result.stderr, /is not a verified entry in eval\/models\.json/)
   assert.match(result.stderr, /no-such-model\/at-all/)
+})
+
+test("local mode: local-single-shot never demands OPENROUTER_API_KEY", () => {
+  // A puzzle id that matches nothing fails right after the key check (main()'s next gate) —
+  // proving this one passed — without ever reaching a real network call or writing results.
+  const result = runEvalWithEnv("eval-extraction", ["--harness", "local-single-shot", "NO-SUCH-PUZZLE"], {
+    ZEBRA_LOCAL_BASE_URL: "http://127.0.0.1:1",
+  })
+  assert.doesNotMatch(result.stdout + result.stderr, /OPENROUTER_API_KEY is not set/)
+  assert.match(result.stderr, /No matching puzzles found/)
+})
+
+test("local mode: direct-solve still demands OPENROUTER_API_KEY (its judge is always forced onto OpenRouter)", () => {
+  const result = runEvalWithEnv("eval-extraction", ["--harness", "direct-solve", "NO-SUCH-PUZZLE"], {
+    ZEBRA_LOCAL_BASE_URL: "http://127.0.0.1:1",
+  })
+  assert.notEqual(result.exitCode, 0)
+  assert.match(result.stderr, /OPENROUTER_API_KEY is not set/)
 })
 
 test("gradeJudged: verdicts fan out to class-appropriate outcomes", async () => {
@@ -156,6 +201,21 @@ test("renderVerdictGrid: per-puzzle x cell table, missing puzzles as '—', empt
 
   const empty = renderVerdictGrid([cellA], new Map())
   assert.match(empty, /No cells completed/)
+})
+
+test("needsOpenRouterKey: a local-only plan doesn't need one; a direct-solve cell still does", async () => {
+  const { needsOpenRouterKey } = await import("../../scripts/eval-matrix.ts")
+  const model = { id: "openai/gpt-4o-mini", tier: "cheap", cost_per_call_usd: 0.002, verified: true }
+  const localCell = { model, harnessId: "local-single-shot", puzzles: [], runs: 1, estimatedUsd: 0 }
+  const directSolveCell = { model, harnessId: "direct-solve", puzzles: [], runs: 1, estimatedUsd: 0 }
+
+  assert.equal(needsOpenRouterKey([localCell], { ZEBRA_LOCAL_BASE_URL: "http://127.0.0.1:1" }), false)
+  assert.equal(needsOpenRouterKey([localCell], {}), true, "no local base URL at all — every cell needs OpenRouter")
+  assert.equal(
+    needsOpenRouterKey([localCell, directSolveCell], { ZEBRA_LOCAL_BASE_URL: "http://127.0.0.1:1" }),
+    true,
+    "direct-solve's judge is always forced onto OpenRouter, even in local mode",
+  )
 })
 
 test("matrix dry-run: --harness filters to one harness's cells", () => {

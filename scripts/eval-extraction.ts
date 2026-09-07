@@ -854,16 +854,22 @@ function printSummary(records: readonly PuzzleRunRecord[], summary: Summary, git
 
 async function main(): Promise<void> {
   loadEnvFileIfPresent(new URL("../.env", import.meta.url).pathname)
-  if (!process.env.OPENROUTER_API_KEY) {
-    console.error("OPENROUTER_API_KEY is not set. Add it to .env at the repo root, or export it in your shell, then re-run.")
-    process.exit(1)
-  }
 
   const args = parseArgs(process.argv.slice(2))
   const harnessId = resolveHarnessId(args)
   const harness = lookupHarness(harnessId)
   if (harness === undefined) {
     console.error(`Unknown harness: "${harnessId}". Built-in: full-critic, single-shot, compile-repair.`)
+    process.exit(1)
+  }
+
+  // A purely local run (ZEBRA_LOCAL_BASE_URL set) needs no OpenRouter key at all — every call
+  // routes to the local server with a dummy key (src/extraction/provider.ts's resolveBaseRoute).
+  // The one exception is direct-solve: its judge is forced onto OpenRouter regardless of local
+  // mode (ADR-008 §2.4's forceOpenRouter), so it always needs a real key even in local mode.
+  const needsOpenRouterKey = harness.id === "direct-solve" || !process.env.ZEBRA_LOCAL_BASE_URL
+  if (needsOpenRouterKey && !process.env.OPENROUTER_API_KEY) {
+    console.error("OPENROUTER_API_KEY is not set. Add it to .env at the repo root, or export it in your shell, then re-run.")
     process.exit(1)
   }
   const answerKeys = await loadAnswerKeys()

@@ -306,6 +306,17 @@ function getGitCommitSha(): string {
   }
 }
 
+/**
+ * Same local-mode exception as scripts/eval-extraction.ts: a purely local plan (every cell
+ * routes through ZEBRA_LOCAL_BASE_URL) needs no OpenRouter key — except direct-solve cells,
+ * whose judge is always forced onto OpenRouter regardless of local mode (ADR-008 §2.4). A pure
+ * function of the plan and the env, so the gate condition is unit-testable without a real run
+ * (which always writes eval/matrix.md, even for a plan whose cells never execute).
+ */
+export function needsOpenRouterKey(cells: readonly CellPlan[], env: { readonly ZEBRA_LOCAL_BASE_URL?: string }): boolean {
+  return !env.ZEBRA_LOCAL_BASE_URL || cells.some((c) => c.harnessId === "direct-solve")
+}
+
 async function main(): Promise<void> {
   loadEnvFileIfPresent(new URL("../.env", import.meta.url).pathname)
   const args = parseArgs(process.argv.slice(2))
@@ -323,7 +334,7 @@ async function main(): Promise<void> {
   printPlan(cells, skipped, blocked, args.budgetUsd)
   if (args.dryRun) return
 
-  if (!process.env.OPENROUTER_API_KEY) {
+  if (needsOpenRouterKey(cells, process.env) && !process.env.OPENROUTER_API_KEY) {
     console.error("OPENROUTER_API_KEY is not set. Add it to .env at the repo root, or export it in your shell, then re-run.")
     process.exit(1)
   }
