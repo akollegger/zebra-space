@@ -13,6 +13,12 @@ export interface StubRequest {
   readonly userPrompt: string
   /** The JSON Schema actually sent as the forced tool's `parameters` (ADR-004 §2.1/§2.7). */
   readonly toolParameters: unknown
+  /**
+   * The raw `tool_choice` as sent: `{type:"function",...}` on the OpenRouter route, `"required"`
+   * on the local route (LM Studio rejects the object form). Recorded so tests can assert which
+   * route the provider layer took.
+   */
+  readonly toolChoice: unknown
 }
 
 export interface StubExchange {
@@ -38,7 +44,7 @@ interface RawChatBody {
   readonly tools?: ReadonlyArray<{
     readonly function?: { readonly name?: string; readonly parameters?: unknown }
   }>
-  readonly tool_choice?: { readonly function?: { readonly name?: string } }
+  readonly tool_choice?: { readonly function?: { readonly name?: string } } | string
 }
 
 function readBody(req: import("node:http").IncomingMessage): Promise<string> {
@@ -97,14 +103,19 @@ export function startStubServer(handler: StubHandler): Promise<StubServer> {
           const systemMessage = body.messages?.find((m) => m.role === "system")
           const userMessage = body.messages?.find((m) => m.role === "user")
           const tool = body.tools?.[0]?.function
+          const toolChoice = body.tool_choice
           const request: StubRequest = {
             model: body.model ?? "",
             // The forced tool's name carries what response_format's json_schema.name used to
-            // (ADR-004 §2.1) — tests still discriminate extraction vs. critique by this.
-            schemaName: body.tool_choice?.function?.name ?? tool?.name ?? "",
+            // (ADR-004 §2.1) — tests still discriminate extraction vs. critique by this. On the
+            // local route tool_choice is the string "required" (no name), so fall back to the
+            // declared tool's name.
+            schemaName:
+              (typeof toolChoice === "object" ? toolChoice?.function?.name : undefined) ?? tool?.name ?? "",
             systemPrompt: systemMessage?.content ?? "",
             userPrompt: userMessage?.content ?? "",
             toolParameters: tool?.parameters,
+            toolChoice: toolChoice ?? null,
           }
           requests.push(request)
 

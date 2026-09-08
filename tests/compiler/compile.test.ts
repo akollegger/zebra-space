@@ -261,6 +261,25 @@ test("ADR-005 §2.3: an unrecognized adjacency relation name is a CompileError, 
   assert.match(reason, /Unrecognized adjacency relation/)
 })
 
+test("ADR-005 §2.3: adjacency relation names normalize formatting variants (camelCase, underscores) but a bare direction still fails loudly", async () => {
+  const cspWith = (relation: string): ExtractedCsp => ({
+    entities: [
+      { id: "H1", type: "House" },
+      { id: "H2", type: "House" },
+    ],
+    domains: [{ variable: "position", entityType: "House", values: ["1", "2"] }],
+    constraints: [{ kind: "adjacency", relation, a: "H1", b: "H2", variable: null }],
+  })
+  // Fully-phrased variants resolve identically.
+  for (const relation of ["immediately right of", "immediately_right_of", "immediatelyRightOf", "nextTo"]) {
+    const mzn = await run(cspWith(relation))
+    assert.match(mzn, /constraint/, `relation "${relation}" should compile`)
+  }
+  // A bare direction is not a registry phrase — normalization is formatting-only.
+  const reason = await runFails(cspWith("leftOf"))
+  assert.match(reason, /Unrecognized adjacency relation "leftOf"/)
+})
+
 test("ADR-005 §2.4 mode 1 (fact-driven): relation facts expand derivedRule.then per matching pair", async () => {
   const csp: ExtractedCsp = {
     entities: [

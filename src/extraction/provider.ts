@@ -21,6 +21,8 @@ export interface StructuredCompletionRequest<A> {
   readonly jsonSchema: Record<string, unknown>
   readonly schema: Schema.Codec<A>
   readonly timeoutMs?: number
+  /** ADR-008 §2.4: route this call to OpenRouter even when ZEBRA_LOCAL_BASE_URL is set. */
+  readonly forceOpenRouter?: boolean | undefined
 }
 
 /**
@@ -34,9 +36,9 @@ export interface StructuredCompletionRequest<A> {
  * OpenRouterError` and carries `statusCode: 401`), so this check doesn't depend on OpenRouter's
  * exact response shape.
  */
-function errorMessage(error: unknown): string {
+function errorMessage(error: unknown, route: ProviderRoute): string {
   if (error instanceof OpenRouterError && error.statusCode === 401) {
-    return MISSING_API_KEY_MESSAGE
+    return route.missingKeyMessage
   }
   return error instanceof Error ? error.message : String(error)
 }
@@ -64,15 +66,69 @@ function looksLikeSchemaRejection(error: unknown): boolean {
 }
 
 /**
+ * Where this call is routed: OpenRouter by default, or a local OpenAI-compatible server
+ * (LM Studio, Ollama-style) when ZEBRA_LOCAL_BASE_URL is set. Local mode sends a dummy API
+ * key (local servers ignore auth), skips the 401-missing-key diagnosis (a local 401 is a real
+ * server error, not a missing credential), and uses `tool_choice: "required"` instead of the
+ * named-function object form — LM Studio rejects the object form with "Invalid tool_choice
+ * type: 'object'" (verified live against LM Studio + Qwen3, 2026-09-06) while OpenRouter
+ * requires the named form to force the single declared tool.
+ */
+export interface ProviderRoute {
+  readonly serverURL: string | undefined
+  readonly apiKey: string | undefined
+  readonly toolChoice: { readonly type: "function"; readonly function: { readonly name: string } } | "required"
+  readonly missingKeyMessage: string
+}
+
+export function resolveProviderRoute(schemaName: string, opts?: { readonly forceOpenRouter?: boolean | undefined }): ProviderRoute {
+  const base = resolveBaseRoute(opts)
+  if (base.serverURL !== undefined && base.serverURL === process.env.ZEBRA_LOCAL_BASE_URL) {
+    return {
+      ...base,
+      toolChoice: "required",
+      missingKeyMessage: `ZEBRA_LOCAL_BASE_URL is set (${base.serverURL}) but the server refused the request (401 Unauthorized). Check the local server is running and reachable.`,
+    }
+  }
+  return {
+    ...base,
+    toolChoice: { type: "function", function: { name: schemaName } },
+    missingKeyMessage: MISSING_API_KEY_MESSAGE,
+  }
+}
+
+/**
+ * Server + credential only, no tool-choice. Shared by the forced-tool-call path above and
+ * callers that need plain prose (the direct-solve baseline) — both must honor
+ * ZEBRA_LOCAL_BASE_URL and the test-only ZEBRA_OPENROUTER_BASE_URL_OVERRIDE identically,
+ * or tests can't route prose calls at the stub.
+ *
+ * `forceOpenRouter` (ADR-008 §2.4) skips `ZEBRA_LOCAL_BASE_URL` even when it's set — for a
+ * call that must never be silently answered by the local model under test, e.g. the
+ * direct-solve baseline's judge. The test-only `ZEBRA_OPENROUTER_BASE_URL_OVERRIDE` still
+ * applies either way, since it exists to route OpenRouter-shaped calls at a stub, not to
+ * express "use the local model."
+ */
+export function resolveBaseRoute(opts?: {
+  readonly forceOpenRouter?: boolean | undefined
+}): { readonly serverURL: string | undefined; readonly apiKey: string | undefined } {
+  const localBaseUrl = process.env.ZEBRA_LOCAL_BASE_URL
+  if (!opts?.forceOpenRouter && localBaseUrl !== undefined && localBaseUrl !== "") {
+    return { serverURL: localBaseUrl, apiKey: "local" }
+  }
+  return { serverURL: process.env.ZEBRA_OPENROUTER_BASE_URL_OVERRIDE, apiKey: process.env.OPENROUTER_API_KEY }
+}
+
+/**
  * A fresh client per call, not a module-level singleton: `ZEBRA_OPENROUTER_BASE_URL_OVERRIDE`
  * (test-only, not part of ADR-003's public flag surface) must be read at call time so tests can
- * point requests at a local stub server without module-load-order concerns.
+ * point requests at a local stub server without module-load-order concerns. `ZEBRA_LOCAL_BASE_URL`
+ * (LM Studio et al) is likewise read per call for the same reason.
  */
-function client(): OpenRouter {
-  const serverURL = process.env.ZEBRA_OPENROUTER_BASE_URL_OVERRIDE
+function client(route: ProviderRoute): OpenRouter {
   return new OpenRouter({
-    apiKey: process.env.OPENROUTER_API_KEY,
-    ...(serverURL !== undefined ? { serverURL } : {}),
+    apiKey: route.apiKey,
+    ...(route.serverURL !== undefined ? { serverURL: route.serverURL } : {}),
   })
 }
 
@@ -90,10 +146,11 @@ export function requestStructuredCompletion<A>(
   request: StructuredCompletionRequest<A>,
 ): Effect.Effect<A, ProviderError | SchemaRejected | SchemaViolation> {
   const timeoutMs = request.timeoutMs ?? DEFAULT_TIMEOUT_MS
+  const route = resolveProviderRoute(request.schemaName, { forceOpenRouter: request.forceOpenRouter })
 
   return Effect.tryPromise({
     try: () =>
-      client().chat.send(
+      client(route).chat.send(
         {
           chatRequest: {
             model: request.model,
@@ -111,7 +168,7 @@ export function requestStructuredCompletion<A>(
                 },
               },
             ],
-            toolChoice: { type: "function", function: { name: request.schemaName } },
+            toolChoice: route.toolChoice,
           },
         },
         // ADR-004 §2.3: retries/timeouts are this pipeline's own Effect.retry/Effect.timeout —
@@ -125,9 +182,9 @@ export function requestStructuredCompletion<A>(
       looksLikeSchemaRejection(error)
         ? new SchemaRejected({
             model: request.model,
-            providerMessage: (error as OpenRouterError).body || errorMessage(error),
+            providerMessage: (error as OpenRouterError).body || errorMessage(error, route),
           })
-        : new ProviderError({ message: errorMessage(error) }),
+        : new ProviderError({ message: errorMessage(error, route) }),
   }).pipe(
     Effect.timeout(timeoutMs),
     Effect.catchTag("TimeoutError", () =>

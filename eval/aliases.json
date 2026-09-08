@@ -1,0 +1,7 @@
+{
+  "$comment": "ADR-007 §2.2: versioned alias table for grader normalization. canonical -> [variants]. Exact lookup only — no fuzzy matching. Applying an alias during grading is recorded in the run's raw JSON. Starts with the one evidenced case (PZL-0014); grows only with observed paraphrases from live runs.",
+  "version": 1,
+  "aliases": {
+    "hardcover book set": ["book_set", "book set", "hardcover_book_set"]
+  }
+}

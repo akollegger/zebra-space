@@ -44,5 +44,12 @@
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
     "skipLibCheck": true,
-  }
+  },
+  // No "include" — tsc's default is every reachable .ts file under the project root — so a
+  // nested spike worktree (a full duplicate checkout, its own tsconfig.json included) and a
+  // spike's own scoped-package.json scripts (deliberately depending on packages not installed
+  // at the root, e.g. SPIKE-007's effect@rc.112/@effect/ai-openrouter — see that spike's
+  // package.json and design/spikes/SPIKE-002-*'s precedent) both need excluding explicitly,
+  // or `tsc --noEmit` fails on dependencies this project was never meant to have.
+  "exclude": ["node_modules", "design/spikes/*/worktree/**", "design/spikes/*/scripts/**"]
 }

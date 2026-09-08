@@ -1,5 +1,5 @@
 {
-  "$comment": "Private verification record, originally authored under specs/001-catalog-seeding/ per FR-009 (each seed puzzle has exactly one valid solution, confirming FR-008/SC-004), later moved to eval/ and reformatted from Markdown to JSON so it can double as machine-readable ground truth for eval/'s extraction eval (comparing a puzzle's compiled, solved output against the known-correct answer below). Not part of the public catalog schema -- not linked from catalog/README.md, not referenced by any puzzle's frontmatter. Each entry's `answer` is intentionally shaped to match that puzzle's own variables rather than a single uniform schema, since the seed catalog spans multiple constraint shapes (grid assignment, digit substitution, subset selection, ordering, single-value decision), not just zebra-grid puzzles. Starting with PZL-0015, entries also cover non-problems and optimization (COP) puzzles that don't fit the single-correct-assignment framing above -- for those, `answer` records a diagnosis or an optimum rather than a satisfying assignment, and `notes` says so explicitly. This is a deliberately provisional extension, not a redesign: RFC-004 §7.3 and root TODO.md item 2 own the eventual outcome taxonomy and answer-key format; these entries exist now so the gap they'll need to close is visible rather than silently absent.",
+  "$comment": "Private verification record, originally authored under specs/001-catalog-seeding/ per FR-009 (each seed puzzle has exactly one valid solution, confirming FR-008/SC-004), later moved to eval/ and reformatted from Markdown to JSON so it can double as machine-readable ground truth for eval/'s extraction eval (comparing a puzzle's compiled, solved output against the known-correct answer below). Not part of the public catalog schema -- not linked from catalog/README.md, not referenced by any puzzle's frontmatter. Each entry's `answer` is intentionally shaped to match that puzzle's own variables rather than a single uniform schema, since the seed catalog spans multiple constraint shapes (grid assignment, digit substitution, subset selection, ordering, single-value decision), not just zebra-grid puzzles. Starting with PZL-0015, entries also cover non-problems and optimization (COP) puzzles that don't fit the single-correct-assignment framing above -- for those, `answer` records a diagnosis or an optimum rather than a satisfying assignment, and `notes` says so explicitly. Per-class grading semantics are decided in ADR-007 (design/adr/ADR-007-eval-outcome-grader-semantics.md): determinate entries expect a unique assignment under §2.2's comparison rules; entries with an outcome marker grade under that class's verdicts. The decline path itself, live cost calibration, and multi-label puzzles remain future work (root TODO.md item 2 notes the remainders).",
   "PZL-0001": {
     "title": "Life International 1962",
     "answer": {
@@ -169,6 +169,7 @@
   },
   "PZL-0022": {
     "title": "Packing the Box, Wisely",
+    "outcome": "cop",
     "answer": {
       "items": ["first-aid kit", "hardcover book set", "cast-iron skillet"],
       "total_weight_kg": 10,
@@ -178,6 +179,7 @@
   },
   "PZL-0023": {
     "title": "Who Does Which Task",
+    "outcome": "cop",
     "answer": {
       "Ana": "Testing",
       "Ben": "Editing",
@@ -189,6 +191,7 @@
   },
   "PZL-0024": {
     "title": "Cheapest Adequate Meal",
+    "outcome": "cop",
     "answer": {
       "Oats": 0,
       "Beans": 5,
@@ -199,6 +202,7 @@
   },
   "PZL-0025": {
     "title": "How Many Crates",
+    "outcome": "cop",
     "answer": {
       "crate_1": [6, 4],
       "crate_2": [5, 3, 2],
@@ -209,6 +213,7 @@
   },
   "PZL-0026": {
     "title": "Which Candidates to Interview",
+    "outcome": "cop",
     "answer": {
       "scheduled": ["Amara", "Chen", "Elena"],
       "skipped": ["Ben", "Deepak"],
@@ -218,6 +223,7 @@
   },
   "PZL-0027": {
     "title": "The Shortest Delivery Route",
+    "outcome": "cop",
     "answer": {
       "routes": [
         ["Ashby", "Brindle", "Dunmore", "Caldwell", "Ashby"],

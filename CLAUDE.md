@@ -77,3 +77,13 @@ This is enforced, not just conventional: `/speckit-specify` has mandatory hooks 
 - `after_specify` → `speckit-adr-link` backlinks the new `spec.md` (a `**Derived From**` line) to its ADR(s), and appends the spec's path to each ADR's `specs:` list.
 
 Do not bypass this by hand-editing `spec.md`/`plan.md` without a corresponding ADR, and don't hand-edit the `adrs:`/`specs:` front-matter lists that `/adr-create` and `speckit-adr-link` maintain automatically.
+
+**Recorded exception:** ADR-007, ADR-008, and ADR-009 (the `eval-framework-improvements` branch)
+were implemented directly against kilocode-tracked plans (`.kilo/plans/`) rather than through
+`/speckit-specify` — their `specs:` front-matter is empty because no spec was ever created, not
+because the link is missing. The planning discipline itself was preserved (the plan file records
+completed work, ranks next steps, and states a decision rule) — only the tool and the artifact
+format differ from speckit's `spec.md`/`plan.md`/`tasks.md`. This is named here rather than
+backfilled with a `/speckit-specify` call after the fact, which would produce a spec describing
+code that already exists instead of one that guided its creation. Route new eval-layer work
+through speckit going forward.

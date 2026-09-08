@@ -3,7 +3,7 @@ id: RFC-003
 title: Natural-Language Puzzle to CSP Extraction
 status: draft
 created: 2026-08-18
-adrs: [ADR-004, ADR-005, ADR-003]
+adrs: [ADR-004, ADR-005, ADR-003, ADR-009, ADR-010]
 ---
 
 # RFC-003: Natural-Language Puzzle to CSP Extraction
@@ -223,6 +223,10 @@ its own boundary case before an ADR commits to a representation?
 - [ADR-005](../adr/ADR-005-extractedcsp-mzn-compiler.md) — ExtractedCsp to MiniZinc Compiler
 - [ADR-003](../adr/ADR-003-cli-interface.md) — CLI Interface Shape (extended with the `extract`
   subcommand)
+- [ADR-009](../adr/ADR-009-staged-extraction.md) — Staged Extraction (Vocabulary then
+  Constraints)
+- [ADR-010](../adr/ADR-010-actual-llm-cost-accounting.md) — Actual LLM Cost Accounting for the
+  Eval Harness
 
 ## 9. Appendix: Extraction Strategy Evaluation
 

@@ -67,3 +67,7 @@ Use `/adr-review` before moving a draft to `accepted`.
 | [ADR-004](ADR-004-llm-extraction-critic-loop.md) | Adopt LLM-Based Extraction with a Fidelity Critic Loop | proposed | RFC-003 | specs/004-nl-csp-extraction |
 | [ADR-005](ADR-005-extractedcsp-mzn-compiler.md) | ExtractedCsp to MiniZinc Compiler | proposed | RFC-002, RFC-003 | specs/004-nl-csp-extraction |
 | [ADR-006](ADR-006-deck-yaml-format.md) | Deck YAML Format | proposed | RFC-005 | |
+| [ADR-007](ADR-007-eval-outcome-grader-semantics.md) | Eval Outcome Taxonomy and Grader Semantics | proposed | RFC-004 | |
+| [ADR-008](ADR-008-direct-solve-baseline.md) | Direct-Solve Baseline with LLM Judge | proposed | RFC-004 | |
+| [ADR-009](ADR-009-staged-extraction.md) | Staged Extraction (Vocabulary then Constraints) | proposed | RFC-004, RFC-003 | |
+| [ADR-010](ADR-010-actual-llm-cost-accounting.md) | Actual LLM Cost Accounting for the Eval Harness | proposed | RFC-004, RFC-003 | |
