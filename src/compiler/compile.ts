@@ -492,7 +492,10 @@ const ADJACENCY_TEMPLATES: Record<string, (a: string, b: string) => string> = {
 // Relation names come from an LLM, which varies formatting (spaces vs. underscores/hyphens
 // vs. camelCase) for the same phrasing (e.g. "immediately before" vs. "immediately_before"
 // vs. "immediatelyBefore") — normalize before registry lookup rather than growing the
-// registry with every formatting variant. Found live: staged extraction emitted "leftOf".
+// registry with every formatting variant. Normalization is formatting-only: it cannot turn
+// a bare direction into a registry phrase, so "leftOf" still normalizes to "left of" and
+// still fails loudly — only fully-phrased variants resolve (found live: staged extraction
+// emitted "leftOf", correctly rejected; the stage-2 prompt now quotes the registry phrases).
 function normalizeRelationName(name: string): string {
   return name
     .replace(/([a-z])([A-Z])/g, "$1 $2")

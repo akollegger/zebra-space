@@ -109,6 +109,20 @@ test("gradeFlatRecord: single-key wrapped values ({e: value}) unwrap before comp
   assert.equal(wrapped.verdict, "MATCH")
 })
 
+test("aliasesApplied: row-keyed and subset paths count both sides, dispatch passes through", () => {
+  const aliases = { "hardcover book set": ["book_set"] }
+  const rowKeyed = gradeRowKeyedMapping({ "1": "hardcover book set" }, { "1": "book_set" }, aliases)
+  assert.equal(rowKeyed.verdict, "MATCH")
+  assert.equal(rowKeyed.aliasesApplied, 2)
+  const subset = gradeSubset(["hardcover book set"], { item: ["book_set"] }, aliases)
+  assert.equal(subset.verdict, "MATCH")
+  assert.equal(subset.aliasesApplied, 2)
+  const viaDispatchRow = gradeDeterminate("PZL-0006", { row_to_column: { "1": "hardcover book set" } }, { "1": "book_set" }, aliases)
+  assert.equal(viaDispatchRow.aliasesApplied, 2)
+  const viaDispatchSubset = gradeDeterminate("PZL-0014", { items: ["hardcover book set"] }, { item: ["book_set"] }, aliases)
+  assert.equal(viaDispatchSubset.aliasesApplied, 2)
+})
+
 test("gradeSubset: single-key wrapped values unwrap before comparing", () => {
   assert.equal(gradeSubset(["Rice"], { item: { e: "Rice" } }).verdict, "MATCH")
 })
@@ -117,7 +131,7 @@ test("gradeFlatRecord: paraphrase resolves through the alias table and is counte
   const aliases = { "hardcover book set": ["book_set"] }
   const result = gradeFlatRecord({ items: ["hardcover book set"] }, { item: ["book_set"] }, aliases)
   assert.equal(result.verdict, "MATCH")
-  assert.equal(result.aliasesApplied, 1)
+  assert.equal(result.aliasesApplied, 2)
 })
 
 test("gradeCop: optimum attained in any enumerated solution; otherwise FEASIBLE_ONLY; unsatisfiable is INFEASIBLE", () => {

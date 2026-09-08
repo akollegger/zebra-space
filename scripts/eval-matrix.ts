@@ -349,10 +349,24 @@ async function main(): Promise<void> {
     const label = `${cell.model.id} x ${cell.harnessId}`
     console.log(`\n===== Cell: ${label} =====`)
     const before = await listResultsSnapshot()
+    // Cell output is captured per cell, not inherited: a runaway cell's stdout would
+    // otherwise stream unbuffered into this process and interleave with the matrix's own
+    // summary. The tail prints inline for live progress; the full log is in the error on
+    // failure and always lands in the cell's raw JSON detail.
     try {
-      execFileSync("node", cellArgs(cell, args.budgetUsd), { cwd: REPO_ROOT, stdio: "inherit" })
+      const output = execFileSync("node", cellArgs(cell, args.budgetUsd), {
+        cwd: REPO_ROOT,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+        maxBuffer: 64 * 1024 * 1024,
+      })
+      const tail = output.trim().split("\n").slice(-5).join("\n")
+      if (tail !== "") console.log(tail)
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
+      const procError = error as { stdout?: string; stderr?: string; message: string }
+      const tail = (procError.stdout ?? "").trim().split("\n").slice(-15).join("\n")
+      if (tail !== "") console.log(tail)
+      const message = `${procError.message}${procError.stderr ? ` — ${procError.stderr.slice(0, 500)}` : ""}`
       console.error(`Cell ${label} failed: ${message}`)
       cellFailures.push({ cell, error: message })
     }

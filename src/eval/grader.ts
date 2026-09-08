@@ -45,22 +45,25 @@ export type AliasTable = Record<string, readonly string[]>
 /**
  * Collects normalized tokens from a solved-assignment value, recursing through arrays and
  * unwrapping single-key records. Scalar domains solve wrapped one level deep ({e: value} —
- * seen live on PZL-0004), so the inner value must compare, not the wrapper.
+ * seen live on PZL-0004), so the inner value must compare, not the wrapper. Returns how
+ * many collected tokens resolved through the alias table, so callers report honest counts.
  */
-function collectActualTokens(value: unknown, aliases: AliasTable, into: Set<string>): void {
+function collectActualTokens(value: unknown, aliases: AliasTable, into: Set<string>): number {
   if (Array.isArray(value)) {
-    for (const item of value) collectActualTokens(item, aliases, into)
-    return
+    return value.reduce((sum, item) => sum + collectActualTokens(item, aliases, into), 0)
   }
   if (value !== null && typeof value === "object") {
     const entries = Object.entries(value as Record<string, unknown>)
     if (entries.length === 1 && entries[0] !== undefined) {
-      collectActualTokens(entries[0][1], aliases, into)
-      return
+      return collectActualTokens(entries[0][1], aliases, into)
     }
+    return 0
   }
   const token = tokenOf(value)
-  if (token !== undefined) into.add(normalizeToken(token, aliases).normalized)
+  if (token === undefined) return 0
+  const result = normalizeToken(token, aliases)
+  into.add(result.normalized)
+  return result.aliasApplied ? 1 : 0
 }
 
 /**
@@ -203,10 +206,21 @@ export function gradeRowKeyedMapping(
   expected: Record<string, string | number>,
   actual: Assignment,
   aliases: AliasTable = {},
-): { readonly verdict: DeterminateVerdict; readonly detail: string } {
+): { readonly verdict: DeterminateVerdict; readonly detail: string; readonly aliasesApplied: number } {
+  let aliasesApplied = 0
+  const normalized = (token: string): string => {
+    const result = normalizeToken(token, aliases)
+    if (result.aliasApplied) aliasesApplied += 1
+    return result.normalized
+  }
+  const done = (verdict: DeterminateVerdict, detail: string): { readonly verdict: DeterminateVerdict; readonly detail: string; readonly aliasesApplied: number } => ({
+    verdict,
+    detail,
+    aliasesApplied,
+  })
   const expectedPairs = new Map<string, string>()
   for (const [row, col] of Object.entries(expected)) {
-    expectedPairs.set(normalizeToken(String(row), aliases).normalized, normalizeToken(String(col), aliases).normalized)
+    expectedPairs.set(normalized(String(row)), normalized(String(col)))
   }
 
   const actualPairs = new Map<string, string>()
@@ -215,29 +229,29 @@ export function gradeRowKeyedMapping(
   if (numericKeyed) {
     for (const [row, col] of Object.entries(actual)) {
       const token = tokenOf(col)
-      if (token === undefined) return { verdict: "MISMATCH", detail: `non-scalar value at row ${row}` }
-      actualPairs.set(normalizeToken(row, aliases).normalized, normalizeToken(token, aliases).normalized)
+      if (token === undefined) return done("MISMATCH", `non-scalar value at row ${row}`)
+      actualPairs.set(normalized(row), normalized(token))
     }
   } else if (actualKeys.length === 1) {
     const sole = actual[actualKeys[0]!]!
-    if (!Array.isArray(sole)) return { verdict: "MISMATCH", detail: "expected a numeric-keyed record or a single positional array" }
+    if (!Array.isArray(sole)) return done("MISMATCH", "expected a numeric-keyed record or a single positional array")
     sole.forEach((col, index) => {
       const token = tokenOf(col)
-      if (token !== undefined) actualPairs.set(String(index + 1), normalizeToken(token, aliases).normalized)
+      if (token !== undefined) actualPairs.set(String(index + 1), normalized(token))
     })
   } else {
-    return { verdict: "MISMATCH", detail: "expected a numeric-keyed record or a single positional array" }
+    return done("MISMATCH", "expected a numeric-keyed record or a single positional array")
   }
 
   if (expectedPairs.size !== actualPairs.size) {
-    return { verdict: "MISMATCH", detail: `pair count ${actualPairs.size} != expected ${expectedPairs.size}` }
+    return done("MISMATCH", `pair count ${actualPairs.size} != expected ${expectedPairs.size}`)
   }
   for (const [row, col] of expectedPairs) {
     if (actualPairs.get(row) !== col) {
-      return { verdict: "MISMATCH", detail: `row ${row}: got ${actualPairs.get(row) ?? "∅"}, expected ${col}` }
+      return done("MISMATCH", `row ${row}: got ${actualPairs.get(row) ?? "∅"}, expected ${col}`)
     }
   }
-  return { verdict: "MATCH", detail: "all row→column pairs match" }
+  return done("MATCH", "all row→column pairs match")
 }
 
 // --- Subset shape (ADR-007 §2.2: PZL-0014) ----------------------------------------------
@@ -250,15 +264,20 @@ export function gradeSubset(
   expectedItems: readonly string[],
   actual: Assignment,
   aliases: AliasTable = {},
-): { readonly verdict: DeterminateVerdict; readonly detail: string } {
+): { readonly verdict: DeterminateVerdict; readonly detail: string; readonly aliasesApplied: number } {
   const actualTokens = new Set<string>()
-  for (const value of Object.values(actual)) collectActualTokens(value, aliases, actualTokens)
+  let aliasesApplied = 0
+  for (const value of Object.values(actual)) aliasesApplied += collectActualTokens(value, aliases, actualTokens)
   const missing = expectedItems
-    .map((item) => normalizeToken(item, aliases).normalized)
+    .map((item) => {
+      const result = normalizeToken(item, aliases)
+      if (result.aliasApplied) aliasesApplied += 1
+      return result.normalized
+    })
     .filter((item) => !actualTokens.has(item))
   return missing.length === 0
-    ? { verdict: "MATCH", detail: "all expected items present" }
-    : { verdict: "MISMATCH", detail: `missing items: ${missing.join(", ")}` }
+    ? { verdict: "MATCH", detail: "all expected items present", aliasesApplied }
+    : { verdict: "MISMATCH", detail: `missing items: ${missing.join(", ")}`, aliasesApplied }
 }
 
 // --- Determinate dispatch ---------------------------------------------------------------
@@ -288,8 +307,7 @@ export function gradeDeterminate(
     if (!mapping || typeof mapping !== "object" || Array.isArray(mapping)) {
       return { verdict: "MISMATCH", detail: "row_to_column is not a mapping", aliasesApplied: 0 }
     }
-    const result = gradeRowKeyedMapping(mapping as Record<string, string | number>, assignment, aliases)
-    return { ...result, aliasesApplied: 0 }
+    return gradeRowKeyedMapping(mapping as Record<string, string | number>, assignment, aliases)
   }
 
   const keys = Object.keys(expectedRecord)
@@ -302,8 +320,7 @@ export function gradeDeterminate(
       }
       items.push(token)
     }
-    const result = gradeSubset(items, assignment, aliases)
-    return { ...result, aliasesApplied: 0 }
+    return gradeSubset(items, assignment, aliases)
   }
 
   if (PARALLEL_ARRAY_PUZZLES.has(puzzleId)) {
@@ -363,8 +380,8 @@ export function gradeFlatRecord(
     }
   }
   const actualTokens = new Set<string>()
-  for (const value of Object.values(actual)) collectActualTokens(value, aliases, actualTokens)
   let aliasesApplied = 0
+  for (const value of Object.values(actual)) aliasesApplied += collectActualTokens(value, aliases, actualTokens)
   const missing: string[] = []
   for (const token of expectedTokens) {
     const result = normalizeToken(token, aliases)

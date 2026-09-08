@@ -110,6 +110,10 @@ test("timeout enforcement: a hung server fails in ~timeoutMs, not forever", asyn
   // Regression guard for the 50-minute PZL-0001 hang against a 10-minute timeout: if neither
   // Effect.timeout nor the SDK's timeoutMs can interrupt a stalled local connection, this
   // test hangs the suite instead of failing fast.
+  // Bound arithmetic, not slack: timeoutMs 500 x up to 3 attempts (initial + 2 retries at
+  // 300/600ms exponential backoff) lands ~2s; the 5s bound has ~2.5x headroom over the
+  // designed worst case while still catching a dead timeout path (which would hang until
+  // the suite runner kills it, orders of magnitude over).
   const Payload = Schema.Struct({ colors: Schema.Array(Schema.String) })
   await withLocalStub(
     (_exchange) => {
@@ -125,7 +129,7 @@ test("timeout enforcement: a hung server fails in ~timeoutMs, not forever", asyn
           schemaName: "extract",
           jsonSchema: { type: "object" },
           schema: Payload,
-          timeoutMs: 2_000,
+          timeoutMs: 500,
         }).pipe(
           Effect.map(() => ({ _tag: "Ok" as const })),
           Effect.catch((e) => Effect.succeed({ _tag: "Err" as const, tag: e._tag })),
@@ -133,7 +137,7 @@ test("timeout enforcement: a hung server fails in ~timeoutMs, not forever", asyn
       )
       const elapsed = Date.now() - started
       assert.equal(outcome._tag, "Err")
-      assert.ok(elapsed < 30_000, `timeout took ${elapsed}ms, expected ~2s`)
+      assert.ok(elapsed < 5_000, `timeout took ${elapsed}ms, expected ~2s`)
     },
   )
 })
