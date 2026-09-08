@@ -40,32 +40,49 @@ changing what today's callers already receive from a successful call.
 
 ## 2. Decision
 
-### 2.1 A cost-reporting side channel, not a changed return type
+### 2.1 Cost travels on the return type, read off the SDK response
 
-`StructuredCompletionRequest<A>` gains an optional field, `onCost?: (usd: number) => void`.
-`requestStructuredCompletion` calls it once, via `Effect.tap` immediately after a successful
-decode, with `response.usage?.cost` — only when that value is a `number` (present and
-non-null); a `null` or missing `cost` reports nothing, the same as if `onCost` had never been
-passed. `requestProseCompletion` gains the identical field and calls it the same way. Neither
-function's success type changes: `Effect<A, ProviderError | SchemaRejected |
-SchemaViolation>` stays exactly what every existing caller already expects.
+[SPIKE-007](../spikes/SPIKE-007-effect-unstable-ai-viability/SPIKE.md) (finding 3,
+conclusion) confirmed `ChatResult.usage.cost` (`number | null | undefined`) is present by
+default on every non-streaming `@openrouter/sdk` response — actual dollars billed for that
+call — with no request flag, no new dependency, and no `effect` version bump. (The spike
+reached the same field through `@effect/ai-openrouter`'s
+`finishPart.metadata.openrouter.usage.cost` and confirmed it is the same value the
+hand-rolled path sees as `response.usage?.cost`.) A `cost_details` breakdown rides along;
+this ADR deliberately records only the top-line cost.
 
-A caller that doesn't pass `onCost` loses nothing it has today. A caller that does —
-`extractOnce`, `critiqueOnce`, and `critiqueWithRepair` in `src/extraction/extract.ts`; the
-two `requestStructuredCompletion` calls in `extractStaged`; `directSolveHarness`'s two calls
-in `src/eval/direct-solve.ts` — receives one accumulator through its own parameters and adds
-to it on every call it makes, including retried and escalated attempts within the critic
-loop's `runTier`/`runTierSafely`. A failed attempt (a timeout, a rejected schema, a
-`SchemaViolation` that gets repaired and retried) contributes nothing on that attempt: an
-error response never carries `usage`, so there is nothing to add — only a call that reaches a
-successful decode reports a cost.
+That finding supersedes this ADR's original `onCost`-callback design (kept in git history):
+the callback was designed around the premise that the cost needed a cross-cutting channel
+because "the response object is discarded." The premise is wrong — the value is one
+property access away at the exact site that already holds the response
+(`provider.ts`'s `flatMap` next to `choices[0]`, `direct-solve.ts`'s prose `flatMap`).
+A callback inverts control for no benefit; a local return-shape change keeps data flow
+total. So:
+
+- `requestStructuredCompletion` (`src/extraction/provider.ts`) returns
+  `Effect<{ value: A; costUsd: number | undefined }, ProviderError | SchemaRejected |
+  SchemaViolation>` — `costUsd` is `response.usage?.cost` when that is a `number`, else
+  `undefined` (`null`/missing on local and free-tier routes). Read at the existing site
+  that already holds the response; no new response plumbing.
+- `requestProseCompletion` (`src/eval/direct-solve.ts`) returns the identical wrapper,
+  read the identical way.
+- Direct callers — `extractOnce`, `critiqueOnce` in `src/extraction/extract.ts`; the two
+  `requestStructuredCompletion` calls in `extractStaged`; `directSolveHarness`'s
+  solve-then-judge pair in `src/eval/direct-solve.ts` — destructure once and forward
+  `costUsd` additively through the layers §2.2 names. Layers that don't aggregate cost
+  pass the wrapper's `value` through exactly as today; the only code that names `costUsd`
+  is code that sums it.
+- A failed attempt (a timeout, a rejected schema, a `SchemaViolation` that gets repaired
+  and retried) contributes nothing on that attempt: an error response never carries
+  `usage`, so there is nothing to read — only a call that reaches a successful decode
+  reports a cost.
 
 ### 2.2 Each harness stage reports its own measured total
 
 Every harness's `extract`/`compile`/`solve` stage already returns a custom object
 (`{extractedCsp, model}`, then `{..., mzn}`, then `{..., solveResult}` — `EvalHarness`'s
 three stage-separated `Effect`s in `src/eval/harness.ts`). Each stage gains one field,
-`actualCostUsd: number | undefined`, carrying the sum of every `onCost` report made within
+`actualCostUsd: number | undefined`, carrying the summed `costUsd` of every call made within
 that stage — `undefined` when the stage made calls but every one of them reported no cost
 (a fully local or free-tier run), distinct from a measured `0`. `compile` and `solve` forward
 their predecessor's `actualCostUsd` unchanged through the same object-spread pattern they
@@ -90,13 +107,13 @@ JSON the same way it already does for verdicts.
 
 ## 3. Alternatives Considered
 
-- **Change every affected function's success type to carry cost alongside its value** (e.g.
-  `Effect<{data: A; costUsd: number | undefined}, Err>`). Rejected: every caller of
-  `requestStructuredCompletion` — and every caller of *those* callers, up through the critic
-  loop's tier orchestration — would need to destructure a wrapped value instead of using the
-  decoded payload directly, for a benefit (cost) most callers don't need at their layer. The
-  side-channel callback gets the same data to the same places without changing what any
-  existing caller receives on success.
+- **A cost-reporting side channel (`onCost` callback) instead of a changed return type.**
+  This ADR's original design; superseded by [SPIKE-007](../spikes/SPIKE-007-effect-unstable-ai-viability/SPIKE.md)
+  finding 3. Rejected on revisit: the callback inverted control to deliver a value that is
+  one property access away at the existing response site, and every layer would still have
+  needed the accumulator parameter to receive it — same signature growth as the return-type
+  change, plus an indirection. Direct reads keep data flow total: the value is produced
+  where the response is held and forwarded explicitly by code that sums it.
 - **A `Ref`/`FiberRef`-based accumulator instead of a plain callback.** Rejected for this: the
   harness's stages run sequentially within one puzzle, one call at a time — there is no
   concurrent access to guard against, so a `Ref`'s compare-and-swap semantics buy nothing a
@@ -120,8 +137,11 @@ JSON the same way it already does for verdicts.
 
 - Every function on the critic loop's call chain from `requestStructuredCompletion` up to
   `extract()` — `extractOnce`, `critiqueOnce`, `critiqueWithRepair`, `runTier`,
-  `runTierSafely` — gains one additional parameter to carry the `onCost` callback down. This
-  is signature growth at each layer, not a behavior change to any of them.
+  `runTierSafely` — destructures the wrapped return once and forwards `costUsd` additively
+  (a closed-over sum or an explicit accumulator parameter, implementer's choice — the
+  stages run sequentially, so no concurrency primitive is needed either way). This is
+  signature growth at the aggregation layers, not a behavior change to any of them; layers
+  that don't aggregate keep using `value` exactly as today.
 - A puzzle that needed retries or tier escalation before succeeding is under-counted relative
   to what OpenRouter actually billed for the failed attempts, since an error response never
   carries `usage`. The registry's per-call estimate is not substituted in for those specific
