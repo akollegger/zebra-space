@@ -78,7 +78,7 @@ test("local route: completion succeeds with no API key and sends tool_choice req
   const Payload = Schema.Struct({ colors: Schema.Array(Schema.String) })
   await withLocalStub(
     (exchange) => {
-      exchange.respondWithJson({ colors: ["red", "blue"] })
+      exchange.respondWithJson({ colors: ["red", "blue"] }, { cost: 0 })
     },
     async (stub) => {
       const result = await Effect.runPromise(
@@ -91,7 +91,7 @@ test("local route: completion succeeds with no API key and sends tool_choice req
           schema: Payload,
         }),
       )
-      assert.deepEqual(result, { colors: ["red", "blue"] })
+      assert.deepEqual(result, { value: { colors: ["red", "blue"] }, costUsd: 0 })
       assert.equal(stub.requests.length, 1)
       assert.equal(stub.requests[0]?.toolChoice, "required")
       assert.equal(stub.requests[0]?.schemaName, "extract")

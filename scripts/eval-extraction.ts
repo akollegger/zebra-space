@@ -294,6 +294,8 @@ interface PuzzleRunRecord {
   readonly assignment: unknown
   readonly graderDetail: string | null
   readonly aliasesApplied: number
+  readonly estimatedCostUsd: number
+  readonly actualCostUsd: number | null
   readonly extractionError: { readonly tag: string; readonly detail: string; readonly criticAttempts: number | null } | null
   readonly compileError: { readonly reason: string } | null
   readonly solveError: { readonly tag: string; readonly detail: string } | null
@@ -303,6 +305,7 @@ interface RecordContext {
   readonly runIndex: number
   readonly workflow: Workflow
   readonly harness: EvalHarness
+  readonly estimatedCostUsd: number
 }
 
 function record(
@@ -330,6 +333,8 @@ function record(
     assignment: extra.assignment ?? null,
     graderDetail: extra.graderDetail ?? null,
     aliasesApplied: extra.aliasesApplied ?? 0,
+    estimatedCostUsd: extra.estimatedCostUsd ?? ctx.estimatedCostUsd,
+    actualCostUsd: extra.actualCostUsd ?? null,
     extractionError: extra.extractionError ?? null,
     compileError: extra.compileError ?? null,
     solveError: extra.solveError ?? null,
@@ -462,6 +467,7 @@ async function runOnePuzzle(
       {
         extractedCsp: extraction.extractedCsp,
         resolvedModel: extraction.model,
+        actualCostUsd: extraction.actualCostUsd ?? null,
         compileError: { reason: compileOutcome.error.reason },
       },
       title,
@@ -481,13 +487,14 @@ async function runOnePuzzle(
         extractedCsp: compilation.extractedCsp,
         mzn: compilation.mzn,
         resolvedModel: compilation.model,
+        actualCostUsd: compilation.actualCostUsd ?? null,
         solveError: { tag: error.tag, detail: error.detail },
       },
       title,
       ctx,
     )
   }
-  const { solveResult, extractedCsp, model, mzn } = solveOutcome.value
+  const { solveResult, extractedCsp, model, mzn, actualCostUsd } = solveOutcome.value
   const finalDurationMs = durationMs()
 
   // The direct-solve baseline carries a judge's verdict, not a SolveResult to grade:
@@ -510,6 +517,7 @@ async function runOnePuzzle(
         assignment: null,
         graderDetail: judged.detail,
         aliasesApplied: 0,
+        actualCostUsd: actualCostUsd ?? null,
       },
       title,
       ctx,
@@ -547,6 +555,7 @@ async function runOnePuzzle(
             : solveResult.assignments,
       graderDetail: graded.detail,
       aliasesApplied: graded.aliasesApplied,
+      actualCostUsd: actualCostUsd ?? null,
     },
     title,
     ctx,
@@ -660,6 +669,11 @@ function chargePuzzle(budget: BudgetState): boolean {
   return budget.budgetUsd === undefined || budget.spendUsd <= budget.budgetUsd
 }
 
+/** Replace the just-reserved estimate with a measured stage total when the provider reported one. */
+function reconcilePuzzleCost(budget: BudgetState, actualCostUsd: number | null): void {
+  if (actualCostUsd !== null) budget.spendUsd += actualCostUsd - budget.costPerPuzzleUsd
+}
+
 // --- Reporting -------------------------------------------------------------------------------
 
 function getGitCommitSha(): string {
@@ -749,6 +763,7 @@ async function writeRawResults(
     harness: EvalHarness
     runs: number
     spendUsd: number
+    estimatedSpendUsd: number
     llmCalls: number
     aliasesVersion: number
     records: readonly PuzzleRunRecord[]
@@ -769,6 +784,7 @@ async function writeRawResults(
     promptVersion: data.harness.promptVersion,
     runsPerPuzzle: data.runs,
     spendUsd: data.spendUsd,
+    estimatedSpendUsd: data.estimatedSpendUsd,
     llmCalls: data.llmCalls,
     aliasesVersion: data.aliasesVersion,
     concurrency: "sequential",
@@ -806,6 +822,7 @@ async function appendResultsMarkdown(data: {
   records: readonly PuzzleRunRecord[]
   summary: Summary
   spendUsd: number
+  estimatedSpendUsd: number
   rawResultsPath: URL
 }): Promise<void> {
   if (!existsSync(RESULTS_MD_PATH)) {
@@ -826,7 +843,7 @@ async function appendResultsMarkdown(data: {
 
 ## ${data.startedAt.toISOString().replace(/\.\d+Z$/, "Z")} — commit \`${data.gitCommit}\`
 
-${modelLine}${harnessLine}${runsLine} · ${data.summary.total} puzzle-runs · pass rate **${data.summary.passes}/${data.summary.total - data.summary.excluded} (${Math.round(data.summary.passRate * 100)}%)** · spend ~$${data.spendUsd.toFixed(2)}
+${modelLine}${harnessLine}${runsLine} · ${data.summary.total} puzzle-runs · pass rate **${data.summary.passes}/${data.summary.total - data.summary.excluded} (${Math.round(data.summary.passRate * 100)}%)** · estimated $${data.estimatedSpendUsd.toFixed(2)} · measured/fallback $${data.spendUsd.toFixed(2)}
 
 | Puzzle | Outcome |
 |---|---|
@@ -920,7 +937,7 @@ async function main(): Promise<void> {
 
   const startedAt = new Date()
   const records: PuzzleRunRecord[] = []
-  const ctx = { runIndex: 0, workflow: args.workflow, harness }
+  const ctx = { runIndex: 0, workflow: args.workflow, harness, estimatedCostUsd: budget.costPerPuzzleUsd }
   let stoppedByBudget = false
   for (let runIndex = 0; runIndex < args.runs && !stoppedByBudget; runIndex++) {
     for (const puzzle of puzzles) {
@@ -964,6 +981,7 @@ async function main(): Promise<void> {
               ),
             ])
       records.push(rec)
+      reconcilePuzzleCost(budget, rec.actualCostUsd)
       console.log(`${outcomeDetail(rec)} (${(rec.durationMs / 1000).toFixed(1)}s)`)
     }
   }
@@ -983,6 +1001,7 @@ async function main(): Promise<void> {
     harness,
     runs: args.runs,
     spendUsd: budget.spendUsd,
+    estimatedSpendUsd: budget.costPerPuzzleUsd * records.length,
     llmCalls: budget.calls,
     aliasesVersion,
     records,
@@ -998,6 +1017,7 @@ async function main(): Promise<void> {
     records,
     summary,
     spendUsd: budget.spendUsd,
+    estimatedSpendUsd: budget.costPerPuzzleUsd * records.length,
     rawResultsPath,
   })
 

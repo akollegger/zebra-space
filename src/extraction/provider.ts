@@ -25,6 +25,12 @@ export interface StructuredCompletionRequest<A> {
   readonly forceOpenRouter?: boolean | undefined
 }
 
+/** A successful provider response plus its billed dollar cost, when the route reports one. */
+export interface Costed<A> {
+  readonly value: A
+  readonly costUsd: number | undefined
+}
+
 /**
  * A 401 reaching this far means no usable credential was attached to the request at all (an
  * empty/unset OPENROUTER_API_KEY never gets an Authorization header in the first place — see
@@ -144,7 +150,7 @@ function client(route: ProviderRoute): OpenRouter {
  */
 export function requestStructuredCompletion<A>(
   request: StructuredCompletionRequest<A>,
-): Effect.Effect<A, ProviderError | SchemaRejected | SchemaViolation> {
+): Effect.Effect<Costed<A>, ProviderError | SchemaRejected | SchemaViolation> {
   const timeoutMs = request.timeoutMs ?? DEFAULT_TIMEOUT_MS
   const route = resolveProviderRoute(request.schemaName, { forceOpenRouter: request.forceOpenRouter })
 
@@ -216,6 +222,7 @@ export function requestStructuredCompletion<A>(
         )
       }
 
+      const costUsd = typeof response.usage?.cost === "number" ? response.usage.cost : undefined
       return Effect.try({
         try: () => JSON.parse(call.function.arguments) as unknown,
         catch: () =>
@@ -225,6 +232,7 @@ export function requestStructuredCompletion<A>(
       }).pipe(
         Effect.flatMap((json) =>
           Schema.decodeUnknownEffect(request.schema)(json).pipe(
+            Effect.map((value): Costed<A> => ({ value, costUsd })),
             Effect.catchTag("SchemaError", (schemaError) =>
               Effect.fail(
                 new SchemaViolation({

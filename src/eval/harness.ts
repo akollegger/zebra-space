@@ -48,6 +48,7 @@ export interface HarnessModelOpts {
 export interface HarnessExtraction {
   readonly extractedCsp: unknown
   readonly model: string
+  readonly actualCostUsd: number | undefined
 }
 
 export interface HarnessCompilation {
@@ -55,6 +56,7 @@ export interface HarnessCompilation {
   readonly model: string
   /** Null for harnesses with no MiniZinc (e.g. direct-solve) — records already accept null. */
   readonly mzn: string | null
+  readonly actualCostUsd: number | undefined
 }
 
 export interface HarnessSolution {
@@ -62,6 +64,7 @@ export interface HarnessSolution {
   readonly model: string
   readonly mzn: string | null
   readonly solveResult: SolveResult
+  readonly actualCostUsd: number | undefined
 }
 
 /** Failure of the extraction stage (LLM, local NER, graph builder — whatever the harness uses). */
@@ -167,7 +170,7 @@ function solveMzn(compilation: HarnessCompilation): Effect.Effect<HarnessSolutio
 }
 
 function extractWith(
-  run: (prose: string, modelOpts: ExtractOptions) => Effect.Effect<{ extractedCsp: ExtractedCsp; model: string }, ExtractionError>,
+  run: (prose: string, modelOpts: ExtractOptions) => Effect.Effect<{ extractedCsp: ExtractedCsp; model: string; actualCostUsd: number | undefined }, ExtractionError>,
 ): EvalHarness["extract"] {
   return (prose, modelOpts) =>
     run(prose, modelOpts).pipe(
@@ -211,8 +214,8 @@ export const singleShotHarness: EvalHarness = {
 function repairAfterCompileFailure(
   prose: string,
   modelOpts: HarnessModelOpts,
-  extraction: { readonly extractedCsp: ExtractedCsp; readonly model: string },
-): Effect.Effect<{ readonly extractedCsp: ExtractedCsp; readonly model: string }, HarnessExtractionError> {
+  extraction: { readonly extractedCsp: ExtractedCsp; readonly model: string; readonly actualCostUsd: number | undefined },
+): Effect.Effect<{ readonly extractedCsp: ExtractedCsp; readonly model: string; readonly actualCostUsd: number | undefined }, HarnessExtractionError> {
   // Probe: null when the extraction compiles (keep it), the reason when it doesn't (repair).
   const probe: Effect.Effect<string | null, never, never> = compile(extraction.extractedCsp).pipe(
     Effect.map(() => null as string | null),
@@ -225,6 +228,14 @@ function repairAfterCompileFailure(
         : extractSingleShot(
             `${prose}\n\nA previous attempt failed to compile with this error — avoid it:\n${reason}`,
             modelOpts,
+          ).pipe(
+            Effect.map((retry) => ({
+              ...retry,
+              actualCostUsd:
+                extraction.actualCostUsd === undefined && retry.actualCostUsd === undefined
+                  ? undefined
+                  : (extraction.actualCostUsd ?? 0) + (retry.actualCostUsd ?? 0),
+            })),
           ),
     ),
     Effect.catch((error) => Effect.fail(toExtractionError(error))),

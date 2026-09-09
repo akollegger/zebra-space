@@ -262,10 +262,10 @@ async function appendMatrixMarkdown(data: {
   if (!existsSync(MATRIX_MD_PATH)) {
     await writeFile(MATRIX_MD_PATH, MATRIX_MD_HEADER)
   }
-  const failedLabels = new Set(data.cellFailures.map(({ cell }) => `${cell.model.id} ${cell.harnessId}`))
+  const failedLabels = new Set(data.cellFailures.map(({ cell }) => `${cell.model.id}\u0000${cell.harnessId}`))
   const rows = data.cells
     .map((c) => {
-      const failed = failedLabels.has(`${c.model.id} ${c.harnessId}`)
+      const failed = failedLabels.has(`${c.model.id}\u0000${c.harnessId}`)
       const scope = c.puzzles.length === 0 ? "all 39" : c.puzzles.join(" ")
       const estimate = failed ? `~$${c.estimatedUsd.toFixed(2)} (FAILED)` : `~$${c.estimatedUsd.toFixed(2)}`
       return `| ${c.model.id} [${c.model.tier}] | ${c.harnessId} | ${scope} | ${c.runs} | ${estimate} |`

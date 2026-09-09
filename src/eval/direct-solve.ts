@@ -137,14 +137,15 @@ export const directSolveHarness: EvalHarness = {
       if (answerKeyJson === undefined) {
         return yield* Effect.fail(toFailure("JudgeUnclear", "no answer key provided to the judge"))
       }
-      const solution = yield* requestProseCompletion({
+      const solutionResult = yield* requestProseCompletion({
         model: solverModel,
         systemPrompt: solveSystemPrompt(),
         userPrompt: solveUserPrompt(prose),
       })
+      const solution = solutionResult.value
       // ADR-008 §2.4: the judge must never be silently answered by the model under test —
       // force OpenRouter even when ZEBRA_LOCAL_BASE_URL is set for the solver call above.
-      const verdict = yield* requestStructuredCompletion({
+      const verdictResult = yield* requestStructuredCompletion({
         model: judgeModel,
         systemPrompt: judgeSystemPrompt(),
         userPrompt: judgeUserPrompt(prose, solution, answerKeyJson),
@@ -153,11 +154,16 @@ export const directSolveHarness: EvalHarness = {
         schema: JudgeVerdict,
         forceOpenRouter: true,
       })
+      const verdict = verdictResult.value
       // The verdict travels inside extractedCsp (this harness has no MiniZinc);
       // compile passes it through, solve lifts it out for the runner to record.
       return {
         extractedCsp: { directSolution: solution, judgeVerdict: verdict },
         model: solverModel,
+        actualCostUsd: [solutionResult.costUsd, verdictResult.costUsd].reduce<number | undefined>(
+          (sum, cost) => cost === undefined ? sum : (sum ?? 0) + cost,
+          undefined,
+        ),
       }
     }).pipe(
       Effect.catch((error) => {
@@ -175,12 +181,14 @@ export const directSolveHarness: EvalHarness = {
       extractedCsp: extraction.extractedCsp,
       model: extraction.model,
       mzn: null,
+      actualCostUsd: extraction.actualCostUsd,
     }),
   solve: (compilation) =>
     Effect.succeed({
       extractedCsp: compilation.extractedCsp,
       model: compilation.model,
       mzn: compilation.mzn,
+      actualCostUsd: compilation.actualCostUsd,
       // No SolveResult exists — the judge already graded. The runner reads judgeVerdict
       // from extractedCsp and maps it to an outcome directly; this placeholder only
       // satisfies the stage shape and is never graded.
@@ -195,11 +203,11 @@ export const directSolveHarness: EvalHarness = {
 
 const PROSE_TIMEOUT_MS = 300_000
 
-function requestProseCompletion(request: {
+export function requestProseCompletion(request: {
   readonly model: string
   readonly systemPrompt: string
   readonly userPrompt: string
-}): Effect.Effect<string, ProviderError> {
+}): Effect.Effect<{ readonly value: string; readonly costUsd: number | undefined }, ProviderError> {
   const route = resolveBaseRoute()
   const client = new OpenRouter({
     apiKey: route.apiKey,
@@ -237,7 +245,10 @@ function requestProseCompletion(request: {
       if (content.trim() === "") {
         return Effect.fail(new ProviderError({ message: `Direct solve by ${request.model} returned empty content` }))
       }
-      return Effect.succeed(content)
+      return Effect.succeed({
+        value: content,
+        costUsd: typeof response.usage?.cost === "number" ? response.usage.cost : undefined,
+      })
     }),
   )
 }

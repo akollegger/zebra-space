@@ -62,7 +62,7 @@ test("seam: a custom harness with stub stages runs stage-by-stage through the in
     description: "offline stub for interface conformance",
     promptVersion: 99,
     maxCallsPerPuzzle: 0,
-    extract: () => Effect.succeed({ extractedCsp: { stub: true }, model: "stub-model" }),
+    extract: () => Effect.succeed({ extractedCsp: { stub: true }, model: "stub-model", actualCostUsd: undefined }),
     compile: (extraction) => Effect.succeed({ ...extraction, mzn: "stub-mzn" }),
     solve: (compilation) =>
       Effect.succeed({
@@ -74,7 +74,7 @@ test("seam: a custom harness with stub stages runs stage-by-stage through the in
   assert.ok(!listHarnesses().some((h) => h.id === "stub"))
 
   const extraction = await Effect.runPromise(stub.extract("prose", {}))
-  assert.deepEqual(extraction, { extractedCsp: { stub: true }, model: "stub-model" })
+  assert.deepEqual(extraction, { extractedCsp: { stub: true }, model: "stub-model", actualCostUsd: undefined })
   const compilation = await Effect.runPromise(stub.compile(extraction))
   assert.equal(compilation.mzn, "stub-mzn")
   const solution = await Effect.runPromise(stub.solve(compilation))

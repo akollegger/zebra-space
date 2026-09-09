@@ -32,11 +32,15 @@ test(
     // sample concurrently risks 429s/timeouts that fail the assertion below for reasons unrelated
     // to extraction fidelity (same "stay easy on rate limits/cost" practice as eval/README.md's
     // harness).
-    const outcomes: { filename: string; succeeded: boolean }[] = []
+    const outcomes: { filename: string; succeeded: boolean; actualCostUsd: number | undefined }[] = []
     for (const filename of SAMPLE_PUZZLES) {
       const prose = await readFile(puzzlePath(filename), "utf8")
       const exit = await Effect.runPromiseExit(extract(prose))
-      outcomes.push({ filename, succeeded: exit._tag === "Success" })
+      outcomes.push({
+        filename,
+        succeeded: exit._tag === "Success",
+        actualCostUsd: exit._tag === "Success" ? exit.value.actualCostUsd : undefined,
+      })
     }
 
     const succeeded = outcomes.filter((o) => o.succeeded).length
@@ -45,6 +49,15 @@ test(
     console.log(`Live extraction results: ${succeeded}/${outcomes.length} (${Math.round(rate * 100)}%)`)
     for (const outcome of outcomes) {
       console.log(`  ${outcome.succeeded ? "OK  " : "FAIL"} ${outcome.filename}`)
+    }
+
+    // ADR-010: successful billed calls expose the provider's actual cost, not a registry
+    // estimate. This is deliberately key-gated with the existing live extraction test.
+    for (const outcome of outcomes.filter((outcome) => outcome.succeeded)) {
+      const actualCostUsd = outcome.actualCostUsd
+      assert.equal(typeof actualCostUsd, "number", `${outcome.filename} returned no actual cost`)
+      if (actualCostUsd === undefined) assert.fail(`${outcome.filename} returned no actual cost`)
+      assert.ok(actualCostUsd > 0, `${outcome.filename} reported a non-positive actual cost`)
     }
 
     assert.ok(

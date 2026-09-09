@@ -24,9 +24,9 @@ export interface StubRequest {
 export interface StubExchange {
   readonly request: StubRequest
   /** Reply as the model calling the forced tool with `payload` as its arguments. */
-  respondWithJson(payload: unknown): void
+  respondWithJson(payload: unknown, usage?: { readonly cost?: number | null }): void
   /** Reply with prose and no tool call at all — the SchemaViolation path SPIKE-005 observed. */
-  respondWithProse(text: string): void
+  respondWithProse(text: string, usage?: { readonly cost?: number | null }): void
   respondWithError(statusCode: number, message: string): void
 }
 
@@ -56,13 +56,14 @@ function readBody(req: import("node:http").IncomingMessage): Promise<string> {
   })
 }
 
-function toolCallResponse(model: string, toolName: string, args: string): unknown {
+function toolCallResponse(model: string, toolName: string, args: string, usage?: { readonly cost?: number | null }): unknown {
   return {
     id: "stub-completion",
     object: "chat.completion",
     created: 0,
     model,
     system_fingerprint: null,
+    ...(usage === undefined ? {} : { usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0, ...usage } }),
     choices: [
       {
         index: 0,
@@ -79,13 +80,14 @@ function toolCallResponse(model: string, toolName: string, args: string): unknow
   }
 }
 
-function proseResponse(model: string, content: string): unknown {
+function proseResponse(model: string, content: string, usage?: { readonly cost?: number | null }): unknown {
   return {
     id: "stub-completion",
     object: "chat.completion",
     created: 0,
     model,
     system_fingerprint: null,
+    ...(usage === undefined ? {} : { usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0, ...usage } }),
     choices: [{ index: 0, finish_reason: "stop", message: { role: "assistant", content } }],
   }
 }
@@ -121,18 +123,19 @@ export function startStubServer(handler: StubHandler): Promise<StubServer> {
 
           const exchange: StubExchange = {
             request,
-            respondWithJson(payload) {
+            respondWithJson(payload, usage) {
               const responseBody = toolCallResponse(
                 request.model,
                 request.schemaName,
                 JSON.stringify(payload),
+                usage,
               )
               res.writeHead(200, { "content-type": "application/json" })
               res.end(JSON.stringify(responseBody))
             },
-            respondWithProse(text) {
+            respondWithProse(text, usage) {
               res.writeHead(200, { "content-type": "application/json" })
-              res.end(JSON.stringify(proseResponse(request.model, text)))
+              res.end(JSON.stringify(proseResponse(request.model, text, usage)))
             },
             respondWithError(statusCode, message) {
               res.writeHead(statusCode, { "content-type": "application/json" })

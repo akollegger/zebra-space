@@ -26,12 +26,12 @@ test("schema: JudgeVerdict is verdict + reason, with no transcription surface", 
 test("harness: direct-solve issues a prose solve then a judge tool call carrying the key", async () => {
   const stub = await startStubServer((exchange, callIndex) => {
     if (callIndex === 0) {
-      exchange.respondWithProse("The culprit is Plum. Reasoning: ...")
+      exchange.respondWithProse("The culprit is Plum. Reasoning: ...", { cost: 0.001 })
     } else {
       // The judge sees the answer key in its prompt and returns a judgment, not assignments.
       assert.match(exchange.request.userPrompt, /Expected answer/)
       assert.match(exchange.request.userPrompt, /PZL-TEST/)
-      exchange.respondWithJson({ verdict: "correct", reason: "matches on all fields" })
+      exchange.respondWithJson({ verdict: "correct", reason: "matches on all fields" }, { cost: 0.002 })
     }
   })
   const previousOverride = process.env.ZEBRA_OPENROUTER_BASE_URL_OVERRIDE
@@ -51,14 +51,17 @@ test("harness: direct-solve issues a prose solve then a judge tool call carrying
     assert.equal(extraction.model, "test/solver")
     const csp = extraction.extractedCsp as { judgeVerdict: { verdict: string } }
     assert.equal(csp.judgeVerdict.verdict, "correct")
+    assert.equal(extraction.actualCostUsd, 0.003)
     // Two calls: solve (prose) + judge (tool call by schema name).
     assert.equal(stub.requests.length, 2)
     assert.equal(stub.requests[1]?.schemaName, "JudgeVerdict")
 
     const compilation = await Effect.runPromise(directSolveHarness.compile(extraction))
     assert.equal(compilation.mzn, null)
+    assert.equal(compilation.actualCostUsd, 0.003)
     const solution = await Effect.runPromise(directSolveHarness.solve(compilation))
     assert.equal(solution.mzn, null)
+    assert.equal(solution.actualCostUsd, 0.003)
   } finally {
     await stub.close()
     if (previousOverride === undefined) delete process.env.ZEBRA_OPENROUTER_BASE_URL_OVERRIDE
