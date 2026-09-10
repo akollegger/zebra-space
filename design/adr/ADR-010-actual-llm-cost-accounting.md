@@ -4,7 +4,7 @@ title: Actual LLM Cost Accounting for the Eval Harness
 status: proposed
 rfcs: [RFC-004, RFC-003]
 created: 2026-09-07
-specs: []
+specs: [specs/006-cost-accounting]
 ---
 
 # ADR-010: Actual LLM Cost Accounting for the Eval Harness
@@ -143,12 +143,18 @@ JSON the same way it already does for verdicts.
   signature growth at the aggregation layers, not a behavior change to any of them; layers
   that don't aggregate keep using `value` exactly as today.
 - A puzzle that needed retries or tier escalation before succeeding is under-counted relative
-  to what OpenRouter actually billed for the failed attempts, since an error response never
-  carries `usage`. The registry's per-call estimate is not substituted in for those specific
-  failed calls — only for a whole stage whose successful calls never reported a cost — so a
-  retry-heavy puzzle's `actualCostUsd` is a real lower bound, not a corrected total. Closing
-  this gap would need OpenRouter to bill and report failed generations, which is outside this
-  project's control.
+  to what OpenRouter actually billed for the failed attempts, since a genuine transport failure
+  (a timeout, a dropped connection, a 4xx/5xx before any body is parsed) never carries `usage`.
+  The registry's per-call estimate is not substituted in for those specific failed calls — only
+  for a whole stage whose successful calls never reported a cost — so a retry-heavy puzzle's
+  `actualCostUsd` remains a lower bound in that specific case. Closing that residual gap would
+  need OpenRouter to bill and report failed generations, which is outside this project's
+  control. (Narrower than originally stated here: a PR-review follow-up found that a call which
+  *does* get a response and only then fails — the model replies in prose instead of calling the
+  tool, or its tool-call arguments don't decode — still carries `usage` on that response, and
+  every accounting layer from `provider.ts`'s error construction up through `HarnessExtractionError`
+  now preserves it instead of discarding it. Only the truly response-less failures above are
+  still invisible to `actualCostUsd`.)
 - `eval/models.json`'s `cost_per_call_usd` estimates stop being the only spend figure in
   `eval/results.md`/`eval/matrix.md` and become a visible pre-run ceiling and per-call
   fallback instead — a live discrepancy between the two (e.g. a model whose real cost
@@ -161,8 +167,7 @@ JSON the same way it already does for verdicts.
 ## 5. Related
 
 - RFCs: RFC-004, RFC-003
-- Specs: _(populated automatically by the speckit ADR-link hook once `/speckit-specify`
-  references this ADR)_
+- Specs: [specs/006-cost-accounting](../../specs/006-cost-accounting/spec.md)
 - Implementation: deferred from the `eval-framework-improvements` branch's code-review fix
   pass — see `CLAUDE.md`'s Design process section and
   [ADR-007](ADR-007-eval-outcome-grader-semantics.md) §2.3, whose actual-cost decision this

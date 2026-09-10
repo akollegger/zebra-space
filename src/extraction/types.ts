@@ -483,8 +483,16 @@ export const extractedConstraintsJsonSchema = toProviderSchema(ExtractedConstrai
 // Independent of SolverError — this pipeline's errors are about extraction and critique, not
 // solving.
 
+// Every extraction/critique error carries `costUsd`: the dollar cost of whatever billed calls
+// happened before this error surfaced (`undefined` when nothing billed, e.g. a transport failure
+// before any response arrived). Without this, a call that billed and then failed downstream
+// (the model replied in prose instead of calling the tool, or a decode rejected its arguments)
+// silently drops that spend from every accounting layer above — the failure looks free when it
+// wasn't (ADR-010 follow-up; found in PR review, see src/eval/harness.ts's toExtractionError).
+
 export class ProviderError extends Data.TaggedError("ProviderError")<{
   readonly message: string
+  readonly costUsd: number | undefined
 }> {}
 
 /**
@@ -496,6 +504,7 @@ export class ProviderError extends Data.TaggedError("ProviderError")<{
 export class SchemaRejected extends Data.TaggedError("SchemaRejected")<{
   readonly model: string
   readonly providerMessage: string
+  readonly costUsd: number | undefined
 }> {}
 
 /**
@@ -510,6 +519,7 @@ export class SchemaViolation extends Data.TaggedError("SchemaViolation")<{
   readonly model: string
   readonly raw: string
   readonly detail: string
+  readonly costUsd: number | undefined
 }> {}
 
 export interface ExtractionAttempt {
@@ -520,6 +530,7 @@ export interface ExtractionAttempt {
 
 export class CriticRejected extends Data.TaggedError("CriticRejected")<{
   readonly attempts: readonly ExtractionAttempt[]
+  readonly costUsd: number | undefined
 }> {}
 
 export type ExtractionError = ProviderError | SchemaRejected | SchemaViolation | CriticRejected

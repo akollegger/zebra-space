@@ -40,6 +40,27 @@ verified registry models (at least one per tier) with registered harnesses; each
 defaults to a stratified 8-puzzle subset spanning all five outcome classes, the baseline cell
 always runs all 39, and `--full` opts every cell in. Only `verified` registry entries run.
 
+## Cost accounting (ADR-010)
+
+Two figures, always side by side, never conflated:
+
+- **`estimatedCostUsd`** — the registry's per-call rate × the harness's worst-case call
+  count. Exists before any call is made; drives the pre-run budget gate, which stays
+  estimate-based by design (nothing measured exists yet at that point).
+- **`actualCostUsd`** — the sum of `usage.cost` off the provider's own responses, read per
+  call at the response site and summed per harness stage. `null` (JSON) / `undefined`
+  (in-process) when no call in the stage reported a cost — local and free-tier routes, which
+  don't bill in dollars. Absence is never rewritten to `0`; a measured `0` is a real zero.
+
+After each puzzle the budget accumulator replaces its reserved estimate with the measured
+total when there is one, so a run's live spend tracks reality rather than worst case. Two
+caveats worth knowing before reading these numbers as invoices: measured totals are **lower
+bounds** for retry-heavy runs, because a failed attempt (timeout, schema rejection) never
+carries usage data and contributes nothing; and within a stage only reported calls count —
+there is no per-call estimate substitution, only whole-stage fallback. Comparing the two
+figures across runs is how registry estimates get calibrated: a model whose actual
+consistently lands under its estimate is over-provisioned in `models.json`, and vice versa.
+
 ## Baseline (`direct-solve`, ADR-008)
 
 Every extraction number needs a baseline answering "can the model solve this at all, schema
@@ -79,16 +100,21 @@ entity-vocabulary recovery keeps working; each harness declares `maxCallsPerPuzz
 
 ## Output
 
-- `results.md` (committed) — one append-only section per run: date, git commit, models used, and
-  a per-puzzle outcome table. The durable history to compare across runs/changes.
+- `results.md` (committed) — one append-only section per run: date, git commit, models used,
+  estimated and measured spend, and a per-puzzle outcome table. The durable history to compare
+  across runs/changes.
 - `results/<run-id>.json` (gitignored) — full raw detail for one run: harness id +
   description + prompt version, extracted CSP, compiled `.mzn`, solve result, grader detail,
-  spend, and per-repeat records. Use this to actually debug a failure; `results.md` only has
+  run-level `spendUsd`/`estimatedSpendUsd`, per-puzzle `estimatedCostUsd`/`actualCostUsd`,
+  and per-repeat records. Use this to actually debug a failure; `results.md` only has
   the summary.
 - `matrix.md` (committed) — one section per matrix run: the cells executed, their estimates, and
-  skipped tiers. Per-cell raw detail lives in that cell's `results/<run-id>.json`.
-- `models.json` (committed, versioned) — the model registry: id, tier, cost-per-call estimate,
-  verification status, provider notes. Only `verified` entries run.
+  skipped tiers; completed cells gain a spend line (measured vs estimated, with the measured
+  count). Per-cell raw detail lives in that cell's `results/<run-id>.json`.
+- `models.json` (committed, versioned) — the model registry: id, tier, `cost_per_call_usd`
+  (a planning ESTIMATE for the pre-run gate and the whole-stage fallback — not an observed
+  cost; ADR-010 actuals live in the raw results), verification status, provider notes.
+  Only `verified` entries run.
 - `aliases.json` (committed, versioned) — the grader's alias table for name paraphrases.
 
 ## Answer keys (`answer-keys.json`)

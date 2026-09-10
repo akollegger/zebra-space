@@ -1,7 +1,7 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { Effect } from "effect"
-import { extract } from "../../src/extraction/extract.ts"
+import { extract, extractSingleShot, extractStaged } from "../../src/extraction/extract.ts"
 import type { ExtractedCsp } from "../../src/extraction/types.ts"
 import { startStubServer, type StubHandler, type StubServer } from "./support/stub-server.ts"
 
@@ -324,6 +324,153 @@ test("A schema-invalid CRITIQUE response (not extraction) is also retried with a
       // Only ONE extraction call — the critique repair reused the same extractedCsp, no
       // re-extraction was needed.
       assert.equal(stub.requests.filter((r) => r.schemaName === "ExtractedCsp").length, 1)
+    },
+  )
+})
+
+// --- ADR-010 cost accumulation (T008) ------------------------------------------------------------
+// Costs use binary-exact values (0.25, 0.125, …) so sums assert with exact equality —
+// no floating-point noise. Failed attempts must contribute nothing: an error response never
+// carries usage, and a decode failure discards the response's cost with it.
+
+test("ADR-010: a first-pass accept sums the extraction and critique call costs", async () => {
+  await withStub(
+    (exchange) => {
+      if (exchange.request.schemaName === "FidelityCritique") {
+        exchange.respondWithJson({ accepted: true, issues: [] }, { cost: 0.125 })
+      } else {
+        exchange.respondWithJson(SAMPLE_CSP, { cost: 0.25 })
+      }
+    },
+    async () => {
+      const result = await runExtract()
+      assert.equal(result.actualCostUsd, 0.375)
+    },
+  )
+})
+
+test("ADR-010: a critic revision sums every call in the tier, rejected critiques included", async () => {
+  let critiqueCalls = 0
+  await withStub(
+    (exchange) => {
+      if (exchange.request.schemaName === "FidelityCritique") {
+        critiqueCalls += 1
+        exchange.respondWithJson(
+          critiqueCalls === 1 ? { accepted: false, issues: ["missing a clue"] } : { accepted: true, issues: [] },
+          { cost: 0.125 },
+        )
+      } else {
+        exchange.respondWithJson(SAMPLE_CSP, { cost: 0.25 })
+      }
+    },
+    async (stub) => {
+      const result = await runExtract()
+      // 2 extractions (initial + revision) + 2 critiques (reject + accept).
+      assert.equal(stub.requests.length, 4)
+      assert.equal(result.actualCostUsd, 0.75)
+    },
+  )
+})
+
+test("ADR-010: tier escalation sums costs across both tiers", async () => {
+  await withStub(
+    (exchange) => {
+      if (exchange.request.schemaName === "FidelityCritique") {
+        const accept = exchange.request.model === FRONTIER_MODEL
+        exchange.respondWithJson(
+          accept ? { accepted: true, issues: [] } : { accepted: false, issues: ["still not faithful"] },
+          { cost: accept ? 0.25 : 0.03125 },
+        )
+      } else {
+        const frontier = exchange.request.model === FRONTIER_MODEL
+        exchange.respondWithJson(SAMPLE_CSP, { cost: frontier ? 0.5 : 0.0625 })
+      }
+    },
+    async () => {
+      const result = await runExtract()
+      assert.equal(result.model, FRONTIER_MODEL)
+      // Cheap tier: 3 extracts (0.0625 each) + 3 critiques (0.03125 each) = 0.28125.
+      // Frontier tier: 1 extract (0.5) + 1 critique (0.25) = 0.75.
+      assert.equal(result.actualCostUsd, 1.03125)
+    },
+  )
+})
+
+test("ADR-010: a billed schema-violating attempt still counts, alongside the successful retry", async () => {
+  let extractionCalls = 0
+  await withStub(
+    (exchange) => {
+      if (exchange.request.schemaName === "FidelityCritique") {
+        exchange.respondWithJson({ accepted: true, issues: [] }, { cost: 0.125 })
+        return
+      }
+      extractionCalls += 1
+      if (extractionCalls === 1) {
+        // Invalid payload WITH a billed cost attached: decode fails, but the response was real
+        // and billed, so its cost must still be counted (PR review of ADR-010 — an earlier
+        // version of this fix discarded it here).
+        exchange.respondWithJson({}, { cost: 0.5 })
+      } else {
+        exchange.respondWithJson(SAMPLE_CSP, { cost: 0.25 })
+      }
+    },
+    async () => {
+      const result = await runExtract()
+      assert.deepEqual(result.extractedCsp, SAMPLE_CSP)
+      // 0.5 (rejected attempt) + 0.25 (retry) + 0.125 (critique).
+      assert.equal(result.actualCostUsd, 0.875)
+    },
+  )
+})
+
+test("ADR-010: routes that never bill (no usage) report an absent actual, not zero", async () => {
+  await withStub(
+    (exchange) => {
+      if (exchange.request.schemaName === "FidelityCritique") {
+        exchange.respondWithJson({ accepted: true, issues: [] })
+      } else {
+        exchange.respondWithJson(SAMPLE_CSP)
+      }
+    },
+    async () => {
+      const result = await runExtract()
+      assert.equal(result.actualCostUsd, undefined)
+    },
+  )
+})
+
+test("ADR-010: single-shot reports its one call's cost", async () => {
+  await withStub(
+    (exchange) => {
+      exchange.respondWithJson(SAMPLE_CSP, { cost: 0.25 })
+    },
+    async () => {
+      const result = await Effect.runPromise(extractSingleShot("a puzzle", { model: CHEAP_MODEL }))
+      assert.equal(result.actualCostUsd, 0.25)
+    },
+  )
+})
+
+const STAGED_VOCAB = {
+  entities: [{ id: "H1", type: "house" }],
+  domains: [{ variable: "color", entityType: "house", values: ["Red", "Blue"] }],
+}
+const STAGED_CONSTRAINTS = {
+  constraints: [{ kind: "assignment", entity: "H1", variable: "color", value: "Red" }],
+}
+
+test("ADR-010: staged extraction sums both stage calls", async () => {
+  await withStub(
+    (exchange) => {
+      if (exchange.request.schemaName === "ExtractedVocabulary") {
+        exchange.respondWithJson(STAGED_VOCAB, { cost: 0.25 })
+      } else {
+        exchange.respondWithJson(STAGED_CONSTRAINTS, { cost: 0.125 })
+      }
+    },
+    async () => {
+      const result = await Effect.runPromise(extractStaged("a puzzle", { model: CHEAP_MODEL }))
+      assert.equal(result.actualCostUsd, 0.375)
     },
   )
 })

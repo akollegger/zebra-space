@@ -43,6 +43,7 @@ export interface ExtractOptions {
 export interface ExtractionResult {
   readonly extractedCsp: ExtractedCsp
   readonly model: string
+  readonly actualCostUsd: number | undefined
 }
 
 interface RevisionContext {
@@ -271,6 +272,7 @@ function extractOnce(
   timeoutMs: number,
   context?: RevisionContext,
   repair?: SchemaRepairContext,
+  reportCost?: (costUsd: number | undefined) => void,
 ): Effect.Effect<ExtractedCsp, ProviderError | SchemaRejected | SchemaViolation> {
   const userPrompt =
     repair !== undefined
@@ -286,7 +288,14 @@ function extractOnce(
     jsonSchema: extractedCspJsonSchema,
     schema: ExtractedCsp,
     timeoutMs,
-  })
+  }).pipe(
+    // A call that billed and then failed downstream (schema violation, rejected, etc.) still
+    // spent money — report it on both channels, or a retried/repaired round's cost silently
+    // vanishes from the accumulator (found in PR review of ADR-010).
+    Effect.tap((result) => Effect.sync(() => reportCost?.(result.costUsd))),
+    Effect.tapError((error) => Effect.sync(() => reportCost?.(error.costUsd))),
+    Effect.map((result) => result.value),
+  )
 }
 
 function critiqueOnce(
@@ -295,6 +304,7 @@ function critiqueOnce(
   candidate: ExtractedCsp,
   timeoutMs: number,
   repair?: SchemaRepairContext,
+  reportCost?: (costUsd: number | undefined) => void,
 ): Effect.Effect<FidelityCritique, ProviderError | SchemaRejected | SchemaViolation> {
   return requestStructuredCompletion({
     model,
@@ -304,7 +314,11 @@ function critiqueOnce(
     jsonSchema: fidelityCritiqueJsonSchema,
     schema: FidelityCritique,
     timeoutMs,
-  })
+  }).pipe(
+    Effect.tap((result) => Effect.sync(() => reportCost?.(result.costUsd))),
+    Effect.tapError((error) => Effect.sync(() => reportCost?.(error.costUsd))),
+    Effect.map((result) => result.value),
+  )
 }
 
 type CritiqueOutcome =
@@ -326,11 +340,12 @@ function critiqueWithRepair(
   prose: string,
   candidate: ExtractedCsp,
   timeoutMs: number,
+  reportCost?: (costUsd: number | undefined) => void,
 ): Effect.Effect<CritiqueOutcome, ProviderError | SchemaRejected> {
-  return critiqueOnce(model, prose, candidate, timeoutMs).pipe(
+  return critiqueOnce(model, prose, candidate, timeoutMs, undefined, reportCost).pipe(
     Effect.map((critique): CritiqueOutcome => ({ ok: true, critique })),
     Effect.catchTag("SchemaViolation", (violation) =>
-      critiqueOnce(model, prose, candidate, timeoutMs, { raw: violation.raw, detail: violation.detail }).pipe(
+      critiqueOnce(model, prose, candidate, timeoutMs, { raw: violation.raw, detail: violation.detail }, reportCost).pipe(
         Effect.map((critique): CritiqueOutcome => ({ ok: true, critique })),
         Effect.catchTag("SchemaViolation", (violation2) => Effect.succeed<CritiqueOutcome>({ ok: false, violation: violation2 })),
       ),
@@ -356,6 +371,7 @@ function runTier(
   model: string,
   prose: string,
   timeoutMs: number,
+  reportCost?: (costUsd: number | undefined) => void,
 ): Effect.Effect<TierOutcome, ProviderError | SchemaRejected | SchemaViolation> {
   return Effect.gen(function* () {
     const attempts: ExtractionAttempt[] = []
@@ -364,7 +380,7 @@ function runTier(
     let lastSchemaViolation: SchemaViolation | undefined
 
     for (let round = 0; round <= MAX_REVISIONS_PER_TIER; round++) {
-      const attempt = yield* extractOnce(model, prose, timeoutMs, context, repair).pipe(
+      const attempt = yield* extractOnce(model, prose, timeoutMs, context, repair, reportCost).pipe(
         Effect.map((extractedCsp) => ({ ok: true as const, extractedCsp })),
         Effect.catchTag("SchemaViolation", (violation) => Effect.succeed({ ok: false as const, violation })),
       )
@@ -377,7 +393,7 @@ function runTier(
       }
 
       repair = undefined
-      const critiqueOutcome = yield* critiqueWithRepair(model, prose, attempt.extractedCsp, timeoutMs)
+      const critiqueOutcome = yield* critiqueWithRepair(model, prose, attempt.extractedCsp, timeoutMs, reportCost)
       if (!critiqueOutcome.ok) {
         // The critique itself never conformed, even after one repair retry — this round produced
         // no attempt to record (no valid critique exists to pair with the extraction), but the
@@ -415,8 +431,9 @@ function runTierSafely(
   model: string,
   prose: string,
   timeoutMs: number,
+  reportCost?: (costUsd: number | undefined) => void,
 ): Effect.Effect<TierAttempt, SchemaRejected | SchemaViolation> {
-  return runTier(model, prose, timeoutMs).pipe(
+  return runTier(model, prose, timeoutMs, reportCost).pipe(
     Effect.map((outcome): TierAttempt => ({ ok: true, outcome })),
     Effect.catchTag("ProviderError", (providerError) => Effect.succeed<TierAttempt>({ ok: false, providerError })),
   )
@@ -433,11 +450,19 @@ export function extractSingleShot(
   options?: ExtractOptions & { readonly timeoutMs?: number },
 ): Effect.Effect<ExtractionResult, ProviderError | SchemaRejected | SchemaViolation> {
   const model = options?.model ?? DEFAULT_MODEL
+  let total = 0
+  let reported = false
+  const reportCost = (costUsd: number | undefined) => {
+    if (costUsd !== undefined) {
+      total += costUsd
+      reported = true
+    }
+  }
   // Local models (LM Studio et al) generate an order of magnitude slower than hosted tiers —
   // a 27B model needs minutes, not the cheap tier's 60s, for the full extraction schema.
   const timeoutMs = options?.timeoutMs ?? CHEAP_TIER_TIMEOUT_MS
-  return extractOnce(model, prose, timeoutMs).pipe(
-    Effect.map((extractedCsp) => ({ extractedCsp, model })),
+  return extractOnce(model, prose, timeoutMs, undefined, undefined, reportCost).pipe(
+    Effect.map((extractedCsp) => ({ extractedCsp, model, actualCostUsd: reported ? total : undefined })),
   )
 }
 
@@ -525,6 +550,11 @@ export function extractStaged(
 ): Effect.Effect<StagedExtractionResult, ProviderError | SchemaRejected | SchemaViolation> {
   const model = options?.model ?? DEFAULT_MODEL
   const timeoutMs = options?.timeoutMs ?? CHEAP_TIER_TIMEOUT_MS
+  // Set once stage 1 succeeds, so a stage-2 failure's reconstructed error below can carry
+  // stage 1's billed cost forward instead of discarding it (found in PR review of ADR-010:
+  // a billed vocabulary call followed by a failed constraints call previously vanished from
+  // the accumulator entirely).
+  let priorStageCostUsd: number | undefined
   // Either stage failing fails the whole extraction with the stage named in the detail.
   // Errors are reconstructed per type — never spread: Data.TaggedError fields (message,
   // providerMessage, raw, detail) are non-enumerable, so {...e} silently drops them and
@@ -534,17 +564,21 @@ export function extractStaged(
     error: ProviderError | SchemaRejected | SchemaViolation,
   ): ProviderError | SchemaRejected | SchemaViolation => {
     const prefix = `stage ${stage}: `
+    const costUsd =
+      priorStageCostUsd === undefined && error.costUsd === undefined
+        ? undefined
+        : (priorStageCostUsd ?? 0) + (error.costUsd ?? 0)
     switch (error._tag) {
       case "ProviderError":
-        return new ProviderError({ message: `${prefix}${error.message}` })
+        return new ProviderError({ message: `${prefix}${error.message}`, costUsd })
       case "SchemaRejected":
-        return new SchemaRejected({ model: error.model, providerMessage: `${prefix}${error.providerMessage}` })
+        return new SchemaRejected({ model: error.model, providerMessage: `${prefix}${error.providerMessage}`, costUsd })
       case "SchemaViolation":
-        return new SchemaViolation({ model: error.model, raw: error.raw, detail: `${prefix}${error.detail}` })
+        return new SchemaViolation({ model: error.model, raw: error.raw, detail: `${prefix}${error.detail}`, costUsd })
     }
   }
   return Effect.gen(function* () {
-    const vocabulary = yield* requestStructuredCompletion({
+    const vocabularyResult = yield* requestStructuredCompletion({
       model,
       systemPrompt: vocabularySystemPrompt(),
       userPrompt: `Puzzle:\n\n${prose}`,
@@ -553,7 +587,9 @@ export function extractStaged(
       schema: ExtractedVocabulary,
       timeoutMs,
     }).pipe(Effect.catch((e) => Effect.fail(stageTag("1-vocabulary", e as ProviderError | SchemaRejected | SchemaViolation))))
-    const constraints = yield* requestStructuredCompletion({
+    const vocabulary = vocabularyResult.value
+    priorStageCostUsd = vocabularyResult.costUsd
+    const constraintsResult = yield* requestStructuredCompletion({
       model,
       systemPrompt: constraintsSystemPrompt(vocabulary),
       userPrompt: constraintsUserPrompt(prose, vocabulary),
@@ -562,6 +598,8 @@ export function extractStaged(
       schema: ExtractedConstraints,
       timeoutMs,
     }).pipe(Effect.catch((e) => Effect.fail(stageTag("2-constraints", e as ProviderError | SchemaRejected | SchemaViolation))))
+    const constraints = constraintsResult.value
+    const costs = [vocabularyResult.costUsd, constraintsResult.costUsd].filter((cost): cost is number => cost !== undefined)
     // Closed-kind note (ADR-009 §4): the ExtractedConstraint union decodes `kind` against
     // the nine literals, so an invented kind (the live "rightOf" failure) fails decode as a
     // SchemaViolation carrying the stage-2 tag — failing here with the stage named, not
@@ -574,6 +612,7 @@ export function extractStaged(
       },
       model,
       vocabulary,
+      actualCostUsd: costs.length === 0 ? undefined : costs.reduce((sum, cost) => sum + cost, 0),
     }
   })
 }
@@ -586,23 +625,38 @@ export function extractStaged(
 export function extract(prose: string, options?: ExtractOptions): Effect.Effect<ExtractionResult, ExtractionError> {
   const cheapModel = options?.model ?? DEFAULT_MODEL
   const frontierModel = options?.frontierModel ?? DEFAULT_FRONTIER_MODEL
+  let total = 0
+  let reported = false
+  const reportCost = (costUsd: number | undefined) => {
+    if (costUsd !== undefined) {
+      total += costUsd
+      reported = true
+    }
+  }
+  // Every failure path below re-attaches this instead of trusting the propagated error's own
+  // costUsd, which reflects only the LAST call — earlier successful (or billed-but-failed)
+  // rounds across both tiers would otherwise vanish from the raw JSON/budget entirely (found in
+  // PR review of ADR-010).
+  const accumulatedCost = () => (reported ? total : undefined)
 
   return Effect.gen(function* () {
-    const cheapResult = yield* runTierSafely(cheapModel, prose, CHEAP_TIER_TIMEOUT_MS)
+    const cheapResult = yield* runTierSafely(cheapModel, prose, CHEAP_TIER_TIMEOUT_MS, reportCost)
     if (cheapResult.ok && cheapResult.outcome.accepted !== undefined) {
-      return { extractedCsp: cheapResult.outcome.accepted.extractedCsp, model: cheapModel }
+      return { extractedCsp: cheapResult.outcome.accepted.extractedCsp, model: cheapModel, actualCostUsd: accumulatedCost() }
     }
 
-    const frontierResult = yield* runTierSafely(frontierModel, prose, FRONTIER_TIER_TIMEOUT_MS)
+    const frontierResult = yield* runTierSafely(frontierModel, prose, FRONTIER_TIER_TIMEOUT_MS, reportCost)
     if (frontierResult.ok && frontierResult.outcome.accepted !== undefined) {
-      return { extractedCsp: frontierResult.outcome.accepted.extractedCsp, model: frontierModel }
+      return { extractedCsp: frontierResult.outcome.accepted.extractedCsp, model: frontierModel, actualCostUsd: accumulatedCost() }
     }
 
     // Both tiers failed on transport grounds — neither produced so much as a schema violation to
     // diagnose. Surface the frontier tier's transport error (the more relevant, final one) rather
     // than an empty, uninformative CriticRejected.
     if (!cheapResult.ok && !frontierResult.ok) {
-      return yield* Effect.fail(frontierResult.providerError)
+      return yield* Effect.fail(
+        new ProviderError({ message: frontierResult.providerError.message, costUsd: accumulatedCost() }),
+      )
     }
 
     const cheapAttempts = cheapResult.ok ? cheapResult.outcome.attempts : []
@@ -616,15 +670,24 @@ export function extract(prose: string, options?: ExtractOptions): Effect.Effect<
     const frontierSchemaViolation = frontierResult.ok ? frontierResult.outcome.lastSchemaViolation : undefined
     const lastSchemaViolation = frontierSchemaViolation ?? cheapSchemaViolation
     if (attempts.length === 0 && lastSchemaViolation !== undefined) {
-      return yield* Effect.fail(lastSchemaViolation)
+      return yield* Effect.fail(
+        new SchemaViolation({
+          model: lastSchemaViolation.model,
+          raw: lastSchemaViolation.raw,
+          detail: lastSchemaViolation.detail,
+          costUsd: accumulatedCost(),
+        }),
+      )
     }
 
     // The frontier tier failed on transport grounds with nothing else to report — surface that
     // rather than a CriticRejected with zero attempts and no diagnostic.
     if (attempts.length === 0 && !frontierResult.ok) {
-      return yield* Effect.fail(frontierResult.providerError)
+      return yield* Effect.fail(
+        new ProviderError({ message: frontierResult.providerError.message, costUsd: accumulatedCost() }),
+      )
     }
 
-    return yield* Effect.fail(new CriticRejected({ attempts }))
+    return yield* Effect.fail(new CriticRejected({ attempts, costUsd: accumulatedCost() }))
   })
 }

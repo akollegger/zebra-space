@@ -1,6 +1,6 @@
 import { Effect } from "effect"
 import { compile } from "../compiler/compile.ts"
-import type { ExtractedCsp, ExtractionError } from "../extraction/types.ts"
+import { ProviderError, SchemaRejected, SchemaViolation, type ExtractedCsp, type ExtractionError } from "../extraction/types.ts"
 import {
   EXTRACTION_PROMPT_VERSION,
   STAGED_PROMPT_VERSION,
@@ -48,6 +48,7 @@ export interface HarnessModelOpts {
 export interface HarnessExtraction {
   readonly extractedCsp: unknown
   readonly model: string
+  readonly actualCostUsd: number | undefined
 }
 
 export interface HarnessCompilation {
@@ -55,6 +56,7 @@ export interface HarnessCompilation {
   readonly model: string
   /** Null for harnesses with no MiniZinc (e.g. direct-solve) — records already accept null. */
   readonly mzn: string | null
+  readonly actualCostUsd: number | undefined
 }
 
 export interface HarnessSolution {
@@ -62,6 +64,7 @@ export interface HarnessSolution {
   readonly model: string
   readonly mzn: string | null
   readonly solveResult: SolveResult
+  readonly actualCostUsd: number | undefined
 }
 
 /** Failure of the extraction stage (LLM, local NER, graph builder — whatever the harness uses). */
@@ -71,6 +74,10 @@ export interface HarnessExtractionError {
   readonly detail: string
   /** Critic-loop attempts where applicable; null for single-shot harnesses. */
   readonly criticAttempts: number | null
+  /** Cost of whatever billed calls happened before this failure (undefined if none did) —
+   * preserved so a call that billed and then failed downstream doesn't vanish from per-puzzle
+   * spend (ADR-010 follow-up). */
+  readonly actualCostUsd: number | undefined
 }
 
 export interface HarnessCompileError {
@@ -113,6 +120,7 @@ function toExtractionError(error: ExtractionError): HarnessExtractionError {
     tag: error._tag,
     detail: summarizeExtractionError(error),
     criticAttempts: error._tag === "CriticRejected" ? error.attempts.length : null,
+    actualCostUsd: error.costUsd,
   }
 }
 
@@ -167,7 +175,7 @@ function solveMzn(compilation: HarnessCompilation): Effect.Effect<HarnessSolutio
 }
 
 function extractWith(
-  run: (prose: string, modelOpts: ExtractOptions) => Effect.Effect<{ extractedCsp: ExtractedCsp; model: string }, ExtractionError>,
+  run: (prose: string, modelOpts: ExtractOptions) => Effect.Effect<{ extractedCsp: ExtractedCsp; model: string; actualCostUsd: number | undefined }, ExtractionError>,
 ): EvalHarness["extract"] {
   return (prose, modelOpts) =>
     run(prose, modelOpts).pipe(
@@ -203,6 +211,27 @@ export const singleShotHarness: EvalHarness = {
 }
 
 /**
+ * Reconstructs `error` with `priorCostUsd` folded into its own `costUsd` — never spread
+ * (Data.TaggedError fields are non-enumerable, so `{...error}` silently drops them, per the
+ * same pitfall `extractStaged`'s `stageTag` guards against).
+ */
+function withPriorCost(
+  error: ProviderError | SchemaRejected | SchemaViolation,
+  priorCostUsd: number | undefined,
+): ProviderError | SchemaRejected | SchemaViolation {
+  const costUsd =
+    priorCostUsd === undefined && error.costUsd === undefined ? undefined : (priorCostUsd ?? 0) + (error.costUsd ?? 0)
+  switch (error._tag) {
+    case "ProviderError":
+      return new ProviderError({ message: error.message, costUsd })
+    case "SchemaRejected":
+      return new SchemaRejected({ model: error.model, providerMessage: error.providerMessage, costUsd })
+    case "SchemaViolation":
+      return new SchemaViolation({ model: error.model, raw: error.raw, detail: error.detail, costUsd })
+  }
+}
+
+/**
  * One repair re-extraction after a compile failure, carrying the compiler's error as context.
  * The probe compile's error channel is folded to an Option (none = compiled fine, keep the
  * extraction) so the repair prompt keeps the reason in scope without the compile error type
@@ -211,8 +240,8 @@ export const singleShotHarness: EvalHarness = {
 function repairAfterCompileFailure(
   prose: string,
   modelOpts: HarnessModelOpts,
-  extraction: { readonly extractedCsp: ExtractedCsp; readonly model: string },
-): Effect.Effect<{ readonly extractedCsp: ExtractedCsp; readonly model: string }, HarnessExtractionError> {
+  extraction: { readonly extractedCsp: ExtractedCsp; readonly model: string; readonly actualCostUsd: number | undefined },
+): Effect.Effect<{ readonly extractedCsp: ExtractedCsp; readonly model: string; readonly actualCostUsd: number | undefined }, HarnessExtractionError> {
   // Probe: null when the extraction compiles (keep it), the reason when it doesn't (repair).
   const probe: Effect.Effect<string | null, never, never> = compile(extraction.extractedCsp).pipe(
     Effect.map(() => null as string | null),
@@ -225,6 +254,18 @@ function repairAfterCompileFailure(
         : extractSingleShot(
             `${prose}\n\nA previous attempt failed to compile with this error — avoid it:\n${reason}`,
             modelOpts,
+          ).pipe(
+            Effect.map((retry) => ({
+              ...retry,
+              actualCostUsd:
+                extraction.actualCostUsd === undefined && retry.actualCostUsd === undefined
+                  ? undefined
+                  : (extraction.actualCostUsd ?? 0) + (retry.actualCostUsd ?? 0),
+            })),
+            // The retry's own error already carries its own call's cost (provider.ts) — but not
+            // the first attempt's, which billed successfully before the compile probe triggered
+            // this repair. Fold it in so a failed repair retry doesn't lose the initial spend.
+            Effect.catch((error) => Effect.fail(withPriorCost(error, extraction.actualCostUsd))),
           ),
     ),
     Effect.catch((error) => Effect.fail(toExtractionError(error))),

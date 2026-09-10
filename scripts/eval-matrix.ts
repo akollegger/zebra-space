@@ -60,10 +60,20 @@ interface BlockedCell {
   readonly reason: string
 }
 
-/** The slice of a cell's raw JSON (written by scripts/eval-extraction.ts) the verdict grid needs. */
+/**
+ * The slice of a cell's raw JSON (written by scripts/eval-extraction.ts) the verdict grid needs.
+ * Spend fields are optional: raw JSON written before cost accounting (ADR-010) lacks them, and
+ * those cells still render — without a spend line, never with a fabricated figure.
+ */
 export interface RawCellResult {
-  readonly puzzles: readonly { readonly id: string; readonly outcome: string }[]
+  readonly puzzles: readonly {
+    readonly id: string
+    readonly outcome: string
+    readonly actualCostUsd?: number | null
+  }[]
   readonly summary: { readonly total: number; readonly excluded: number; readonly passRate: number }
+  readonly spendUsd?: number
+  readonly estimatedSpendUsd?: number
 }
 
 interface MatrixArgs {
@@ -233,18 +243,41 @@ export function renderVerdictGrid(cells: readonly CellPlan[], cellResults: Reado
     return `| ${id} | ${cols} |`
   })
   const passRates = completed
-    .map(
-      ({ cell, result }) =>
-        `- ${columnLabel({ cell })}: ${(result.summary.passRate * 100).toFixed(0)}% (excluded ${result.summary.excluded}/${result.summary.total})`,
-    )
+    .map(({ cell, result }) => {
+      const base = `- ${columnLabel({ cell })}: ${(result.summary.passRate * 100).toFixed(0)}% (excluded ${result.summary.excluded}/${result.summary.total})`
+      return `${base}${renderCellSpend(result)}`
+    })
     .join("\n")
   return `${passRates}\n\n${header}\n${divider}\n${rows.join("\n")}`
+}
+
+/**
+ * Per-cell measured spend next to the estimate (ADR-010 §2.3). Three shapes, never ambiguous:
+ * all runs measured shows both figures side by side; some measured says how many plus the
+ * fallback; none measured labels the figure an estimate outright. A cell whose raw JSON predates
+ * cost accounting renders no spend line at all rather than inventing one.
+ */
+function renderCellSpend(result: RawCellResult): string {
+  const { spendUsd, estimatedSpendUsd } = result
+  if (spendUsd === undefined) return ""
+  const measured = result.puzzles.filter((p) => typeof p.actualCostUsd === "number").length
+  if (measured === 0) return ` · spend $${spendUsd.toFixed(4)} (est — no measured calls)`
+  const detail =
+    measured === result.puzzles.length
+      ? `measured ${measured}/${result.puzzles.length}`
+      : `measured ${measured}/${result.puzzles.length}, rest est`
+  const est = estimatedSpendUsd === undefined ? "" : `, est $${estimatedSpendUsd.toFixed(4)}`
+  return ` · spend $${spendUsd.toFixed(4)} (${detail}${est})`
 }
 
 const MATRIX_MD_HEADER = `# Eval Matrix Results
 
 Per-puzzle × cell comparison tables for the comparative matrix (ADR-007 §2.3). Each run
-appends one section: the cells executed, their pass rates, and the per-puzzle verdict grid.
+appends one section: the cells executed, their pass rates and spend, and the per-puzzle
+verdict grid. Spend lines (ADR-010) show the measured total first — \`measured N/M\` counts
+puzzle-runs whose provider reported a billed cost; \`est — no measured calls\` marks a cell
+whose figure is entirely the registry estimate (local/free-tier routes). Measured totals
+are lower bounds for retry-heavy cells: failed attempts never carry usage data.
 Raw per-cell detail lives in the gitignored \`eval/results/<run-id>.json\` files referenced
 per row; this file is the committed summary only. Runs stay sequential by default.
 `
@@ -262,10 +295,10 @@ async function appendMatrixMarkdown(data: {
   if (!existsSync(MATRIX_MD_PATH)) {
     await writeFile(MATRIX_MD_PATH, MATRIX_MD_HEADER)
   }
-  const failedLabels = new Set(data.cellFailures.map(({ cell }) => `${cell.model.id} ${cell.harnessId}`))
+  const failedLabels = new Set(data.cellFailures.map(({ cell }) => `${cell.model.id}\u0000${cell.harnessId}`))
   const rows = data.cells
     .map((c) => {
-      const failed = failedLabels.has(`${c.model.id} ${c.harnessId}`)
+      const failed = failedLabels.has(`${c.model.id}\u0000${c.harnessId}`)
       const scope = c.puzzles.length === 0 ? "all 39" : c.puzzles.join(" ")
       const estimate = failed ? `~$${c.estimatedUsd.toFixed(2)} (FAILED)` : `~$${c.estimatedUsd.toFixed(2)}`
       return `| ${c.model.id} [${c.model.tier}] | ${c.harnessId} | ${scope} | ${c.runs} | ${estimate} |`

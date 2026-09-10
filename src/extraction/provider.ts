@@ -25,6 +25,12 @@ export interface StructuredCompletionRequest<A> {
   readonly forceOpenRouter?: boolean | undefined
 }
 
+/** A successful provider response plus its billed dollar cost, when the route reports one. */
+export interface Costed<A> {
+  readonly value: A
+  readonly costUsd: number | undefined
+}
+
 /**
  * A 401 reaching this far means no usable credential was attached to the request at all (an
  * empty/unset OPENROUTER_API_KEY never gets an Authorization header in the first place — see
@@ -144,7 +150,7 @@ function client(route: ProviderRoute): OpenRouter {
  */
 export function requestStructuredCompletion<A>(
   request: StructuredCompletionRequest<A>,
-): Effect.Effect<A, ProviderError | SchemaRejected | SchemaViolation> {
+): Effect.Effect<Costed<A>, ProviderError | SchemaRejected | SchemaViolation> {
   const timeoutMs = request.timeoutMs ?? DEFAULT_TIMEOUT_MS
   const route = resolveProviderRoute(request.schemaName, { forceOpenRouter: request.forceOpenRouter })
 
@@ -183,13 +189,14 @@ export function requestStructuredCompletion<A>(
         ? new SchemaRejected({
             model: request.model,
             providerMessage: (error as OpenRouterError).body || errorMessage(error, route),
+            costUsd: undefined,
           })
-        : new ProviderError({ message: errorMessage(error, route) }),
+        : new ProviderError({ message: errorMessage(error, route), costUsd: undefined }),
   }).pipe(
     Effect.timeout(timeoutMs),
     Effect.catchTag("TimeoutError", () =>
       Effect.fail(
-        new ProviderError({ message: `Request to ${request.model} timed out after ${timeoutMs}ms` }),
+        new ProviderError({ message: `Request to ${request.model} timed out after ${timeoutMs}ms`, costUsd: undefined }),
       ),
     ),
     Effect.flatMap((response) => {
@@ -197,10 +204,15 @@ export function requestStructuredCompletion<A>(
         return Effect.fail(
           new ProviderError({
             message: "Received a streamed response; this pipeline only sends non-streaming requests.",
+            costUsd: undefined,
           }),
         )
       }
 
+      // Computed before the tool-call check below: a response that billed and then came back as a
+      // prose reply (no tool call) still incurred cost — that must not be discarded along with the
+      // SchemaViolation it triggers (found in PR review of ADR-010).
+      const costUsd = typeof response.usage?.cost === "number" ? response.usage.cost : undefined
       const message = response.choices[0]?.message
       const call = message?.toolCalls?.[0]
       if (call === undefined) {
@@ -212,6 +224,7 @@ export function requestStructuredCompletion<A>(
             model: request.model,
             raw: String(message?.content ?? "").slice(0, 2000),
             detail: "the model replied in prose instead of calling the required tool",
+            costUsd,
           }),
         )
       }
@@ -221,16 +234,19 @@ export function requestStructuredCompletion<A>(
         catch: () =>
           new ProviderError({
             message: `Tool-call arguments were not valid JSON: ${call.function.arguments.slice(0, 500)}`,
+            costUsd,
           }),
       }).pipe(
         Effect.flatMap((json) =>
           Schema.decodeUnknownEffect(request.schema)(json).pipe(
+            Effect.map((value): Costed<A> => ({ value, costUsd })),
             Effect.catchTag("SchemaError", (schemaError) =>
               Effect.fail(
                 new SchemaViolation({
                   model: request.model,
                   raw: call.function.arguments,
                   detail: schemaError.message,
+                  costUsd,
                 }),
               ),
             ),

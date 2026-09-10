@@ -62,7 +62,7 @@ test("seam: a custom harness with stub stages runs stage-by-stage through the in
     description: "offline stub for interface conformance",
     promptVersion: 99,
     maxCallsPerPuzzle: 0,
-    extract: () => Effect.succeed({ extractedCsp: { stub: true }, model: "stub-model" }),
+    extract: () => Effect.succeed({ extractedCsp: { stub: true }, model: "stub-model", actualCostUsd: undefined }),
     compile: (extraction) => Effect.succeed({ ...extraction, mzn: "stub-mzn" }),
     solve: (compilation) =>
       Effect.succeed({
@@ -74,9 +74,41 @@ test("seam: a custom harness with stub stages runs stage-by-stage through the in
   assert.ok(!listHarnesses().some((h) => h.id === "stub"))
 
   const extraction = await Effect.runPromise(stub.extract("prose", {}))
-  assert.deepEqual(extraction, { extractedCsp: { stub: true }, model: "stub-model" })
+  assert.deepEqual(extraction, { extractedCsp: { stub: true }, model: "stub-model", actualCostUsd: undefined })
   const compilation = await Effect.runPromise(stub.compile(extraction))
   assert.equal(compilation.mzn, "stub-mzn")
   const solution = await Effect.runPromise(stub.solve(compilation))
   assert.equal(solution.solveResult._tag, "Unsatisfiable")
+})
+
+// --- ADR-010 §2.2 stage forwarding (T010) -------------------------------------------------
+// compile/solve forward actualCostUsd unchanged; a measured 0 stays 0 (never coerced to
+// absent), and absent stays absent (never fabricated as 0).
+
+const FORWARD_CSP = {
+  entities: [{ id: "H1", type: "house" }],
+  domains: [{ variable: "color", entityType: "house", values: ["Red", "Blue"] }],
+  constraints: [],
+}
+
+test("ADR-010: compile forwards a measured zero unchanged, never as absent", async () => {
+  const compilation = await Effect.runPromise(
+    fullCriticHarness.compile({ extractedCsp: FORWARD_CSP, model: "m", actualCostUsd: 0 }),
+  )
+  assert.equal(compilation.actualCostUsd, 0)
+})
+
+test("ADR-010: compile forwards an absent actual unchanged, never as zero", async () => {
+  const compilation = await Effect.runPromise(
+    fullCriticHarness.compile({ extractedCsp: FORWARD_CSP, model: "m", actualCostUsd: undefined }),
+  )
+  assert.equal(compilation.actualCostUsd, undefined)
+  assert.ok("actualCostUsd" in compilation)
+})
+
+test("ADR-010: compile forwards a measured sum unchanged", async () => {
+  const compilation = await Effect.runPromise(
+    fullCriticHarness.compile({ extractedCsp: FORWARD_CSP, model: "m", actualCostUsd: 0.375 }),
+  )
+  assert.equal(compilation.actualCostUsd, 0.375)
 })
