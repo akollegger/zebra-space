@@ -105,10 +105,11 @@ export interface DirectSolveFailure {
   readonly tag: "ProviderError" | "SchemaRejected" | "SchemaViolation" | "JudgeUnclear"
   readonly detail: string
   readonly criticAttempts: null
+  readonly actualCostUsd: number | undefined
 }
 
-function toFailure(tag: DirectSolveFailure["tag"], detail: string): DirectSolveFailure {
-  return { _tag: "ExtractionFailed", tag, detail, criticAttempts: null }
+function toFailure(tag: DirectSolveFailure["tag"], detail: string, actualCostUsd?: number | undefined): DirectSolveFailure {
+  return { _tag: "ExtractionFailed", tag, detail, criticAttempts: null, actualCostUsd }
 }
 
 /**
@@ -129,8 +130,13 @@ export const directSolveHarness: EvalHarness = {
   description: "direct solve in prose, judge grades against the answer key (ADR-008 baseline)",
   promptVersion: DIRECT_SOLVE_PROMPT_VERSION,
   maxCallsPerPuzzle: 2,
-  extract: (prose, modelOpts: DirectSolveModelOpts) =>
-    Effect.gen(function* () {
+  extract: (prose, modelOpts: DirectSolveModelOpts) => {
+    // Tracked outside the generator: if the judge call fails after the solver already billed,
+    // that solver cost must still reach the failure — it's not visible inside Effect.catch's
+    // closure otherwise (found in PR review of ADR-010; the solver call is real spend even
+    // when the judge never grades it).
+    let solverCostUsd: number | undefined
+    return Effect.gen(function* () {
       const solverModel = modelOpts.model ?? "openai/gpt-4o-mini"
       const judgeModel = modelOpts.judgeModel ?? process.env.ZEBRA_JUDGE_MODEL ?? DEFAULT_JUDGE_MODEL
       const answerKeyJson = modelOpts.answerKeyJson
@@ -142,6 +148,7 @@ export const directSolveHarness: EvalHarness = {
         systemPrompt: solveSystemPrompt(),
         userPrompt: solveUserPrompt(prose),
       })
+      solverCostUsd = solutionResult.costUsd
       const solution = solutionResult.value
       // ADR-008 §2.4: the judge must never be silently answered by the model under test —
       // force OpenRouter even when ZEBRA_LOCAL_BASE_URL is set for the solver call above.
@@ -170,12 +177,19 @@ export const directSolveHarness: EvalHarness = {
         if (typeof error === "object" && error !== null && "_tag" in error && error._tag === "ExtractionFailed") {
           return Effect.fail(error as DirectSolveFailure)
         }
-        const e = error as { _tag?: string; message?: string; providerMessage?: string; detail?: string }
-        if (e._tag === "SchemaRejected") return Effect.fail(toFailure("SchemaRejected", e.providerMessage ?? "judge rejected schema"))
-        if (e._tag === "SchemaViolation") return Effect.fail(toFailure("SchemaViolation", e.detail ?? "judge response invalid"))
-        return Effect.fail(toFailure("ProviderError", e.message ?? String(error)))
+        const e = error as { _tag?: string; message?: string; providerMessage?: string; detail?: string; costUsd?: number }
+        const mergedCostUsd =
+          solverCostUsd === undefined && e.costUsd === undefined ? undefined : (solverCostUsd ?? 0) + (e.costUsd ?? 0)
+        if (e._tag === "SchemaRejected") {
+          return Effect.fail(toFailure("SchemaRejected", e.providerMessage ?? "judge rejected schema", mergedCostUsd))
+        }
+        if (e._tag === "SchemaViolation") {
+          return Effect.fail(toFailure("SchemaViolation", e.detail ?? "judge response invalid", mergedCostUsd))
+        }
+        return Effect.fail(toFailure("ProviderError", e.message ?? String(error), mergedCostUsd))
       }),
-    ),
+    )
+  },
   compile: (extraction) =>
     Effect.succeed({
       extractedCsp: extraction.extractedCsp,
@@ -230,25 +244,33 @@ export function requestProseCompletion(request: {
     catch: (error) =>
       new ProviderError({
         message: error instanceof OpenRouterError ? error.message : error instanceof Error ? error.message : String(error),
+        costUsd: undefined,
       }),
   }).pipe(
     Effect.timeout(PROSE_TIMEOUT_MS),
     Effect.catchTag("TimeoutError", () =>
-      Effect.fail(new ProviderError({ message: `Direct solve by ${request.model} timed out after ${PROSE_TIMEOUT_MS}ms` })),
+      Effect.fail(
+        new ProviderError({ message: `Direct solve by ${request.model} timed out after ${PROSE_TIMEOUT_MS}ms`, costUsd: undefined }),
+      ),
     ),
     Effect.flatMap((response) => {
       if (!("choices" in response)) {
-        return Effect.fail(new ProviderError({ message: "Received a streamed response; direct-solve only sends non-streaming requests." }))
+        return Effect.fail(
+          new ProviderError({
+            message: "Received a streamed response; direct-solve only sends non-streaming requests.",
+            costUsd: undefined,
+          }),
+        )
       }
+      const costUsd = typeof response.usage?.cost === "number" ? response.usage.cost : undefined
       const rawContent = response.choices[0]?.message?.content ?? ""
       const content = typeof rawContent === "string" ? rawContent : JSON.stringify(rawContent)
       if (content.trim() === "") {
-        return Effect.fail(new ProviderError({ message: `Direct solve by ${request.model} returned empty content` }))
+        return Effect.fail(
+          new ProviderError({ message: `Direct solve by ${request.model} returned empty content`, costUsd }),
+        )
       }
-      return Effect.succeed({
-        value: content,
-        costUsd: typeof response.usage?.cost === "number" ? response.usage.cost : undefined,
-      })
+      return Effect.succeed({ value: content, costUsd })
     }),
   )
 }

@@ -1,6 +1,6 @@
 import { Effect } from "effect"
 import { compile } from "../compiler/compile.ts"
-import type { ExtractedCsp, ExtractionError } from "../extraction/types.ts"
+import { ProviderError, SchemaRejected, SchemaViolation, type ExtractedCsp, type ExtractionError } from "../extraction/types.ts"
 import {
   EXTRACTION_PROMPT_VERSION,
   STAGED_PROMPT_VERSION,
@@ -74,6 +74,10 @@ export interface HarnessExtractionError {
   readonly detail: string
   /** Critic-loop attempts where applicable; null for single-shot harnesses. */
   readonly criticAttempts: number | null
+  /** Cost of whatever billed calls happened before this failure (undefined if none did) —
+   * preserved so a call that billed and then failed downstream doesn't vanish from per-puzzle
+   * spend (ADR-010 follow-up). */
+  readonly actualCostUsd: number | undefined
 }
 
 export interface HarnessCompileError {
@@ -116,6 +120,7 @@ function toExtractionError(error: ExtractionError): HarnessExtractionError {
     tag: error._tag,
     detail: summarizeExtractionError(error),
     criticAttempts: error._tag === "CriticRejected" ? error.attempts.length : null,
+    actualCostUsd: error.costUsd,
   }
 }
 
@@ -206,6 +211,27 @@ export const singleShotHarness: EvalHarness = {
 }
 
 /**
+ * Reconstructs `error` with `priorCostUsd` folded into its own `costUsd` — never spread
+ * (Data.TaggedError fields are non-enumerable, so `{...error}` silently drops them, per the
+ * same pitfall `extractStaged`'s `stageTag` guards against).
+ */
+function withPriorCost(
+  error: ProviderError | SchemaRejected | SchemaViolation,
+  priorCostUsd: number | undefined,
+): ProviderError | SchemaRejected | SchemaViolation {
+  const costUsd =
+    priorCostUsd === undefined && error.costUsd === undefined ? undefined : (priorCostUsd ?? 0) + (error.costUsd ?? 0)
+  switch (error._tag) {
+    case "ProviderError":
+      return new ProviderError({ message: error.message, costUsd })
+    case "SchemaRejected":
+      return new SchemaRejected({ model: error.model, providerMessage: error.providerMessage, costUsd })
+    case "SchemaViolation":
+      return new SchemaViolation({ model: error.model, raw: error.raw, detail: error.detail, costUsd })
+  }
+}
+
+/**
  * One repair re-extraction after a compile failure, carrying the compiler's error as context.
  * The probe compile's error channel is folded to an Option (none = compiled fine, keep the
  * extraction) so the repair prompt keeps the reason in scope without the compile error type
@@ -236,6 +262,10 @@ function repairAfterCompileFailure(
                   ? undefined
                   : (extraction.actualCostUsd ?? 0) + (retry.actualCostUsd ?? 0),
             })),
+            // The retry's own error already carries its own call's cost (provider.ts) — but not
+            // the first attempt's, which billed successfully before the compile probe triggered
+            // this repair. Fold it in so a failed repair retry doesn't lose the initial spend.
+            Effect.catch((error) => Effect.fail(withPriorCost(error, extraction.actualCostUsd))),
           ),
     ),
     Effect.catch((error) => Effect.fail(toExtractionError(error))),

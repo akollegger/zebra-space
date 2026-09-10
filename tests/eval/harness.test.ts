@@ -180,6 +180,21 @@ test("budget: a measured actual replaces the reserved estimate; absent falls bac
   assert.equal(mixed.calls, 24)
 })
 
+test("budget: a refused charge rolls back its own reservation instead of inflating spend past what ran", async () => {
+  const { createBudget, chargePuzzle } = await import("../../scripts/eval-extraction.ts")
+  // $0.10/puzzle, a $0.15 cap: the first puzzle fits (spendUsd 0.10 <= 0.15), the second would
+  // push spendUsd to 0.20 and must be refused — and refusing it must not leave that puzzle's
+  // reservation standing, since it never ran (found in PR review of ADR-010: the unconditional
+  // += before the budget check left a phantom reservation on every refusal).
+  const budget = createBudget(0.15, 0.1, 4)
+  assert.equal(chargePuzzle(budget), true)
+  assert.equal(budget.spendUsd, 0.1)
+  assert.equal(budget.calls, 4)
+  assert.equal(chargePuzzle(budget), false)
+  assert.equal(budget.spendUsd, 0.1, "the refused charge must roll back, not inflate spend past what actually ran")
+  assert.equal(budget.calls, 4, "the refused charge's call count must roll back too")
+})
+
 test("budget: the pre-run estimate check stays registry-only and refuses over-budget plans", async () => {
   const { createBudget, checkBudgetEstimate } = await import("../../scripts/eval-extraction.ts")
   const over = createBudget(0.01, 0.0252, 12)

@@ -396,7 +396,7 @@ test("ADR-010: tier escalation sums costs across both tiers", async () => {
   )
 })
 
-test("ADR-010: a schema-violating attempt contributes nothing; only the successful retry counts", async () => {
+test("ADR-010: a billed schema-violating attempt still counts, alongside the successful retry", async () => {
   let extractionCalls = 0
   await withStub(
     (exchange) => {
@@ -406,7 +406,9 @@ test("ADR-010: a schema-violating attempt contributes nothing; only the successf
       }
       extractionCalls += 1
       if (extractionCalls === 1) {
-        // Invalid payload WITH a billed cost attached: decode fails, so the cost is discarded.
+        // Invalid payload WITH a billed cost attached: decode fails, but the response was real
+        // and billed, so its cost must still be counted (PR review of ADR-010 — an earlier
+        // version of this fix discarded it here).
         exchange.respondWithJson({}, { cost: 0.5 })
       } else {
         exchange.respondWithJson(SAMPLE_CSP, { cost: 0.25 })
@@ -415,8 +417,8 @@ test("ADR-010: a schema-violating attempt contributes nothing; only the successf
     async () => {
       const result = await runExtract()
       assert.deepEqual(result.extractedCsp, SAMPLE_CSP)
-      // 0.5 from the failed attempt is excluded: 0.25 (retry) + 0.125 (critique).
-      assert.equal(result.actualCostUsd, 0.375)
+      // 0.5 (rejected attempt) + 0.25 (retry) + 0.125 (critique).
+      assert.equal(result.actualCostUsd, 0.875)
     },
   )
 })

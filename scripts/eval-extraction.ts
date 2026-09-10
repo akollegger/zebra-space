@@ -451,6 +451,7 @@ async function runOnePuzzle(
       durationMs(),
       {
         extractionError: { tag: error.tag, detail: error.detail, criticAttempts: error.criticAttempts },
+        actualCostUsd: error.actualCostUsd ?? null,
       },
       title,
       ctx,
@@ -662,11 +663,22 @@ function checkBudgetEstimate(budget: BudgetState, puzzleCount: number, runs: num
     : null
 }
 
-/** Per-puzzle spend accumulator. Returns false when the budget is exceeded (caller stops). */
+/**
+ * Per-puzzle spend accumulator. Returns false when the reservation would exceed the budget —
+ * in which case the reservation is rolled back rather than left standing, since the caller
+ * stops without ever running that puzzle. Without the rollback, a refused puzzle's estimate
+ * still inflated `spendUsd`/`calls` past what was actually spent (found in PR review of
+ * ADR-010).
+ */
 function chargePuzzle(budget: BudgetState): boolean {
   budget.calls += budget.maxCallsPerPuzzle
   budget.spendUsd += budget.costPerPuzzleUsd
-  return budget.budgetUsd === undefined || budget.spendUsd <= budget.budgetUsd
+  if (budget.budgetUsd !== undefined && budget.spendUsd > budget.budgetUsd) {
+    budget.calls -= budget.maxCallsPerPuzzle
+    budget.spendUsd -= budget.costPerPuzzleUsd
+    return false
+  }
+  return true
 }
 
 /** Replace the just-reserved estimate with a measured stage total when the provider reported one. */
@@ -985,8 +997,28 @@ async function main(): Promise<void> {
                 ),
               ),
             ])
+      const recordIndex = records.length
       records.push(rec)
       reconcilePuzzleCost(budget, rec.actualCostUsd)
+      if (rec.outcome === "TIMEOUT") {
+        // The real run is still going in the background (by design — the runner doesn't block
+        // on it). Its own billed calls are real spend the reserved estimate above may not cover;
+        // reconcile the budget (and backfill the record actualCostUsd for the raw JSON, when it
+        // hasn't been written yet) once it eventually settles, rather than losing that spend
+        // silently (found in PR review of ADR-010). This can't retroactively fix a summary/raw
+        // JSON already written before it resolves — a genuine limit of not blocking on it.
+        runPromise
+          .then((settled) => {
+            reconcilePuzzleCost(budget, settled.actualCostUsd)
+            const current = records[recordIndex]
+            if (current !== undefined && current.outcome === "TIMEOUT") {
+              records[recordIndex] = { ...current, actualCostUsd: settled.actualCostUsd }
+            }
+          })
+          .catch((error: unknown) => {
+            console.error(`\nBackground run for ${puzzle.id} (past its ${capMs}ms cap) failed after timing out:`, error)
+          })
+      }
       console.log(`${outcomeDetail(rec)} (${(rec.durationMs / 1000).toFixed(1)}s)`)
     }
   }
