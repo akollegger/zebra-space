@@ -144,6 +144,80 @@ test("gradeJudged: verdicts fan out to class-appropriate outcomes", async () => 
   assert.deepEqual(gradeJudged("P", det, { verdict: "bogus", reason: "" }).verdict, "EXTRACT_FAILED")
 })
 
+// --- ADR-010 US2: budget charge semantics (T016) -------------------------------------------------
+
+test("budget: a measured actual replaces the reserved estimate; absent falls back; zero is never fallback", async () => {
+  const { createBudget, chargePuzzle, reconcilePuzzleCost } = await import("../../scripts/eval-extraction.ts")
+  // Binary-exact values: the reserve/reconcile delta arithmetic is float addition, and
+  // decimal cents (0.0252 etc.) would assert against representation noise, not semantics.
+
+  // Measured actual replaces the estimate.
+  const measured = createBudget(undefined, 0.25, 12)
+  chargePuzzle(measured)
+  assert.equal(measured.spendUsd, 0.25)
+  reconcilePuzzleCost(measured, 0.125)
+  assert.equal(measured.spendUsd, 0.125)
+
+  // Absent actual (local/free-tier): the registry estimate stands.
+  const absent = createBudget(undefined, 0.25, 12)
+  chargePuzzle(absent)
+  reconcilePuzzleCost(absent, null)
+  assert.equal(absent.spendUsd, 0.25)
+
+  // Measured zero: a real zero billing, never confused with absence.
+  const zero = createBudget(undefined, 0.25, 12)
+  chargePuzzle(zero)
+  reconcilePuzzleCost(zero, 0)
+  assert.equal(zero.spendUsd, 0)
+
+  // Accumulation across puzzles mixes measured and fallback correctly.
+  const mixed = createBudget(undefined, 0.25, 12)
+  chargePuzzle(mixed)
+  reconcilePuzzleCost(mixed, 0.125)
+  chargePuzzle(mixed)
+  reconcilePuzzleCost(mixed, null)
+  assert.equal(mixed.spendUsd, 0.375)
+  assert.equal(mixed.calls, 24)
+})
+
+test("budget: the pre-run estimate check stays registry-only and refuses over-budget plans", async () => {
+  const { createBudget, checkBudgetEstimate } = await import("../../scripts/eval-extraction.ts")
+  const over = createBudget(0.01, 0.0252, 12)
+  const refusal = checkBudgetEstimate(over, 1, 1)
+  assert.match(refusal ?? "", /exceeds --budget-usd/)
+  assert.match(refusal ?? "", /refusing to start/)
+  const within = createBudget(5, 0.0252, 12)
+  assert.equal(checkBudgetEstimate(within, 8, 3), null)
+  const unlimited = createBudget(undefined, 0.0252, 12)
+  assert.equal(checkBudgetEstimate(unlimited, 39, 3), null)
+})
+
+// --- ADR-010 US2: raw record fields (T017) --------------------------------------------------------
+
+test("records: estimated and actual cost ride side by side; absent actual serializes as JSON null", async () => {
+  const { record } = await import("../../scripts/eval-extraction.ts")
+  const { lookupHarness } = await import("../../src/eval/harness.ts")
+  const harness = lookupHarness("single-shot")
+  if (harness === undefined) throw new Error("single-shot harness missing")
+  const puzzle = { id: "PZL-TEST", file: "PZL-TEST-x.md", path: new URL("file:///x.md") }
+  const ctx = { runIndex: 0, workflow: "full" as const, harness, estimatedCostUsd: 0.0021 }
+
+  const measured = record(puzzle, "MATCH", 100, { actualCostUsd: 0.0042 }, "t", ctx)
+  assert.equal(measured.estimatedCostUsd, 0.0021)
+  assert.equal(measured.actualCostUsd, 0.0042)
+
+  const absent = record(puzzle, "MATCH", 100, {}, "t", ctx)
+  assert.equal(absent.actualCostUsd, null)
+  // The serialized raw JSON must carry null (not drop the key, not fabricate 0).
+  const json = JSON.parse(JSON.stringify(absent))
+  assert.equal(json.actualCostUsd, null)
+  assert.equal(json.estimatedCostUsd, 0.0021)
+
+  const zero = record(puzzle, "MATCH", 100, { actualCostUsd: 0 }, "t", ctx)
+  assert.equal(zero.actualCostUsd, 0)
+  assert.equal(JSON.parse(JSON.stringify(zero)).actualCostUsd, 0)
+})
+
 test("matrix dry-run: plans verified cells, skips unverified tiers, estimates spend", () => {
   const stdout = execFileSync("node", ["scripts/eval-matrix.ts", "--dry-run"], { cwd: REPO_ROOT, encoding: "utf8" })
   assert.match(stdout, /openai\/gpt-4o-mini \[cheap\] x full-critic/)
@@ -201,6 +275,73 @@ test("renderVerdictGrid: per-puzzle x cell table, missing puzzles as '—', empt
 
   const empty = renderVerdictGrid([cellA], new Map())
   assert.match(empty, /No cells completed/)
+})
+
+test("renderVerdictGrid: per-cell spend line distinguishes measured from estimated (T018)", async () => {
+  const { renderVerdictGrid } = await import("../../scripts/eval-matrix.ts")
+  const model = { id: "openai/gpt-4o-mini", tier: "cheap", cost_per_call_usd: 0.0021, verified: true }
+  const cell = { model, harnessId: "full-critic", puzzles: [], runs: 1, estimatedUsd: 0.0252 }
+
+  // Fully measured cell: both figures side by side, measured count shown.
+  const measured = {
+    puzzles: [
+      { id: "PZL-0002", outcome: "MATCH", actualCostUsd: 0.0021 },
+      { id: "PZL-0004", outcome: "MATCH", actualCostUsd: 0.0021 },
+    ],
+    summary: { total: 2, excluded: 0, passRate: 1 },
+    spendUsd: 0.0042,
+    estimatedSpendUsd: 0.0504,
+  }
+  const grid = renderVerdictGrid([cell], new Map([[cell, measured]]))
+  assert.match(grid, /spend \$0\.0042 \(measured 2\/2, est \$0\.0504\)/)
+
+  // No measured calls (local/free-tier): the estimate stands and SAYS it is an estimate —
+  // never presented as a measurement, never a fabricated zero.
+  const localCell = { model: { ...model, id: "local/qwen" }, harnessId: "local-single-shot", puzzles: [], runs: 1, estimatedUsd: 0 }
+  const unmeasured = {
+    puzzles: [{ id: "PZL-0002", outcome: "MATCH", actualCostUsd: null }],
+    summary: { total: 1, excluded: 0, passRate: 1 },
+    spendUsd: 0.0021,
+    estimatedSpendUsd: 0.0021,
+  }
+  const localGrid = renderVerdictGrid([localCell], new Map([[localCell, unmeasured]]))
+  assert.match(localGrid, /spend \$0\.0021 \(est — no measured calls\)/)
+  assert.doesNotMatch(localGrid, /measured 1\/1/)
+
+  // Pre-cost-accounting raw JSON (no spend fields): renders without a spend line, no crash.
+  const legacy = {
+    puzzles: [{ id: "PZL-0002", outcome: "MATCH" }],
+    summary: { total: 1, excluded: 0, passRate: 1 },
+  }
+  const legacyGrid = renderVerdictGrid([cell], new Map([[cell, legacy]]))
+  assert.match(legacyGrid, /100% \(excluded 0\/1\)/)
+  assert.doesNotMatch(legacyGrid, /spend \$/)
+})
+
+test("renderVerdictGrid: divergent actual-vs-estimate cells stay independently visible (T024/US3)", async () => {
+  const { renderVerdictGrid } = await import("../../scripts/eval-matrix.ts")
+  const cheap = { id: "openai/gpt-4o-mini", tier: "cheap", cost_per_call_usd: 0.0021, verified: true }
+  const frontier = { id: "anthropic/claude-sonnet-4.5", tier: "frontier", cost_per_call_usd: 0.05, verified: true }
+  const cellCheap = { model: cheap, harnessId: "single-shot", puzzles: [], runs: 1, estimatedUsd: 0.0021 }
+  const cellFrontier = { model: frontier, harnessId: "single-shot", puzzles: [], runs: 1, estimatedUsd: 0.05 }
+
+  // Registry estimate says $0.0252/puzzle; real billing came in 6x under.
+  const under = {
+    puzzles: [{ id: "PZL-0002", outcome: "MATCH", actualCostUsd: 0.0042 }],
+    summary: { total: 1, excluded: 0, passRate: 1 },
+    spendUsd: 0.0042,
+    estimatedSpendUsd: 0.0252,
+  }
+  // Registry estimate says $0.05; real billing came in over 6x above (long reasoning output).
+  const over = {
+    puzzles: [{ id: "PZL-0002", outcome: "MATCH", actualCostUsd: 0.31 }],
+    summary: { total: 1, excluded: 0, passRate: 1 },
+    spendUsd: 0.31,
+    estimatedSpendUsd: 0.05,
+  }
+  const grid = renderVerdictGrid([cellCheap, cellFrontier], new Map([[cellCheap, under], [cellFrontier, over]]))
+  assert.match(grid, /gpt-4o-mini x single-shot: 100% \(excluded 0\/1\) · spend \$0\.0042 \(measured 1\/1, est \$0\.0252\)/)
+  assert.match(grid, /claude-sonnet-4\.5 x single-shot: 100% \(excluded 0\/1\) · spend \$0\.3100 \(measured 1\/1, est \$0\.0500\)/)
 })
 
 test("needsOpenRouterKey: a local-only plan doesn't need one; a direct-solve cell still does", async () => {

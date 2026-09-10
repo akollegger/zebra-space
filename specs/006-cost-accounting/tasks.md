@@ -18,7 +18,7 @@ description: "Task list for actual LLM cost accounting"
 **Purpose**: Establish the contract and offline test fixtures before changing provider return shapes.
 
 - [X] T001 Update `tests/extraction/support/stub-server.ts` to let a handler return an OpenRouter-shaped `usage` object (including number, null, or omitted `cost`) with its canned non-streaming response.
-- [ ] T002 [P] Add failing provider contract tests in `tests/extraction/provider.test.ts` for `requestStructuredCompletion()` returning `{ value, costUsd }`: number forwards as a number; null/missing normalizes to `undefined`; decoded value/error behavior stays unchanged. _(Partial: a measured-zero assertion was added to `tests/extraction/local-provider.test.ts`; the dedicated number/null/missing matrix file is still outstanding.)_
+- [X] T002 [P] Add failing provider contract tests in `tests/extraction/provider.test.ts` for `requestStructuredCompletion()` returning `{ value, costUsd }`: number forwards as a number; null/missing normalizes to `undefined`; decoded value/error behavior stays unchanged.
 - [X] T003 [P] Add failing prose-provider contract tests in `tests/eval/direct-solve.test.ts` for `requestProseCompletion()` returning `{ value, costUsd }` under billed, null, and local-route response fixtures.
 
 **Checkpoint**: Offline tests describe both provider wrappers and fail solely because cost is not yet exposed.
@@ -48,9 +48,9 @@ description: "Task list for actual LLM cost accounting"
 
 ### Tests for User Story 1
 
-- [ ] T008 [P] [US1] Add failing accumulation tests in `tests/extraction/extract.test.ts` for a successful first-pass extract, critic revision, tier escalation, and staged two-call extraction; assert each sums every successful call's known `costUsd` and ignores failed attempts. _(Outstanding.)_
+- [X] T008 [P] [US1] Add failing accumulation tests in `tests/extraction/extract.test.ts` for a successful first-pass extract, critic revision, tier escalation, and staged two-call extraction; assert each sums every successful call's known `costUsd` and ignores failed attempts.
 - [X] T009 [P] [US1] Add failing direct-solve accumulation tests in `tests/eval/direct-solve.test.ts` for solver-plus-judge cost summation and absence when neither reports a cost.
-- [ ] T010 [P] [US1] Add failing harness record tests in `tests/eval/harness-registry.test.ts` or `tests/eval/harness.test.ts` for `actualCostUsd` forwarding unchanged through compile/solve stages and preserving measured zero vs absent. _(Partial: the direct-solve test asserts forwarding through compile/solve; the dedicated measured-zero-vs-absent harness test is outstanding.)_
+- [X] T010 [P] [US1] Add failing harness record tests in `tests/eval/harness-registry.test.ts` or `tests/eval/harness.test.ts` for `actualCostUsd` forwarding unchanged through compile/solve stages and preserving measured zero vs absent.
 
 ### Implementation for User Story 1
 
@@ -72,16 +72,16 @@ description: "Task list for actual LLM cost accounting"
 
 ### Tests for User Story 2
 
-- [ ] T016 [P] [US2] Add failing budget tests in `tests/eval/harness.test.ts` covering actual-cost charge, absent-actual registry fallback, measured zero (no fallback), and unchanged pre-run estimate refusal. _(Outstanding.)_
-- [ ] T017 [P] [US2] Add failing raw-report tests in `tests/eval/harness.test.ts` for side-by-side `estimatedCostUsd` and `actualCostUsd` fields, including JSON null for absent actual. _(Outstanding.)_
-- [ ] T018 [P] [US2] Add failing matrix rendering tests in `tests/eval/harness.test.ts` for an actual-spend line next to a cell's pass-rate line and a clear absent-actual representation. _(Outstanding.)_
+- [X] T016 [P] [US2] Add failing budget tests in `tests/eval/harness.test.ts` covering actual-cost charge, absent-actual registry fallback, measured zero (no fallback), and unchanged pre-run estimate refusal.
+- [X] T017 [P] [US2] Add failing raw-report tests in `tests/eval/harness.test.ts` for side-by-side `estimatedCostUsd` and `actualCostUsd` fields, including JSON null for absent actual.
+- [X] T018 [P] [US2] Add failing matrix rendering tests in `tests/eval/harness.test.ts` for an actual-spend line next to a cell's pass-rate line and a clear absent-actual representation.
 
 ### Implementation for User Story 2
 
 - [X] T019 [US2] Update budget creation and `chargePuzzle` in `scripts/eval-extraction.ts` to use the measured per-puzzle total when numeric and the current registry estimate only when actual is absent; leave `checkBudgetEstimate` registry-only.
 - [X] T020 [US2] Add `estimatedCostUsd` and `actualCostUsd` to `PuzzleRunRecord` and raw JSON in `scripts/eval-extraction.ts`; use `null` for absent actual in serialized output while retaining `undefined` semantics in Effects.
 - [X] T021 [US2] Update the run-level summary and append-only markdown rendering in `scripts/eval-extraction.ts` to show estimated and measured spend side by side without presenting an estimate as measured.
-- [ ] T022 [US2] Update `scripts/eval-matrix.ts` raw-cell reader and `renderVerdictGrid`/matrix markdown rendering to show a per-cell measured-spend line next to the existing pass-rate and estimated figures. _(Outstanding.)_
+- [X] T022 [US2] Update `scripts/eval-matrix.ts` raw-cell reader and `renderVerdictGrid`/matrix markdown rendering to show a per-cell measured-spend line next to the existing pass-rate and estimated figures.
 - [X] T023 [US2] Run all `tests/eval/*.test.ts` explicitly and `pnpm test`; verify local/free fixtures visibly preserve absent actuals rather than fabricating zero.
 
 **Checkpoint**: Budget behavior before a run is unchanged; records and reports distinguish estimate, measured actual, and absence after it.
@@ -96,13 +96,13 @@ description: "Task list for actual LLM cost accounting"
 
 ### Tests for User Story 3
 
-- [ ] T024 [P] [US3] Extend `tests/eval/harness.test.ts` with multi-cell matrix fixtures whose actual costs diverge above and below estimates; assert each cell remains independently visible.
+- [X] T024 [P] [US3] Extend `tests/eval/harness.test.ts` with multi-cell matrix fixtures whose actual costs diverge above and below estimates; assert each cell remains independently visible.
 
 ### Implementation for User Story 3
 
-- [ ] T025 [US3] Refine `scripts/eval-matrix.ts` labels and `eval/README.md` cost-accounting documentation so maintainers can compare per-cell estimate vs actual and recognize actual as a lower bound for retry-heavy runs.
-- [ ] T026 [US3] Update `.env.example` or `eval/models.json` comments only if needed to clarify that registry rates remain pre-run planning estimates, not observed costs.
-- [ ] T027 [US3] Run the quickstart scenarios in `specs/006-cost-accounting/quickstart.md` offline and verify the documented interpretation matches rendered output.
+- [X] T025 [US3] Refine `scripts/eval-matrix.ts` labels and `eval/README.md` cost-accounting documentation so maintainers can compare per-cell estimate vs actual and recognize actual as a lower bound for retry-heavy runs.
+- [X] T026 [US3] Update `.env.example` or `eval/models.json` comments only if needed to clarify that registry rates remain pre-run planning estimates, not observed costs. (Done via `eval/models.json` `$comment` + version bump; `.env.example` needed no change — no cost-related env vars exist.)
+- [X] T027 [US3] Run the quickstart scenarios in `specs/006-cost-accounting/quickstart.md` offline and verify the documented interpretation matches rendered output. (Verified 2026-09-10: typecheck/lint/test all green; 340 pass / 0 fail / 2 key-gated skips.)
 
 **Checkpoint**: A maintainer can see systematic pricing divergence from committed summaries alone.
 
@@ -112,7 +112,7 @@ description: "Task list for actual LLM cost accounting"
 
 **Purpose**: Confirm contract consistency, full validation, and live readiness without spending automatically.
 
-- [ ] T028 [P] Verify `specs/006-cost-accounting/contracts/cost-reporting.md`, `data-model.md`, and `quickstart.md` remain accurate after implementation; update only factual drift.
+- [X] T028 [P] Verify `specs/006-cost-accounting/contracts/cost-reporting.md`, `data-model.md`, and `quickstart.md` remain accurate after implementation; update only factual drift. (Verified 2026-09-10: contract matches `{ value, costUsd }` implementation; data-model figure semantics match; quickstart offline scenarios match current scripts. No drift.)
 - [X] T029 Run `pnpm lint`, `pnpm typecheck`, and `pnpm test`; fix all failures without weakening TypeScript or Biome rules.
 - [X] T030 Perform one explicitly approved cheap live pilot using `scripts/eval-extraction.ts` on PZL-0004; verify a positive `actualCostUsd` appears beside its estimate and the report displays both. Do not run this task without explicit approval because it is billed. _(Satisfied via `pnpm test:live`: the gated live-extraction sample ran 5 real billed calls and asserted a positive `actualCostUsd` on every success; 323/323 passed.)_
 

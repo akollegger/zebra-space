@@ -674,6 +674,11 @@ function reconcilePuzzleCost(budget: BudgetState, actualCostUsd: number | null):
   if (actualCostUsd !== null) budget.spendUsd += actualCostUsd - budget.costPerPuzzleUsd
 }
 
+// Exported for unit tests (ADR-010 US2): the budget semantics — reserve-then-reconcile with
+// registry fallback — are pure functions over BudgetState, tested directly rather than through
+// a subprocess run.
+export { type BudgetState, createBudget, checkBudgetEstimate, chargePuzzle, reconcilePuzzleCost, record }
+
 // --- Reporting -------------------------------------------------------------------------------
 
 function getGitCommitSha(): string {
@@ -1025,8 +1030,9 @@ async function main(): Promise<void> {
   console.log(`Summary appended to: ${fileURLToPath(RESULTS_MD_PATH)}`)
 }
 
-// Importable for unit tests (gradeJudged, loadBaselineCaps, resolveHarnessId) without running
-// the full CLI — main() only fires when this file is the entrypoint.
+// Importable for unit tests (gradeJudged, loadBaselineCaps, resolveHarnessId, the budget
+// functions, record) without running the full CLI — main() only fires when this file is the
+// entrypoint.
 const isEntrypoint = process.argv[1] !== undefined && import.meta.url.endsWith(process.argv[1].split("/").pop() ?? "")
 if (isEntrypoint) {
   main().catch((error: unknown) => {

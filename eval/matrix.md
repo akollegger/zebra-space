@@ -1,7 +1,11 @@
 # Eval Matrix Results
 
 Per-puzzle × cell comparison tables for the comparative matrix (ADR-007 §2.3). Each run
-appends one section: the cells executed, their pass rates, and the per-puzzle verdict grid.
+appends one section: the cells executed, their pass rates and spend, and the per-puzzle
+verdict grid. Spend lines (ADR-010) show the measured total first — `measured N/M` counts
+puzzle-runs whose provider reported a billed cost; `est — no measured calls` marks a cell
+whose figure is entirely the registry estimate (local/free-tier routes). Measured totals
+are lower bounds for retry-heavy cells: failed attempts never carry usage data.
 Raw per-cell detail lives in the gitignored `eval/results/<run-id>.json` files referenced
 per row; this file is the committed summary only. Runs stay sequential by default.
 
