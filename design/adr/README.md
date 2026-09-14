@@ -61,13 +61,13 @@ Use `/adr-review` before moving a draft to `accepted`.
 
 | ADR | Title | Status | RFCs | Specs |
 |---|---|---|---|---|
-| [ADR-001](ADR-001-catalog-format-seeding.md) | Puzzle Catalog Format and Seeding | proposed | RFC-001 | specs/001-catalog-seeding |
-| [ADR-002](ADR-002-adopt-minizinc-solver.md) | Adopt MiniZinc as the Constraint-Solver Ecosystem | proposed | RFC-002 | specs/002-minizinc-integration |
-| [ADR-003](ADR-003-cli-interface.md) | CLI Interface Shape | proposed | RFC-002, RFC-003 | specs/003-cli-interface, specs/004-nl-csp-extraction |
-| [ADR-004](ADR-004-llm-extraction-critic-loop.md) | Adopt LLM-Based Extraction with a Fidelity Critic Loop | proposed | RFC-003 | specs/004-nl-csp-extraction |
-| [ADR-005](ADR-005-extractedcsp-mzn-compiler.md) | ExtractedCsp to MiniZinc Compiler | proposed | RFC-002, RFC-003 | specs/004-nl-csp-extraction |
-| [ADR-006](ADR-006-deck-yaml-format.md) | Deck YAML Format | proposed | RFC-005 | |
-| [ADR-007](ADR-007-eval-outcome-grader-semantics.md) | Eval Outcome Taxonomy and Grader Semantics | proposed | RFC-004 | |
-| [ADR-008](ADR-008-direct-solve-baseline.md) | Direct-Solve Baseline with LLM Judge | proposed | RFC-004 | |
-| [ADR-009](ADR-009-staged-extraction.md) | Staged Extraction (Vocabulary then Constraints) | proposed | RFC-004, RFC-003 | |
-| [ADR-010](ADR-010-actual-llm-cost-accounting.md) | Actual LLM Cost Accounting for the Eval Harness | proposed | RFC-004, RFC-003 | |
+| [ADR-001](ADR-001-catalog-format-seeding.md) | Puzzle Catalog Format and Seeding | accepted | RFC-001 | specs/001-catalog-seeding |
+| [ADR-002](ADR-002-adopt-minizinc-solver.md) | Adopt MiniZinc as the Constraint-Solver Ecosystem | accepted | RFC-002 | specs/002-minizinc-integration |
+| [ADR-003](ADR-003-cli-interface.md) | CLI Interface Shape | accepted | RFC-002, RFC-003 | specs/003-cli-interface, specs/004-nl-csp-extraction |
+| [ADR-004](ADR-004-llm-extraction-critic-loop.md) | Adopt LLM-Based Extraction with a Fidelity Critic Loop | accepted | RFC-003 | specs/004-nl-csp-extraction |
+| [ADR-005](ADR-005-extractedcsp-mzn-compiler.md) | ExtractedCsp to MiniZinc Compiler | accepted | RFC-002, RFC-003 | specs/004-nl-csp-extraction |
+| [ADR-006](ADR-006-deck-yaml-format.md) | Deck YAML Format | accepted | RFC-005 | specs/005-deck-yaml-format |
+| [ADR-007](ADR-007-eval-outcome-grader-semantics.md) | Eval Outcome Taxonomy and Grader Semantics | accepted | RFC-004 | |
+| [ADR-008](ADR-008-direct-solve-baseline.md) | Direct-Solve Baseline with LLM Judge | accepted | RFC-004 | |
+| [ADR-009](ADR-009-staged-extraction.md) | Staged Extraction (Vocabulary then Constraints) | accepted | RFC-004, RFC-003 | |
+| [ADR-010](ADR-010-actual-llm-cost-accounting.md) | Actual LLM Cost Accounting for the Eval Harness | accepted | RFC-004, RFC-003 | specs/006-cost-accounting |

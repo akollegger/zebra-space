@@ -1,7 +1,7 @@
 ---
 id: RFC-002
 title: Constraint Solver Selection
-status: draft
+status: accepted
 created: 2026-08-12
 adrs: [ADR-002, ADR-003, ADR-005]
 ---

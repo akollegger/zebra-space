@@ -1,7 +1,7 @@
 ---
 id: ADR-007
 title: Eval Outcome Taxonomy and Grader Semantics
-status: proposed
+status: accepted
 rfcs: [RFC-004]
 created: 2026-09-06
 specs: []

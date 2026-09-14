@@ -1,7 +1,7 @@
 ---
 id: RFC-003
 title: Natural-Language Puzzle to CSP Extraction
-status: draft
+status: accepted
 created: 2026-08-18
 adrs: [ADR-004, ADR-005, ADR-003, ADR-009, ADR-010]
 ---

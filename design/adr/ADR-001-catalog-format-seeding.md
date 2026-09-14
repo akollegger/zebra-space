@@ -1,7 +1,7 @@
 ---
 id: ADR-001
 title: Puzzle Catalog Format and Seeding
-status: proposed
+status: accepted
 rfcs: [RFC-001]
 created: 2026-08-11
 specs:

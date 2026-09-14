@@ -1,7 +1,7 @@
 ---
 id: ADR-008
 title: Direct-Solve Baseline with LLM Judge
-status: proposed
+status: accepted
 rfcs: [RFC-004]
 created: 2026-09-06
 specs: []
