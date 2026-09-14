@@ -1,0 +1,524 @@
+[
+  {
+    "id": "PZL-0002",
+    "file": "PZL-0002-context-graphs-example.md",
+    "variants": {
+      "full-critic": {
+        "variant": "full-critic",
+        "totalCalls": 12,
+        "costUsd": 0.09366345000000001,
+        "outcome": "SOLVE_MULTIPLY_SATISFIABLE",
+        "verdict": "SOLVED",
+        "detail": "",
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "house1",
+              "type": "house"
+            },
+            {
+              "id": "house2",
+              "type": "house"
+            },
+            {
+              "id": "house3",
+              "type": "house"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "color",
+              "entityType": "house",
+              "values": [
+                "Blue",
+                "Red",
+                "Green"
+              ]
+            },
+            {
+              "variable": "animal",
+              "entityType": "house",
+              "values": [
+                "Dog",
+                "Cat",
+                "Zebra"
+              ]
+            },
+            {
+              "variable": "position",
+              "entityType": "house",
+              "values": [
+                "1",
+                "2",
+                "3"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "allDifferent",
+              "variable": "position"
+            },
+            {
+              "kind": "allDifferent",
+              "variable": "color"
+            },
+            {
+              "kind": "allDifferent",
+              "variable": "animal"
+            },
+            {
+              "kind": "linkedAttributes",
+              "entityType": "house",
+              "attributes": [
+                {
+                  "variable": "animal",
+                  "value": "Cat"
+                },
+                {
+                  "variable": "color",
+                  "value": "Red"
+                }
+              ]
+            },
+            {
+              "kind": "linkedAttributes",
+              "entityType": "house",
+              "attributes": [
+                {
+                  "variable": "color",
+                  "value": "Red"
+                },
+                {
+                  "variable": "position",
+                  "value": "2"
+                }
+              ]
+            },
+            {
+              "kind": "linkedAttributes",
+              "entityType": "house",
+              "attributes": [
+                {
+                  "variable": "animal",
+                  "value": "Dog"
+                },
+                {
+                  "variable": "color",
+                  "value": "Blue"
+                }
+              ]
+            },
+            {
+              "kind": "derivedRule",
+              "appliesTo": "house",
+              "condition": {
+                "kind": "comparison",
+                "variable": "color",
+                "operator": "==",
+                "value": "Blue"
+              },
+              "thenConstraints": [
+                {
+                  "kind": "derivedRule",
+                  "appliesTo": "house",
+                  "condition": {
+                    "kind": "comparison",
+                    "variable": "color",
+                    "operator": "==",
+                    "value": "Red"
+                  },
+                  "thenConstraints": [
+                    {
+                      "kind": "arithmetic",
+                      "expression": {
+                        "kind": "binaryOp",
+                        "op": "-",
+                        "operands": [
+                          {
+                            "kind": "variableRef",
+                            "variable": "position",
+                            "entity": "$this"
+                          },
+                          {
+                            "kind": "variableRef",
+                            "variable": "position",
+                            "entity": "$outer"
+                          }
+                        ]
+                      },
+                      "comparator": "==",
+                      "target": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "mzn": "include \"globals.mzn\";\n\nenum house = {house1, house2, house3};\nenum Values_Blue_Red_Green = {Blue, Red, Green};\nenum Values_Dog_Cat_Zebra = {Dog, Cat, Zebra};\narray[house] of var Values_Blue_Red_Green: color;\narray[house] of var Values_Dog_Cat_Zebra: animal;\narray[house] of var 1..3: position;\n\nconstraint all_different(position);\nconstraint all_different(color);\nconstraint all_different(animal);\nconstraint forall(e in house)(animal[e] = Cat <-> color[e] = Red);\nconstraint forall(e in house)(color[e] = Red <-> position[e] = 2);\nconstraint forall(e in house)(animal[e] = Dog <-> color[e] = Blue);\nconstraint (color[house1] == Blue) -> (forall(house_e in house)((color[house_e] == Red) -> ((position[house_e] - position[house1]) == 1)));\nconstraint (color[house2] == Blue) -> (forall(house_e in house)((color[house_e] == Red) -> ((position[house_e] - position[house2]) == 1)));\nconstraint (color[house3] == Blue) -> (forall(house_e in house)((color[house_e] == Red) -> ((position[house_e] - position[house3]) == 1)));\n\nsolve satisfy;\n",
+        "note": "{\"_tag\":\"MultiplySatisfiable\",\"assignments\":[{\"color\":[{\"e\":\"Green\"},{\"e\":\"Red\"},{\"e\":\"Blue\"}],\"animal\":[{\"e\":\"Zebra\"},{\"e\":\"Cat\"},{\"e\":\"Dog\"}],\"position\":[3,2,1]},{\"color\":[{\"e\":\"Red\"},{\"e\":\"Green\"},{\"e\":\"Blue\"}],\"animal\":[{\"e\":\"Cat\"},{\"e\":\"Zebra\"},{\"e\":\"Dog\"}],\"position\":[2,3,1]}]}",
+        "grade": {
+          "verdict": "MISMATCH",
+          "detail": "expected unique solution, got MultiplySatisfiable"
+        }
+      },
+      "per-clue": {
+        "variant": "per-clue",
+        "totalCalls": 5,
+        "costUsd": 0.0014307,
+        "outcome": "COMPILE_FAILED",
+        "verdict": "FAIL",
+        "detail": "Could not find a single numeric positional domain shared by \"house2\" and \"house3\" for adjacency relation \"directly left of\". If the ordering is over a non-numeric domain (e.g. time slots), set adjacency's \"variable\" field to name it explicitly.",
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "house1",
+              "type": "house"
+            },
+            {
+              "id": "house2",
+              "type": "house"
+            },
+            {
+              "id": "house3",
+              "type": "house"
+            },
+            {
+              "id": "cat",
+              "type": "animal"
+            },
+            {
+              "id": "dog",
+              "type": "animal"
+            },
+            {
+              "id": "zebra",
+              "type": "animal"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "house-color",
+              "entityType": "house",
+              "values": [
+                "Blue",
+                "Red",
+                "Green"
+              ]
+            },
+            {
+              "variable": "house-animal",
+              "entityType": "house",
+              "values": [
+                "Dog",
+                "Cat",
+                "Zebra"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "assignment",
+              "entity": "house2",
+              "variable": "house-color",
+              "value": "Red"
+            },
+            {
+              "kind": "assignment",
+              "entity": "house2",
+              "variable": "house-animal",
+              "value": "Cat"
+            },
+            {
+              "kind": "assignment",
+              "entity": "house2",
+              "variable": "house-color",
+              "value": "Red"
+            },
+            {
+              "kind": "adjacency",
+              "relation": "directly left of",
+              "a": "house2",
+              "b": "house3",
+              "variable": null
+            },
+            {
+              "kind": "assignment",
+              "entity": "house1",
+              "variable": "house-animal",
+              "value": "Dog"
+            },
+            {
+              "kind": "assignment",
+              "entity": "house1",
+              "variable": "house-color",
+              "value": "Blue"
+            }
+          ]
+        },
+        "mzn": null,
+        "grade": {
+          "verdict": "N/A",
+          "detail": "no solve result"
+        },
+        "decomposable": true,
+        "perClue": [
+          {
+            "clueIndex": 0,
+            "clueText": "1. The Cat lives in the Red House.",
+            "toolCallsMade": 2,
+            "kindsEmitted": [
+              "assignment__house-color",
+              "assignment__house-animal"
+            ],
+            "rejectedStructurally": []
+          },
+          {
+            "clueIndex": 1,
+            "clueText": "2. The Red House is the middle house.",
+            "toolCallsMade": 1,
+            "kindsEmitted": [
+              "assignment__house-color"
+            ],
+            "rejectedStructurally": []
+          },
+          {
+            "clueIndex": 2,
+            "clueText": "3. The Blue House is directly to the left of the Red House.",
+            "toolCallsMade": 1,
+            "kindsEmitted": [
+              "adjacency"
+            ],
+            "rejectedStructurally": []
+          },
+          {
+            "clueIndex": 3,
+            "clueText": "4. The Dog lives in the Blue House.\n\nWhere does the Zebra live?",
+            "toolCallsMade": 2,
+            "kindsEmitted": [
+              "assignment__house-animal",
+              "assignment__house-color"
+            ],
+            "rejectedStructurally": []
+          }
+        ]
+      },
+      "per-clue+grounded": {
+        "variant": "per-clue+grounded",
+        "totalCalls": 5,
+        "costUsd": 0.0014385000000000001,
+        "outcome": "COMPILE_FAILED",
+        "verdict": "FAIL",
+        "detail": "Could not find a single numeric positional domain shared by \"house1\" and \"house2\" for adjacency relation \"directly left of\". If the ordering is over a non-numeric domain (e.g. time slots), set adjacency's \"variable\" field to name it explicitly.",
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "house1",
+              "type": "house"
+            },
+            {
+              "id": "house2",
+              "type": "house"
+            },
+            {
+              "id": "house3",
+              "type": "house"
+            },
+            {
+              "id": "animal1",
+              "type": "animal"
+            },
+            {
+              "id": "animal2",
+              "type": "animal"
+            },
+            {
+              "id": "animal3",
+              "type": "animal"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "house-color",
+              "entityType": "house",
+              "values": [
+                "Blue",
+                "Red",
+                "Green"
+              ]
+            },
+            {
+              "variable": "house-animal",
+              "entityType": "house",
+              "values": [
+                "Dog",
+                "Cat",
+                "Zebra"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "assignment",
+              "entity": "house2",
+              "variable": "house-animal",
+              "value": "Cat"
+            },
+            {
+              "kind": "assignment",
+              "entity": "house2",
+              "variable": "house-color",
+              "value": "Red"
+            },
+            {
+              "kind": "assignment",
+              "entity": "house2",
+              "variable": "house-color",
+              "value": "Red"
+            },
+            {
+              "kind": "adjacency",
+              "relation": "directly left of",
+              "a": "house1",
+              "b": "house2",
+              "variable": null
+            },
+            {
+              "kind": "assignment",
+              "entity": "house1",
+              "variable": "house-animal",
+              "value": "Dog"
+            },
+            {
+              "kind": "assignment",
+              "entity": "house1",
+              "variable": "house-color",
+              "value": "Blue"
+            }
+          ]
+        },
+        "mzn": null,
+        "note": "grounded finding: compile-failed; ",
+        "grade": {
+          "verdict": "N/A",
+          "detail": "no solve result"
+        }
+      },
+      "per-clue+back-translation": {
+        "variant": "per-clue+back-translation",
+        "totalCalls": 12,
+        "costUsd": 0.0027171,
+        "outcome": "COMPILE_FAILED",
+        "verdict": "FAIL",
+        "detail": "Could not find a single numeric positional domain shared by \"color-blue\" and \"color-red\" for adjacency relation \"directly left of\". If the ordering is over a non-numeric domain (e.g. time slots), set adjacency's \"variable\" field to name it explicitly.",
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "house-1",
+              "type": "house"
+            },
+            {
+              "id": "house-2",
+              "type": "house"
+            },
+            {
+              "id": "house-3",
+              "type": "house"
+            },
+            {
+              "id": "animal-dog",
+              "type": "animal"
+            },
+            {
+              "id": "animal-cat",
+              "type": "animal"
+            },
+            {
+              "id": "animal-zebra",
+              "type": "animal"
+            },
+            {
+              "id": "color-blue",
+              "type": "color"
+            },
+            {
+              "id": "color-red",
+              "type": "color"
+            },
+            {
+              "id": "color-green",
+              "type": "color"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "house-color",
+              "entityType": "house",
+              "values": [
+                "blue",
+                "red",
+                "green"
+              ]
+            },
+            {
+              "variable": "house-animal",
+              "entityType": "house",
+              "values": [
+                "dog",
+                "cat",
+                "zebra"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "adjacency",
+              "relation": "directly left of",
+              "a": "color-blue",
+              "b": "color-red",
+              "variable": null
+            },
+            {
+              "kind": "assignment",
+              "entity": "house-1",
+              "variable": "house-color",
+              "value": "red"
+            },
+            {
+              "kind": "assignment",
+              "entity": "house-1",
+              "variable": "house-animal",
+              "value": "cat"
+            },
+            {
+              "kind": "adjacency",
+              "relation": "next to",
+              "a": "house-1",
+              "b": "house-2",
+              "variable": "house-color"
+            },
+            {
+              "kind": "assignment",
+              "entity": "house-1",
+              "variable": "house-animal",
+              "value": "dog"
+            },
+            {
+              "kind": "assignment",
+              "entity": "house-1",
+              "variable": "house-color",
+              "value": "blue"
+            }
+          ]
+        },
+        "mzn": null,
+        "note": "judge flagged 3/4 clues; ",
+        "grade": {
+          "verdict": "N/A",
+          "detail": "no solve result"
+        }
+      }
+    }
+  }
+]
