@@ -1,7 +1,7 @@
 ---
 id: ADR-005
 title: ExtractedCsp to MiniZinc Compiler
-status: proposed
+status: accepted
 rfcs: [RFC-002, RFC-003]
 created: 2026-08-18
 specs:

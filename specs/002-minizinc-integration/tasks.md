@@ -58,7 +58,7 @@ and testing of each story.
   1; mirrors the `.agents/skills/minizinc-setup` skill's logic as a non-interactive script).
   Verified idempotent: running it against this already-registered machine correctly detects the
   existing Gecode solver and exits early without rewriting anything.
-- [ ] T006 Write `tests/solver/solve.test.ts` covering SC-001 (an inline unsatisfiable toy model
+- [X] T006 Write `tests/solver/solve.test.ts` covering SC-001 (an inline unsatisfiable toy model
   → `Unsatisfiable`), SC-002 (an inline uniquely-solvable toy model → `UniquelySolvable` with the
   correct assignment), SC-003 (an inline multiply-satisfiable toy model → `MultiplySatisfiable`,
   asserting no more than 2 solutions are ever requested), and SC-005 (no files left in the OS

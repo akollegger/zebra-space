@@ -1,7 +1,7 @@
 ---
 id: ADR-004
 title: Adopt LLM-Based Extraction with a Fidelity Critic Loop
-status: proposed
+status: accepted
 rfcs: [RFC-003]
 created: 2026-08-18
 specs:

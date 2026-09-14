@@ -1,7 +1,7 @@
 ---
 id: ADR-010
 title: Actual LLM Cost Accounting for the Eval Harness
-status: proposed
+status: accepted
 rfcs: [RFC-004, RFC-003]
 created: 2026-09-07
 specs: [specs/006-cost-accounting]

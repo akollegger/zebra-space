@@ -1,7 +1,7 @@
 ---
 id: ADR-003
 title: CLI Interface Shape
-status: proposed
+status: accepted
 rfcs: [RFC-002, RFC-003]
 created: 2026-08-13
 specs:

@@ -1,7 +1,7 @@
 ---
 id: ADR-009
 title: Staged Extraction (Vocabulary then Constraints)
-status: proposed
+status: accepted
 rfcs: [RFC-004, RFC-003]
 created: 2026-09-06
 specs: []

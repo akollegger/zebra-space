@@ -1,7 +1,7 @@
 ---
 id: ADR-002
 title: Adopt MiniZinc as the Constraint-Solver Ecosystem
-status: proposed
+status: accepted
 rfcs: [RFC-002]
 created: 2026-08-12
 specs:

@@ -1,7 +1,7 @@
 ---
 id: RFC-004
 title: Computational Decision Making
-status: draft
+status: accepted
 created: 2026-08-21
 adrs: [ADR-007, ADR-008, ADR-009, ADR-010]
 ---
