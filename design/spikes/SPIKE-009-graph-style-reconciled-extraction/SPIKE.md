@@ -1,7 +1,7 @@
 ---
 id: SPIKE-009
 title: Graph-Style Reconciled Extraction (Local Extract, Neighborhood Reconcile, Filter)
-status: planned
+status: in-progress
 rfcs: [RFC-003]
 created: 2026-09-15
 ---
@@ -58,30 +58,136 @@ Concretely:
 
 ## 2. Method
 
-Not yet designed in detail — this is a stub opened per the user's explicit request to track the
-idea while SPIKE-008's narrower entity-scoping fix is tried first (see SPIKE-008 §6 Conclusion's
-recommended next step, which this spike is a follow-up to, not a replacement for). When picked
-up, the method should build on SPIKE-008's existing scripts
-(`design/spikes/SPIKE-008-per-clue-tool-call-decomposition/scripts/`) rather than starting over
-— `lib/puzzles.ts`'s clue-splitting, `lib/tool-call.ts`'s forced-tool-call wrapper, and
-`lib/grade.ts`'s answer-key grading dispatch are all reusable as-is. The new work is: (a) a
-per-clue *vocabulary* proposal call (parallel in shape to the existing per-clue *constraint*
-call), (b) a reconciliation step — likely deterministic code for straightforward cases (exact
-string match merging) plus an LLM call only where local candidates conflict or look like
-plausible duplicates, and (c) a filtering step applied after reconciliation, before assembly.
-Compare against SPIKE-008's own per-clue results (already measured) on the same 14-puzzle
-sample, not just against `full-critic`, so the comparison isolates what reconciliation adds.
+SPIKE-008's narrower entity-scoping fix has since landed and been measured (gradable-state rate
+4/14 → 8/14 puzzles) — this spike now proceeds against the two named failure classes that fix
+*didn't* close: **PZL-0001** (`"Adjacency variable \"nationality\" is not shared by
+\"Chesterfields\" and \"fox\"."` — no shared ordering domain was ever declared) and **PZL-0010**
+(`"allDifferent requires an entity-indexed variable; \"arrival-order\" has only one entity."` —
+a domain wrongly modeled as scalar). Both trace to the same root cause: vocabulary is decided in
+one global call, before any clue is examined, then trusted unconditionally by every per-clue
+constraint call.
+
+**Reconciliation is deterministic-only for this pass** (explicit scope decision) — exact-match
+merging on *normalized* (lowercased, trimmed) surface forms/attribute names, no LLM-assisted
+fuzzy matching. All new code lives under
+`design/spikes/SPIKE-009-graph-style-reconciled-extraction/scripts/lib/`, reusing SPIKE-008's
+existing modules directly via relative cross-spike imports:
+`../../SPIKE-008-per-clue-tool-call-decomposition/scripts/lib/{puzzles,tool-call,clue-schema,grade}.ts`.
+
+**1. `lib/propose-vocabulary.ts`** — one new tool, `proposeVocabulary`, called per clue through
+the existing single-forced-tool `requestClueTool` wrapper (`tool-call.ts` — already used by
+`back-translation-critic.ts`, reused here for a second purpose); both arrays may be empty, which
+is how a pure scenario-setup clue expresses "nothing here" without needing a separate zero-
+tool-call path. Deliberately unscoped/free-text otherwise (there's no global vocabulary yet to
+scope against):
+
+```jsonc
+{
+  "entityMentions": [{ "surfaceForm": string, "typeGuess": string, "canonicalIdGuess"?: string }],
+  "domainMentions": [{
+    "attributeNameGuess": string, "entityTypeGuess": string, "valueMentioned": string,
+    "isOrderingHint": boolean  // true for adjacency/positional clues — the PZL-0001 signal
+  }]
+}
+```
+
+**2. `lib/reconcile.ts`** — pure, deterministic, offline-testable. Given every clue's
+`VocabularyProposal`, produces a canonical `ExtractedVocabulary` (`clue-schema.ts`'s existing
+`Vocabulary` shape) plus a provenance map (clueIndex -> contributed entity/domain ids):
+
+1. Normalize every `surfaceForm`/`typeGuess`/`attributeNameGuess` (lowercase + trim) before any
+   comparison.
+2. Bucket entity mentions by normalized `typeGuess`; merge exact matches on normalized
+   `canonicalIdGuess` OR normalized `surfaceForm` within a bucket.
+3. Bucket domain mentions by (normalized `attributeNameGuess`, normalized `entityTypeGuess`);
+   merge exact matches; a domain's `values` is the union of every merged mention's
+   `valueMentioned`.
+4. **Entity-indexed vs. scalar, decided AFTER merging**: count distinct merged entities of each
+   domain's `entityTypeGuess` actually referenced by a contributing clue — reuse `clue-schema.ts`'s
+   `entitiesOfDomain` (exported for this reuse — a one-line change to that file) rather than a
+   second, potentially-drifting copy of the same predicate `compile.ts`'s real `isScalar` uses.
+5. **Synthesize a positional domain when needed (the PZL-0001 fix)**: for any domain mention
+   flagged `isOrderingHint: true` whose `entityTypeGuess` has no existing ordered/numeric domain,
+   synthesize one entity-indexed domain (values `"1".."N"`, N = the entity count from step 4).
+6. Emit canonical `{entities, domains}` + provenance map. Domain-split / near-duplicate cases
+   that don't exact-match stay separate, unmerged, in v1 — the deferred LLM-assisted path.
+
+**3. `lib/filter.ts`** — after reconciliation, re-run the existing, unchanged
+`generateClueTools` + `requestClueConstraints` per-clue constraint loop against the canonical
+vocabulary, then before assembly: drop any constraint whose fields don't resolve against the
+canonical vocabulary (defensive — synthesized domains are new territory worth double-checking);
+drop constraints from a clue whose only vocabulary contribution never survived reconciliation
+(the "pure scenario setup" case). No constraint-content deduplication (redundant-but-consistent
+constraints are harmless to MiniZinc, per SPIKE-008's own scoping precedent).
+
+**4. `lib/vocabulary-reconciled-extract.ts`** — orchestrates 1→2→3 into one function parallel to
+SPIKE-008's `extractPerClue`, same result shape.
+
+**5. `run-comparison.ts`** (this spike's own) — reads SPIKE-008's already-committed, already-
+paid-for baseline directly from
+`design/spikes/SPIKE-008-per-clue-tool-call-decomposition/results/comparison-2026-09-14T14-05-07-883Z.json`
+(the post-entity-scoping-fix run) rather than re-running `full-critic` or plain `per-clue` —
+only the new `per-clue+reconcile` variant runs and costs money. Same 14-puzzle sample, same
+`lib/grade.ts` grading (imported cross-spike, unchanged).
+
+**Verification order**: (1) offline-only synthetic fixtures reproducing PZL-0001/PZL-0010's
+exact shapes, confirming reconciliation's output compiles via the real `compile()`/`solve()` —
+zero cost; (2) stop and report a cost estimate, wait for explicit go-ahead; (3) one live dry-run
+on PZL-0001 and PZL-0010 specifically; (4) full 14-puzzle billed run of `per-clue+reconcile`
+only, compared against the read-only baseline above.
 
 ## 3. Time-box
 
-Not yet set — to be scoped when this spike is actually picked up, after SPIKE-008's narrower
-entity-scoping fix has been tried and re-measured (its result may change how much appetite there
-is for this larger architecture change).
+**One day (~8 hours)**: ~1h `propose-vocabulary.ts` (mirrors existing `clueSystemPrompt`/
+`requestClueTool` patterns closely); ~3h `reconcile.ts` (the only genuinely new logic, unit-
+testable offline against synthetic PZL-0001/PZL-0010 fixtures before any billed call); ~1h
+`filter.ts` + assembly glue; ~1h the comparison runner (reading SPIKE-008's committed baseline
+rather than re-running it); ~1h one live dry-run on the two named puzzles; ~1h full billed run
+plus write-up. Hard stop at the time-box — write up whatever's found and mark `status:
+abandoned` with open items noted, rather than extending into the deferred LLM-assisted path.
 
-## 4. Findings
+## 4. Notes
+
+**2026-09-15 — built and proved the mechanism entirely offline, zero cost.** Exported
+`entitiesOfDomain` from SPIKE-008's `clue-schema.ts` (one-line change, still spike-owned code)
+so `reconcile.ts` reuses the exact same entity-counting predicate `compile.ts`'s real `isScalar`
+rule uses, rather than a second copy. Built `lib/propose-vocabulary.ts` (per-clue vocabulary
+proposal via the existing single-forced-tool `requestClueTool`; both arrays may be empty, which
+is how a pure setup clue expresses "nothing here" without needing a separate zero-tool-call
+path), `lib/reconcile.ts` (deterministic, normalized-lowercase exact-match merging, entity-
+indexing decided post-merge, positional-domain synthesis for an ordering hint with no backing
+domain), `lib/filter.ts` (drops constraints referencing anything that didn't survive
+reconciliation), and `lib/vocabulary-reconciled-extract.ts` (orchestrates all of it, parallel in
+shape to SPIKE-008's `extractPerClue`).
+
+Verified in stages, each against the exact named failure shapes:
+- `smoke-test-reconcile.ts`: synthetic PZL-0010-shaped input (an ordering attribute with no
+  independently-proposed entities) correctly synthesizes 3 entities + a sized positional
+  domain; synthetic PZL-0001-shaped input (entities already named, but no shared ordering
+  domain declared) correctly synthesizes a positional domain sized to the already-named
+  entities, rather than inventing new ones.
+- `smoke-test-reconcile-compiles.ts`: the PZL-0010-shaped reconciled vocabulary, with an
+  `allDifferent` over the synthesized positional domain, compiles and solves via the REAL
+  `compile()`/`solve()` — the exact construct that previously failed
+  (`"allDifferent requires an entity-indexed variable; ... has only one entity"`).
+- `smoke-test-filter.ts`: confirms both drop rules (unknown-entity reference; clue whose only
+  contribution never survived reconciliation) fire correctly and independently.
+- `smoke-test-e2e.ts`: the full orchestration end to end against a stub server — a synthetic
+  3-clue puzzle whose third clue is an adjacency clue with no independently-declared ordering
+  domain (the PZL-0001 shape) — produces a compilable, solvable model, 6 total calls (3
+  vocabulary proposals + 3 constraint calls, no reconciliation LLM call as designed).
+
+All of the above is zero real API cost (stub server + local `minizinc` only). `pnpm lint`/
+`typecheck`/`test` all pass unchanged on the root project.
+
+**Per the plan's spend gate: stopping here to report a cost estimate before any live call.**
+See the session's own report for the estimate and to request a go-ahead — not duplicated in
+this file since it's a one-time checkpoint, not a durable finding.
+
+## 5. Findings
 
 _(filled in once the spike concludes)_
 
-## 5. Conclusion
+## 6. Conclusion
 
 _(filled in once the spike concludes)_

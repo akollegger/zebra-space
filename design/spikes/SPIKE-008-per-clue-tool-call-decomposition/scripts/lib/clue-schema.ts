@@ -75,8 +75,10 @@ function enumOf(values: readonly string[]): { readonly type: "string"; readonly 
 
 /** This domain's own entities (by its declared `entityType`) — mirrors compile.ts's own
  * `isScalar` computation (entityIds.length <= 1) so schema-time scoping matches solve-time
- * expectations exactly. */
-function entitiesOfDomain(vocab: Vocabulary, domain: Domain): readonly string[] {
+ * expectations exactly. Exported for reuse by SPIKE-009's reconcile.ts, which needs this same
+ * predicate computed AFTER cross-clue merging rather than from this generator's own
+ * already-fixed vocabulary. */
+export function entitiesOfDomain(vocab: Vocabulary, domain: Domain): readonly string[] {
   return vocab.entities.filter((e) => e.type === domain.entityType).map((e) => e.id)
 }
 
