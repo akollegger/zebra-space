@@ -1,7 +1,7 @@
 ---
 id: SPIKE-009
 title: Graph-Style Reconciled Extraction (Local Extract, Neighborhood Reconcile, Filter)
-status: in-progress
+status: done
 rfcs: [RFC-003]
 created: 2026-09-15
 ---
@@ -184,10 +184,172 @@ All of the above is zero real API cost (stub server + local `minizinc` only). `p
 See the session's own report for the estimate and to request a go-ahead — not duplicated in
 this file since it's a one-time checkpoint, not a durable finding.
 
+**2026-09-15 — live dry-run on PZL-0001/PZL-0010 found and fixed three real identifier-hygiene
+bugs before committing to the full sweep, then surfaced a fourth left as a genuine finding:**
+
+1. **Tool names must match `^[a-zA-Z0-9_-]+$`** (OpenAI's real function-calling validator) —
+   `reconcile.ts` was emitting domain/entity-type strings straight from free-text model output
+   (`attributeNameGuess`/`typeGuess`), and `clue-schema.ts`'s unchanged tool-naming scheme
+   (`assignment__<variable>`) built an invalid tool name from one containing a space. Fixed by
+   adding `sanitizeToken()` (lowercase, collapse disallowed characters to `-`, trim) applied at
+   every point a proposal field becomes part of an IDENTIFIER (domain variable, entity type,
+   entity id) — never applied to domain VALUES, which flow through as real puzzle data, not
+   identifiers.
+2. **Domain-variable-name collision across different entity types** — `mergeDomainMentions`
+   correctly buckets by (attribute name, entity type), so the SAME attribute name proposed for
+   genuinely different entity types (a puzzle's clues independently called several different
+   things "arrival-order" — for "vehicle", "car", "person", "pedestrian") produced multiple
+   domains sharing one `variable` string; MiniZinc's single flat namespace rejects the second
+   declaration (`"identifier \`arrival_order' already defined"`). Fixed by disambiguating every
+   colliding attribute name with an entity-type suffix, applied to ALL of that name's
+   occurrences (not just the second onward), so the fix doesn't depend on candidate order.
+3. **Entity-type name colliding with a domain value string** — an entity TYPE ("car") and an
+   unrelated domain's VALUE ("car") both sanitize to the same MiniZinc identifier; `compile.ts`
+   (unchanged) emits an entity-type enum named after the type and, separately, a value-enum
+   whose member is the value itself — both land on the same flat-namespace identifier
+   (`"identifier \`car' already defined"`). Fixed conservatively: rename the colliding ENTITY
+   TYPE (never a domain value, which is real puzzle data), scoped only to entity-type strings
+   that structurally collide with detected domain values.
+4. **Left as a genuine finding, not patched**: a domain VALUE colliding with a DIFFERENT
+   domain's value string (both domains' value-enums landing on the same MiniZinc identifier,
+   e.g. two unrelated clues each producing a value literally `"the order they arrive"`). Unlike
+   1-3 (pure identifier-hygiene bugs in this spike's own code), fixing this properly means
+   either duplicating semantic near-duplicate/domain-split resolution this spike's Method
+   explicitly deferred to a future LLM-assisted pass (§2/§4), or changing `compile.ts` itself
+   (root `src/`, out of scope for a spike). Left as-is; the full 14-puzzle run below measures how
+   often it actually recurs, which is itself the honest signal about whether local, independent
+   per-clue vocabulary proposals generate more generic-string collisions than a single global
+   vocabulary call naturally avoids by seeing the whole puzzle at once.
+
+Net effect of fixes 1-3, measured directly on the same two puzzles across successive live
+retries: **PZL-0001 moved from `COMPILE_FAILED` (ungraded) all the way to `SOLVE_UNSATISFIABLE`
+— a real, gradable outcome (graded `MISMATCH`) that SPIKE-008's own `per-clue` baseline never
+reached for this puzzle.** PZL-0010 still doesn't reach a gradable state, blocked by finding 4
+above. Full 14-puzzle billed run launched next.
+
 ## 5. Findings
 
-_(filled in once the spike concludes)_
+Full 14-puzzle billed run: `results/comparison-2026-09-14T15-37-27-397Z.json`. One sample per
+puzzle (SPIKE-005/SPIKE-008's own caveat applies equally — individual cells are suggestive, not
+conclusive).
+
+### 5.1 Aggregate: a small net improvement over plain `per-clue`, at comparable cost
+
+| Variant | Cost (14 puzzles) | Calls | Reached a gradable state | Passing verdicts |
+|---|---|---|---|---|
+| `per-clue` (SPIKE-008 baseline, post-entity-scoping-fix) | $0.031 | 77 | 8/14 | 2/14 |
+| `per-clue+reconcile` (this spike) | $0.071 | 131 | **9/14** | 2/14 |
+| `full-critic` (today's real pipeline) | $2.096 | 168 (worst-case, not measured) | 13/14 | 2/14 |
+
+Reconciliation adds real cost (roughly 2x plain `per-clue`'s calls, from the added per-clue
+vocabulary-proposal stage) for a marginal gradable-state improvement (+1 puzzle) on this single
+run, still ~30x cheaper than `full-critic`. Passing-verdict count is unchanged (2/14, the same
+two puzzles — PZL-0028 `READING_MATCHED`, PZL-0033 `PREMISE_FREE_MATCH` — both variants).
+
+### 5.2 Per-puzzle: real gains, one real regression, non-determinism visible
+
+| Puzzle | `per-clue+reconcile` | `per-clue` baseline | Change |
+|---|---|---|---|
+| PZL-0038 | `SOLVE_UNSATISFIABLE`/`MISMATCH` | `SOLVE_ERROR`/N/A | **improved** — now gradable |
+| PZL-0012 | `SOLVE_UNSATISFIABLE`/`MISMATCH` | `SOLVE_ERROR`/N/A | **improved** — now gradable |
+| PZL-0011 | `COMPILE_FAILED`/N/A | `SOLVE_UNSATISFIABLE`/`MISMATCH` | **regressed** — was gradable, now isn't |
+| PZL-0001, PZL-0002, PZL-0003, PZL-0010 | still ungraded (`COMPILE_FAILED`/`SOLVE_ERROR`) | also ungraded | no change, different reasons (§5.3) |
+| remaining 8 puzzles | identical outcome+verdict | — | no change |
+
+PZL-0011's regression detail: `"Entity placeholder \"$9,000\" was never substituted with a real
+entity"` — the per-clue constraint-extraction stage (unchanged from SPIKE-008) emitted a
+`derivedRule` placeholder token where a dollar amount was expected; this is a constraint-
+extraction-stage issue, not a reconciliation one — reconciliation's vocabulary was not the
+cause here, a useful reminder that this spike's mechanism only changes vocabulary, not the
+unchanged per-clue constraint stage's own failure modes.
+
+Also notable: **PZL-0001 itself flipped between the live dry-run and the full run** — the
+dry-run (§4, before the full sweep) reached `SOLVE_UNSATISFIABLE`/`MISMATCH` (a gradable state,
+improving on the baseline's `COMPILE_FAILED`), but the full run's independent sample reverted to
+`COMPILE_FAILED`. Real, expected LLM sampling variance (SPIKE-004's original finding, still
+holding at the per-clue-proposal level) — not a regression in the mechanism, but a reminder that
+a single sample per puzzle is not a reliable measurement for puzzles this close to the margin.
+
+### 5.3 The un-gradable puzzles are now dominated by a NEW collision class, not the two this spike targeted
+
+Of the 5 puzzles still not reaching a gradable state, none show the original PZL-0001/PZL-0010
+failure signatures (adjacency-with-no-ordering-domain; allDifferent-on-scalar) — both of those
+specific failure classes are gone, exactly as designed (§4, confirmed directly on PZL-0002's
+stored `.mzn` in SPIKE-008 and now on PZL-0001/PZL-0010's own live output during this spike's
+dry-run, §4). What replaced them, inspected directly from the raw records:
+
+- PZL-0002: `"identifier \`house1' already defined"` — two independently-proposed type labels
+  that only became identical AFTER identifier sanitization (fixed post-hoc, §4 item, not
+  re-verified against a full rerun — see §6).
+- PZL-0010: `"identifier \`South' already defined"` — the value/value collision class named in
+  §4 item 4, deliberately left unpatched.
+- PZL-0003: `"type-inst variable $T instantiated with incompatible types (var Values_rock vs
+  Values_paper)"` — a new shape, not yet diagnosed in depth (time-boxed out — see §6).
+- PZL-0001: `"Adjacency variable \"has\" is not shared by \"smoker1\" and \"person1\""` — the
+  positional-domain synthesis fired (no more missing-domain crash), but on THIS run's specific
+  local vocabulary proposals, the synthesized domain didn't end up shared between the two
+  entities the adjacency clue actually needed — a per-clue-proposal quality issue (which
+  entities get merged into which type) more than a reconciliation-logic issue.
+- PZL-0011: constraint-stage placeholder substitution, unrelated to vocabulary (§5.2).
+
+**The pattern across 5.2/5.3 is consistent and important**: independent, local per-clue
+vocabulary proposals are far more prone to generating identifier collisions (the same generic
+word — "car", "South", a type label with stray punctuation — reused across what a global,
+whole-puzzle-aware call would have recognized as needing distinct names) than SPIKE-008's
+single-global-vocabulary-call design ever was. Reconciliation's deterministic merging closes the
+two failure classes it was built for, but the local-proposal architecture itself introduces a
+new failure surface that a single global call structurally avoided by construction (one call,
+one consistent naming pass, no cross-call collision possible). This is the central, honest
+finding of this spike.
 
 ## 6. Conclusion
 
-_(filled in once the spike concludes)_
+**The two named failure classes are closed, exactly as designed — but the local-proposal
+architecture trades them for a new, more diffuse failure surface (identifier collisions across
+independent local proposals), leaving net reliability roughly flat.** PZL-0001's and PZL-0010's
+specific failure signatures (missing ordering domain; scalar-vs-entity-indexed) do not recur
+anywhere in the 14-puzzle sample — confirmed both by direct inspection (§5.3) and by the
+mechanism's own offline proof (§4, `smoke-test-reconcile-compiles.ts`). That is real, structural
+validation of sub-questions 1 and 2 (§1): local extraction does surface genuine cross-clue
+conflicts to reconcile, and reconciliation does structurally prevent the targeted failure class
+in a way a post-hoc enum-scoping patch alone could not (it has no mechanism to *invent* a
+missing domain).
+
+But the net aggregate result (8/14 → 9/14 gradable, 2/14 → 2/14 passing) is a small, likely-
+within-noise improvement, not the clear win a purely additive story would predict — because
+local, independently-generated vocabulary proposals reintroduce a different failure class this
+spike did not originally anticipate: **generic-word identifier collisions across clues that
+never see each other**. Three of five fixes for this (§4 items 1-3: invalid tool-name
+characters, cross-type variable-name collisions, entity-type/value collisions) were purely
+mechanical identifier hygiene, cheaply fixed within this spike's deterministic scope. The fourth
+(§4 item 4: value/value collisions across unrelated domains) and the bucketing-key-granularity
+fix applied *after* the recorded full run (§5.3's PZL-0002 note) sit right at the boundary of
+this spike's explicit scope decision — genuine near-duplicate/domain-split resolution, which
+the plan deferred to a future LLM-assisted pass rather than building here.
+
+**On cost (sub-question 4): confirmed cheap, but not as cheap as hoped.** $0.071 for 14 puzzles
+is still ~30x cheaper than `full-critic`'s $2.096 — the decomposition cost advantage from
+SPIKE-008 survives. But it's roughly 2.3x plain `per-clue`'s cost, close to the plan's own
+"roughly 2x" estimate, for a gradable-state gain of only +1 puzzle on this sample — a much
+thinner margin than SPIKE-008's own entity-scoping fix delivered (which doubled the
+gradable-state rate for essentially the same cost).
+
+**Recommended next steps:**
+1. **Verify the post-hoc bucketing-key fix (§4/§5.3) with a fresh, small re-run** (PZL-0002
+   specifically) before trusting it — not done in this pass, since it landed after the recorded
+   full run and a further billed re-run wasn't requested.
+2. **Do not build the deferred LLM-assisted near-duplicate/domain-split resolution as a blind
+   next step.** This spike's evidence suggests the identifier-collision failures are common
+   enough (3 of 5 remaining un-gradable puzzles) to justify it in principle, but the *mechanism*
+   worth measuring first is narrower than full fuzzy entity matching: specifically, whether a
+   single cheap pass recognizing "these two locally-proposed strings collide after
+   sanitization — are they actually the same concept, or must they be disambiguated?" (a much
+   smaller question than general near-duplicate co-reference) closes most of what remains.
+3. **This spike's core question is answered**: a graph-construction-shaped pipeline (local
+   extract, reconcile, filter) does what it was designed to do for the specific failure classes
+   named, but is not, on its own and without further work, a clearly superior architecture to
+   SPIKE-008's simpler global-vocabulary design on THIS 14-puzzle sample. Any follow-up ADR
+   drawing on both spikes should weigh this directly rather than assume the more sophisticated
+   architecture wins by construction.
+
+Status: done.

@@ -10,6 +10,22 @@ function normalize(s: string): string {
   return s.trim().toLowerCase()
 }
 
+/**
+ * Turns free-text model output into a safe identifier fragment: OpenAI's real function-calling
+ * validator requires tool NAMES to match `^[a-zA-Z0-9_-]+$` (found live, PR review pass —
+ * "assignment__<domain.variable>"/"linkedAttributes__<type>" tool names, unchanged from
+ * SPIKE-008, are built directly from whatever this module emits as domain.variable/entity.type,
+ * so those fields must already be safe identifiers, not raw model text). Collapses any run of
+ * disallowed characters (spaces, punctuation) to a single hyphen and trims leading/trailing
+ * hyphens — applied only where a string becomes part of an IDENTIFIER (domain variable name,
+ * entity type, entity id), never to VALUES (domain.values, which flow through as plain data,
+ * not identifiers).
+ */
+function sanitizeToken(s: string): string {
+  const cleaned = normalize(s).replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "")
+  return cleaned.length > 0 ? cleaned : "x"
+}
+
 export interface ReconciledEntity {
   readonly id: string
   readonly type: string
@@ -48,7 +64,14 @@ function mergeEntities(proposals: readonly VocabularyProposal[]): ReconciledEnti
 
   for (const proposal of proposals) {
     for (const mention of proposal.entityMentions) {
-      const type = normalize(mention.typeGuess)
+      // Bucket by the SANITIZED type (not just normalize()'s lowercase+trim) — found live
+      // (PZL-0002, second full run): two typeGuess variants that only become identical AFTER
+      // stripping punctuation (e.g. differing only in trailing punctuation) previously bucketed
+      // separately under normalize()'s coarser key, then both independently generated the same
+      // id ("house1") once sanitizeToken() was applied at emission — bucketing and emission
+      // must use the same granularity, or a collision this normalize()-only key can't see slips
+      // through to duplicate ids.
+      const type = sanitizeToken(mention.typeGuess)
       const key = normalize(mention.canonicalIdGuess ?? mention.surfaceForm)
       const bucket = byType.get(type) ?? []
       byType.set(type, bucket)
@@ -67,10 +90,11 @@ function mergeEntities(proposals: readonly VocabularyProposal[]): ReconciledEnti
 
   const result: ReconciledEntity[] = []
   for (const [type, bucket] of byType) {
+    const safeType = sanitizeToken(type)
     bucket.forEach((entry, i) => {
       result.push({
-        id: `${type}${i + 1}`,
-        type: entry.typeGuess,
+        id: `${safeType}${i + 1}`,
+        type: safeType,
         mergedFrom: [...entry.mergedFrom],
         clueIndices: entry.clueIndices,
       })
@@ -94,7 +118,9 @@ function mergeDomainMentions(proposals: readonly VocabularyProposal[]): DomainCa
   const byKey = new Map<string, DomainCandidate & { readonly values: Set<string>; readonly clueIndices: number[] }>()
   for (const proposal of proposals) {
     for (const mention of proposal.domainMentions) {
-      const key = `${normalize(mention.attributeNameGuess)}::${normalize(mention.entityTypeGuess)}`
+      const safeAttribute = sanitizeToken(mention.attributeNameGuess)
+      const safeType = sanitizeToken(mention.entityTypeGuess)
+      const key = `${safeAttribute}::${safeType}`
       const existing = byKey.get(key)
       if (existing !== undefined) {
         existing.values.add(mention.valueMentioned)
@@ -103,8 +129,8 @@ function mergeDomainMentions(proposals: readonly VocabularyProposal[]): DomainCa
         continue
       }
       byKey.set(key, {
-        attributeNameGuess: mention.attributeNameGuess,
-        entityTypeGuess: mention.entityTypeGuess,
+        attributeNameGuess: safeAttribute,
+        entityTypeGuess: safeType,
         values: new Set([mention.valueMentioned]),
         clueIndices: [proposal.clueIndex],
         anyOrderingHint: mention.isOrderingHint,
@@ -134,9 +160,26 @@ function resolveDomains(candidates: readonly DomainCandidate[], entities: readon
 
   const entitiesOfType = (type: string) => workingEntities.filter((e) => normalize(e.type) === normalize(type))
 
+  // Found live (PZL-0010, 2026-09-15): mergeDomainMentions buckets by (attributeName,
+  // entityType), so the SAME attribute name proposed across DIFFERENT entity types (a model
+  // calling several genuinely different things "arrival-order" — for "vehicle", "car",
+  // "person", "pedestrian" in the same puzzle) produces multiple domain candidates that would
+  // otherwise all get the identical `variable` string — MiniZinc rejects two array
+  // declarations sharing one identifier ("identifier 'arrival_order' already defined"). Detect
+  // any attributeName used by more than one distinct entityType and disambiguate ALL of that
+  // name's candidates by suffixing the entity type, rather than only the second occurrence
+  // onward (stable regardless of candidate order).
+  const typesByAttribute = new Map<string, Set<string>>()
   for (const candidate of candidates) {
+    const types = typesByAttribute.get(candidate.attributeNameGuess) ?? new Set<string>()
+    types.add(candidate.entityTypeGuess)
+    typesByAttribute.set(candidate.attributeNameGuess, types)
+  }
+
+  for (const candidate of candidates) {
+    const collides = (typesByAttribute.get(candidate.attributeNameGuess)?.size ?? 0) > 1
     domains.push({
-      variable: candidate.attributeNameGuess,
+      variable: collides ? `${candidate.attributeNameGuess}-${candidate.entityTypeGuess}` : candidate.attributeNameGuess,
       entityType: candidate.entityTypeGuess,
       values: [...candidate.values],
       clueIndices: candidate.clueIndices,
@@ -172,7 +215,9 @@ function resolveDomains(candidates: readonly DomainCandidate[], entities: readon
       entitiesForType = newEntities
     }
 
-    const positionalVariable = `${candidate.attributeNameGuess}-position`
+    const collides = (typesByAttribute.get(candidate.attributeNameGuess)?.size ?? 0) > 1
+    const baseVariable = collides ? `${candidate.attributeNameGuess}-${candidate.entityTypeGuess}` : candidate.attributeNameGuess
+    const positionalVariable = `${baseVariable}-position`
     if (!domains.some((d) => d.variable === positionalVariable)) {
       domains.push({
         variable: positionalVariable,
@@ -187,10 +232,40 @@ function resolveDomains(candidates: readonly DomainCandidate[], entities: readon
   return { domains, entities: workingEntities }
 }
 
+/**
+ * Found live (PZL-0010, 2026-09-15, second dry-run pass): a domain VALUE string and an ENTITY
+ * TYPE string can independently sanitize to the same MiniZinc identifier (e.g. a "car" entity
+ * TYPE alongside some other domain's "car" VALUE) — compile.ts emits an entity-type enum named
+ * after the type (`enum car = {...}`) and, separately, a values-enum whose MEMBER is the value
+ * itself (`enum Values_car = {car}`), and MiniZinc's single flat namespace rejects the
+ * resulting duplicate identifier. Renaming every colliding entity type (never domain values,
+ * which are real puzzle data, not something this spike should silently alter) is the
+ * conservative fix — same "avoid a hard identifier collision" scope as the variable-name-
+ * collision fix above, not new semantic disambiguation (recognizing "car" the type and "car"
+ * the value as the same underlying concept is exactly the kind of near-duplicate resolution
+ * this spike's Method explicitly defers to a future LLM-assisted pass).
+ */
+function renameCollidingEntityTypes(entities: readonly ReconciledEntity[], domains: readonly ReconciledDomain[]): { readonly entities: ReconciledEntity[]; readonly domains: ReconciledDomain[] } {
+  const allValues = new Set(domains.flatMap((d) => d.values.map((v) => sanitizeToken(v))))
+  const renamed = new Map<string, string>()
+  for (const entity of entities) {
+    const safeType = sanitizeToken(entity.type)
+    if (allValues.has(safeType) && !renamed.has(entity.type)) {
+      renamed.set(entity.type, `${entity.type}-type`)
+    }
+  }
+  if (renamed.size === 0) return { entities: [...entities], domains: [...domains] }
+  return {
+    entities: entities.map((e) => ({ ...e, type: renamed.get(e.type) ?? e.type })),
+    domains: domains.map((d) => ({ ...d, entityType: renamed.get(d.entityType) ?? d.entityType })),
+  }
+}
+
 export function reconcile(proposals: readonly VocabularyProposal[]): ReconciliationResult {
   const mergedEntities = mergeEntities(proposals)
   const domainCandidates = mergeDomainMentions(proposals)
-  const { domains, entities } = resolveDomains(domainCandidates, mergedEntities)
+  const resolved = resolveDomains(domainCandidates, mergedEntities)
+  const { domains, entities } = renameCollidingEntityTypes(resolved.entities, resolved.domains)
 
   const survivingClueIndices = new Set<number>()
   for (const e of entities) for (const i of e.clueIndices) survivingClueIndices.add(i)
