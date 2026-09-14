@@ -47,10 +47,11 @@ reconcile variant, to keep this a clean single-variable diff.
 _(dated log, appended as work proceeds)_
 
 - **2026-09-14**: Built `scripts/lib/full-prose-extract.ts` — a copy of SPIKE-008's
-  `extractPerClue` with exactly one change: `fullProseClueSystemPrompt` shows the full numbered
-  clue list (target clue marked `<-- TARGET`) instead of only the target clue's own text; the
-  user prompt collapses to `"Extract the constraint(s) asserted by clue [N]."` since the puzzle
-  content now lives in the system prompt. Confirmed offline (zero cost) via
+  `extractPerClue` with exactly one change: `fullProseClueSystemPrompt` shows the full clue list
+  (target clue marked `<-- TARGET`, inline after its own existing numbering) instead of only the
+  target clue's own text; the user prompt collapses to `"Extract the constraint(s) asserted by
+  the clue marked <-- TARGET."` since the puzzle content now lives in the system prompt.
+  Confirmed offline (zero cost) via
   `smoke-test-full-prose-prompt.ts`: the assembled prompt contains every clue's text plus an
   unambiguous, correctly-placed target marker. `run-comparison.ts` mirrors SPIKE-009's shape —
   reads SPIKE-008's `per-clue` baseline JSON directly, runs only this variant live.
