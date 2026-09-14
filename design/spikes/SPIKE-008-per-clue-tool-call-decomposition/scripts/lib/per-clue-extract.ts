@@ -66,6 +66,11 @@ export interface PerClueCallLog {
   readonly costUsd: number | undefined
 }
 
+export interface ClueTaggedConstraint {
+  readonly clueIndex: number
+  readonly constraint: ExtractedConstraint
+}
+
 export interface PerClueExtractionResult {
   readonly extractedCsp: ExtractedCsp
   readonly model: string
@@ -73,6 +78,12 @@ export interface PerClueExtractionResult {
   readonly totalCalls: number
   readonly perClue: readonly PerClueCallLog[]
   readonly decomposable: boolean
+  /** Exposed so a caller (run-comparison.ts) can do a post-hoc revision pass on one specific
+   * clue (grounded-critic/back-translation variants) without re-running stage 1. */
+  readonly vocabulary: Vocabulary
+  readonly clues: readonly string[]
+  readonly preamble: string
+  readonly taggedConstraints: readonly ClueTaggedConstraint[]
 }
 
 /**
@@ -113,6 +124,7 @@ export async function extractPerClue(prose: string, model: string): Promise<PerC
   const split = splitClues(prose)
   const perClue: PerClueCallLog[] = []
   const constraints: ExtractedConstraint[] = []
+  const taggedConstraints: ClueTaggedConstraint[] = []
 
   for (let i = 0; i < split.clues.length; i++) {
     const clueText = split.clues[i]!
@@ -146,7 +158,10 @@ export async function extractPerClue(prose: string, model: string): Promise<PerC
     }
 
     for (const call of calls) {
-      if (call.ok) constraints.push(call.value as ExtractedConstraint)
+      if (call.ok) {
+        constraints.push(call.value as ExtractedConstraint)
+        taggedConstraints.push({ clueIndex: i, constraint: call.value as ExtractedConstraint })
+      }
     }
     perClue.push({
       clueIndex: i,
@@ -165,5 +180,30 @@ export async function extractPerClue(prose: string, model: string): Promise<PerC
     totalCalls,
     perClue,
     decomposable: split.decomposable,
+    vocabulary,
+    clues: split.clues,
+    preamble: split.preamble,
+    taggedConstraints,
   }
+}
+
+/** Re-runs ONE clue's requestClueConstraints call with an extra hint appended to the user
+ * prompt (e.g. a grounded-critic finding, or a back-translation judge's issue) — used by
+ * run-comparison.ts's grounded/back-translation variants for a single, scoped revision round
+ * rather than re-running the whole per-clue loop. Returns the new constraints for that clue
+ * (replacing, not adding to, its previous ones) plus the call's cost. */
+export async function reviseOneClue(
+  vocabulary: Vocabulary,
+  preamble: string,
+  clueText: string,
+  hint: string,
+  model: string,
+): Promise<{ readonly constraints: readonly ExtractedConstraint[]; readonly costUsd: number | undefined; readonly calls: number }> {
+  const tools = generateClueTools(vocabulary)
+  const systemPrompt = clueSystemPrompt(vocabulary, preamble)
+  const userPrompt = `Clue:\n\n${clueText}\n\n${hint}\n\nCall the tool(s) again, corrected.`
+  const result = await requestClueConstraints({ model, systemPrompt, userPrompt, tools })
+  if (!result.ok) return { constraints: [], costUsd: result.costUsd, calls: 1 }
+  const ok = result.calls.filter((c) => c.ok)
+  return { constraints: ok.map((c) => c.value as ExtractedConstraint), costUsd: result.costUsd, calls: 1 }
 }
