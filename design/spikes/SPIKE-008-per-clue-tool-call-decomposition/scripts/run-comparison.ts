@@ -5,7 +5,7 @@
 // Usage: node --env-file-if-exists=.env design/spikes/SPIKE-008-per-clue-tool-call-decomposition/scripts/run-comparison.ts [puzzleId ...]
 // With no args, runs the full 14-puzzle sample.
 
-import { writeFile, mkdir } from "node:fs/promises"
+import { writeFile, mkdir, readFile } from "node:fs/promises"
 import { Effect } from "effect"
 import { fullCriticHarness, type HarnessModelOpts } from "../../../../src/eval/harness.ts"
 import type { SolveResult } from "../../../../src/solver/types.ts"
@@ -243,13 +243,35 @@ async function main(): Promise<void> {
   const answerKeys = await loadAnswerKeys()
   const records: unknown[] = []
 
+  // SKIP_FULL_CRITIC=1: skip re-running today's real pipeline, which this fix never touches
+  // (it only changes the per-clue schema generator) — reuse the prior run's full-critic numbers
+  // instead of spending ~$2 re-measuring something unaffected by this change.
+  const skipFullCritic = process.env.SKIP_FULL_CRITIC === "1"
+  const priorRunPath = process.env.PRIOR_RUN_PATH
+  const priorRecords: Record<string, unknown> = {}
+  if (skipFullCritic) {
+    if (priorRunPath === undefined) throw new Error("SKIP_FULL_CRITIC=1 requires PRIOR_RUN_PATH pointing at the earlier run's JSON")
+    const prior = JSON.parse(await readFile(priorRunPath, "utf8")) as ReadonlyArray<{ id: string; variants: { "full-critic": unknown } }>
+    for (const rec of prior) priorRecords[rec.id] = rec.variants["full-critic"]
+  }
+
   for (const puzzleId of puzzleIds) {
     console.log(`\n=== ${puzzleId} ===`)
     const { file, prose } = await loadPuzzleProse(puzzleId)
 
-    const fc = await runFullCritic(prose)
-    const fcGrade = fc.extractedCsp !== undefined && fc.note ? gradeVariant(puzzleId, answerKeys, fc, JSON.parse(fc.note || "null"), fc.extractedCsp as ExtractedCsp) : { verdict: fc.outcome, detail: fc.detail }
-    console.log(`  full-critic: ${fc.outcome} calls=${fc.totalCalls} cost=${fc.costUsd ?? "n/a"} grade=${fcGrade.verdict}`)
+    let fc: VariantOutcome
+    let fcGrade: { verdict: string; detail: string }
+    if (skipFullCritic) {
+      const prior = priorRecords[puzzleId] as (VariantOutcome & { grade: { verdict: string; detail: string } }) | undefined
+      if (prior === undefined) throw new Error(`No prior full-critic record for ${puzzleId} in ${priorRunPath}`)
+      fc = prior
+      fcGrade = prior.grade
+      console.log(`  full-critic (reused from prior run): ${fc.outcome} calls=${fc.totalCalls} cost=${fc.costUsd ?? "n/a"} grade=${fcGrade.verdict}`)
+    } else {
+      fc = await runFullCritic(prose)
+      fcGrade = fc.extractedCsp !== undefined && fc.note ? gradeVariant(puzzleId, answerKeys, fc, JSON.parse(fc.note || "null"), fc.extractedCsp as ExtractedCsp) : { verdict: fc.outcome, detail: fc.detail }
+      console.log(`  full-critic: ${fc.outcome} calls=${fc.totalCalls} cost=${fc.costUsd ?? "n/a"} grade=${fcGrade.verdict}`)
+    }
 
     const pc = await runPerClueOnly(prose)
     const pcGrade = gradeVariant(puzzleId, answerKeys, pc.variant, pc.solveResult, pc.result.extractedCsp)

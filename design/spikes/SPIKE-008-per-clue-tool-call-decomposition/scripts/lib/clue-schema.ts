@@ -57,22 +57,67 @@ function enumOf(values: readonly string[]): { readonly type: "string"; readonly 
   return { type: "string", enum: values.length > 0 ? values : ["__no_values_declared__"] }
 }
 
+// --- Entity-scoping fix (SPIKE-008 §6 Conclusion's recommended next step, 2026-09-15) --------
+//
+// The billed comparison run found this generator's biggest structural weakness wasn't
+// out-of-vocabulary values (proven foreclosed by the zero-cost smoke test) but IN-vocabulary
+// CROSS-DOMAIN confusion: a single global `entityEnum`/`valueEnum` let a model pair one
+// domain's `variable` with a DIFFERENT domain's `entity`/`value` — e.g. `{variable: "house",
+// entity: "animal_cat"}`, which src/compiler/compile.ts's real solver-time check
+// (renderVariableRef, compile.ts:263-278) rejects only at solve time, not at schema-decode
+// time. The fix mirrors compile.ts's own `isScalar` rule exactly (compile.ts:183: `isScalar:
+// entityIds.length <= 1` — a domain with 0 or 1 matching entities needs no entity reference at
+// all; 2+ requires one, scoped to THAT domain's own entityType): generate one schema
+// ALTERNATIVE per domain (`variable` fixed to a literal, `entity`/`value` scoped to that one
+// domain), rather than one flat schema with independent global enums — the same "closed union
+// of concrete shapes, no free-floating cross-references" principle SPIKE-005 already found
+// works reliably under tool calling.
+
+/** This domain's own entities (by its declared `entityType`) — mirrors compile.ts's own
+ * `isScalar` computation (entityIds.length <= 1) so schema-time scoping matches solve-time
+ * expectations exactly. */
+function entitiesOfDomain(vocab: Vocabulary, domain: Domain): readonly string[] {
+  return vocab.entities.filter((e) => e.type === domain.entityType).map((e) => e.id)
+}
+
+/** The `entity` field's schema for ONE specific domain: `null`-only when compile.ts would
+ * treat it as scalar (renderVariableRef returns the bare variable name and never reads
+ * `entity` at all in that case — compile.ts:273), otherwise an enum of exactly that domain's
+ * own entities (never any other domain's). */
+function entityFieldForDomain(vocab: Vocabulary, domain: Domain): Record<string, unknown> {
+  const entities = entitiesOfDomain(vocab, domain)
+  return entities.length <= 1 ? { type: "null" } : enumOf(entities)
+}
+
 /**
- * A `variableRef` operand, enum-scoped to this vocabulary: `variable` is any declared domain
- * name, `entity` is either an enum of declared entity ids or `null` (mirrors
+ * A `variableRef` operand, now scoped PER DOMAIN via one `anyOf` alternative per declared
+ * domain — `variable` fixed to that domain's own name (a single-value enum, not a shared free
+ * choice), `entity` scoped to that domain's own entities via `entityFieldForDomain` (mirrors
  * ArithmeticExpression's variableRef in src/extraction/types.ts:82-93, but closed rather than
- * a free string).
+ * a free string, and — as of this fix — closed PER DOMAIN rather than globally).
  */
 function variableRefSchema(vocab: Vocabulary): Record<string, unknown> {
+  if (vocab.domains.length === 0) {
+    // No domains declared at all — degrade to the pre-fix global shape rather than emit an
+    // empty anyOf (invalid JSON Schema with no alternatives to match).
+    return {
+      type: "object",
+      properties: { kind: { type: "string", enum: ["variableRef"] }, variable: { type: "string" }, entity: { anyOf: [{ type: "string" }, { type: "null" }] } },
+      required: ["kind", "variable", "entity"],
+      additionalProperties: false,
+    }
+  }
   return {
-    type: "object",
-    properties: {
-      kind: { type: "string", enum: ["variableRef"] },
-      variable: enumOf(variableNames(vocab)),
-      entity: { anyOf: [enumOf(entityIds(vocab)), { type: "null" }] },
-    },
-    required: ["kind", "variable", "entity"],
-    additionalProperties: false,
+    anyOf: vocab.domains.map((domain) => ({
+      type: "object",
+      properties: {
+        kind: { type: "string", enum: ["variableRef"] },
+        variable: { type: "string", enum: [domain.variable] },
+        entity: entityFieldForDomain(vocab, domain),
+      },
+      required: ["kind", "variable", "entity"],
+      additionalProperties: false,
+    })),
   }
 }
 
@@ -127,17 +172,54 @@ export function generateClueTools(vocab: Vocabulary): Record<string, Record<stri
   const variableEnum = enumOf(variableNames(vocab))
   const valueEnum = enumOf(allDomainValues(vocab))
 
-  const assignment = {
-    type: "object",
-    properties: {
-      kind: { type: "string", enum: ["assignment"] },
-      entity: entityEnum,
-      variable: variableEnum,
-      value: valueEnum,
-    },
-    required: ["kind", "entity", "variable", "value"],
-    additionalProperties: false,
-  }
+  // assignment: same per-domain scoping as variableRefSchema, and for the same reason — entity
+  // and value must both belong to the SAME domain as `variable`, not any domain's global union.
+  // Unlike variableRef, assignment fixes a SPECIFIC entity's value (compile.ts:391), so a
+  // scalar (<=1 entity) domain still needs an entity id when one exists (there's exactly one to
+  // name) — entityFieldForDomain's null-for-scalar rule is about variableRef's *reference*
+  // semantics, not assignment's *fixing* semantics, so assignment computes its own entity field
+  // per domain instead of reusing that helper.
+  //
+  // Cannot be expressed as ONE tool with a top-level `anyOf` of per-domain alternatives: live
+  // 2026-09-15, OpenAI's real function-calling validator rejects a top-level `anyOf` outright
+  // ("schema must have type 'object' and not have 'oneOf'/'anyOf'/'allOf'/'enum'/'const'/'not'
+  // at the top level") even with a sibling `type: "object"` — this restriction is specific to
+  // the TOP-LEVEL tool-parameters document; nested anyOf (e.g. `arithmetic.expression`'s
+  // ArithmeticExpression union, a property VALUE rather than the schema root) is unaffected and
+  // already working. So each domain gets its OWN flat top-level tool
+  // (`assignment__<variable>`) instead of one `assignment` tool with an internal union — the
+  // emitted payload's `kind` field stays the literal `"assignment"` regardless, so assembly
+  // (per-clue-extract.ts) needs no awareness of the split; only the outer tool NAME differs.
+  const assignmentAlternatives: Record<string, unknown>[] =
+    vocab.domains.length === 0
+      ? [{ type: "object", properties: { kind: { type: "string", enum: ["assignment"] }, entity: { type: "string" }, variable: { type: "string" }, value: { type: "string" } }, required: ["kind", "entity", "variable", "value"], additionalProperties: false }]
+      : vocab.domains.map((domain) => {
+          const entities = entitiesOfDomain(vocab, domain)
+          return {
+            type: "object",
+            properties: {
+              kind: { type: "string", enum: ["assignment"] },
+              entity: entities.length > 0 ? enumOf(entities) : { type: "string", description: "No entity of this domain's type was declared in stage 1 — name one directly if the clue implies it." },
+              variable: { type: "string", enum: [domain.variable] },
+              value: enumOf(domain.values),
+            },
+            required: ["kind", "entity", "variable", "value"],
+            additionalProperties: false,
+          }
+        })
+  // One top-level tool per domain (or one generic tool when no domains were declared at all).
+  const assignmentTools: Record<string, Record<string, unknown>> =
+    vocab.domains.length === 0
+      ? { assignment: assignmentAlternatives[0]! }
+      : Object.fromEntries(vocab.domains.map((domain, i) => [`assignment__${domain.variable}`, assignmentAlternatives[i]!]))
+
+  // linkedAttributes: each {variable, value} pair must also stay within one domain — reuses
+  // the same per-domain alternative shape as assignment's variable+value pairing (entity is
+  // deliberately absent here per the kind's own existential semantics, unaffected by this fix).
+  const linkedAttributePair =
+    vocab.domains.length === 0
+      ? { type: "object", properties: { variable: { type: "string" }, value: { type: "string" } }, required: ["variable", "value"], additionalProperties: false }
+      : { anyOf: vocab.domains.map((domain) => ({ type: "object", properties: { variable: { type: "string", enum: [domain.variable] }, value: enumOf(domain.values) }, required: ["variable", "value"], additionalProperties: false })) }
 
   const linkedAttributes = {
     type: "object",
@@ -146,12 +228,7 @@ export function generateClueTools(vocab: Vocabulary): Record<string, Record<stri
       entityType: enumOf([...new Set(vocab.entities.map((e) => e.type))]),
       attributes: {
         type: "array",
-        items: {
-          type: "object",
-          properties: { variable: variableEnum, value: valueEnum },
-          required: ["variable", "value"],
-          additionalProperties: false,
-        },
+        items: linkedAttributePair,
       },
     },
     required: ["kind", "entityType", "attributes"],
@@ -229,14 +306,26 @@ export function generateClueTools(vocab: Vocabulary): Record<string, Record<stri
   }
 
   // Restricted "then" member — see the doc comment above for why only these four kinds.
-  const thenMember = { anyOf: [assignment, arithmetic, allDifferent, linkedAttributes] }
+  const thenMember = { anyOf: [...assignmentAlternatives, arithmetic, allDifferent, linkedAttributes] }
 
-  const comparisonCondition = {
-    type: "object",
-    properties: { kind: { type: "string", enum: ["comparison"] }, variable: variableEnum, operator: { type: "string", enum: [...ARITHMETIC_COMPARATORS] }, value: { anyOf: [valueEnum, { type: "number" }] } },
-    required: ["kind", "variable", "operator", "value"],
-    additionalProperties: false,
-  }
+  // comparison: variable+value scoped per domain like assignment/linkedAttributes above
+  // (value may also be a plain number for numeric domains, unaffected by the scoping fix).
+  const comparisonCondition =
+    vocab.domains.length === 0
+      ? { type: "object", properties: { kind: { type: "string", enum: ["comparison"] }, variable: { type: "string" }, operator: { type: "string", enum: [...ARITHMETIC_COMPARATORS] }, value: { anyOf: [{ type: "string" }, { type: "number" }] } }, required: ["kind", "variable", "operator", "value"], additionalProperties: false }
+      : {
+          anyOf: vocab.domains.map((domain) => ({
+            type: "object",
+            properties: {
+              kind: { type: "string", enum: ["comparison"] },
+              variable: { type: "string", enum: [domain.variable] },
+              operator: { type: "string", enum: [...ARITHMETIC_COMPARATORS] },
+              value: { anyOf: [enumOf(domain.values), { type: "number" }] },
+            },
+            required: ["kind", "variable", "operator", "value"],
+            additionalProperties: false,
+          })),
+        }
   const expressionComparisonCondition = {
     type: "object",
     properties: { kind: { type: "string", enum: ["expressionComparison"] }, expression: expr, operator: { type: "string", enum: [...ARITHMETIC_COMPARATORS] }, value: { anyOf: [valueEnum, { type: "number" }] } },
@@ -264,5 +353,5 @@ export function generateClueTools(vocab: Vocabulary): Record<string, Record<stri
     additionalProperties: false,
   }
 
-  return { assignment, linkedAttributes, allDifferent, adjacency, relation, arithmetic, ruleTable, ruleTableConstraint, derivedRule }
+  return { ...assignmentTools, linkedAttributes, allDifferent, adjacency, relation, arithmetic, ruleTable, ruleTableConstraint, derivedRule }
 }

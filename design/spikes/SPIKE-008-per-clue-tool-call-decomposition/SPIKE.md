@@ -289,6 +289,46 @@ zero-cost smoke test already proved directly) — a per-domain-scoped entity enu
 fix, not built here given the time-box, and named explicitly in the Conclusion as the clearest
 next iteration rather than folded into a rerun.
 
+**2026-09-15 — entity-scoping fix implemented and re-run (the recommended next step from §6,
+taken up immediately rather than deferred).** Also opened
+[SPIKE-009](../SPIKE-009-graph-style-reconciled-extraction/SPIKE.md) first, tracking the
+broader question (is a global one-shot vocabulary decision the right architecture at all, vs. a
+knowledge-graph-style local-extract/reconcile/filter pipeline) as a separate, not-yet-built
+follow-up — this fix is the narrower patch, not that redesign.
+
+`lib/clue-schema.ts` changes: `variableRefSchema` and a new `assignment`/`comparison`
+generator now build one schema alternative PER DECLARED DOMAIN (`variable` fixed to a literal,
+`entity`/`value` scoped to that domain's own `entityType`/`values` — mirroring
+`compile.ts`'s own `isScalar` rule, `entityIds.length <= 1`, so schema-time scoping matches
+solve-time expectations exactly) instead of one flat schema with independent global enums.
+Added `smoke-test-entity-scoping.ts`, reproducing the exact live PZL-0002 shape
+(`{variable:"house_color", entity:"animal_cat"}`) and confirming it's now rejected structurally
+while the correct same-domain form still passes — zero cost, local only.
+
+**A real provider constraint surfaced immediately on the first live retry, caught before the
+full rerun**: OpenAI's forced-tool-call validator rejects a top-level `anyOf` in a tool's
+`parameters` outright — `"schema must have type 'object' and not have 'oneOf'/'anyOf'/'allOf'/
+'enum'/'const'/'not' at the top level"` — even with a sibling `type: "object"`. This is specific
+to the TOP-LEVEL tool-parameters document; nested `anyOf` under a property (e.g.
+`arithmetic.expression`'s `ArithmeticExpression` union) is unaffected and was already working
+throughout the first billed run. Fixed by splitting `assignment` into one flat top-level tool
+per domain (`assignment__<variable>`) instead of one `assignment` tool with an internal
+per-domain union — the emitted payload's `kind` field stays the literal `"assignment"`
+regardless, so `per-clue-extract.ts`'s assembly needed no change, only the outer tool NAME
+differs. `comparison`'s per-domain union stays nested (inside `derivedRule.condition`, never a
+top-level tool) and needed no change.
+
+A live single-puzzle check (PZL-0002, the puzzle whose stored `.mzn` first diagnosed the bug)
+confirmed the fix directly: the same puzzle now compiles with **zero cross-domain entity
+references** — every `assignment`/`variableRef` correctly names an entity of the right type.
+The puzzle still fails to compile, but for a *different*, already-acknowledged reason (no
+numeric/ordered domain was declared for `adjacency`'s "directly left of" relation — a
+vocabulary-completeness gap, not a cross-domain reference error) — direct evidence the fix
+targets what it was built to target, without papering over it with a coincidentally-different
+failure. Full 14-puzzle re-run launched next, reusing the prior run's unaffected `full-critic`
+numbers (`SKIP_FULL_CRITIC=1`/`PRIOR_RUN_PATH`, added to `run-comparison.ts`) rather than
+re-spending ~$2 re-measuring a harness this fix never touches.
+
 ## 5. Findings
 
 One sample per puzzle × variant (SPIKE-005's own caveat applies equally here — individual
@@ -367,50 +407,115 @@ identical input — reproducing SPIKE-004's original non-determinism finding con
 vocabulary-modeling level specifically. Neither per-clue decomposition nor either critic variant
 addresses this, because it happens upstream of both.
 
+### 5.6 Post-fix re-run: the entity-scoping fix measurably improved `per-clue` alone
+
+After the §4 (2026-09-15) entity-scoping fix, re-ran the same 14-puzzle sample (full-critic
+reused unchanged from the first run — this fix never touches it; raw:
+`results/comparison-2026-09-14T14-05-07-883Z.json`):
+
+| Variant | Cost (14 puzzles) | Calls | Reached a gradable state | Passing verdicts |
+|---|---|---|---|---|
+| `per-clue`, **before fix** | $0.029 | 73 | 4/14 | 0/14 |
+| `per-clue`, **after fix** | $0.031 | 77 | **8/14** | **2/14** |
+| `per-clue+grounded`, before | $0.029 | 77 | 6/14 | 2/14 |
+| `per-clue+grounded`, after | $0.036 | 83 | 7/14 | 0/14 |
+| `per-clue+back-translation`, before | $0.047 | 179 | 7/14 | 1/14 |
+| `per-clue+back-translation`, after | $0.058 | 183 | 7/14 | 2/14 |
+
+`per-clue` alone — the variant with no critic to compensate — **doubled its gradable-state
+rate (4/14 → 8/14) and went from zero genuine passes to two** (`PZL-0028` READING_MATCHED,
+`PZL-0033` PREMISE_FREE_MATCH), at essentially unchanged cost. This is the cleanest, least
+confounded result in this spike, because it isolates exactly what the fix targets: no critic,
+no revision logic, just the generator change.
+
+**Directly confirmed causally, not just aggregately**, on the same puzzle the bug was originally
+diagnosed from (PZL-0002, §4): before the fix, its compiled MiniZinc referenced
+`house_animal[animal_cat]` — a cross-domain entity, exactly the bug. After the fix, the same
+puzzle's `per-clue` output has **zero cross-domain entity references** — every `assignment`/
+`variableRef` correctly names an entity of the matching type. It still fails to compile, but
+for a different, already-acknowledged reason (`"Could not find a single numeric positional
+domain shared by 'house2' and 'house3' for adjacency relation 'directly left of'"` — a
+vocabulary-completeness gap: no ordering domain was declared, not a cross-domain reference
+error). Spot-checked two more `COMPILE_FAILED` cases in the post-fix run (`PZL-0001`:
+`"Adjacency variable \"nationality\" is not shared by ... "`; `PZL-0010`: `"allDifferent
+requires an entity-indexed variable; ... has only one entity"`) — both are this same adjacency/
+vocabulary-completeness family, not a recurrence of cross-domain confusion.
+
+`per-clue+grounded` got noisier, not better, post-fix (6/14→7/14 gradable, but 2/14→0/14
+passing — both of its pre-fix passes, on `PZL-0028` and `PZL-0033`, flipped to a worse outcome
+on the post-fix run). Given the single-sample-per-cell caveat (§5, SPIKE-005's own caveat) this
+reads as LLM sampling variance on the puzzles genuinely near a coin-flip, not a sign the fix
+made the grounded-revision critic worse — nothing in the fix touches that critic's logic.
+`per-clue+back-translation` improved marginally (1/14→2/14 passing, gradable-state rate
+unchanged), consistent with drawing from cleaner per-clue inputs without itself changing.
+
+A schema-construction lesson surfaced while building the fix, independent of the spike's actual
+question: a naive per-domain `anyOf` union at a TOOL's top level is rejected outright by OpenAI's
+real function-calling validator (`"schema must have type 'object' and ... not have ... 'anyOf'
+... at the top level"`), even though the identical union nested one level down (inside a
+property, e.g. `arithmetic.expression`) works fine and was already in production use throughout
+this spike's first run. The fix — split into one flat top-level tool per domain
+(`assignment__<variable>`) rather than one tool with an internal union — is a concrete, reusable
+pattern for representation-scoping under real tool-calling constraints, distinct from and
+in addition to the SPIKE-005 mechanism findings this spike already built on.
+
 ## 6. Conclusion
 
-**(b), with a specific, fixable culprit identified — not (a), and not (c) either.** Per-clue
-decomposition does not "win clearly" on this run: `full-critic` reached a gradable state on
-13/14 puzzles and MATCHed 2; `per-clue` alone reached one on only 4/14 and MATCHed 0. That rules
-out (a) as written. But it would be wrong to read this as "today's whole-document critic loop
-stays as designed" (c) either, because the dominant cause of `per-clue`'s failures is not a
-property of decomposition itself — it's a specific, named, fixable bug in this spike's own
-generator (§5.2): `entity` enums are scoped globally instead of per-domain-`entityType`, letting
-a model index one domain's array with a different domain's entity id, a class of error the
-schema-generation idea is explicitly meant to foreclose and, per the zero-cost smoke test,
-*does* foreclose for genuinely out-of-vocabulary values. This spike did not build and test the
-corrected (per-domain-scoped) generator, so the honest conclusion is: **sub-question 4's core
-mechanism is validated in isolation (proven offline, zero ambiguity) but not yet validated at
-whole-puzzle scale**, because the implementation tested at that scale had a scoping gap the
-isolated test didn't exercise. This is not evidence the idea fails at scale — it's evidence this
-particular generator needs one more iteration before that question can be answered.
+**(b), confirmed with a fix-and-rerun cycle, not just diagnosed — still not (a), and not (c)
+either.** The first run ruled out (a) as written: `full-critic` reached a gradable state on
+13/14 puzzles and MATCHed 2; `per-clue` alone reached one on only 4/14 and MATCHed 0. Rather
+than stopping at that diagnosis, the recommended fix (scope each field's `entity`/`variable`
+enum to its domain's own `entityType`, per §5.2) was built and re-run (§5.6) in the same pass.
+Result: `per-clue` alone **doubled its gradable-state rate (4/14 → 8/14) and went from zero
+genuine passes to two**, at essentially unchanged cost, and — checked directly on the exact
+puzzle the bug was diagnosed from — the specific failure class (cross-domain entity reference)
+is now **structurally absent**, confirmed both by an offline regression test
+(`smoke-test-entity-scoping.ts`) and by a live before/after diff on `PZL-0002`'s actual compiled
+output. This is not "today's whole-document critic loop stays as designed" (c) either: a
+one-iteration fix materially closed part of the gap that made per-clue look unviable in the
+first pass.
 
-**On cost (sub-question 2): unambiguous, independent of the above.** Per-clue decomposition
-(any variant) costs 45-72× less than `full-critic` in measured dollars, a large enough margin
-that it survives generous slack for the entity-scoping fix adding a few more calls per puzzle.
-This alone is worth carrying into a follow-up ADR discussion regardless of how correctness
-nets out, since $2.10 → $0.03-0.05 per puzzle compounds heavily at catalog scale (39 puzzles) or
-matrix scale (model × harness).
+It also isn't (a) yet, even after the fix: `per-clue` alone still only reaches a gradable state
+on 8/14 puzzles, well short of `full-critic`'s 13/14, and the remaining `per-clue` failures are
+a **different, already-named family** — adjacency/vocabulary-completeness gaps (no ordering
+domain declared, `allDifferent` on a scalar variable) rather than cross-domain confusion. That
+family is exactly what [SPIKE-009](../SPIKE-009-graph-style-reconciled-extraction/SPIKE.md)
+(opened during this pass, not yet built) targets: a local-extract/reconcile/filter architecture
+where vocabulary itself is built and validated the same way constraints are, rather than decided
+once, globally, before any clue is examined.
 
-**On the critic (sub-question 5): both variants show real, if inconsistent, value — worth
-pursuing independently of the decomposition decision.** Each recovered at least one puzzle from
-an ungraded failure into a genuine pass that plain `per-clue` didn't reach (§5.4), and the
-back-translation critic demonstrated correct *detection* even where it couldn't produce a fix
-(constrained by an upstream vocabulary error, not its own judgment). Neither variant is net-
-positive on this sample yet (each also has at least one clear regression), and both are
-confounded by the entity-scoping bug feeding them bad inputs to critique in the first place —
-re-running the comparison after that fix is likely to change these specific numbers.
+**On cost (sub-question 2): unambiguous, unaffected by any of the above.** Per-clue decomposition
+(any variant) costs 35-70× less than `full-critic` in measured dollars, before and after the fix
+— a large enough margin that it survives generous slack for further iteration. This alone is
+worth carrying into a follow-up ADR discussion regardless of how correctness nets out, since
+$2.10 → $0.03-0.06 per puzzle compounds heavily at catalog scale (39 puzzles) or matrix scale
+(model × harness).
 
-**Recommended next step, not built here (time-boxed per §3):** fix `lib/clue-schema.ts` to
-scope each field's `entity`/`variable` enum to the declared domain's own `entityType` rather
-than the global entity list, and re-run this same 14-puzzle × 4-variant comparison once. If
-`per-clue`'s gradable-state rate then approaches `full-critic`'s, this spike's findings support
-drafting an ADR (superseding ADR-009's staging, revising ADR-004 §2.1/§2.4) around per-clue
-decomposition plus whichever critic variant proves net-positive. If it doesn't close the gap
-even after that fix, the conclusion moves toward (b) as originally worded — decomposition alone
-isn't sufficient, but the synchronous per-call structural validation and/or grounded-revision
-signal may still be worth adopting piecemeal.
+**On the critic (sub-question 5): still inconsistent, and now legibly so.** Post-fix,
+`per-clue+back-translation` improved slightly (1/14 → 2/14 passing); `per-clue+grounded` got
+noisier (2/14 → 0/14 passing, though gradable-state rate ticked up 6/14 → 7/14) — read as
+sampling variance on close-call puzzles (§5.6), not a fix-induced regression, since nothing in
+the fix touches either critic's own logic. Both still show real value in isolated cases (§5.4)
+without being net-positive on this small a sample. This remains a genuinely separate question
+from decomposition's own viability, worth its own dedicated measurement once SPIKE-009's
+vocabulary-reconciliation work (if pursued) changes what a critic even needs to catch.
+
+**Recommended next steps, in order:**
+1. Pursue [SPIKE-009](../SPIKE-009-graph-style-reconciled-extraction/SPIKE.md) — the
+   entity-scoping fix closed the specific bug it targeted, but the *architecture* that produced
+   it (one global vocabulary call, trusted unconditionally by every per-clue constraint call)
+   is unchanged, and the remaining `per-clue` failures are exactly the shape that architecture
+   predicts (vocabulary-completeness gaps a reconciliation pass would catch).
+2. Once SPIKE-009 concludes (or if it's not pursued soon), draft an ADR informed by both spikes'
+   findings — superseding ADR-009's staging, revising ADR-004 §2.1/§2.4 — rather than from this
+   spike's numbers alone, since §5.6 shows one fix already meaningfully moved the comparison and
+   a second architectural change is likely to move it further.
+3. Re-measure the critic variants (sub-question 5) only after vocabulary-stage reliability is
+   settled — critiquing constraints built on an unreliable vocabulary conflates two different
+   failure surfaces (§5.4's back-translation finding: a critic downstream of a bad vocabulary
+   decision can only ask for a redo against that same flawed vocabulary).
 
 **Not built, per §1's explicit scope decision**: direct-MiniZinc-emission (a genuinely separate
-falsification question) and classification-as-step-zero (RFC-004 §5.3) remain candidates for
-their own future spikes, not folded into this one.
+falsification question) remains a candidate for its own future spike, not folded into this one.
+Classification-as-step-zero (RFC-004 §5.3) likewise remains separate, though it may turn out to
+share infrastructure with whatever SPIKE-009 builds for vocabulary reconciliation.

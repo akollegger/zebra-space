@@ -22,7 +22,7 @@ const result = await requestClueTool({
   systemPrompt: "test",
   userPrompt: "test",
   schemaName: "assignment",
-  jsonSchema: tools.assignment,
+  jsonSchema: tools["assignment__color"],
 })
 console.log("valid case:", JSON.stringify(result))
 await stub.close()
@@ -37,7 +37,7 @@ const result2 = await requestClueTool({
   systemPrompt: "test",
   userPrompt: "test",
   schemaName: "assignment",
-  jsonSchema: tools.assignment,
+  jsonSchema: tools["assignment__color"],
 })
 console.log("invented-value case:", JSON.stringify(result2))
 await stub2.close()

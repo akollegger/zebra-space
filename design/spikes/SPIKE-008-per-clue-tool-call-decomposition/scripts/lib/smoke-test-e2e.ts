@@ -33,7 +33,7 @@ const server = createServer((req, res) => {
       // Clue 1: "The red house is house 1." -> linkedAttributes (no entity named directly by id,
       // "house 1" resolves to H1 only via positional convention - use assignment since H1 IS the
       // known id here for this synthetic test).
-      toolCalls = [{ id: "c2", type: "function", function: { name: "assignment", arguments: JSON.stringify({ kind: "assignment", entity: "H1", variable: "color", value: "Red" }) } }]
+      toolCalls = [{ id: "c2", type: "function", function: { name: "assignment__color", arguments: JSON.stringify({ kind: "assignment", entity: "H1", variable: "color", value: "Red" }) } }]
     } else {
       // Clue 2: "The blue house is not house 1." -> arithmetic !=
       toolCalls = [{ id: "c3", type: "function", function: { name: "arithmetic", arguments: JSON.stringify({

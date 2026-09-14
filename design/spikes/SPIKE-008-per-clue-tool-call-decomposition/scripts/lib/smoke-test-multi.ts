@@ -20,7 +20,7 @@ const server = createServer((req, res) => {
     res.end(JSON.stringify({
       id: "x", object: "chat.completion", created: 0, model: "test-model", system_fingerprint: null,
       choices: [{ index: 0, finish_reason: "tool_calls", message: { role: "assistant", content: null, tool_calls: [
-        { id: "c1", type: "function", function: { name: "assignment", arguments: JSON.stringify({ kind: "assignment", entity: "H1", variable: "color", value: "Red" }) } },
+        { id: "c1", type: "function", function: { name: "assignment__color", arguments: JSON.stringify({ kind: "assignment", entity: "H1", variable: "color", value: "Red" }) } },
       ] } }],
     }))
   })
