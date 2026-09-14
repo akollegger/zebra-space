@@ -72,6 +72,19 @@ _(dated log, appended as work proceeds)_
   level risk unrelated to this spike's actual change (stage 1 is byte-identical code to
   SPIKE-008's), just newly exposed by a different random vocabulary sample this run happened to
   draw.
+- **2026-09-14 (PR #29 review)**: Kilo Code Review flagged a real prompt-clarity issue —
+  `fullProseClueSystemPrompt` marked the target clue with a bracketed `[0]`/`[1]`/`[2]` index, a
+  SECOND, 0-based numbering scheme shown alongside each clue's own pre-existing 1-based
+  `"1. "`/`"2. "` prefix (from `splitClues`), risking the model conflating the two. Fixed by
+  dropping the separate index scheme entirely — the target is now marked inline, right after its
+  own existing clue text (`"...  <-- TARGET"`), with no second numbering introduced. This is a
+  prompt-formatting clarity fix only, not a mechanism or vocabulary-stage change; not re-run
+  live, since the recorded findings (§5/§6) concern the vocabulary-stage/per-clue-call boundary
+  the fix doesn't touch, not target-identification ambiguity (the smoke test already confirmed
+  the model-facing marker was structurally unambiguous before this fix, just needlessly noisy).
+  Two other Kilo suggestions (hardcoded baseline path, `unknown[]` record typing in
+  `run-comparison.ts`) were left as-is — both match SPIKE-009's own precedent for this
+  deliberately small, disposable spike-code convention; see PR #29's review-comment replies.
 
 ## 5. Findings
 

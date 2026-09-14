@@ -36,7 +36,12 @@ const VOCABULARY_SYSTEM_PROMPT =
 function fullProseClueSystemPrompt(vocab: Vocabulary, preamble: string, allClues: readonly string[], targetIndex: number): string {
   const entityIds = vocab.entities.map((e) => e.id).join(", ") || "(none declared)"
   const domainNames = vocab.domains.map((d) => `${d.variable}=[${d.values.join(", ")}]`).join("; ")
-  const numberedClues = allClues.map((c, i) => `[${i}]${i === targetIndex ? " <-- TARGET" : ""} ${c}`).join("\n")
+  // Each clue's own text already carries its catalog numbering ("1. ...", "2. ...", from
+  // puzzles.ts's splitClues) — reviewed in PR #29: an added bracketed index like "[0]"/"[1]"
+  // introduced a SECOND, differently-based numbering scheme alongside it, which risked the
+  // model conflating the two. Fixed by marking the target inline, after its own existing
+  // number, with no separate index scheme at all.
+  const numberedClues = allClues.map((c, i) => (i === targetIndex ? `${c}  <-- TARGET` : c)).join("\n")
   return (
     "You are extracting the constraint(s) asserted by ONE marked clue in a natural-language " +
     "logic puzzle, against an already-fixed vocabulary. You are shown the FULL puzzle below — " +
@@ -48,9 +53,9 @@ function fullProseClueSystemPrompt(vocab: Vocabulary, preamble: string, allClues
     `Scenario: ${preamble}\n\n` +
     `Entities: ${entityIds}\n` +
     `Domains: ${domainNames}\n\n` +
-    "Full puzzle (target clue marked):\n" +
+    "Full puzzle (target clue marked with <-- TARGET at the end of its line):\n" +
     `${numberedClues}\n\n` +
-    `Pick the tool by what the TARGET clue [${targetIndex}] asserts:\n` +
+    "Pick the tool by what the TARGET clue asserts:\n" +
     '- Exclusion/negation ("X is not val1"): `arithmetic` with comparator "!=".\n' +
     "- Attribute co-occurrence with no entity named: `linkedAttributes`.\n" +
     '- A specific, already-known entity ("the first one", or one named directly): `assignment`.\n' +
@@ -71,8 +76,8 @@ function fullProseClueSystemPrompt(vocab: Vocabulary, preamble: string, allClues
 /**
  * Same structure as SPIKE-008's extractPerClue (stage-1 vocabulary call + one
  * requestClueConstraints call per clue, one repair round on structural rejection), except each
- * per-clue call's user prompt is just "Extract clue [N]." — the full puzzle context (and the
- * target-clue marker) lives in the system prompt via fullProseClueSystemPrompt, so the model
+ * per-clue call's user prompt just points at the marked target — the full puzzle context (and
+ * the target-clue marker) lives in the system prompt via fullProseClueSystemPrompt, so the model
  * always sees the whole puzzle rather than only the target clue's isolated text.
  */
 export async function extractFullProsePerClue(prose: string, model: string): Promise<PerClueExtractionResult> {
@@ -109,7 +114,7 @@ export async function extractFullProsePerClue(prose: string, model: string): Pro
   for (let i = 0; i < split.clues.length; i++) {
     const clueText = split.clues[i]!
     const systemPrompt = fullProseClueSystemPrompt(vocabulary, split.preamble, split.clues, i)
-    const userPrompt = `Extract the constraint(s) asserted by clue [${i}].`
+    const userPrompt = "Extract the constraint(s) asserted by the clue marked <-- TARGET."
     const result = await requestClueConstraints({ model, systemPrompt, userPrompt, tools })
     totalCalls += 1
     addCost(result.costUsd)

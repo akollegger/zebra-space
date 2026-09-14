@@ -20,9 +20,13 @@ console.log(prompt)
 
 if (!prompt.includes(clues[0]!)) throw new Error("REGRESSION: prompt is missing clue 0's text — full prose was not included")
 if (!prompt.includes(clues[1]!)) throw new Error("REGRESSION: prompt is missing clue 1's text — full prose was not included")
-if (!prompt.includes(clues[2]!)) throw new Error("REGRESSION: prompt is missing the target clue's own text")
-if (!prompt.includes("<-- TARGET")) throw new Error("REGRESSION: prompt has no unambiguous target-clue marker")
-if (!prompt.includes("[2] <-- TARGET")) throw new Error("REGRESSION: target marker is not attached to the correct clue index")
-if (prompt.includes("[0] <-- TARGET") || prompt.includes("[1] <-- TARGET")) throw new Error("REGRESSION: a non-target clue was marked as the target")
+if (!prompt.includes(`${clues[2]}  <-- TARGET`)) throw new Error("REGRESSION: target marker is not attached to the correct clue's own text")
+if (prompt.includes(`${clues[0]}  <-- TARGET`) || prompt.includes(`${clues[1]}  <-- TARGET`)) {
+  throw new Error("REGRESSION: a non-target clue was marked as the target")
+}
+// No separate bracketed index scheme (PR #29 review: this previously used "[0]"/"[1]"/"[2]"
+// alongside each clue's own "1."/"2."/"3." numbering, a second numbering scheme that risked
+// the model conflating the two).
+if (/\[\d+\]/.test(prompt)) throw new Error("REGRESSION: prompt reintroduced a separate bracketed clue-index scheme")
 
 console.log("FULL-PROSE-PROMPT SMOKE TEST PASSED")
