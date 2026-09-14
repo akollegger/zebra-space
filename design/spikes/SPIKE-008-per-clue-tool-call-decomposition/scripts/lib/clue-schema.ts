@@ -213,26 +213,40 @@ export function generateClueTools(vocab: Vocabulary): Record<string, Record<stri
       ? { assignment: assignmentAlternatives[0]! }
       : Object.fromEntries(vocab.domains.map((domain, i) => [`assignment__${domain.variable}`, assignmentAlternatives[i]!]))
 
-  // linkedAttributes: each {variable, value} pair must also stay within one domain — reuses
-  // the same per-domain alternative shape as assignment's variable+value pairing (entity is
-  // deliberately absent here per the kind's own existential semantics, unaffected by this fix).
-  const linkedAttributePair =
-    vocab.domains.length === 0
-      ? { type: "object", properties: { variable: { type: "string" }, value: { type: "string" } }, required: ["variable", "value"], additionalProperties: false }
-      : { anyOf: vocab.domains.map((domain) => ({ type: "object", properties: { variable: { type: "string", enum: [domain.variable] }, value: enumOf(domain.values) }, required: ["variable", "value"], additionalProperties: false })) }
-
-  const linkedAttributes = {
-    type: "object",
-    properties: {
-      kind: { type: "string", enum: ["linkedAttributes"] },
-      entityType: enumOf([...new Set(vocab.entities.map((e) => e.type))]),
-      attributes: {
-        type: "array",
-        items: linkedAttributePair,
+  // linkedAttributes: found in review (PR #27) that the previous version scoped each
+  // {variable, value} pair to ITS OWN domain independently of `entityType` — so a call could
+  // combine, say, a "house"-typed attribute with an "animal"-typed one under `entityType:
+  // "house"`, or reference a SCALAR domain (<=1 entity) at all. src/compiler/compile.ts's real
+  // `compileLinkedAttributesBody` (compile.ts:425-457) rejects both: every attribute's domain
+  // must match `c.entityType` exactly, and every domain must be entity-indexed (isScalar false)
+  // — the recorded run actually hit this mismatch (results/comparison-2026-09-14T14-05-07-883Z.json).
+  // Fixed the same way `assignment` was: one flat top-level tool PER ENTITY TYPE
+  // (`linkedAttributes__<type>`), `entityType` fixed to that type's literal, and `attributes`
+  // items restricted to only THAT type's own non-scalar domains — never any other type's, and
+  // never a domain compile.ts would reject as scalar. A type with fewer than 2 qualifying
+  // domains gets no tool at all (linkedAttributes needs >=2 attributes to link — compile.ts:429
+  // — so a type that can never supply 2 valid domains can never produce a valid call; omitting
+  // the tool is simpler and safer than generating one certain to fail).
+  const linkedAttributesTools: Record<string, Record<string, unknown>> = {}
+  for (const type of new Set(vocab.entities.map((e) => e.type))) {
+    const qualifyingDomains = vocab.domains.filter((d) => d.entityType === type && entitiesOfDomain(vocab, d).length > 1)
+    if (qualifyingDomains.length < 2) continue
+    const pairAlternatives = qualifyingDomains.map((domain) => ({
+      type: "object",
+      properties: { variable: { type: "string", enum: [domain.variable] }, value: enumOf(domain.values) },
+      required: ["variable", "value"],
+      additionalProperties: false,
+    }))
+    linkedAttributesTools[`linkedAttributes__${type}`] = {
+      type: "object",
+      properties: {
+        kind: { type: "string", enum: ["linkedAttributes"] },
+        entityType: { type: "string", enum: [type] },
+        attributes: { type: "array", minItems: 2, items: { anyOf: pairAlternatives } },
       },
-    },
-    required: ["kind", "entityType", "attributes"],
-    additionalProperties: false,
+      required: ["kind", "entityType", "attributes"],
+      additionalProperties: false,
+    }
   }
 
   const allDifferent = {
@@ -306,7 +320,7 @@ export function generateClueTools(vocab: Vocabulary): Record<string, Record<stri
   }
 
   // Restricted "then" member — see the doc comment above for why only these four kinds.
-  const thenMember = { anyOf: [...assignmentAlternatives, arithmetic, allDifferent, linkedAttributes] }
+  const thenMember = { anyOf: [...assignmentAlternatives, arithmetic, allDifferent, ...Object.values(linkedAttributesTools)] }
 
   // comparison: variable+value scoped per domain like assignment/linkedAttributes above
   // (value may also be a plain number for numeric domains, unaffected by the scoping fix).
@@ -353,5 +367,5 @@ export function generateClueTools(vocab: Vocabulary): Record<string, Record<stri
     additionalProperties: false,
   }
 
-  return { ...assignmentTools, linkedAttributes, allDifferent, adjacency, relation, arithmetic, ruleTable, ruleTableConstraint, derivedRule }
+  return { ...assignmentTools, ...linkedAttributesTools, allDifferent, adjacency, relation, arithmetic, ruleTable, ruleTableConstraint, derivedRule }
 }

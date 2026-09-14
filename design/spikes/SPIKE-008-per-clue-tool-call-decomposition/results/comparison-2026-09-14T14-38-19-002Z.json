@@ -1,0 +1,601 @@
+[
+  {
+    "id": "PZL-0004",
+    "file": "PZL-0004-whodunit.md",
+    "variants": {
+      "full-critic": {
+        "variant": "full-critic",
+        "totalCalls": 12,
+        "costUsd": 0.09301845000000002,
+        "outcome": "SOLVE_UNIQUE",
+        "verdict": "SOLVED",
+        "detail": "",
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "the_murder",
+              "type": "murder"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "suspect",
+              "entityType": "murder",
+              "values": [
+                "Miss Scarlett",
+                "Colonel Mustard",
+                "Professor Plum"
+              ]
+            },
+            {
+              "variable": "weapon",
+              "entityType": "murder",
+              "values": [
+                "Candlestick",
+                "Revolver",
+                "Rope"
+              ]
+            },
+            {
+              "variable": "room",
+              "entityType": "murder",
+              "values": [
+                "Kitchen",
+                "Library",
+                "Conservatory"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "variableRef",
+                "variable": "suspect",
+                "entity": "the_murder"
+              },
+              "comparator": "!=",
+              "target": "Colonel Mustard"
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "variableRef",
+                "variable": "suspect",
+                "entity": "the_murder"
+              },
+              "comparator": "!=",
+              "target": "Miss Scarlett"
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "variableRef",
+                "variable": "weapon",
+                "entity": "the_murder"
+              },
+              "comparator": "!=",
+              "target": "Revolver"
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "variableRef",
+                "variable": "weapon",
+                "entity": "the_murder"
+              },
+              "comparator": "!=",
+              "target": "Rope"
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "variableRef",
+                "variable": "room",
+                "entity": "the_murder"
+              },
+              "comparator": "!=",
+              "target": "Kitchen"
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "variableRef",
+                "variable": "room",
+                "entity": "the_murder"
+              },
+              "comparator": "!=",
+              "target": "Library"
+            }
+          ]
+        },
+        "mzn": "enum Values_Miss_Scarlett_Colonel_Mustard_Professor_Plum = {Miss_Scarlett, Colonel_Mustard, Professor_Plum};\nenum Values_Candlestick_Revolver_Rope = {Candlestick, Revolver, Rope};\nenum Values_Kitchen_Library_Conservatory = {Kitchen, Library, Conservatory};\nvar Values_Miss_Scarlett_Colonel_Mustard_Professor_Plum: suspect;\nvar Values_Candlestick_Revolver_Rope: weapon;\nvar Values_Kitchen_Library_Conservatory: room;\n\nconstraint suspect != Colonel_Mustard;\nconstraint suspect != Miss_Scarlett;\nconstraint weapon != Revolver;\nconstraint weapon != Rope;\nconstraint room != Kitchen;\nconstraint room != Library;\n\nsolve satisfy;\n",
+        "note": "{\"_tag\":\"UniquelySolvable\",\"assignment\":{\"suspect\":{\"e\":\"Professor_Plum\"},\"weapon\":{\"e\":\"Candlestick\"},\"room\":{\"e\":\"Conservatory\"}}}",
+        "grade": {
+          "verdict": "MATCH",
+          "detail": "all expected tokens present",
+          "aliasesApplied": 0
+        }
+      },
+      "per-clue": {
+        "variant": "per-clue",
+        "totalCalls": 7,
+        "costUsd": 0.00269445,
+        "outcome": "SOLVE_UNSATISFIABLE",
+        "verdict": "SOLVED",
+        "detail": "",
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "suspect_miss_scarlett",
+              "type": "suspect"
+            },
+            {
+              "id": "suspect_colonel_mustard",
+              "type": "suspect"
+            },
+            {
+              "id": "suspect_professor_plum",
+              "type": "suspect"
+            },
+            {
+              "id": "weapon_candlestick",
+              "type": "weapon"
+            },
+            {
+              "id": "weapon_revolver",
+              "type": "weapon"
+            },
+            {
+              "id": "weapon_rope",
+              "type": "weapon"
+            },
+            {
+              "id": "room_kitchen",
+              "type": "room"
+            },
+            {
+              "id": "room_library",
+              "type": "room"
+            },
+            {
+              "id": "room_conservatory",
+              "type": "room"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "culprit",
+              "entityType": "suspect",
+              "values": [
+                "Miss Scarlett",
+                "Colonel Mustard",
+                "Professor Plum"
+              ]
+            },
+            {
+              "variable": "murder-weapon",
+              "entityType": "weapon",
+              "values": [
+                "Candlestick",
+                "Revolver",
+                "Rope"
+              ]
+            },
+            {
+              "variable": "murder-room",
+              "entityType": "room",
+              "values": [
+                "Kitchen",
+                "Library",
+                "Conservatory"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "variableRef",
+                "variable": "culprit",
+                "entity": "suspect_colonel_mustard"
+              },
+              "comparator": "!=",
+              "target": "Colonel Mustard"
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "variableRef",
+                "variable": "culprit",
+                "entity": "suspect_miss_scarlett"
+              },
+              "comparator": "!=",
+              "target": "Miss Scarlett"
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "variableRef",
+                "variable": "murder-weapon",
+                "entity": "weapon_revolver"
+              },
+              "comparator": "!=",
+              "target": "Revolver"
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "variableRef",
+                "variable": "murder-weapon",
+                "entity": "weapon_rope"
+              },
+              "comparator": "!=",
+              "target": "Rope"
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "literal",
+                "value": 1
+              },
+              "comparator": "!=",
+              "target": "Kitchen"
+            },
+            {
+              "kind": "assignment",
+              "entity": "room_library",
+              "variable": "murder-room",
+              "value": "Library"
+            }
+          ]
+        },
+        "mzn": "enum suspect = {suspect_miss_scarlett, suspect_colonel_mustard, suspect_professor_plum};\nenum Values_Miss_Scarlett_Colonel_Mustard_Professor_Plum = {Miss_Scarlett, Colonel_Mustard, Professor_Plum};\nenum weapon = {weapon_candlestick, weapon_revolver, weapon_rope};\nenum Values_Candlestick_Revolver_Rope = {Candlestick, Revolver, Rope};\nenum room = {room_kitchen, room_library, room_conservatory};\nenum Values_Kitchen_Library_Conservatory = {Kitchen, Library, Conservatory};\narray[suspect] of var Values_Miss_Scarlett_Colonel_Mustard_Professor_Plum: culprit;\narray[weapon] of var Values_Candlestick_Revolver_Rope: murder_weapon;\narray[room] of var Values_Kitchen_Library_Conservatory: murder_room;\n\nconstraint culprit[suspect_colonel_mustard] != Colonel_Mustard;\nconstraint culprit[suspect_miss_scarlett] != Miss_Scarlett;\nconstraint murder_weapon[weapon_revolver] != Revolver;\nconstraint murder_weapon[weapon_rope] != Rope;\nconstraint 1 != Kitchen;\nconstraint murder_room[room_library] = Library;\n\nsolve satisfy;\n",
+        "note": "{\"_tag\":\"Unsatisfiable\"}",
+        "grade": {
+          "verdict": "MISMATCH",
+          "detail": "expected unique solution, got Unsatisfiable"
+        },
+        "decomposable": true,
+        "perClue": [
+          {
+            "clueIndex": 0,
+            "clueText": "1. The culprit is not Colonel Mustard.",
+            "toolCallsMade": 1,
+            "kindsEmitted": [
+              "arithmetic"
+            ],
+            "rejectedStructurally": []
+          },
+          {
+            "clueIndex": 1,
+            "clueText": "2. The culprit is not Miss Scarlett.",
+            "toolCallsMade": 1,
+            "kindsEmitted": [
+              "arithmetic"
+            ],
+            "rejectedStructurally": []
+          },
+          {
+            "clueIndex": 2,
+            "clueText": "3. The murder weapon was not the Revolver.",
+            "toolCallsMade": 1,
+            "kindsEmitted": [
+              "arithmetic"
+            ],
+            "rejectedStructurally": []
+          },
+          {
+            "clueIndex": 3,
+            "clueText": "4. The murder weapon was not the Rope.",
+            "toolCallsMade": 1,
+            "kindsEmitted": [
+              "arithmetic"
+            ],
+            "rejectedStructurally": []
+          },
+          {
+            "clueIndex": 4,
+            "clueText": "5. The murder did not take place in the Kitchen.",
+            "toolCallsMade": 1,
+            "kindsEmitted": [
+              "arithmetic"
+            ],
+            "rejectedStructurally": []
+          },
+          {
+            "clueIndex": 5,
+            "clueText": "6. The murder did not take place in the Library.\n\nWhodunit — and with what, and where?",
+            "toolCallsMade": 1,
+            "kindsEmitted": [
+              "assignment__murder-room"
+            ],
+            "rejectedStructurally": []
+          }
+        ]
+      },
+      "per-clue+grounded": {
+        "variant": "per-clue+grounded",
+        "totalCalls": 8,
+        "costUsd": 0.00286605,
+        "outcome": "SOLVE_MULTIPLY_SATISFIABLE",
+        "verdict": "SOLVED",
+        "detail": "",
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "suspect-1",
+              "type": "suspect"
+            },
+            {
+              "id": "suspect-2",
+              "type": "suspect"
+            },
+            {
+              "id": "suspect-3",
+              "type": "suspect"
+            },
+            {
+              "id": "weapon-1",
+              "type": "weapon"
+            },
+            {
+              "id": "weapon-2",
+              "type": "weapon"
+            },
+            {
+              "id": "weapon-3",
+              "type": "weapon"
+            },
+            {
+              "id": "room-1",
+              "type": "room"
+            },
+            {
+              "id": "room-2",
+              "type": "room"
+            },
+            {
+              "id": "room-3",
+              "type": "room"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "suspect",
+              "entityType": "suspect",
+              "values": [
+                "Miss Scarlett",
+                "Colonel Mustard",
+                "Professor Plum"
+              ]
+            },
+            {
+              "variable": "weapon",
+              "entityType": "weapon",
+              "values": [
+                "Candlestick",
+                "Revolver",
+                "Rope"
+              ]
+            },
+            {
+              "variable": "room",
+              "entityType": "room",
+              "values": [
+                "Kitchen",
+                "Library",
+                "Conservatory"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "variableRef",
+                "variable": "suspect",
+                "entity": "suspect-1"
+              },
+              "comparator": "!=",
+              "target": "Miss Scarlett"
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "variableRef",
+                "variable": "weapon",
+                "entity": "weapon-2"
+              },
+              "comparator": "!=",
+              "target": "Revolver"
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "variableRef",
+                "variable": "weapon",
+                "entity": "weapon-3"
+              },
+              "comparator": "!=",
+              "target": "Rope"
+            },
+            {
+              "kind": "assignment",
+              "entity": "room-1",
+              "variable": "room",
+              "value": "Library"
+            },
+            {
+              "kind": "assignment",
+              "entity": "room-2",
+              "variable": "room",
+              "value": "Kitchen"
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "variableRef",
+                "variable": "suspect",
+                "entity": "suspect-2"
+              },
+              "comparator": "!=",
+              "target": "Colonel Mustard"
+            }
+          ]
+        },
+        "mzn": "enum suspect_Type = {suspect_1, suspect_2, suspect_3};\nenum Values_Miss_Scarlett_Colonel_Mustard_Professor_Plum = {Miss_Scarlett, Colonel_Mustard, Professor_Plum};\nenum weapon_Type = {weapon_1, weapon_2, weapon_3};\nenum Values_Candlestick_Revolver_Rope = {Candlestick, Revolver, Rope};\nenum room_Type = {room_1, room_2, room_3};\nenum Values_Kitchen_Library_Conservatory = {Kitchen, Library, Conservatory};\narray[suspect_Type] of var Values_Miss_Scarlett_Colonel_Mustard_Professor_Plum: suspect;\narray[weapon_Type] of var Values_Candlestick_Revolver_Rope: weapon;\narray[room_Type] of var Values_Kitchen_Library_Conservatory: room;\n\nconstraint suspect[suspect_1] != Miss_Scarlett;\nconstraint weapon[weapon_2] != Revolver;\nconstraint weapon[weapon_3] != Rope;\nconstraint room[room_1] = Library;\nconstraint room[room_2] = Kitchen;\nconstraint suspect[suspect_2] != Colonel_Mustard;\n\nsolve satisfy;\n",
+        "note": "grounded finding: underconstrained; {\"_tag\":\"MultiplySatisfiable\",\"assignments\":[{\"suspect\":[{\"e\":\"Colonel_Mustard\"},{\"e\":\"Miss_Scarlett\"},{\"e\":\"Miss_Scarlett\"}],\"weapon\":[{\"e\":\"Candlestick\"},{\"e\":\"Candlestick\"},{\"e\":\"Candlestick\"}],\"room\":[{\"e\":\"Library\"},{\"e\":\"Kitchen\"},{\"e\":\"Kitchen\"}]},{\"suspect\":[{\"e\":\"Professor_Plum\"},{\"e\":\"Miss_Scarlett\"},{\"e\":\"Miss_Scarlett\"}],\"weapon\":[{\"e\":\"Candlestick\"},{\"e\":\"Candlestick\"},{\"e\":\"Candlestick\"}],\"room\":[{\"e\":\"Library\"},{\"e\":\"Kitchen\"},{\"e\":\"Kitchen\"}]}]}",
+        "grade": {
+          "verdict": "MISMATCH",
+          "detail": "expected unique solution, got MultiplySatisfiable"
+        }
+      },
+      "per-clue+back-translation": {
+        "variant": "per-clue+back-translation",
+        "totalCalls": 19,
+        "costUsd": 0.0052182,
+        "outcome": "SOLVE_MULTIPLY_SATISFIABLE",
+        "verdict": "SOLVED",
+        "detail": "",
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "suspect_miss_scarlett",
+              "type": "suspect"
+            },
+            {
+              "id": "suspect_colonel_mustard",
+              "type": "suspect"
+            },
+            {
+              "id": "suspect_professor_plum",
+              "type": "suspect"
+            },
+            {
+              "id": "weapon_candlestick",
+              "type": "weapon"
+            },
+            {
+              "id": "weapon_revolver",
+              "type": "weapon"
+            },
+            {
+              "id": "weapon_rope",
+              "type": "weapon"
+            },
+            {
+              "id": "room_kitchen",
+              "type": "room"
+            },
+            {
+              "id": "room_library",
+              "type": "room"
+            },
+            {
+              "id": "room_conservatory",
+              "type": "room"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "culprit",
+              "entityType": "suspect",
+              "values": [
+                "Miss Scarlett",
+                "Colonel Mustard",
+                "Professor Plum"
+              ]
+            },
+            {
+              "variable": "murder_weapon",
+              "entityType": "weapon",
+              "values": [
+                "Candlestick",
+                "Revolver",
+                "Rope"
+              ]
+            },
+            {
+              "variable": "murder_room",
+              "entityType": "room",
+              "values": [
+                "Kitchen",
+                "Library",
+                "Conservatory"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "variableRef",
+                "variable": "culprit",
+                "entity": "suspect_colonel_mustard"
+              },
+              "comparator": "!=",
+              "target": "Colonel Mustard"
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "variableRef",
+                "variable": "culprit",
+                "entity": "suspect_miss_scarlett"
+              },
+              "comparator": "!=",
+              "target": "Miss Scarlett"
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "variableRef",
+                "variable": "murder_weapon",
+                "entity": "weapon_revolver"
+              },
+              "comparator": "!=",
+              "target": "Revolver"
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "variableRef",
+                "variable": "murder_weapon",
+                "entity": "weapon_rope"
+              },
+              "comparator": "!=",
+              "target": "Rope"
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "variableRef",
+                "variable": "murder_room",
+                "entity": "room_kitchen"
+              },
+              "comparator": "!=",
+              "target": "Kitchen"
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "variableRef",
+                "variable": "murder_room",
+                "entity": "room_library"
+              },
+              "comparator": "!=",
+              "target": "Library"
+            }
+          ]
+        },
+        "mzn": "enum suspect = {suspect_miss_scarlett, suspect_colonel_mustard, suspect_professor_plum};\nenum Values_Miss_Scarlett_Colonel_Mustard_Professor_Plum = {Miss_Scarlett, Colonel_Mustard, Professor_Plum};\nenum weapon = {weapon_candlestick, weapon_revolver, weapon_rope};\nenum Values_Candlestick_Revolver_Rope = {Candlestick, Revolver, Rope};\nenum room = {room_kitchen, room_library, room_conservatory};\nenum Values_Kitchen_Library_Conservatory = {Kitchen, Library, Conservatory};\narray[suspect] of var Values_Miss_Scarlett_Colonel_Mustard_Professor_Plum: culprit;\narray[weapon] of var Values_Candlestick_Revolver_Rope: murder_weapon;\narray[room] of var Values_Kitchen_Library_Conservatory: murder_room;\n\nconstraint culprit[suspect_colonel_mustard] != Colonel_Mustard;\nconstraint culprit[suspect_miss_scarlett] != Miss_Scarlett;\nconstraint murder_weapon[weapon_revolver] != Revolver;\nconstraint murder_weapon[weapon_rope] != Rope;\nconstraint murder_room[room_kitchen] != Kitchen;\nconstraint murder_room[room_library] != Library;\n\nsolve satisfy;\n",
+        "note": "judge flagged 6/6 clues; {\"_tag\":\"MultiplySatisfiable\",\"assignments\":[{\"culprit\":[{\"e\":\"Colonel_Mustard\"},{\"e\":\"Miss_Scarlett\"},{\"e\":\"Miss_Scarlett\"}],\"murder_weapon\":[{\"e\":\"Candlestick\"},{\"e\":\"Candlestick\"},{\"e\":\"Candlestick\"}],\"murder_room\":[{\"e\":\"Library\"},{\"e\":\"Kitchen\"},{\"e\":\"Kitchen\"}]},{\"culprit\":[{\"e\":\"Professor_Plum\"},{\"e\":\"Miss_Scarlett\"},{\"e\":\"Miss_Scarlett\"}],\"murder_weapon\":[{\"e\":\"Candlestick\"},{\"e\":\"Candlestick\"},{\"e\":\"Candlestick\"}],\"murder_room\":[{\"e\":\"Library\"},{\"e\":\"Kitchen\"},{\"e\":\"Kitchen\"}]}]}",
+        "grade": {
+          "verdict": "MISMATCH",
+          "detail": "expected unique solution, got MultiplySatisfiable"
+        }
+      }
+    }
+  }
+]

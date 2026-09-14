@@ -329,6 +329,43 @@ failure. Full 14-puzzle re-run launched next, reusing the prior run's unaffected
 numbers (`SKIP_FULL_CRITIC=1`/`PRIOR_RUN_PATH`, added to `run-comparison.ts`) rather than
 re-spending ~$2 re-measuring a harness this fix never touches.
 
+**2026-09-15 — PR #27 review found five more real issues, all fixed:**
+1. **`linkedAttributes` had the same class of bug `assignment`/`variableRef` did**, missed by
+   the earlier pass: each `{variable, value}` pair was scoped to its own domain independently of
+   `entityType`, so a call could combine a "house"-typed attribute with an "animal"-typed one
+   under `entityType: "house"`, or reference a scalar domain at all — both of which
+   `compile.ts`'s real `compileLinkedAttributesBody` rejects, and the recorded run actually hit
+   this. Fixed the same way as `assignment`: one flat top-level tool per entity type
+   (`linkedAttributes__<type>`), attributes restricted to that type's own non-scalar domains,
+   `minItems: 2`; a type with fewer than 2 qualifying domains gets no tool at all rather than one
+   certain to fail. Added `smoke-test-linked-attributes-scoping.ts` (zero cost) and confirmed no
+   new OpenAI top-level-schema rejection live on PZL-0004.
+2. **`checkStructural` had no `boolean` branch**, so `judgeBackTranslation`'s `accepted` field
+   was unchecked — a malformed `{"accepted": "false"}` (a string, not a boolean) would pass
+   validation and, downstream, evaluate as truthy. Added the missing branch.
+3. **`tool_choice: "required"` contradicted the clue prompt's documented "call nothing" path**
+   for a pure scenario/setup clue — `"required"` makes that structurally impossible, forcing a
+   hallucinated call instead. Switched to `"auto"` and treat zero tool calls as a legitimate
+   empty result, not a call-level failure. Every billed run recorded in this file used the
+   stricter `"required"` behavior; this fix wasn't re-run against the full sample (a downstream
+   correctness fix, not the bug that motivated the last billed re-run, and a further re-run
+   wasn't requested) — noted here so anyone reading the numbers later knows this behavior
+   changed after they were recorded.
+4. **`per-clue-extract.ts` only recorded a per-clue call's cost when it succeeded**, silently
+   under-reporting `actualCostUsd` for any run with a billed-but-failed call (prose reply,
+   streamed response). Fixed to record cost unconditionally, matching the pattern
+   `src/extraction/extract.ts` itself already uses for exactly this reason (ADR-010 follow-up:
+   "a call that billed and then failed downstream... still spent money").
+5. **`run-comparison.ts`'s `compileAndSolve` discarded the actual `SolverError`**, replacing it
+   with a generic `"solve failed"` — undermining this spike's own stated goal of keeping its raw
+   records independently auditable. Added a `solveErrorDetail` mapper mirroring
+   `src/eval/harness.ts`'s own (unexported) `toSolveError`, so `SOLVE_ERROR` records now carry
+   the real tag and detail (syntax error, timeout, toolchain issue, etc.).
+
+Also fixed SPIKE-009's section numbering (skipped 4 with no Notes section to justify it).
+None of these fixes required another full billed run — verified via new/existing offline smoke
+tests plus one live single-puzzle check (PZL-0004) confirming no new provider-schema rejection.
+
 ## 5. Findings
 
 One sample per puzzle × variant (SPIKE-005's own caveat applies equally here — individual

@@ -44,6 +44,7 @@ function checkStructural(value: unknown, schema: Record<string, unknown>, path =
   }
   if (schema.type === "number") return typeof value === "number" ? undefined : `${path}: expected a number, got ${JSON.stringify(value)}`
   if (schema.type === "string") return typeof value === "string" ? undefined : `${path}: expected a string, got ${JSON.stringify(value)}`
+  if (schema.type === "boolean") return typeof value === "boolean" ? undefined : `${path}: expected a boolean, got ${JSON.stringify(value)}`
   if (schema.type === "array") {
     if (!Array.isArray(value)) return `${path}: expected an array, got ${JSON.stringify(value)}`
     const items = schema.items as Record<string, unknown>
@@ -98,12 +99,20 @@ export type MultiToolResult =
   | { readonly ok: false; readonly reason: "prose" | "no-tool-call"; readonly detail: string; readonly raw: string; readonly costUsd: number | undefined }
 
 /**
- * One clue, all nine generated tools offered at once, `tool_choice: "required"` (not a single
- * forced function name) so the MODEL decides how many constraints this clue implies — usually
- * one, occasionally two for a compound clue ("X is red and lives in house 1" might be one
- * `linkedAttributes` OR two calls) — rather than this harness guessing the kind up front. Each
- * returned tool call is independently structurally validated against ITS OWN kind's schema
+ * One clue, all nine generated tools offered at once, `tool_choice: "auto"` — not `"required"`,
+ * and not a single forced function name — so the MODEL decides both WHETHER this clue asserts
+ * any constraint at all (a pure scenario/setup clue legitimately calls nothing — the
+ * clueSystemPrompt documents this path, and `"required"` would have made it structurally
+ * impossible, forcing a hallucinated call on every clue instead) and, when it does, HOW MANY —
+ * usually one, occasionally two for a compound clue ("X is red and lives in house 1" might be
+ * one `linkedAttributes` OR two calls) — rather than this harness guessing the kind up front.
+ * Each returned tool call is independently structurally validated against ITS OWN kind's schema
  * (clue-schema.ts), so one bad call among several doesn't invalidate the others.
+ *
+ * Found in review (2026-09-15, PR #27): every billed run so far used `"required"`, so those
+ * results reflect the stricter (always-forces-a-call) behavior; this fix wasn't re-run against
+ * the full sample since it's a downstream correctness fix, not the entity-scoping bug that
+ * motivated the last billed re-run, and re-running again wasn't requested.
  */
 export async function requestClueConstraints(request: MultiToolRequest): Promise<MultiToolResult> {
   const route = resolveProviderRoute("multi-tool")
@@ -122,10 +131,7 @@ export async function requestClueConstraints(request: MultiToolRequest): Promise
           type: "function" as const,
           function: { name: kind, description: `Emit a "${kind}" constraint if — and only if — this clue asserts one.`, parameters: schema },
         })),
-        // "required": any one (or more) of the declared tools, not a specific named one — the
-        // local-route string form SPIKE-005/provider.ts already rely on, reused here
-        // universally since this call always needs the model to CHOOSE among several tools.
-        toolChoice: "required",
+        toolChoice: "auto",
       },
     },
     { retries: { strategy: "none" }, timeoutMs },
@@ -138,7 +144,11 @@ export async function requestClueConstraints(request: MultiToolRequest): Promise
   const message = response.choices[0]?.message
   const toolCalls = message?.toolCalls ?? []
   if (toolCalls.length === 0) {
-    return { ok: false, reason: message?.content ? "prose" : "no-tool-call", detail: String(message?.content ?? "no tool call and no content"), raw: String(message?.content ?? "").slice(0, 2000), costUsd }
+    // Under "auto", zero tool calls is a legitimate outcome for a pure setup/scenario clue, not
+    // a call-level failure — the clueSystemPrompt explicitly documents this path. A non-empty
+    // `content` alongside it is still worth carrying (the model explaining itself, or drifting
+    // into prose), but doesn't make this an error case the way it would under "required".
+    return { ok: true, calls: [], costUsd }
   }
   const calls: ParsedToolCall[] = toolCalls.map((call) => {
     const kind = call.function.name

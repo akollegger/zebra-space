@@ -78,10 +78,10 @@ Not yet set — to be scoped when this spike is actually picked up, after SPIKE-
 entity-scoping fix has been tried and re-measured (its result may change how much appetite there
 is for this larger architecture change).
 
-## 5. Findings
+## 4. Findings
 
 _(filled in once the spike concludes)_
 
-## 6. Conclusion
+## 5. Conclusion
 
 _(filled in once the spike concludes)_

@@ -8,7 +8,7 @@
 import { writeFile, mkdir, readFile } from "node:fs/promises"
 import { Effect } from "effect"
 import { fullCriticHarness, type HarnessModelOpts } from "../../../../src/eval/harness.ts"
-import type { SolveResult } from "../../../../src/solver/types.ts"
+import type { SolveResult, SolverError } from "../../../../src/solver/types.ts"
 import { extractPerClue, reviseOneClue } from "./lib/per-clue-extract.ts"
 import { groundedFinding } from "./lib/grounded-critic.ts"
 import { renderConstraintAsEnglish } from "./lib/back-translation.ts"
@@ -86,6 +86,29 @@ async function runFullCritic(prose: string): Promise<VariantOutcome> {
   }
 }
 
+/** Mirrors src/eval/harness.ts's private toSolveError — that mapping isn't exported, and this
+ * spike's own raw records need the same per-tag detail (not a generic "solve failed") to stay
+ * independently diagnosable, per its own auditability goal (found in review, PR #27: this was
+ * previously discarding the SolverError entirely, making SOLVE_ERROR records undiagnosable). */
+function solveErrorDetail(error: SolverError): string {
+  switch (error._tag) {
+    case "ToolchainUnavailable":
+      return `${error._tag}: ${error.message}`
+    case "ModelSyntaxError":
+      return `${error._tag}: ${error.stderr.slice(0, 200)}`
+    case "SolverConfigError":
+      return `${error._tag}: solver "${error.solverId}": ${error.stderr.slice(0, 200)}`
+    case "Timeout":
+      return `${error._tag}: timed out after ${error.timeoutMs}ms`
+    case "UnexpectedExit":
+      return `${error._tag}: exit ${error.exitCode}: ${error.stderr.slice(0, 200)}`
+    case "UnexpectedOutput":
+      return `${error._tag}: ${error.message}`
+    case "FilesystemError":
+      return `${error._tag}: ${error.message}`
+  }
+}
+
 async function compileAndSolve(extractedCsp: ExtractedCsp): Promise<{ readonly outcome: string; readonly detail: string; readonly mzn: string | null; readonly solveResult?: SolveResult }> {
   const compiled = await Effect.runPromise(
     compile(extractedCsp).pipe(
@@ -97,10 +120,10 @@ async function compileAndSolve(extractedCsp: ExtractedCsp): Promise<{ readonly o
   const solved = await Effect.runPromise(
     solve({ model: compiled.mzn }).pipe(
       Effect.map((r) => ({ ok: true as const, r })),
-      Effect.catch(() => Effect.succeed({ ok: false as const })),
+      Effect.catch((e) => Effect.succeed({ ok: false as const, detail: solveErrorDetail(e) })),
     ),
   )
-  if (!solved.ok) return { outcome: "SOLVE_ERROR", detail: "solve failed", mzn: compiled.mzn }
+  if (!solved.ok) return { outcome: "SOLVE_ERROR", detail: solved.detail, mzn: compiled.mzn }
   return { outcome: classify(solved.r), detail: "", mzn: compiled.mzn, solveResult: solved.r }
 }
 

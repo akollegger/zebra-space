@@ -131,7 +131,10 @@ export async function extractPerClue(prose: string, model: string): Promise<PerC
     const systemPrompt = clueSystemPrompt(vocabulary, split.preamble)
     const result = await requestClueConstraints({ model, systemPrompt, userPrompt: `Clue:\n\n${clueText}`, tools })
     totalCalls += 1
-    if (result.ok) addCost(result.costUsd)
+    // Unconditional: a failed call (prose reply, streamed response) can still have billed —
+    // found in review (PR #27) that this previously only recorded cost on the ok:true branch,
+    // silently under-reporting per-clue spend whenever a call failed after being billed.
+    addCost(result.costUsd)
 
     let calls: readonly ParsedToolCall[] = result.ok ? result.calls : []
     const rejected: string[] = result.ok ? [] : [`(call-level) ${result.reason}: ${result.detail}`]
@@ -145,8 +148,8 @@ export async function extractPerClue(prose: string, model: string): Promise<PerC
         "Call the tool(s) again, corrected."
       const retry = await requestClueConstraints({ model, systemPrompt, userPrompt: repairPrompt, tools })
       totalCalls += 1
+      addCost(retry.costUsd)
       if (retry.ok) {
-        addCost(retry.costUsd)
         // Keep whichever calls succeeded across BOTH rounds — a repair round that fixes one
         // call but not another shouldn't discard the one that was already right.
         const stillFailing = retry.calls.filter((c) => !c.ok)
