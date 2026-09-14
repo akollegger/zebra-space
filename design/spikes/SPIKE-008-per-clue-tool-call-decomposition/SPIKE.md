@@ -1,7 +1,7 @@
 ---
 id: SPIKE-008
 title: Per-Clue Tool-Call Decomposition vs. the Whole-Document Critic Loop
-status: planned
+status: in-progress
 rfcs: [RFC-003]
 created: 2026-09-07
 ---
@@ -177,7 +177,64 @@ extending scope.
 
 ## 4. Notes
 
-_(dated log, kept during the work — filled in as the spike runs)_
+**2026-09-15 — decided to skip the nested worktree.** Nothing else is in flight on this repo
+concurrently, so the investigation proceeds directly on the `spike/008-per-clue-decomposition`
+branch (in `design/spikes/SPIKE-008-per-clue-tool-call-decomposition/scripts/`) rather than
+under a gitignored `worktree/` subfolder — the isolation a worktree buys (parallel spikes not
+stepping on each other) isn't needed here.
+
+**2026-09-15 — clue-splitting is not universal across the catalog.** Built `lib/puzzles.ts`'s
+`splitClues()` on a `^\d+\.\s` numbered-list heuristic (every classic zebra-shaped puzzle in the
+sample uses it) and checked it against the full 14-puzzle sample: PZL-0001/0003(via ruleTable
+clues)/0004/0010/0011/0012/0028/0038 all split cleanly (3-14 clues each). PZL-0007 (SEND+MORE=
+MONEY, an ASCII arithmetic diagram), PZL-0022 (a markdown table of items, no numbered list), and
+PZL-0033 (a plain prose paragraph) have no numbered structure at all — `decomposable: false`,
+and the harness degenerates to one call for these, same as single-shot. This is itself a data
+point for sub-question 2 (net cost): decomposition can't reduce call count below 1, so these
+three puzzles test the floor case, not the mechanism, and should be reported separately from the
+puzzles that actually decompose.
+
+**2026-09-15 — schema generation proven at zero cost.** Built `lib/clue-schema.ts` (generates
+one closed JSON Schema tool per constraint kind from an `ExtractedVocabulary` — `variable`/
+`entity`/`value` as enums, `relation`/`comparator` as closed enums drawn from
+`src/compiler/compile.ts`'s own registries, `derivedRule.thenConstraints` restricted to the four
+kinds `compile.ts`'s own `compileThenConstraint` actually accepts there rather than all nine) and
+`lib/tool-call.ts` (a forced-tool-call wrapper reusing `src/extraction/provider.ts`'s exported
+`resolveProviderRoute` for route resolution, structurally validating each returned call against
+its own generated schema). Smoke-tested against `tests/extraction/support/stub-server.ts` (zero
+real API cost): a stub returning an invented value (`"value": "Green"` against a
+`["Red","Blue"]` enum) is correctly rejected structurally before ever reaching the compiler —
+`$.value: "Green" is not one of the declared values [Red, Blue]`. This is a direct, offline-
+reproducible confirmation of sub-question 4's premise: enum-typed per-clue schemas foreclose
+the invented-value failure class at decode time, where the monolith only catches it (or doesn't)
+downstream at compile time.
+
+**2026-09-15 — one call per clue offers all nine tools, not a hand-picked one.** Designed
+`requestClueConstraints` (`lib/tool-call.ts`) to send every generated tool with
+`tool_choice: "required"` rather than forcing a single named kind per clue — the model decides
+how many constraints a clue implies (usually one, occasionally two for a genuinely compound
+clue) rather than this harness guessing the kind from the clue text itself, which would just
+relocate the "which kind does this clue need" judgment call out of the model and into
+unreliable heuristic code.
+
+**2026-09-15 — full offline pipeline proof.** Built `lib/per-clue-extract.ts` (stage 1
+vocabulary reuses the real pipeline's `requestStructuredCompletion` + `ExtractedVocabulary`
+directly; stage 2 loops `requestClueConstraints` per clue with one repair retry on a
+structurally-rejected call, scoped to that one clue rather than the whole document) and ran it
+end to end against a synthetic 2-clue puzzle via the stub server: vocabulary call → 2 per-clue
+calls → assembly → `src/compiler/compile.ts`'s real `compile()` → `src/solver/solve.ts`'s real
+`solve()`, all succeeding mechanically (3 total calls, valid MiniZinc emitted, solver returned a
+real — if intentionally underconstrained — outcome). Zero real API spend; proves the mechanism
+before any billed run.
+
+**Not yet done, pending a spend go-ahead from the user**: the grounded-revision critic
+(sub-question 5's compile/solve-fed minimal-conflict search — buildable and testable entirely
+offline against the local `minizinc` install, no LLM cost, still to build), the back-translation
+critic (its deterministic renderer is offline-testable; its NL-vs-NL judgment call is not), and
+the actual baseline rerun + four-way comparison across the 14-puzzle sample, which is real,
+billed OpenRouter spend and needs an explicit dollar-bounded go-ahead before running (per this
+project's own established convention — `scripts/eval-extraction.ts --budget-usd`, and spec
+006/T030's "do not run without explicit approval because it is billed").
 
 ## 5. Findings
 
