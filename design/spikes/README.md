@@ -80,3 +80,4 @@ into the RFC rather than copied verbatim.
 | [SPIKE-006](SPIKE-006-progressive-card-prototype/SPIKE.md) | Progressive Card-Loop Playable Prototype | done | RFC-005 |
 | [SPIKE-007](SPIKE-007-effect-unstable-ai-viability/SPIKE.md) | effect/unstable/ai + @effect/ai-openrouter Viability | done | RFC-003, RFC-004 |
 | [SPIKE-008](SPIKE-008-per-clue-tool-call-decomposition/SPIKE.md) | Per-Clue Tool-Call Decomposition vs. the Whole-Document Critic Loop | done | RFC-003 |
+| [SPIKE-009](SPIKE-009-graph-style-reconciled-extraction/SPIKE.md) | Graph-Style Reconciled Extraction (Local Extract, Neighborhood Reconcile, Filter) | planned | RFC-003 |
