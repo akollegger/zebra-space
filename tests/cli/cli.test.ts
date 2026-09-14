@@ -74,6 +74,11 @@ async function withExtractStub<A>(handler: StubHandler, use: (stub: StubServer) 
 function extractEnv(stub: StubServer, extra?: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   return {
     ...process.env,
+    // Cleared, not just left alone: a developer's own .env may set this for local LM Studio
+    // testing, and .env never overwrites an already-set process.env value (load-env.ts) — so an
+    // empty string here is what actually keeps these tests routed at the stub server below
+    // instead of a real local server that happens to be configured on this machine.
+    ZEBRA_LOCAL_BASE_URL: "",
     ZEBRA_OPENROUTER_BASE_URL_OVERRIDE: stub.baseUrl,
     OPENROUTER_API_KEY: "test-key",
     ...extra,
@@ -261,6 +266,7 @@ test("FR-012: a provider failure prints a message distinguishable from a rejecte
 
   const result = await runCli(["extract", WHODUNIT_PUZZLE], {
     ...process.env,
+    ZEBRA_LOCAL_BASE_URL: "",
     ZEBRA_OPENROUTER_BASE_URL_OVERRIDE: closedUrl,
     OPENROUTER_API_KEY: "test-key",
   })
