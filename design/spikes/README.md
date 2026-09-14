@@ -81,3 +81,4 @@ into the RFC rather than copied verbatim.
 | [SPIKE-007](SPIKE-007-effect-unstable-ai-viability/SPIKE.md) | effect/unstable/ai + @effect/ai-openrouter Viability | done | RFC-003, RFC-004 |
 | [SPIKE-008](SPIKE-008-per-clue-tool-call-decomposition/SPIKE.md) | Per-Clue Tool-Call Decomposition vs. the Whole-Document Critic Loop | done | RFC-003 |
 | [SPIKE-009](SPIKE-009-graph-style-reconciled-extraction/SPIKE.md) | Graph-Style Reconciled Extraction (Local Extract, Neighborhood Reconcile, Filter) | done | RFC-003 |
+| [SPIKE-010](SPIKE-010-full-prose-per-clue-context/SPIKE.md) | Full-Prose Context for Per-Clue Extraction | done | RFC-003 |
