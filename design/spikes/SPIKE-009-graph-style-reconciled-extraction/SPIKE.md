@@ -295,8 +295,9 @@ conclusive).
 already recorded**: a failed vocabulary-proposal tool call (prose reply, invalid JSON,
 structural rejection) was, at the time of this run, silently collapsed into the same
 empty-arrays shape a legitimate vocabulary-free clue produces (fixed post-`main`-merge — see the
-PR's review-response commit). A live spot-check on PZL-0004 after the fix
-(`results/comparison-2026-09-14T16-06-18-104Z.json`) found **4 of its
+PR's review-response commit). A live spot-check on PZL-0004 after the fix (its own raw JSON not
+kept alongside the others — trimmed for PR reviewability, same reason as the note above) found
+**4 of its
 clues' vocabulary proposals had actually failed** yet the puzzle still reached `SOLVE_UNIQUE` in
 this recorded run — meaning the assembled CSP was silently missing real content from 4 clues and
 happened to still solve to something, with no record that anything went wrong. This means the
