@@ -49,7 +49,7 @@ const server = createServer((req, res) => {
       const responses = [
         { toolName: assignmentToolName, args: { kind: "assignment", entity: "house1", variable: "color", value: "Red" } },
         { toolName: assignmentToolName, args: { kind: "assignment", entity: "house2", variable: "color", value: "Blue" } },
-        { toolName: "adjacency", args: { kind: "adjacency", relation: "directly right of", a: "house3", b: "house2", variable: "color-position" } },
+        { toolName: "adjacency", args: { kind: "adjacency", relation: "directly right of", a: "house3", b: "house2", variable: "color_position" } },
       ]
       const resp = responses[constraintCallIndex - 1]!
       toolCalls = [{ id: `c${constraintCallIndex}`, type: "function", function: { name: resp.toolName, arguments: JSON.stringify(resp.args) } }]

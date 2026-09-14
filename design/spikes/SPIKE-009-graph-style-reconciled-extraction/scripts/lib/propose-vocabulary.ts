@@ -29,6 +29,16 @@ export interface VocabularyProposal {
   readonly clueIndex: number
   readonly entityMentions: readonly EntityMention[]
   readonly domainMentions: readonly DomainMention[]
+  /**
+   * Set only when the tool call itself failed (prose reply, invalid JSON, or a structurally
+   * invalid response) — found in review (PR #28): this used to be silently collapsed into the
+   * same empty-arrays shape a genuinely vocabulary-free clue produces, so a real call failure
+   * and "this clue has no vocabulary" were indistinguishable downstream, and the pipeline would
+   * happily compile/grade a CSP missing that clue's real content without ever recording that
+   * anything went wrong. Callers (vocabulary-reconciled-extract.ts) surface this rather than
+   * treating the proposal as trustworthy.
+   */
+  readonly failed?: { readonly reason: string; readonly detail: string }
 }
 
 const PROPOSAL_SCHEMA = {
@@ -97,11 +107,7 @@ export async function proposeVocabulary(model: string, clueIndex: number, clueTe
     jsonSchema: PROPOSAL_SCHEMA,
   })
   if (!result.ok) {
-    // A structurally-invalid or prose response is treated as "no vocabulary proposed" rather
-    // than a hard failure — reconciliation still works fine with fewer proposals; the
-    // constraint-extraction stage's own failure handling (unchanged from SPIKE-008) is what
-    // actually gates correctness.
-    return { proposal: { clueIndex, entityMentions: [], domainMentions: [] }, costUsd: result.costUsd }
+    return { proposal: { clueIndex, entityMentions: [], domainMentions: [], failed: { reason: result.reason, detail: result.detail } }, costUsd: result.costUsd }
   }
   const value = result.value as { entityMentions: EntityMention[]; domainMentions: DomainMention[] }
   return { proposal: { clueIndex, entityMentions: value.entityMentions, domainMentions: value.domainMentions }, costUsd: result.costUsd }

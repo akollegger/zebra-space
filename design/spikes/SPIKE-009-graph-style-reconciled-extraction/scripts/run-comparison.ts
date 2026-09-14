@@ -66,7 +66,14 @@ async function compileAndSolve(extractedCsp: ExtractedCsp) {
 async function main(): Promise<void> {
   const puzzleIds = process.argv.slice(2).length > 0 ? process.argv.slice(2) : SAMPLE
   const answerKeys = await loadAnswerKeys()
-  const baseline = JSON.parse(await readFile(new URL(BASELINE_PATH, import.meta.url), "utf8")) as ReadonlyArray<{ id: string; variants: Record<string, { outcome: string; costUsd: number | undefined; totalCalls: number; grade: { verdict: string } }> }>
+  // Verified directly against the actual stored file (PR #28 review — this declaration
+  // previously omitted the top-level `verdict`/`detail` fields the JSON also carries; `grade`
+  // IS present and IS the field worth reading here, since it's the outcome-CLASS verdict
+  // (MATCH/MISMATCH/...), not the coarser top-level SOLVED/FAIL marker).
+  const baseline = JSON.parse(await readFile(new URL(BASELINE_PATH, import.meta.url), "utf8")) as ReadonlyArray<{
+    id: string
+    variants: Record<string, { outcome: string; verdict: string; costUsd: number | undefined; totalCalls: number; grade: { verdict: string; detail: string } }>
+  }>
   const baselineById = new Map(baseline.map((r) => [r.id, r.variants]))
 
   const records: unknown[] = []
@@ -81,14 +88,22 @@ async function main(): Promise<void> {
       solved.solveResult !== undefined && solved.solveResult._tag === "UniquelySolvable"
         ? { ...solved.solveResult, assignment: recoverEntityKeyedArrays(solved.solveResult.assignment, result.extractedCsp) }
         : solved.solveResult
-    const grade = solved.solveResult !== undefined ? gradeSolved(puzzleId, answerKeys[puzzleId], recovered!) : { verdict: "N/A", detail: "no solve result" }
+    // A vocabulary-proposal call failure (PR #28 review) means the assembled CSP may be
+    // missing real content from that clue — grading it as a normal pass/fail would misrepresent
+    // what happened, so this takes precedence over whatever compile()/solve() produced.
+    const grade =
+      result.failedProposals.length > 0
+        ? { verdict: "UNRELIABLE", detail: `${result.failedProposals.length} clue(s)' vocabulary proposal failed: ${result.failedProposals.map((f) => `clue ${f.clueIndex} (${f.reason})`).join(", ")}` }
+        : solved.solveResult !== undefined
+          ? gradeSolved(puzzleId, answerKeys[puzzleId], recovered!)
+          : { verdict: "N/A", detail: "no solve result" }
 
     const baselineVariants = baselineById.get(puzzleId)
     const pcBaseline = baselineVariants?.["per-clue"]
     const fcBaseline = baselineVariants?.["full-critic"]
 
-    console.log(`  per-clue+reconcile: ${solved.outcome} calls=${result.totalCalls} cost=${result.actualCostUsd ?? "n/a"} grade=${grade.verdict} decomposable=${result.decomposable} dropped=${result.droppedConstraints.length}`)
-    console.log(`  (baseline) per-clue: ${pcBaseline?.outcome} grade=${pcBaseline?.grade?.["verdict" as never] ?? "?"} | full-critic: ${fcBaseline?.outcome}`)
+    console.log(`  per-clue+reconcile: ${solved.outcome} calls=${result.totalCalls} cost=${result.actualCostUsd ?? "n/a"} grade=${grade.verdict} decomposable=${result.decomposable} dropped=${result.droppedConstraints.length} failedProposals=${result.failedProposals.length}`)
+    console.log(`  (baseline) per-clue: ${pcBaseline?.outcome} grade=${pcBaseline?.grade.verdict ?? "?"} | full-critic: ${fcBaseline?.outcome}`)
 
     records.push({
       id: puzzleId,
@@ -104,6 +119,7 @@ async function main(): Promise<void> {
           decomposable: result.decomposable,
           droppedConstraints: result.droppedConstraints,
           proposals: result.proposals,
+          failedProposals: result.failedProposals,
           grade,
         },
         "per-clue (SPIKE-008 baseline)": pcBaseline,

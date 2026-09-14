@@ -5,7 +5,7 @@
 // whose only vocabulary contribution never survived reconciliation.
 
 import type { Vocabulary } from "../../../SPIKE-008-per-clue-tool-call-decomposition/scripts/lib/clue-schema.ts"
-import type { ExtractedConstraint } from "../../../../../src/extraction/types.ts"
+import type { ArithmeticExpression, DerivedCondition, ExtractedConstraint } from "../../../../../src/extraction/types.ts"
 
 export interface TaggedConstraint {
   readonly clueIndex: number
@@ -48,18 +48,64 @@ function referencedIds(constraint: ExtractedConstraint): { readonly entities: re
       walk(constraint.target)
       return { entities, variables: vars }
     }
-    case "derivedRule":
+    case "derivedRule": {
       // Placeholder entities ($this/$outer/$a/$b) are resolved at compile time, not here —
       // checking them against the canonical vocabulary would false-positive-reject every
-      // derivedRule. Only check the rule's own thenConstraints' variables recursively.
-      return constraint.thenConstraints.reduce(
+      // derivedRule. Check the rule's own thenConstraints' variables recursively, AND (found
+      // in review, PR #28) the condition's own variable references — comparison.variable and
+      // expressionComparison.expression's variableRef nodes reference real declared variables
+      // just as much as a thenConstraint does, and previously slipped past this filter
+      // entirely, surviving only to fail downstream in compile() with a less specific error.
+      const thenRefs = constraint.thenConstraints.reduce(
         (acc, c) => {
           const r = referencedIds(c)
           return { entities: [...acc.entities, ...r.entities.filter((e) => !e.startsWith("$"))], variables: [...acc.variables, ...r.variables] }
         },
         { entities: [] as string[], variables: [] as string[] },
       )
+      const conditionRefs = referencedConditionIds(constraint.condition)
+      return {
+        entities: [...thenRefs.entities, ...conditionRefs.entities.filter((e) => !e.startsWith("$"))],
+        variables: [...thenRefs.variables, ...conditionRefs.variables],
+      }
+    }
   }
+}
+
+function walkArithmeticExpression(expr: ArithmeticExpression, vars: string[], entities: string[]): void {
+  if (expr.kind === "variableRef") {
+    vars.push(expr.variable)
+    if (expr.entity !== null) entities.push(expr.entity)
+  } else if (expr.kind === "binaryOp") {
+    for (const operand of expr.operands) walkArithmeticExpression(operand, vars, entities)
+  }
+}
+
+/** Variable/entity references inside a derivedRule's OWN condition — "relation" conditions
+ * reference a relation NAME, not a declared variable, so they contribute nothing here;
+ * "comparison" references one declared variable; "expressionComparison" and "and" (over
+ * comparison/expressionComparison members) may reference several, via a full
+ * ArithmeticExpression walk for the expressionComparison case. */
+function referencedConditionIds(condition: DerivedCondition): { readonly entities: readonly string[]; readonly variables: readonly string[] } {
+  const vars: string[] = []
+  const entities: string[] = []
+  const visit = (c: DerivedCondition): void => {
+    switch (c.kind) {
+      case "relation":
+        return
+      case "comparison":
+        vars.push(c.variable)
+        return
+      case "expressionComparison":
+        walkArithmeticExpression(c.expression, vars, entities)
+        return
+      case "and":
+        for (const inner of c.conditions) visit(inner)
+        return
+    }
+  }
+  visit(condition)
+  return { entities, variables: vars }
 }
 
 /**

@@ -18,8 +18,8 @@ const { vocabulary } = reconcile(proposals)
 const entityIds = vocabulary.entities.map((e) => e.id)
 
 const constraints: ExtractedConstraint[] = [
-  { kind: "allDifferent", variable: "arrival-order-position" },
-  ...entityIds.map((id, i): ExtractedConstraint => ({ kind: "assignment", entity: id, variable: "arrival-order-position", value: String(i + 1) })),
+  { kind: "allDifferent", variable: "arrival_order_position" },
+  ...entityIds.map((id, i): ExtractedConstraint => ({ kind: "assignment", entity: id, variable: "arrival_order_position", value: String(i + 1) })),
 ]
 
 const csp = { entities: vocabulary.entities, domains: vocabulary.domains, constraints }

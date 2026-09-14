@@ -235,11 +235,78 @@ Their content is already fully captured in prose above; removed rather than kept
 retaining only the final, full-sample run (`results/comparison-2026-09-14T15-37-27-397Z.json`,
 cited throughout §5) that this spike's actual Findings are drawn from.
 
+**2026-09-15 — PR #28 review found five more real issues, all fixed:**
+1. **`filter.ts` only checked `derivedRule.thenConstraints`, missing the rule's own condition.**
+   `comparison.variable` and `expressionComparison.expression`'s variable references (and,
+   transitively, `and`'s nested conditions) could reference an undeclared variable and still
+   pass this filter, failing later — inside `compile()` — with a less specific error. Added a
+   recursive walk over `DerivedCondition` (skipping `relation`'s fact name, which isn't a
+   variable reference) alongside the existing `thenConstraints` walk.
+2. **A failed vocabulary-proposal call was silently indistinguishable from a legitimate
+   vocabulary-free clue.** `propose-vocabulary.ts` now records `{reason, detail}` on failure
+   instead of collapsing straight to empty arrays; `vocabulary-reconciled-extract.ts` surfaces
+   every failure via a new `failedProposals` field; `run-comparison.ts` grades a puzzle with any
+   as `UNRELIABLE` rather than silently proceeding. A live spot-check found this had real
+   consequences already recorded — see §5's caveat.
+3. **`sanitizeToken` diverged from `compile.ts`'s own `sanitizeIdentifier`** in exactly the way
+   this module exists to prevent: it kept hyphens as a distinct allowed character and collapsed
+   RUNS of disallowed characters, while `sanitizeIdentifier` converts hyphens (and everything
+   else disallowed) to `_` one at a time. Two proposal strings differing only in hyphen-vs-
+   underscore punctuation (`"a-b"` / `"a_b"`) stayed distinct here, passing this module's own
+   collision checks, only to both resolve to the identical MiniZinc identifier once `compile.ts`
+   processed them for real. Switched to calling `sanitizeIdentifier` directly (imported from
+   `compile.ts`), with `normalize()`'s lowercase-fold kept as a deliberate additional layer on
+   top (case-insensitive bucketing was an explicit design choice, and only ever merges MORE
+   aggressively than the compiler's own case-sensitive collision behavior requires). Also found,
+   while verifying this: three DERIVED identifiers (the collision-disambiguation suffix, the
+   synthesized positional-domain name, the entity-type/value-collision rename) concatenated a
+   raw literal suffix onto an already-sanitized string WITHOUT re-sanitizing the combined
+   result — the same class of bug, reintroduced downstream of the fix. Fixed by wrapping each
+   final concatenated string in `sanitizeToken()` again. Added
+   `smoke-test-punctuation-equivalence.ts` reproducing the exact reported shape.
+4. **The SPIKE.md claim that `reconcile.ts` reuses `clue-schema.ts`'s exported
+   `entitiesOfDomain` didn't match the code** — a nit, but a real doc/implementation mismatch:
+   `resolveDomains`'s `entitiesOfType` had its own parallel `normalize()`-based filter instead of
+   calling the shared predicate. Now genuinely calls `entitiesOfDomain`, wrapped in a small
+   adapter (`entitiesOfDomain` expects a full `Vocabulary`/`Domain` pair; `entitiesOfType` only
+   has a type string and a plain entity list mid-construction) — same behavior, but no longer a
+   second implementation that could silently drift from the first.
+5. **`run-comparison.ts`'s baseline type declaration didn't match the stored JSON shape** (missing
+   the top-level `verdict`/`detail` fields, though `grade.verdict` — the field actually read and
+   displayed — genuinely is present and correct; verified directly against the stored file
+   before changing anything, since the review comment's specific symptom claim ("prints `?` for
+   every available baseline grade") didn't reproduce against this session's own console output).
+   Tightened the type to declare the full actual shape and simplified the read to plain dot
+   access.
+
+All fixes verified via existing + new offline smoke tests (14 total, all passing) plus one live
+single-puzzle check (PZL-0004) confirming no new provider-schema rejection and that
+`failedProposals` now surfaces real call failures. No further full-sample billed re-run was
+performed as part of this fix pass — see §5's caveat for what that means for this run's own
+recorded numbers.
+
 ## 5. Findings
 
 Full 14-puzzle billed run: `results/comparison-2026-09-14T15-37-27-397Z.json`. One sample per
 puzzle (SPIKE-005/SPIKE-008's own caveat applies equally — individual cells are suggestive, not
 conclusive).
+
+**A caveat on the numbers below, found in PR #28 review and confirmed live after this run was
+already recorded**: a failed vocabulary-proposal tool call (prose reply, invalid JSON,
+structural rejection) was, at the time of this run, silently collapsed into the same
+empty-arrays shape a legitimate vocabulary-free clue produces (fixed post-`main`-merge — see the
+PR's review-response commit). A live spot-check on PZL-0004 after the fix
+(`results/comparison-2026-09-14T16-06-18-104Z.json`) found **4 of its
+clues' vocabulary proposals had actually failed** yet the puzzle still reached `SOLVE_UNIQUE` in
+this recorded run — meaning the assembled CSP was silently missing real content from 4 clues and
+happened to still solve to something, with no record that anything went wrong. This means the
+9/14 gradable-state figure below is a measurement taken WITHOUT that visibility, and could be
+optimistic (a puzzle credited as gradable might have gotten there on an incomplete CSP) or
+pessimistic (a puzzle marked ungradable might have been salvageable had a failed proposal been
+retried) in ways this recorded run cannot distinguish. Re-running the full sample with the fix
+in place is the only way to know the corrected numbers; not done in this pass (no fresh billed
+re-run was requested) — flagged here rather than silently left inconsistent with what §4/§6
+otherwise imply about this run's reliability.
 
 ### 5.1 Aggregate: a small net improvement over plain `per-clue`, at comparable cost
 

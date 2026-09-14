@@ -21,8 +21,8 @@ console.log(JSON.stringify(result0010.vocabulary, null, 1))
 
 const vehicleEntities = result0010.vocabulary.entities.filter((e) => e.type === "vehicle")
 if (vehicleEntities.length !== 3) throw new Error(`expected 3 synthesized vehicle entities, got ${vehicleEntities.length}`)
-const positionalDomain0010 = result0010.vocabulary.domains.find((d) => d.variable === "arrival-order-position")
-if (positionalDomain0010 === undefined) throw new Error("expected a synthesized arrival-order-position domain")
+const positionalDomain0010 = result0010.vocabulary.domains.find((d) => d.variable === "arrival_order_position")
+if (positionalDomain0010 === undefined) throw new Error("expected a synthesized arrival_order_position domain")
 if (positionalDomain0010.values.length !== 3) throw new Error(`expected 3 positional values, got ${positionalDomain0010.values.length}`)
 console.log("PZL-0010-like: entity-indexed ordering domain correctly synthesized")
 
@@ -42,8 +42,8 @@ const result0001 = reconcile(pzl0001)
 console.log("\n=== PZL-0001-like ===")
 console.log(JSON.stringify(result0001.vocabulary, null, 1))
 
-const positionalDomain0001 = result0001.vocabulary.domains.find((d) => d.variable === "adjacency-check-position")
-if (positionalDomain0001 === undefined) throw new Error("expected a synthesized adjacency-check-position domain")
+const positionalDomain0001 = result0001.vocabulary.domains.find((d) => d.variable === "adjacency_check_position")
+if (positionalDomain0001 === undefined) throw new Error("expected a synthesized adjacency_check_position domain")
 // Entities h_chesterfields/h_fox already existed (2 houses) — the synthesized positional domain
 // should index THOSE, not invent new ones, since entitiesOfType("house") was non-empty.
 if (positionalDomain0001.values.length !== 2) throw new Error(`expected positional domain sized to the 2 already-named houses, got ${positionalDomain0001.values.length}`)

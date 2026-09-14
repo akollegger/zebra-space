@@ -3,7 +3,8 @@
 // call (an explicit scope decision for this pass — see SPIKE.md §2/§4: near-duplicate/fuzzy
 // merging is deferred, not built here).
 
-import type { Vocabulary } from "../../../SPIKE-008-per-clue-tool-call-decomposition/scripts/lib/clue-schema.ts"
+import { entitiesOfDomain, type Vocabulary } from "../../../SPIKE-008-per-clue-tool-call-decomposition/scripts/lib/clue-schema.ts"
+import { sanitizeIdentifier } from "../../../../../src/compiler/compile.ts"
 import type { VocabularyProposal } from "./propose-vocabulary.ts"
 
 function normalize(s: string): string {
@@ -11,19 +12,30 @@ function normalize(s: string): string {
 }
 
 /**
- * Turns free-text model output into a safe identifier fragment: OpenAI's real function-calling
- * validator requires tool NAMES to match `^[a-zA-Z0-9_-]+$` (found live, PR review pass —
+ * Turns free-text model output into a safe identifier: OpenAI's real function-calling validator
+ * requires tool NAMES to match `^[a-zA-Z0-9_-]+$` (found live, PR review pass —
  * "assignment__<domain.variable>"/"linkedAttributes__<type>" tool names, unchanged from
  * SPIKE-008, are built directly from whatever this module emits as domain.variable/entity.type,
- * so those fields must already be safe identifiers, not raw model text). Collapses any run of
- * disallowed characters (spaces, punctuation) to a single hyphen and trims leading/trailing
- * hyphens — applied only where a string becomes part of an IDENTIFIER (domain variable name,
- * entity type, entity id), never to VALUES (domain.values, which flow through as plain data,
- * not identifiers).
+ * so those fields must already be safe identifiers, not raw model text).
+ *
+ * Reuses `compile.ts`'s own `sanitizeIdentifier` directly rather than a hand-rolled equivalent
+ * — found in review (PR #28): an earlier version of this function collapsed disallowed
+ * characters into a HYPHEN and kept it as a distinct allowed character, but `sanitizeIdentifier`
+ * converts every disallowed character (hyphens included) to `_` one at a time. Two proposal
+ * strings differing only in hyphen-vs-underscore punctuation (`"a-b"` / `"a_b"`) therefore
+ * stayed distinct under the old hand-rolled version, passing this module's own collision checks,
+ * only to BOTH sanitize to the identical MiniZinc identifier once `compile.ts` processed them
+ * for real — reproducing the exact class of bug this function exists to prevent. Calling the
+ * real compiler's transform directly makes that impossible by construction, and additionally
+ * inherits its leading-character and MiniZinc-reserved-word handling for free (guarantees this
+ * hand-rolled version never had). `normalize()`'s lowercase-fold is applied FIRST and is a
+ * deliberate additional layer on top — bucketing/collision-detection should treat case
+ * differences as the same concept (the project's own explicit choice), which is strictly safe
+ * to add on top of the compiler's own (case-sensitive) transform: it only ever merges MORE
+ * aggressively than compile.ts's own collision behavior requires, never less.
  */
 function sanitizeToken(s: string): string {
-  const cleaned = normalize(s).replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "")
-  return cleaned.length > 0 ? cleaned : "x"
+  return sanitizeIdentifier(normalize(s))
 }
 
 export interface ReconciledEntity {
@@ -158,7 +170,23 @@ function resolveDomains(candidates: readonly DomainCandidate[], entities: readon
   const domains: ReconciledDomain[] = []
   let workingEntities = [...entities]
 
-  const entitiesOfType = (type: string) => workingEntities.filter((e) => normalize(e.type) === normalize(type))
+  // Genuinely reuses clue-schema.ts's exported entitiesOfDomain (not a parallel
+  // reimplementation — found in review, PR #28: an earlier version had its own local
+  // normalize()-based filter here that only claimed, in prose, to reuse the shared predicate).
+  // entitiesOfDomain's signature expects a full Vocabulary + Domain; workingEntities is a plain
+  // ReconciledEntity[] mid-construction, so this wraps it in a minimal Vocabulary-shaped value
+  // (empty domains — entitiesOfDomain only ever reads .entities) and a Domain-shaped value
+  // carrying just the entityType being queried, then maps the returned ids back to full
+  // ReconciledEntity objects so every existing caller's shape (.length, iteration) is unchanged.
+  const entitiesOfType = (type: string): readonly ReconciledEntity[] => {
+    const ids = new Set(
+      entitiesOfDomain(
+        { entities: workingEntities.map((e) => ({ id: e.id, type: e.type })), domains: [] },
+        { variable: "", entityType: type, values: [] },
+      ),
+    )
+    return workingEntities.filter((e) => ids.has(e.id))
+  }
 
   // Found live (PZL-0010, 2026-09-15): mergeDomainMentions buckets by (attributeName,
   // entityType), so the SAME attribute name proposed across DIFFERENT entity types (a model
@@ -178,8 +206,14 @@ function resolveDomains(candidates: readonly DomainCandidate[], entities: readon
 
   for (const candidate of candidates) {
     const collides = (typesByAttribute.get(candidate.attributeNameGuess)?.size ?? 0) > 1
+    // sanitizeToken() again on the FINAL concatenated string, not just its already-sanitized
+    // parts — found in review (PR #28, the same root cause as the sanitizeIdentifier switch
+    // above): joining two already-safe tokens with a literal "-" reintroduces a character
+    // compile.ts's own transform would later collapse to "_", so two candidates that only
+    // differ in whether THIS join produced a hyphen or an underscore could still both resolve
+    // to the identical MiniZinc identifier once compile.ts got to them.
     domains.push({
-      variable: collides ? `${candidate.attributeNameGuess}-${candidate.entityTypeGuess}` : candidate.attributeNameGuess,
+      variable: collides ? sanitizeToken(`${candidate.attributeNameGuess}-${candidate.entityTypeGuess}`) : candidate.attributeNameGuess,
       entityType: candidate.entityTypeGuess,
       values: [...candidate.values],
       clueIndices: candidate.clueIndices,
@@ -216,8 +250,8 @@ function resolveDomains(candidates: readonly DomainCandidate[], entities: readon
     }
 
     const collides = (typesByAttribute.get(candidate.attributeNameGuess)?.size ?? 0) > 1
-    const baseVariable = collides ? `${candidate.attributeNameGuess}-${candidate.entityTypeGuess}` : candidate.attributeNameGuess
-    const positionalVariable = `${baseVariable}-position`
+    const baseVariable = collides ? sanitizeToken(`${candidate.attributeNameGuess}-${candidate.entityTypeGuess}`) : candidate.attributeNameGuess
+    const positionalVariable = sanitizeToken(`${baseVariable}-position`)
     if (!domains.some((d) => d.variable === positionalVariable)) {
       domains.push({
         variable: positionalVariable,
@@ -251,7 +285,7 @@ function renameCollidingEntityTypes(entities: readonly ReconciledEntity[], domai
   for (const entity of entities) {
     const safeType = sanitizeToken(entity.type)
     if (allValues.has(safeType) && !renamed.has(entity.type)) {
-      renamed.set(entity.type, `${entity.type}-type`)
+      renamed.set(entity.type, sanitizeToken(`${entity.type}-type`))
     }
   }
   if (renamed.size === 0) return { entities: [...entities], domains: [...domains] }

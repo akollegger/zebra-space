@@ -51,6 +51,14 @@ export interface VocabularyReconciledExtractionResult {
   readonly decomposable: boolean
   readonly proposals: readonly VocabularyProposal[]
   readonly droppedConstraints: readonly { readonly constraint: TaggedConstraint; readonly reason: string }[]
+  /**
+   * Non-empty when one or more clues' vocabulary-proposal call itself failed (prose, invalid
+   * JSON, structural rejection) rather than legitimately proposing nothing — found in review
+   * (PR #28): a caller (run-comparison.ts) must treat a puzzle with any of these as
+   * unreliable/ungradable, not silently compile and grade a CSP that's missing that clue's real
+   * vocabulary contribution with no record anything went wrong.
+   */
+  readonly failedProposals: readonly { readonly clueIndex: number; readonly reason: string; readonly detail: string }[]
 }
 
 export async function extractWithReconciliation(prose: string, model: string): Promise<VocabularyReconciledExtractionResult> {
@@ -110,6 +118,8 @@ export async function extractWithReconciliation(prose: string, model: string): P
   // Phase 4: filter.
   const { kept, dropped } = filterConstraints(tagged, vocabulary, survivingClueIndices)
 
+  const failedProposals = proposals.flatMap((p) => (p.failed !== undefined ? [{ clueIndex: p.clueIndex, reason: p.failed.reason, detail: p.failed.detail }] : []))
+
   return {
     extractedCsp: { entities: vocabulary.entities, domains: vocabulary.domains, constraints: kept.map((t) => t.constraint) },
     model,
@@ -118,5 +128,6 @@ export async function extractWithReconciliation(prose: string, model: string): P
     decomposable: split.decomposable,
     proposals,
     droppedConstraints: dropped,
+    failedProposals,
   }
 }
