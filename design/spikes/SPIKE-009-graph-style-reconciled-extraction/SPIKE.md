@@ -227,6 +227,14 @@ retries: **PZL-0001 moved from `COMPILE_FAILED` (ungraded) all the way to `SOLVE
 reached for this puzzle.** PZL-0010 still doesn't reach a gradable state, blocked by finding 4
 above. Full 14-puzzle billed run launched next.
 
+**2026-09-15 — trimmed superseded raw result files from the PR for reviewability.** The three
+intermediate dry-run iterations (single- or two-puzzle runs, each superseded by the next as
+bugs were found and fixed — see the numbered fixes above) pushed this PR's diff large enough
+that the repo's automated review bot failed outright ("the model output limit was reached").
+Their content is already fully captured in prose above; removed rather than kept as raw JSON,
+retaining only the final, full-sample run (`results/comparison-2026-09-14T15-37-27-397Z.json`,
+cited throughout §5) that this spike's actual Findings are drawn from.
+
 ## 5. Findings
 
 Full 14-puzzle billed run: `results/comparison-2026-09-14T15-37-27-397Z.json`. One sample per
