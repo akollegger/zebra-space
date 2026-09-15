@@ -1,7 +1,7 @@
 ---
 id: SPIKE-013
 title: Isolating Vocabulary Construction — Self-Consistency, Correctness, and Two Library Candidates
-status: in-progress
+status: done
 rfcs: [RFC-003]
 created: 2026-09-15
 ---
@@ -115,7 +115,10 @@ shape directly, not a downstream solve outcome):
    a whole still needs resampling). Records, per sample: entity count, domain count + names,
    entity-axis/domain-values split, and (for the determinate subset) the `lib/score.ts`
    correctness verdict. Puzzle sample: the same 14 puzzles SPIKE-008 through SPIKE-012 used,
-   with correctness scored only against the determinate ~11.
+   with correctness scored only against the determinate 9 (confirmed by reading each entry's
+   actual `outcome` field, nested or top-level, in `eval/answer-keys.json`: PZL-0022 is a COP,
+   PZL-0028 ambiguous, PZL-0033 subjective, PZL-0015/0018 non-problem — 5 of 14, not the ~11
+   this Method section originally estimated before checking).
 
 **Verification order**, mirroring every prior spike in this line's own spend discipline: (1)
 offline-only — confirm `wink-nlp` chunking and `@huggingface/transformers` embedding+clustering
@@ -202,3 +205,157 @@ paper over) — the real, calibrated finding is that this embedding model's simi
 separates spelling/near-synonym variants cleanly from unrelated words, but sits genuinely
 ambiguous on more distant conceptual paraphrases, which is itself useful information for anyone
 tuning this threshold later, not a bug to silently fix by lowering it to fit one example.
+
+**2026-09-15 — first dry-run crashed the whole sweep on a transient OpenRouter 504; fixed with
+retry + incremental writes (see the standalone commit for detail), then the full `n=5×14×3`
+sweep completed cleanly: 210 puzzle-reps × 3 variants, $0.0623 total, 0 unrecovered errors.**
+
+## 5. Findings
+
+Raw: `results/comparison-2026-09-15T13-45-00-734Z.json`. 14 puzzles × 5 reps × 3 variants (9 of
+the 14 have ground truth — PZL-0022/0028/0033/0015/0018 are scored for self-consistency only,
+per §1's explicit scope).
+
+### 5.1 The collapsed "structurally correct" number is real but misleading on its own — split it
+
+| Variant | Structurally correct (both) | Entity-axis size matches | Domain full-coverage | Domain-slot coverage |
+|---|---|---|---|---|
+| `llm-only` | 0/45 | 7/45 (16%) | 11/45 (24%) | 28/80 (35%) |
+| `chunked-inventory` | 2/45 | 8/45 (18%) | 9/45 (20%) | 24/80 (30%) |
+| `embedded-group` | 1/45 | 11/45 (24%) | 1/45 (2%) | 6/80 (8%) |
+
+A flat "0/45" for the baseline reads as total failure. It isn't — per-puzzle inspection (PZL-0002,
+the simplest puzzle in the sample) shows `llm-only` correctly identified BOTH domains
+(`color`/`animal`, exact names, exact value sets) in 3 of its 5 reps, and got the right kind of
+vocabulary in every rep. What sank `structurallyCorrect` there specifically was entity-AXIS SIZE
+— never domain content. `domainCoverage` (35% of individual expected domain-slots found, across
+all 9 puzzles) is a fairer single number for "does this identify the right categories," and it's
+still low, but the two failure modes below explain why, concretely — a very different picture
+than "vocabulary construction just doesn't work."
+
+### 5.2 A new, concrete failure mode: referring-expression entity inflation
+
+PZL-0002's `llm-only` reps repeatedly declared 6-7 `house`-typed entities instead of 3 — not
+because the model invented houses, but because referring expressions actually mentioned in the
+prose ("the Red House", "the middle house", "the Blue House") got added as ADDITIONAL entities
+alongside the three positional ones (`v1`/`v2`/`v3`), rather than recognized as descriptions OF
+one of those same three houses. This is a distinct problem from this session's earlier
+"coreference" conversation (§1): that conversation correctly concluded ENTITY BINDING ("which
+house is red") doesn't need resolving until solve time, and the constraint layer (`derivedRule`)
+already handles it without touching vocabulary. This is upstream of that — `inventory` correctly
+lists "the Red House" as A LITERAL MENTION (it does appear in the prose), but nothing in `group`
+recognizes that a compound span combining a domain word ("Red") with the axis's own generic noun
+("House") is a REFERENCE to an already-counted entity, not a new one. The result is entity-count
+inflation even when domain identification itself is working (§5.1's PZL-0002 case). PZL-0004 and
+PZL-0012 show the identical pattern (0/5 and 0/5 entity-axis matches despite 60-67% domain
+coverage) — this is a general failure mode across the sample, not a PZL-0002 quirk.
+
+### 5.3 Domain-naming diversity is wider than this spike's ground truth anticipated
+
+PZL-0003's `move` domain came back named `game_items` or `game_tools` across different reps —
+correct in content (`Paper`/`Rock`/`Scissors`), wrong by every name this spike's own
+`ground-truth.ts` anticipated, and NOT close enough for the 0.6 embedding threshold to bridge
+either (a gap consistent with §4's own calibration finding that this embedding model separates
+near-synonyms cleanly but sits ambiguous on more distant paraphrases). This is best read as a
+limitation of this spike's own ground truth (a narrow alias list) exposing a genuinely wider
+naming diversity than assumed, not a pipeline defect — and it's independently confirmed without
+any ground truth at all by §5.5's self-consistency numbers.
+
+### 5.4 A genuinely new failure class this isolation surfaced: procedural-rule text mistaken for domain values
+
+PZL-0010 (Four-Way Stop)'s `llm-only` reps repeatedly produced domains like `rules` or `traffic`
+whose "values" are sentence fragments — `"If two cars"`, `"right-of-way"`, `"rotates
+clockwise"` — not attribute values at all. This puzzle's clues state PROCEDURAL RULES (who
+yields to whom), not just attribute facts, and nothing in `group`/`shape` distinguishes "this is
+a fact about a category" from "this is a conditional rule that shouldn't become a category at
+all." This is a genuinely new problem, only visible because this spike isolated vocabulary
+construction from constraint extraction — none of SPIKE-008 through SPIKE-012 could have
+surfaced it, since a whole-pipeline run's downstream constraint-typing failure would have masked
+where exactly things went wrong.
+
+### 5.5 Self-consistency, independent of any ground truth, confirms vocabulary-stage non-determinism directly
+
+| Variant | Entity-axis-size agreement (mode / n) | Domain-name-set agreement (mode / n) |
+|---|---|---|
+| `llm-only` | 53% | 36% |
+| `chunked-inventory` | 64% | 31% |
+| `embedded-group` | 60% | 44% |
+
+Averaged across all 14 puzzles (n=5 reps each), NOT requiring ground truth — this measures
+whether independent runs of the IDENTICAL prompt on the IDENTICAL puzzle agree with each other
+at all. They don't, most of the time: the most common answer only shows up in roughly half of
+`llm-only`'s runs for entity-axis size, and little more than a third for the domain-name set.
+This is the cleanest, most direct confirmation yet of SPIKE-004's original non-determinism
+finding, isolated to exactly the stage SPIKE-012 §6 recommended isolating — and it holds even
+under the two library-based variants, which only replace ONE of the two remaining LLM calls
+each.
+
+### 5.6 The two library candidates: one clear win, one clear (but informative) miss
+
+**`chunked-inventory` (wink-nlp, zero LLM cost for the inventory stage) performs on par with, or
+marginally better than, `llm-only` on every measure** (18% vs. 16% entity-axis match, 2/45 vs.
+0/45 fully correct) despite its own raw inventory being noisier (§4's dry-run finding — narrative
+words like "houses"/"unique" leak through the POS filter). `group`'s LLM call is apparently
+robust enough to filter that noise out about as well as it filters its own LLM-inventory's
+different noise. This is a genuine, evidence-backed win: a free, fully local, zero-network span
+enumerator is a viable substitute for an LLM call here, not just a cheaper-but-worse one.
+
+**`embedded-group` (local embeddings + greedy single-linkage threshold clustering) is clearly
+worse on domain identification** (8% slot coverage vs. 35% for `llm-only`, 2% full-coverage vs.
+24%) despite slightly BETTER entity-axis agreement. The embedding SIGNAL itself is real and
+well-separated (§4's direct calibration: 0.66-0.87 within-category vs. 0.28-0.41 cross-category
+on an 8-word synthetic example) — what doesn't generalize is the naive clustering ALGORITHM
+(single fixed threshold, greedy single-linkage merge) across this catalog's actual diversity of
+vocabulary sizes and semantic distances. This is an honest negative result about ONE specific
+mechanism, not evidence that embeddings can't help this stage at all.
+
+## 6. Conclusion
+
+**Isolating vocabulary construction confirms, more directly than any prior spike in this line,
+that it is itself the dominant source of the non-determinism SPIKE-004 first found** — not
+merely inherited from downstream constraint-extraction complexity. §5.5's self-consistency
+numbers make this the cleanest evidence yet: independent runs of the IDENTICAL prompt on the
+IDENTICAL puzzle agree with themselves only about half the time on entity-axis size and roughly
+a third of the time on domain naming, with no ground truth or downstream pipeline involved at
+all. SPIKE-012 §6's recommendation to isolate this stage as the sole independent variable was
+correct — this is where the instability actually lives.
+
+**But "vocabulary construction is unreliable" is not the same claim as "vocabulary construction
+identifies the wrong categories."** §5.1's split shows domain identification itself partially
+works (24-35% coverage, and qualitatively correct in a real majority of PZL-0002's own reps) —
+what actually breaks structural correctness are two distinct, concrete, nameable failure modes
+newly diagnosed by this spike: **referring-expression entity inflation** (§5.2 — a compound span
+like "the Red House" gets counted as a new entity instead of recognized as a reference to one
+already counted) and, on procedural puzzles specifically, **rule-text mistaken for domain values**
+(§5.4). Both are narrow enough to be addressed directly in `group.ts`/`shape.ts`'s own prompts —
+neither requires abandoning the architecture.
+
+**On the two library candidates**: `chunked-inventory` (wink-nlp) is a confirmed, free win —
+performs at least as well as the LLM inventory call it replaces, at zero cost and zero network,
+a legitimate answer to this session's own tool-survey question. `embedded-group`'s specific
+mechanism (fixed-threshold greedy clustering) is a confirmed miss on domain coverage, but the
+underlying embedding signal is real (directly measured, not assumed) — the failure is in the
+clustering ALGORITHM, not the representation, so this doesn't settle whether embeddings could
+help `group`'s job with a better mechanism.
+
+**Recommended next steps, in order**:
+1. Fix referring-expression entity inflation (§5.2) directly in `group.ts`'s prompt — likely the
+   single highest-leverage, most narrowly-scoped fix available: explicitly instruct that a
+   compound mention combining a domain-value word with the entity axis's own generic noun (e.g.
+   "Red House" when "house" is already a group) describes an EXISTING entity, not a new one.
+   Cheap to test in isolation against this same 9-puzzle ground truth before touching anything
+   else.
+2. Do not pursue `embedded-group`'s current mechanism further without first trying a materially
+   different clustering approach (e.g. a similarity graph + connected components, less prone to
+   single-linkage's chaining failure mode, or a puzzle-scale-aware threshold instead of one fixed
+   constant) — the embedding signal earns another attempt; greedy single-linkage at a fixed
+   threshold does not.
+3. PZL-0010's rule-vs-value confusion (§5.4) is a genuinely new failure class worth its own
+   follow-up once the higher-leverage fix in (1) is tried — likely needs `shape`'s own
+   classification to recognize and exclude procedural/conditional clue content, not just
+   entity-axis-vs-domain-values.
+4. Any future re-measurement of this stage should keep reporting entity-axis-match and
+   domain-coverage SEPARATELY (§5.1), not just a single collapsed correctness flag — this spike's
+   own headline number would have been badly misleading reported alone.
+
+Status: done.
