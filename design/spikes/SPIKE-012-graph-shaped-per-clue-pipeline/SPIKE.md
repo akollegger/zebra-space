@@ -1,7 +1,7 @@
 ---
 id: SPIKE-012
 title: Graph-Shaped Per-Clue Pipeline (Inventory → Group → Shape → Template-Typed Clues → Oracle Repair)
-status: in-progress
+status: done
 rfcs: [RFC-003]
 created: 2026-09-15
 ---
@@ -241,3 +241,127 @@ Re-ran the same dry-run after the shape.ts fix: PZL-0004 now reaches `SOLVE_MULT
 on both variants (was `COMPILE_FAILED`); PZL-0001 unchanged (the two findings above stand, both
 already understood and explicitly deferred). `pnpm test`/lint/offline smoke tests all re-verified
 clean after the fix. Proceeding to the full `n=3×14-puzzle×2-variant` billed sweep next.
+
+**2026-09-15 — full sweep complete.** `n=3` reps × 14 puzzles × 2 variants (`graph-pipeline`,
+`graph-pipeline+oracle-repair`), `openai/gpt-4o-mini`. Total spend: **$0.1227** — well under the
+$1.00-$1.50 estimate. Raw:
+`results/comparison-2026-09-15T12-29-30-944Z.json`. See §5/§6.
+
+## 5. Findings
+
+### 5.1 Headline: `SOLVE_UNIQUE` moved off zero for the first time in four spikes — `MATCH` did not
+
+| Variant | `SOLVE_UNIQUE` | `MATCH` | Gradable (not `COMPILE_FAILED`/`SOLVE_ERROR`) | Cost (14×3) | Calls |
+|---|---|---|---|---|---|
+| `full-critic` (baseline, single sample, reused from SPIKE-011) | 11/14 (79%) | 2/14 (14%) | 13/14 | ~$2.06 (1 rep) | 168 |
+| `graph-pipeline` | **6/42 (14%)** | **0/42 (0%)** | 28/42 (67%) | $0.0564 | 530 |
+| `graph-pipeline+oracle-repair` | **6/42 (14%)** | **0/42 (0%)** | 32/42 (76%) | $0.0663 | 586 |
+
+This is the first per-clue-style architecture across SPIKE-008/009/010/011/012 to reach
+`SOLVE_UNIQUE` at all — every prior per-clue variant, in every prior spike, scored exactly 0/14.
+Gradable rate (67-76%) is also the highest yet for a per-clue variant, exceeding SPIKE-011's
+post-fix `per-clue`'s 8/14 (57%) and `per-clue+reconcile`'s 9/14 (64%). Cost stays two orders of
+magnitude below `full-critic` even at 3x the sampling (n=3 here vs. n=1 for the baseline).
+
+**But `MATCH` is still exactly 0/42** — not one single genuinely correct extraction on a
+determinate puzzle, across 84 total attempts (both variants combined). SPIKE-011 §5.1's own
+warning about conflating "gradable" with "correct" applies with full force to this spike's own
+`SOLVE_UNIQUE` number too: reaching a uniquely-solvable model is necessary but not sufficient,
+and this design's `SOLVE_UNIQUE` gains do not convert into `MATCH` gains anywhere in this sample.
+
+### 5.2 Every `SOLVE_UNIQUE` lands on the SAME non-MATCH class `full-critic` also gets — never a puzzle `full-critic` gets wrong
+
+Per-puzzle detail (raw JSON has all 3 reps per cell):
+
+| Puzzle | `graph-pipeline` `SOLVE_UNIQUE` rate | Grade when unique | `full-critic` baseline |
+|---|---|---|---|
+| PZL-0022 (COP) | 2/3 | `FEASIBLE_ONLY` (same class as baseline) | `SOLVE_MULTIPLY_SATISFIABLE`/`FEASIBLE_ONLY` |
+| PZL-0015 (non-problem, no decline mechanism) | 3/3 | `UNDECLINED` (same class as baseline) | `SOLVE_UNIQUE`/`UNDECLINED` |
+| PZL-0003 (Rock Paper Scissors) | 1/3 | `MISMATCH` (same class as baseline) | `SOLVE_UNIQUE`/`MISMATCH` |
+| PZL-0007 (SEND+MORE=MONEY, oracle-repair only) | 0/3 → 1/3 with repair | `MISMATCH` (same class as baseline) | `SOLVE_UNIQUE`/`MISMATCH` |
+
+Every single `SOLVE_UNIQUE` this design reaches lands on the exact same outcome class
+`full-critic` already reaches for that same puzzle — `FEASIBLE_ONLY` for the one COP puzzle,
+`UNDECLINED` for the one non-problem puzzle with no decline mechanism, `MISMATCH` for two
+determinate-but-wrong puzzles. **In no case does this design solve correctly a puzzle
+`full-critic` gets wrong, or reach `SOLVE_UNIQUE` at all on a puzzle `full-critic` doesn't
+already reach it on.** Worse, on the two puzzles where `full-critic` achieves a genuine `MATCH`
+(PZL-0004, PZL-0011), this design scores **0/3 `SOLVE_UNIQUE` on both, across both variants** —
+strictly regressing on exactly the puzzles that matter most for this comparison. PZL-0004's
+failure is the shape-misclassification family already documented in §4 (partially mitigated, not
+eliminated, by the retry fix — 0/3 `SOLVE_UNIQUE` even after it); PZL-0011 (Loan Review, the
+chained-derived-rule puzzle RFC-003 §7.6 already flagged as a boundary case) fails with
+`COMPILE_FAILED`/`SOLVE_UNSATISFIABLE`/`SOLVE_ERROR` across its 6 attempts, never gradable at all.
+
+### 5.3 PZL-0001 (the hardest, largest catalog puzzle) never once reached a gradable state — 0/6 across both variants, all 6 attempts `COMPILE_FAILED`
+
+Confirms §4's dry-run finding was not a one-off: all three `graph-pipeline` reps and all three
+`graph-pipeline+oracle-repair` reps failed to compile, `oracle-repair`'s 0 repair rounds on every
+attempt confirming the same `linkedAttributes`-arity blind spot named in §4 recurs consistently
+on this specific puzzle, not just once.
+
+### 5.4 `oracle-repair` raises gradable rate but not `SOLVE_UNIQUE`/`MATCH`
+
+`graph-pipeline+oracle-repair`'s gradable rate (76%) exceeds plain `graph-pipeline`'s (67%) — repair
+rounds fired most heavily on PZL-0002, PZL-0018, PZL-0010 (2 rounds each, every rep) — but
+`SOLVE_UNIQUE` stayed identical (6/42 both) and `MATCH` stayed at 0 for both. This mirrors
+SPIKE-008 §5.4's own finding about the grounded-revision critic (recovers some puzzles from an
+ungraded failure into a graded-but-still-wrong state, without moving genuine correctness) —
+the SAME critic module (`groundedFinding`, reused unchanged here), doing the same thing, on a
+structurally different pipeline.
+
+## 6. Conclusion
+
+**Real, first-of-its-kind progress on one axis (`SOLVE_UNIQUE`, 0/14 → 6/42), zero progress on
+the axis that actually matters (`MATCH`, 0/14 → 0/42).** This spike's central question (§1) was
+whether the inventory→group→shape→per-clue-typing→oracle-repair redesign — never letting a model
+type a free-text identifier, splitting "which kind" from "fill the slots" into two calls — would
+raise `SOLVE_UNIQUE`/`MATCH` above the 0/14 every prior per-clue variant scored. It partially
+does (§5.1): this is the first per-clue-shaped architecture across five spikes to reach
+`SOLVE_UNIQUE` at all, and its gradable rate is the highest yet measured for this architecture
+family. But `MATCH` did not move, and every single `SOLVE_UNIQUE` this design reaches (§5.2)
+lands on a puzzle and outcome class `full-critic` already reaches — this design has not yet
+demonstrated it can get RIGHT anything `full-critic` gets wrong, and it demonstrably regresses on
+the two puzzles `full-critic` gets right in this exact sample.
+
+**On the secondary question (§1): the "never type an identifier" design closed the specific
+collision class it targeted, cleanly, at the cost of a new failure surface at the boundary
+(shape misclassification cascading into a pre-existing, unrelated fallback gap in reused code) —
+found live, fixed within the same pass, and confirmed by re-running the dry-run.** No SPIKE-009-
+style identifier-collision failures (casing, cross-domain reference, duplicate-name collisions)
+appeared anywhere in the full sweep's raw records — a genuine, structural win consistent with
+this design's own premise, distinct from and not contradicted by §5.1/§5.2's flat `MATCH` result.
+
+**What this means for RFC-003's decision**: neither `full-critic` (expensive, no per-clue
+decomposition benefit) nor any per-clue variant across five spikes (cheap, but zero `MATCH`
+wins independent of `full-critic`) is currently a complete answer. The honest reading of all five
+spikes together is that **vocabulary-stage non-determinism (SPIKE-004's original finding) remains
+the dominant unsolved problem**, now confirmed to persist even when vocabulary construction is
+split across three separate, more constrained calls (inventory/group/shape) rather than one
+(§5.3's PZL-0001 fragmentation, §5.2's PZL-0004 near-miss) — narrowing what each call is ASKED
+does not, on its own, make the ANSWER more reliable across repeated sampling.
+
+**Recommended next steps, in order**:
+1. **Do not draft an RFC-003-superseding ADR yet** — same conclusion SPIKE-011 reached, now
+   doubly confirmed: zero `MATCH` wins from this architecture either, despite real investment in
+   its most promising redesign.
+2. **The `full-critic` vs. per-clue-architecture question may be the wrong frame.** Every spike
+   in this line (008-012) has varied HOW constraints are extracted per clue while inheriting
+   whatever vocabulary-construction approach came before it. Given vocabulary-stage
+   non-determinism is now confirmed as the common thread across every variant regardless of
+   downstream architecture, a more promising next spike would isolate vocabulary construction
+   ITSELF as the sole independent variable — e.g., n≥5 repeated samples of JUST the
+   inventory→group→shape stages (no constraint extraction at all) against a fixed answer-key
+   vocabulary shape, to directly measure how often shape's entity-axis/domain-values
+   classification is actually correct, independent of everything downstream that depends on it.
+3. **Fix the two named, narrow gaps before any further measurement build on this pipeline**:
+   `oracle-repair.ts`'s clue-localization blind spot for non-quoted `CompileError`s (§4/§5.3),
+   and SPIKE-008's own `tool-call.ts` never validating `minItems` client-side (the root cause
+   PZL-0001's `linkedAttributes` failures trace to) — both are small, mechanical fixes with a
+   clear specification, unlike the harder vocabulary-modeling question above.
+4. **Step 8 (selective back-translation), deferred in §4, is not worth building next** on this
+   evidence — a critic downstream of an unreliable vocabulary can only ask for a redo against
+   that same vocabulary (SPIKE-009 §5.4's own finding, still standing), and §5.4 shows the
+   already-built oracle-repair critic doesn't move `MATCH` either.
+
+Status: done.
