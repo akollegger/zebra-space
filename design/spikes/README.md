@@ -82,3 +82,4 @@ into the RFC rather than copied verbatim.
 | [SPIKE-008](SPIKE-008-per-clue-tool-call-decomposition/SPIKE.md) | Per-Clue Tool-Call Decomposition vs. the Whole-Document Critic Loop | done | RFC-003 |
 | [SPIKE-009](SPIKE-009-graph-style-reconciled-extraction/SPIKE.md) | Graph-Style Reconciled Extraction (Local Extract, Neighborhood Reconcile, Filter) | done | RFC-003 |
 | [SPIKE-010](SPIKE-010-full-prose-per-clue-context/SPIKE.md) | Full-Prose Context for Per-Clue Extraction | done | RFC-003 |
+| [SPIKE-011](SPIKE-011-per-clue-pipeline-retrospective/SPIKE.md) | Per-Clue Pipeline Retrospective — Reframing the Metric, Two Free Fixes, a First-Principles Redesign | done | RFC-003 |

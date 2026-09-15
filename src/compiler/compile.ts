@@ -214,6 +214,134 @@ function collectRuleTableOrphanValues(csp: ExtractedCsp): readonly string[] {
   return [...orphans]
 }
 
+/**
+ * One entry per identifier `renderDeclarations` is about to emit (a type name, an enum member,
+ * or a top-level var/array name), tagged with a `signature` distinguishing genuinely different
+ * source content from the same content re-declared (e.g. two `CompiledDomain`s sharing one
+ * entityType, or two domains with an identical value set — both dedup'd deliberately and
+ * correctly by `renderDeclarations`'s own `declaredEntityEnums`/`declaredValueEnums` sets, not a
+ * collision). `describe` is only for the eventual error message.
+ */
+interface IdentifierSource {
+  readonly identifier: string
+  readonly signature: string
+  readonly describe: string
+}
+
+function collectIdentifierSources(compiled: readonly CompiledDomain[], csp: ExtractedCsp): readonly IdentifierSource[] {
+  const sources: IdentifierSource[] = []
+  const seenEntityTypeEnum = new Set<string>()
+  const seenValuesEnum = new Set<string>()
+
+  for (const c of compiled) {
+    if (!c.isScalar && !seenEntityTypeEnum.has(c.entityTypeEnumName)) {
+      seenEntityTypeEnum.add(c.entityTypeEnumName)
+      sources.push({
+        identifier: c.entityTypeEnumName,
+        signature: `entityTypeEnum:${c.domain.entityType}`,
+        describe: `entity-type enum for "${c.domain.entityType}"`,
+      })
+      for (const id of c.entityIds) {
+        sources.push({
+          identifier: sanitizeIdentifier(id),
+          signature: `entityMember:${c.entityTypeEnumName}:${id}`,
+          describe: `entity id "${id}"`,
+        })
+      }
+    }
+    if (!c.isNumeric && !seenValuesEnum.has(c.valuesEnumName)) {
+      seenValuesEnum.add(c.valuesEnumName)
+      sources.push({
+        identifier: c.valuesEnumName,
+        signature: `valuesEnum:${c.domain.values.join(" ")}`,
+        describe: `value set [${c.domain.values.join(", ")}] (domain "${c.domain.variable}")`,
+      })
+      for (const v of c.domain.values) {
+        sources.push({
+          identifier: sanitizeIdentifier(v),
+          signature: `valueMember:${c.valuesEnumName}:${v}`,
+          describe: `domain value "${v}" (domain "${c.domain.variable}")`,
+        })
+      }
+    }
+  }
+
+  const orphans = collectRuleTableOrphanValues(csp)
+  if (orphans.length > 0) {
+    const orphanEnumName = `RuleTableValues_${orphans.map(sanitizeIdentifier).join("_")}`
+    sources.push({
+      identifier: orphanEnumName,
+      signature: `orphanEnum:${orphans.join(" ")}`,
+      describe: `ruleTable orphan-value enum [${orphans.join(", ")}]`,
+    })
+    for (const v of orphans) {
+      sources.push({
+        identifier: sanitizeIdentifier(v),
+        signature: `valueMember:${orphanEnumName}:${v}`,
+        describe: `ruleTable value "${v}"`,
+      })
+    }
+  }
+
+  for (const c of compiled) {
+    sources.push({
+      identifier: sanitizeIdentifier(c.domain.variable),
+      signature: `domainVar:${c.domain.variable}`,
+      describe: `domain variable "${c.domain.variable}"`,
+    })
+    if (c.clockHourMapName !== undefined) {
+      sources.push({
+        identifier: c.clockHourMapName,
+        signature: `clockHourMap:${c.valuesEnumName}`,
+        describe: `clock-hour mapping for value set [${c.domain.values.join(", ")}]`,
+      })
+    }
+  }
+
+  return sources
+}
+
+/**
+ * SPIKE-011: two structurally different extraction architectures (SPIKE-009's local, per-clue
+ * vocabulary reconciliation and SPIKE-010's single global vocabulary call) each independently
+ * produced a puzzle whose extraction was schema-valid but where two distinct pieces of source
+ * content — two domain variable names, or two domain values from unrelated domains — sanitized
+ * to the SAME MiniZinc identifier, surfacing only as a downstream `minizinc` syntax error
+ * ("identifier `X' already defined") that names the mangled identifier, not the two source
+ * strings that collided. `sanitizeIdentifier` itself has no uniqueness check (only
+ * `computeEntityTypeEnumNames` above disambiguates one narrow case — an entityType colliding
+ * with an entity id or domain variable). This check runs across every identifier
+ * `renderDeclarations` is about to emit and fails loudly, before any MiniZinc is generated, with
+ * the two colliding SOURCE strings named — an actionable, revisable extraction-stage diagnostic
+ * (consumable by ADR-004 §2.4's critic-loop revision prompt the same way any other CompileError
+ * already is) in place of an opaque compiler-generated identifier. It does not itself invent a
+ * disambiguation scheme (that was SPIKE-009's own failure mode, per SPIKE-011 §5.2/§5.3) — it
+ * only makes the collision loud and specific instead of a silent structural risk.
+ */
+function detectIdentifierCollision(compiled: readonly CompiledDomain[], csp: ExtractedCsp): CompileError | undefined {
+  const bySignatureByIdentifier = new Map<string, Map<string, string>>()
+  for (const source of collectIdentifierSources(compiled, csp)) {
+    let bySignature = bySignatureByIdentifier.get(source.identifier)
+    if (bySignature === undefined) {
+      bySignature = new Map()
+      bySignatureByIdentifier.set(source.identifier, bySignature)
+    }
+    bySignature.set(source.signature, source.describe)
+  }
+  for (const [identifier, bySignature] of bySignatureByIdentifier) {
+    if (bySignature.size > 1) {
+      const descriptions = [...bySignature.values()]
+      return new CompileError({
+        reason:
+          `Identifier collision: ${descriptions.join(", and ")} all sanitize to the same ` +
+          `MiniZinc identifier "${identifier}" — MiniZinc's enum/variable namespace is global, ` +
+          "so one of these needs a different name in the extraction.",
+      })
+    }
+  }
+  return undefined
+}
+
 function renderDeclarations(compiled: readonly CompiledDomain[], csp: ExtractedCsp): string {
   const lines: string[] = []
   const declaredEntityEnums = new Set<string>()
@@ -1018,6 +1146,8 @@ function compileTopLevelConstraint(
  */
 export function compile(csp: ExtractedCsp): Effect.Effect<string, CompileError> {
   const compiled = analyzeDomains(csp)
+  const collision = detectIdentifierCollision(compiled, csp)
+  if (collision !== undefined) return Effect.fail(collision)
   const declarations = renderDeclarations(compiled, csp)
   const needsGlobals = csp.constraints.some((c) => c.kind === "allDifferent")
 

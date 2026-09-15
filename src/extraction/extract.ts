@@ -471,7 +471,7 @@ export function extractSingleShot(
  * either stage's wording change bumps this, and staged runs record it, so staged vs monolith
  * comparisons attribute correctly.
  */
-export const STAGED_PROMPT_VERSION = 1
+export const STAGED_PROMPT_VERSION = 2
 
 function vocabularySystemPrompt(): string {
   return (
@@ -479,7 +479,17 @@ function vocabularySystemPrompt(): string {
     "natural-language logic puzzle. Identify the entities (each with a stable id and a type) " +
     "and the decision-variable domains (each with a variable name, the entity type it ranges " +
     "over, and its finite set of values). Represent every distinct attribute group as one " +
-    "domain; invent no values beyond what the prose states. No constraints yet — vocabulary only."
+    "domain; invent no values beyond what the prose states. No constraints yet — vocabulary only.\n\n" +
+    "If the puzzle establishes a spatial or temporal ORDERING among entities of some type " +
+    '(e.g. "three houses in a row, numbered 1 to 3 from left to right", "five appointments in ' +
+    'sequence") but does not separately name a domain of position labels, you MUST still ' +
+    "declare one: a domain whose variable is that ordering (e.g. position), whose entityType " +
+    'is the ordered entity type, and whose values are the sequence positions as strings ("1", ' +
+    '"2", ... in order) — one value per entity of that type. This is not "inventing a value ' +
+    "beyond what the prose states\" — the prose states the fact of the ordering; declaring the " +
+    "domain that represents it is required so a later constraint (e.g. \"the Blue House is " +
+    "directly to the left of the Red House\") has a shared numeric domain to reference. Only " +
+    "the domain's EXISTENCE is required here, never values beyond the plain position sequence."
   )
 }
 

@@ -895,3 +895,59 @@ test("ADR-004 §2.2: linkedAttributes rejects a scalar (single-entity) domain", 
   const reason = await runFails(csp)
   assert.match(reason, /requires entity-indexed variables/)
 })
+
+// --- SPIKE-011: identifier-collision detection --------------------------------------------------
+// SPIKE-009 (local per-clue vocabulary reconciliation) and SPIKE-010 (a single global vocabulary
+// call) each independently produced an extraction that sanitized two distinct source strings to
+// the same MiniZinc identifier, surfacing only as an opaque downstream `minizinc` syntax error.
+// These tests reproduce the two named shapes directly against `compile()`, offline, confirming
+// the collision is now caught before any MiniZinc is emitted, with both source strings named.
+
+test('SPIKE-011/SPIKE-009 §5.3: two domain VALUES from unrelated domains sanitizing to the same identifier (e.g. "South") is a loud CompileError, not a downstream MiniZinc syntax error', async () => {
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "car1", type: "car" },
+      { id: "car2", type: "car" },
+    ],
+    domains: [
+      { variable: "direction", entityType: "car", values: ["North", "South"] },
+      { variable: "boardSide", entityType: "car", values: ["Port", "South"] },
+    ],
+    constraints: [],
+  }
+  const reason = await runFails(csp)
+  assert.match(reason, /Identifier collision/)
+  assert.match(reason, /domain value "South"/)
+})
+
+test('SPIKE-011/SPIKE-010 notes: two domain VARIABLES sanitizing to the same identifier (e.g. "arrival-order" vs "arrival_order") is a loud CompileError', async () => {
+  const csp: ExtractedCsp = {
+    entities: [{ id: "car1", type: "car" }],
+    domains: [
+      { variable: "arrival-order", entityType: "car", values: ["1"] },
+      { variable: "arrival_order", entityType: "car", values: ["1", "2"] },
+    ],
+    constraints: [],
+  }
+  const reason = await runFails(csp)
+  assert.match(reason, /Identifier collision/)
+  assert.match(reason, /domain variable "arrival-order"/)
+  assert.match(reason, /domain variable "arrival_order"/)
+})
+
+test("SPIKE-011: legitimate reuse — two domains sharing one entityType, or two domains with an identical value set — is never flagged as a collision", async () => {
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "H1", type: "house" },
+      { id: "H2", type: "house" },
+    ],
+    domains: [
+      { variable: "color", entityType: "house", values: ["Red", "Blue"] },
+      { variable: "size", entityType: "house", values: ["Red", "Blue"] },
+    ],
+    constraints: [],
+  }
+  const mzn = await run(csp)
+  assert.match(mzn, /enum house = /)
+  assert.match(mzn, /enum Values_Red_Blue = /)
+})
