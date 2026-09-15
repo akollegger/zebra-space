@@ -951,3 +951,21 @@ test("SPIKE-011: legitimate reuse — two domains sharing one entityType, or two
   assert.match(mzn, /enum house = /)
   assert.match(mzn, /enum Values_Red_Blue = /)
 })
+
+test('SPIKE-011 live finding (PZL-0003, discovered while re-running SPIKE-008\'s sample post-fix): two DIFFERENT domains sharing the same variable name (e.g. "move" declared once per entityType "player" and once per entityType "opponent") is a loud CompileError, even when their value sets don\'t overlap enough to trip the value-member check alone', async () => {
+  const csp: ExtractedCsp = {
+    entities: [
+      { id: "player", type: "player" },
+      { id: "opponent", type: "opponent" },
+    ],
+    domains: [
+      { variable: "move", entityType: "player", values: ["Paper", "Scissors"] },
+      { variable: "move", entityType: "opponent", values: ["Lizard", "Spock"] },
+    ],
+    constraints: [],
+  }
+  const reason = await runFails(csp)
+  assert.match(reason, /Identifier collision/)
+  assert.match(reason, /domain variable "move" \(entityType "player"\)/)
+  assert.match(reason, /domain variable "move" \(entityType "opponent"\)/)
+})

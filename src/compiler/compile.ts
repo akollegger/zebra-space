@@ -260,7 +260,7 @@ function collectIdentifierSources(compiled: readonly CompiledDomain[], csp: Extr
         sources.push({
           identifier: sanitizeIdentifier(v),
           signature: `valueMember:${c.valuesEnumName}:${v}`,
-          describe: `domain value "${v}" (domain "${c.domain.variable}")`,
+          describe: `domain value "${v}" (domain "${c.domain.variable}", entityType "${c.domain.entityType}")`,
         })
       }
     }
@@ -283,12 +283,23 @@ function collectIdentifierSources(compiled: readonly CompiledDomain[], csp: Extr
     }
   }
 
-  for (const c of compiled) {
+  // SPIKE-011, found live on PZL-0003 during the post-fix re-run: two DIFFERENT `Domain`
+  // entries sharing the same `variable` string (e.g. "move" declared once for entityType
+  // "player" and again for entityType "opponent") is unconditionally invalid — `renderDeclarations`
+  // emits one top-level `var`/`array` line per `CompiledDomain` with no dedup guard (unlike the
+  // enum-declaration loops above, which dedup deliberately), so any repeat is a genuine
+  // duplicate declaration regardless of whether the two domains' values happen to overlap too.
+  // Signature is keyed by INDEX, not by the raw variable string, so — unlike every other
+  // category above — there is no legitimate "same signature, safe to reuse" case for a domain
+  // variable name: each `CompiledDomain` always wants its own identifier.
+  compiled.forEach((c, index) => {
     sources.push({
       identifier: sanitizeIdentifier(c.domain.variable),
-      signature: `domainVar:${c.domain.variable}`,
-      describe: `domain variable "${c.domain.variable}"`,
+      signature: `domainVar:${index}`,
+      describe: `domain variable "${c.domain.variable}" (entityType "${c.domain.entityType}")`,
     })
+  })
+  for (const c of compiled) {
     if (c.clockHourMapName !== undefined) {
       sources.push({
         identifier: c.clockHourMapName,

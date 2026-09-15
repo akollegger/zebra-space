@@ -151,6 +151,109 @@ would require inventing a disambiguation scheme, which is exactly the failure cl
 introduced by doing so ad hoc); it converts a silent/confusing failure into a loud, specific,
 revisable one.
 
+**2026-09-15 — live 14-puzzle re-run of both fixes** (user-requested, `OPENROUTER_API_KEY`
+already set): re-ran SPIKE-008's own `run-comparison.ts` (its `full-critic`, `per-clue`,
+`per-clue+grounded`, `per-clue+back-translation` variants, unchanged) over the identical
+14-puzzle sample, after first syncing `per-clue-extract.ts`'s own hand-duplicated vocabulary
+prompt (§2's "duplicated in spirit only" comment) with fix 1's new paragraph — without this
+sync, `per-clue` and its two critic variants would have silently skipped testing fix 1 entirely,
+since that file never imports the real `vocabularySystemPrompt()`. Total spend: $2.195 (14
+puzzles × 4 variants), raw records:
+`design/spikes/SPIKE-008-per-clue-tool-call-decomposition/results/comparison-2026-09-15T11-24-35-879Z.json`.
+Full comparison against the prior post-entity-scoping-fix run
+(`comparison-2026-09-14T14-05-07-883Z.json`) is in §5.7 below.
+
+**2026-09-15 — direct causal confirmation of fix 1**, found by inspecting the re-run's own raw
+`extractedCsp` for PZL-0001: the `per-clue` variant's stage-1 vocabulary call now correctly
+declares a `position` domain (`entityType: "house"`, `values: ["1".."5"]`) — the exact domain
+`compileAdjacency` needs and fix 1 exists to prompt for. This is the first time in four spikes
+(SPIKE-008/009/010/011) that PZL-0001's own extraction has actually included this domain without
+a dedicated reconciliation/synthesis mechanism (SPIKE-009) doing it after the fact.
+
+**2026-09-15 — direct causal confirmation of fix 2, TWO NEW real collisions caught live** (not
+synthetic test fixtures): PZL-0001's `per-clue` extraction modeled each nationality/color/pet/
+beverage/cigarette VALUE as its own entity (`{id: "Englishman", type: "nationality"}`) in
+addition to declaring "Englishman" etc. as that same domain's own values — a live recurrence of
+SPIKE-004's original vocabulary-modeling non-determinism finding, now caught structurally as
+`Identifier collision: entity id "Englishman", and domain value "Englishman" ... all sanitize
+to the same MiniZinc identifier "Englishman"` instead of an opaque downstream MiniZinc error.
+Separately, PZL-0003's `per-clue` extraction declared the SAME variable name `move` twice — once
+for `entityType: "player"` (values `paper`/`rock`/`scissors`) and once for `entityType:
+"opponent"` (values just `rock`, the fixed known move) — caught as `Identifier collision: domain
+value "rock" (domain "move"), and domain value "rock" (domain "move")`.
+
+**2026-09-15 — PZL-0003's collision report exposed a real gap in fix 2's own `domainVar`
+signature, found and fixed in this same pass.** The reported message above is confusing — it
+names "domain value... (domain 'move')" twice with no visible difference — because the two
+colliding `Domain` entries share the SAME variable name "move" but weren't compared against each
+other directly: `domainVar`'s signature was keyed on the raw variable string alone (`domainVar:
+${c.domain.variable}`), which treats any repeat of that string as "the same domain, safely
+reused" — the same class of legitimate-reuse case that's real for `entityTypeEnum`/`valuesEnum`,
+but never legitimate for a domain's own top-level `var`/`array` declaration (each `Domain` always
+needs its OWN identifier; `renderDeclarations` has no dedup guard on that final loop, unlike the
+enum-declaration loops above it). Confirmed this is a real, independent gap by scanning every
+`extractedCsp` in the re-run's raw JSON for duplicate `domain.variable` strings: PZL-0004's
+`per-clue` and `per-clue+back-translation` variants BOTH independently declared THREE domains all
+named `position` (one per entityType: suspect/weapon/room) — caught only as an opaque `SOLVE_ERROR`
+(`"identifier \`position' already defined"`), not the earlier, clearer `COMPILE_FAILED` fix 2 is
+meant to produce, because none of the three `position` domains' value sets happened to overlap
+(each entity type's own `1`/`2`/`3`). Fixed by keying `domainVar`'s signature on each
+`CompiledDomain`'s own array INDEX rather than its variable string — since there is no
+legitimate case where two different domains should share a var name, any repeat is now always
+flagged, regardless of value overlap. Verified via a new offline unit test reproducing PZL-0003's
+exact shape (disjoint value sets, so only the corrected `domainVar` check — not the pre-existing
+`valueMember` check — catches it) plus `pnpm test` (196 pass) and `tsc --noEmit` clean. **Checked
+against the recorded re-run's raw JSON that this fix changes no puzzle's outcome/verdict
+classification** (PZL-0003 was already `COMPILE_FAILED`/N/A via the value-collision path;
+PZL-0004's two affected variants were already `SOLVE_ERROR`/N/A, an equally-ungraded outcome) —
+so the §5.7 tallies below remain accurate without a further billed re-run; only the diagnostic
+clarity improves for a future run.
+
+**2026-09-15 — PZL-0004's triplicated `position` domain is itself a NEW risk fix 1 introduces,
+not just a fix-2 finding.** PZL-0004 (Whodunit) has no ordering/adjacency clue in its prose at
+all — it's pure elimination ("the culprit is not Colonel Mustard", etc., see
+`catalog/puzzles/PZL-0004-whodunit.md`) — yet stage 1 declared a `position` domain for EVERY
+entity type anyway. This looks like an over-generalization of fix 1's new instruction: "one of
+three suspects" apparently gets read by the model as an implied ordering the same way "houses
+numbered 1 to 3" does, and — because fix 1's added text names the synthesized domain `position`
+without scoping that name to the entity type — the model produces one identically-named,
+colliding declaration per entity type instead of at most one, correctly scoped. This is a real,
+directly attributable regression on this specific puzzle: PZL-0004's `per-clue` variant moved
+from a gradable `SOLVE_UNSATISFIABLE`/`MISMATCH` (pre-fix) to an ungraded `SOLVE_ERROR` (post-fix,
+now `COMPILE_FAILED` once a future re-run picks up the domainVar addendum above) — genuinely
+worse on this one puzzle, not just differently-labeled. `full-critic`'s own PZL-0004 extraction
+was unaffected this run (stayed `SOLVE_UNIQUE`/`MATCH`), but per every prior spike's own caveat,
+a single sample can't rule out this being sampling luck rather than a structural difference
+between the two harnesses' vocabulary calls. Fix 1's prompt text should be tightened before
+further use — e.g. explicitly conditioning the instruction on an actual left/right/before/after/
+sequence phrase being present in the clues, and naming the synthesized domain per-entity-type
+(e.g. `positionForSuspect`) rather than a single bare `position` — not done in this pass, flagged
+here as the clearest concrete follow-up.
+
+**2026-09-15 — a separate, pre-existing grading artifact found while auditing `full-critic`'s
+remaining `MISMATCH` verdicts, unrelated to either fix.** PZL-0001's `full-critic` extraction,
+manually cross-checked value-by-value against `eval/answer-keys.json`, is semantically CORRECT
+in every field (nationality, pet, drink, cigarette all match verbatim; `color` matches once
+case-folded) — yet grades `MISMATCH` with detail `"no unambiguous alignment for expected array
+\"color\""`. Root cause, confirmed by reading `src/eval/grader.ts`'s `normalizeToken`: it applies
+`sanitizeIdentifier` (strips disallowed characters) but never folds case, and `eval/aliases.json`
+has no general case rule (only one hand-curated alias, unrelated) — so an extraction that
+declares domain values in a different case than the answer key's own (`"yellow"` vs `"Yellow"`)
+produces zero token overlap for `alignArraysByOverlap`, which then reports the FIRST expected key
+it was checking as "unalignable" (here, `color`, simply because of JSON key order — not because
+`color` specifically was wrong). The same signature (`"no unambiguous alignment for expected
+array ..."`) also appears on PZL-0002 (`"color"`) and PZL-0010 (`"order"`) in this same re-run,
+and PZL-0003's `"missing tokens: Paper"` (vs. an extraction that likely said `"paper"`) looks like
+the same root cause under the OTHER grading path (`gradeDeterminate`'s direct set comparison, not
+alignment). This is a real, pre-existing grader fragility — **not fixed here**, since it's
+outside this pass's two named fixes and touches shared grading code (`src/eval/grader.ts`) used
+by the real eval pipeline, not just this spike — but worth flagging prominently: it means some
+unknown fraction of this project's historical `MISMATCH` verdicts (in this run and possibly
+earlier ones) may be case-sensitivity artifacts on otherwise-correct extractions, not genuine
+semantic errors. A case-insensitive token comparison in `normalizeToken` looks like a small,
+low-risk fix, but is a new, separate finding — not one of this spike's "two free fixes" — and is
+called out as a follow-up recommendation in §6 rather than acted on here.
+
 ## 5. Findings
 
 ### 5.1 The metric the three spikes optimized was the wrong one
@@ -266,6 +369,43 @@ own diagnosed causes was this spike's question 2, and building/measuring it is e
 a future SPIKE-012 (or an ADR informed by one) should take up, per RFC-003 §7.1's still-open
 question about the intermediate representation's concrete form.
 
+### 5.7 Live 14-puzzle re-run with both fixes: `full-critic` improves, `per-clue` variants stay flat
+
+Raw: `design/spikes/SPIKE-008-per-clue-tool-call-decomposition/results/comparison-2026-09-15T11-24-35-879Z.json`
+(post-fix), compared against `comparison-2026-09-14T14-05-07-883Z.json` (SPIKE-008's own
+post-entity-scoping-fix baseline, pre-SPIKE-011). Same 14-puzzle sample, same four variants, same
+`openai/gpt-4o-mini`. Total spend: $2.195.
+
+| Variant | SOLVE_UNIQUE (before → after) | MATCH (before → after) | Cost (before → after) |
+|---|---|---|---|
+| `full-critic` | 9/14 → **11/14** | 2/14 → 2/14 | $2.096 → $2.065 |
+| `per-clue` | 0/14 → 0/14 | 0/14 → 0/14 | $0.031 → $0.036 |
+| `per-clue+grounded` | 0/14 → 0/14 | 0/14 → 0/14 | $0.036 → $0.033 |
+| `per-clue+back-translation` | 0/14 → 0/14 | 0/14 → 0/14 | $0.058 → $0.062 |
+
+**`full-critic` gained two `SOLVE_UNIQUE`s** (PZL-0002, previously `SOLVE_MULTIPLY_SATISFIABLE`;
+PZL-0001, previously `EXTRACT_FAILED` — see §4's direct causal confirmation of fix 1 on this
+exact puzzle) **and two puzzles moved from ungraded to gradable** (PZL-0022:
+`SOLVE_ERROR`→`SOLVE_MULTIPLY_SATISFIABLE`/`FEASIBLE_ONLY`; PZL-0028:
+`EXTRACT_FAILED`→`SOLVE_MULTIPLY_SATISFIABLE`/`READING_MATCHED`, a pass). `MATCH` stayed flat at
+2/14 (the same two puzzles, PZL-0004 and PZL-0011, unchanged) — §4's grading-artifact finding
+means the true number of semantically-correct extractions may be higher than 2/14, but that's a
+grader question, not an extraction-pipeline one, and isn't claimed as a pipeline win here.
+
+**Every per-clue variant stayed at 0/14 `SOLVE_UNIQUE` and 0/14 `MATCH`**, unchanged from before
+either fix — this spike's central §5.1 conclusion (no per-clue variant across four spikes now has
+matched `full-critic` on a single determinate puzzle) still holds after the fixes. Per §4, this
+is not for lack of the fixes working (both are directly confirmed causally on PZL-0001/PZL-0003
+above) — it's that closing two specific, narrow bugs doesn't change the deeper architectural gap
+§5.3 and SPIKE-010's own conclusion already named: a global, one-shot, unrevisable vocabulary
+call remains the dominant failure surface, and PZL-0004's new `position`-domain-collision (§4)
+shows the fixes can introduce as much new risk as they close when applied narrowly to symptoms
+rather than to that root architecture.
+
+**Caveat, as always**: one sample per puzzle per variant. SPIKE-004/005/008/009/010's own
+repeated caveat applies with full force here too — PZL-0001's and PZL-0022's gains, and PZL-0004's
+regression, are each single data points, not confirmed trends.
+
 ## 6. Conclusion
 
 **On the metric**: `full-critic` remains the only mechanism in this project's own evidence that
@@ -277,28 +417,39 @@ one at lower cost. Any future ADR drawing on SPIKE-008/009/010 should report `SO
 `MATCH` alongside "gradable rate," not in its place — the latter alone made three successive
 negative-on-correctness results read as incremental wins.
 
-**On the two fixes**: both are implemented in this same pass (see git history on this branch).
-Neither requires or is validated by a new billed run within this spike's time-box — the
-vocabulary-prompt fix is validated by matching it directly against `compileAdjacency`'s existing,
-unchanged requirement (the fix makes stage 1's instructions consistent with what stage 2/compile
-already need, rather than introducing a new requirement); the collision-detection fix is a pure
-compile-time check exercised by new unit tests. **A live re-run of SPIKE-008/009/010's 14-puzzle
-sample against a future spike or ADR's design is the way to confirm whether either fix moves the
-`SOLVE_UNIQUE` numbers** — not claimed here, since it wasn't measured here.
+**On the two fixes, now live-measured (§5.7), not just implemented**: both are directly confirmed
+causally, on the exact puzzles they were built for (§4) — fix 1 correctly synthesized PZL-0001's
+missing positional domain for the first time across four spikes; fix 2 caught two genuinely new
+real collisions (PZL-0001's entity/value conflation, PZL-0003's duplicate `move` domain) plus,
+via a same-day addendum this verification pass itself found and fixed, a third (PZL-0004's
+triplicated `position` domain). On `full-critic`, this moved `SOLVE_UNIQUE` from 9/14 to 11/14 at
+essentially flat cost (`MATCH` stayed 2/14 — separately, §4 found the grader itself may be
+undercounting `MATCH` via a case-sensitivity gap, not an extraction-pipeline problem). **On every
+per-clue variant, `SOLVE_UNIQUE`/`MATCH` stayed at 0/14** — closing these two narrow, evidenced
+bugs was not enough to make the per-clue architecture viable, consistent with §5.3's diagnosis
+that the deeper issue is architectural (an unrevisable, one-shot global vocabulary), not a
+collection of independently-patchable bugs. Fix 1 was also directly observed introducing a NEW
+failure mode on a puzzle with no real ordering (PZL-0004, §4) — narrow prompt patches aimed at
+one symptom can create another, which is itself evidence for pursuing the architectural redesign
+(§5.3) over further one-off prompt patches on the current staged design.
 
 **Recommended next steps, in order**:
 1. Do not draft the RFC-003-superseding ADR SPIKE-008 §6 recommended, on the current evidence —
    that recommendation was made under the "gradable rate" framing this spike's §5.1 finding
    revises; an ADR now would be committing to a direction (some per-clue architecture) with zero
-   demonstrated `SOLVE_UNIQUE` wins to justify it.
-2. Spike the §5.3 design (inventory → group → shape → per-clue template-typing → oracle-guided
+   demonstrated `SOLVE_UNIQUE` wins to justify it, now confirmed live (§5.7) as well as by re-tally.
+2. Tighten fix 1's prompt before any further use (§4): condition the positional-domain
+   instruction on an actual ordering phrase being present, and name the synthesized domain per
+   entity type rather than a single bare `position`, to close the PZL-0004 regression this
+   verification pass found.
+3. Consider a case-insensitive token comparison in `src/eval/grader.ts`'s `normalizeToken` (§4) —
+   a small, separate fix (not one of this spike's two), but potentially affects how many
+   historical `MISMATCH` verdicts across this project's eval runs are actually grading artifacts
+   rather than genuine extraction errors.
+4. Spike the §5.3 design (inventory → group → shape → per-clue template-typing → oracle-guided
    repair) as its own time-boxed investigation, reporting `SOLVE_UNIQUE`/`MATCH` as the headline
    metric from the start, with n≥3 samples per puzzle (every prior spike's single-sample-per-cell
-   caveat — SPIKE-005's own, repeated in SPIKE-008/009/010 — means none of the existing numbers,
-   including this spike's re-tally, can distinguish a real effect from run-to-run LLM sampling
-   variance; SPIKE-008 through SPIKE-010's own $0.03-0.07-per-14-puzzle cost floor affords this
-   directly).
-3. Re-run the same 14-puzzle sample against `full-critic` (unmodified) and against SPIKE-008's
-   `per-clue` baseline once both fixes from this spike have landed, to check whether either
-   closes any of the sample's remaining `COMPILE_FAILED`/`SOLVE_ERROR` puzzles before a future
-   spike's more invasive redesign is needed to explain what's left.
+   caveat — SPIKE-005's own, repeated in SPIKE-008/009/010/011 — means none of the existing
+   numbers, including this spike's re-tally and live re-run, can distinguish a real effect from
+   run-to-run LLM sampling variance; SPIKE-008 through SPIKE-011's own $0.03-0.07-per-14-puzzle
+   per-clue cost floor affords this directly).
