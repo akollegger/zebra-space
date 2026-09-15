@@ -162,3 +162,43 @@ numbers 0.79-0.87, the 2-word animal pair 0.66), cross-category 0.28-0.41 — a 
 separation band. A fixed threshold around 0.5-0.55 should cluster these correctly with a simple
 greedy merge, no tuning-sensitive algorithm needed, consistent with this session's own earlier
 reasoning against pulling in a dedicated clustering library for group sizes this small.
+
+**2026-09-15 — derived ground truth from REAL successful extractions, not from
+`eval/answer-keys.json`'s own shape alone.** Confirmed by reading `src/eval/grader.ts`'s
+`gradeDeterminate` dispatch directly: the answer-key format is not generically parseable into a
+single vocabulary shape (parallel arrays for PZL-0001/0002/0010 specifically hardcoded by id;
+a flat digit-map for PZL-0007; a bare scalar for PZL-0003/0011; a dict-keyed-by-entity for
+PZL-0038 — `gradeDeterminate` itself falls through to a token-subset check, `gradeFlatRecord`,
+for everything not on its own hardcoded parallel-array list). Instead hand-derived
+`ground-truth.ts`'s 9 entries directly from SPIKE-011's already-recorded `full-critic` results
+(the run that achieved `MATCH` on PZL-0004/PZL-0011, `SOLVE_UNIQUE` on every puzzle in this set)
+— grounding "expected" in a real, already-solved vocabulary shape. Two genuine surprises found
+this way, both encoded directly into the ground truth rather than smoothed over: PZL-0010's own
+successful extraction declared a SECOND domain (`arrivalTime`) beyond what the answer key's own
+`order` key requires — scoring is coverage-only (every expected domain found; extras never
+penalized), so this doesn't break anything, but it's a reminder that "the answer key's own keys"
+is not automatically "the complete correct vocabulary." PZL-0038's successful extraction modeled
+the exact INVERSE of the answer key's own shape (entities = the 5 animals, one domain `pen`
+ranging 1..5 — rather than entities = 5 pens, domain `animal`) — an equally valid isomorphic
+representation; `ground-truth.ts` accepts either via `valueSets`' multiple-alternatives shape,
+confirmed directly by `smoke-test-score.ts`.
+
+**2026-09-15 — offline smoke tests for `score.ts`, zero cost, all pass**: the correct case, a
+deliberately-broken case (a missing domain correctly fails), casing/naming drift still matching
+via `normalize.ts`, PZL-0038's dual-representation OR logic (both directions score correct), and
+confirmation that an extra domain beyond ground truth is never penalized (coverage, not exact
+match — mirrors ADR-007 §2.2's own lesson for the real grader, applied here to structure).
+
+**2026-09-15 — embedding-similarity threshold (0.6) calibration, checked against real word
+pairs before relying on it for scoring.** True synonyms/spelling variants score comfortably
+above threshold: `color`/`colour` 0.974, `cigarette`/`smoke` 0.848, `drink`/`beverage` 0.791,
+`weapon`/`murder_weapon` 0.715. Genuinely unrelated pairs score well below: `color`/`animal`
+0.403. But `nationality`/`citizenship` — the exact example used earlier in this session's own
+conversation as a case embeddings should catch — measures **0.534, below the 0.6 threshold**,
+as does `nationality`/`country` (0.595). This is named honestly rather than adjusted away:
+0.6 was chosen deliberately conservative (a false POSITIVE here would silently inflate this
+spike's own correctness numbers, the exact failure mode this spike exists to measure rather than
+paper over) — the real, calibrated finding is that this embedding model's similarity space
+separates spelling/near-synonym variants cleanly from unrelated words, but sits genuinely
+ambiguous on more distant conceptual paraphrases, which is itself useful information for anyone
+tuning this threshold later, not a bug to silently fix by lowering it to fit one example.
