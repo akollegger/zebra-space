@@ -195,3 +195,49 @@ than built here.
 `pnpm test` (196 pass, 1 skipped, 0 fail) and `pnpm lint` stay clean on the root project
 throughout — this spike's new code lives entirely under its own `scripts/lib/`, touching no
 shipped `src/` file.
+
+**2026-09-15 — cost estimate ($1.00-$1.50 for n=3×14×2-variant) reported, user approved
+proceeding.**
+
+**2026-09-15 — live dry-run (3 puzzles spanning grid/scalar/ordering shapes), first pass: 2 real
+bugs found, one fixed.** `REPS=1` on PZL-0002/PZL-0004/PZL-0001 ($0.0119 total):
+
+1. **PZL-0004 (no natural entity axis) — a real, structurally-important bug, fixed.** `shape`
+   classified EVERY group `entityAxis`, leaving zero domains — which cascades into
+   `clue-schema.ts`'s own zero-domain fallback (an UNSCOPED free-string schema for `variable`/
+   `entity`, documented there as "this shouldn't happen" for the ORIGINAL single-global-
+   vocabulary caller it was written for). The result: `variable: "Rope"` and
+   `entity: "weapon"` — a domain VALUE typed as a variable name, a GROUP LABEL typed as an
+   entity id — the exact "model types a free-text identifier" failure this whole design exists
+   to foreclose, reintroduced through an edge case in code this spike reuses unchanged. Fixed
+   two ways: (a) `shape.ts`'s system prompt now explicitly names the "narrowing down one
+   unstated scenario, no real entity axis at all" case and says every-group-domainValues is a
+   legitimate answer, not a default to avoid; (b) `extractShape` now retries ONCE with a
+   specific nudge whenever the first classification yields zero domains, and marks the result
+   `degenerate` if a second attempt still does. Confirmed live: after the fix, PZL-0004 reaches
+   `SOLVE_MULTIPLY_SATISFIABLE` on both variants instead of `COMPILE_FAILED`/an unscoped
+   `"Rope"` reference.
+2. **PZL-0001 (the hardest, largest catalog puzzle) — a genuine hard-puzzle finding, NOT
+   chased.** `shape`/`group` produced a fragmented vocabulary (13 entities, domains split across
+   mismatched entityTypes like `"suspect"` for a puzzle with no suspects at all, a
+   `house_position` domain sized 9 instead of 5) — a live recurrence of SPIKE-004's original
+   vocabulary-modeling non-determinism finding, now distributed across three separate calls
+   (inventory/group/shape) instead of one. This is a real, honest limitation of the design on
+   this specific puzzle, not a code bug — left as a finding for the full sweep to quantify
+   rather than patched, consistent with this session's own SPIKE-011 caution against chasing
+   every new failure discovered mid-verification.
+3. **A separate, real gap in `oracle-repair.ts`'s clue-localization heuristic, found but NOT
+   fixed.** PZL-0001 also hit `"linkedAttributes needs at least 2 attributes to link; got 1."` —
+   a `checkStructural` gap in SPIKE-008's own (unchanged, reused) `tool-call.ts`: it never
+   validates JSON Schema's `minItems`, so a fill call emitting only 1 attribute for a
+   `linkedAttributes` template passes structural validation and is only caught later, at
+   compile time. `graph-pipeline+oracle-repair`'s `repairRounds: 0` on this puzzle shows why the
+   oracle didn't help: `clueIndicesTouchingError` only matches QUOTED tokens in the error
+   message, and this particular `CompileError` quotes none (an arity complaint, not an
+   identifier complaint) — a real, documented blind spot in the repair heuristic, not fixed in
+   this pass (named in the Conclusion as a follow-up, not chased further per the time-box).
+
+Re-ran the same dry-run after the shape.ts fix: PZL-0004 now reaches `SOLVE_MULTIPLY_SATISFIABLE`
+on both variants (was `COMPILE_FAILED`); PZL-0001 unchanged (the two findings above stand, both
+already understood and explicitly deferred). `pnpm test`/lint/offline smoke tests all re-verified
+clean after the fix. Proceeding to the full `n=3×14-puzzle×2-variant` billed sweep next.

@@ -53,7 +53,17 @@ function systemPrompt(groups: readonly CanonicalGroup[]): string {
     "categories. For each group, decide whether it is the ENTITY AXIS (individual things — " +
     'houses, suspects, days — that clues refer to by identity and that get assigned values) or a ' +
     "set of DOMAIN VALUES (colors, weapons, drinks — interchangeable values some entity axis " +
-    "takes, never referenced individually). Then flag which entity axes have an implied ordering " +
+    "takes, never referenced individually).\n\n" +
+    "IMPORTANT: not every puzzle has a real entity axis. A puzzle that is narrowing down a " +
+    'SINGLE unnamed scenario (e.g. "there has been a murder — who did it, with what, where?") ' +
+    "has NO entity axis at all — every group (suspect, weapon, room, ...) is DOMAIN VALUES, none " +
+    "is an entity axis, and each domain's entity_axis_group_index should be null. Do NOT default " +
+    "every group to entityAxis just because its members could theoretically be referred to by " +
+    "name — ask instead: does this puzzle have MULTIPLE distinct things (rows) each independently " +
+    "taking one value per category, or is it narrowing down ONE unstated thing across several " +
+    "categories at once? Only the former needs an entity axis. It is entirely normal, and " +
+    "correct, for every single group in a puzzle to be classified domainValues with a null axis.\n\n" +
+    "Then flag which entity axes have an implied ordering " +
     "the puzzle states but no group already represents as explicit position labels.\n\n" +
     `Groups:\n${listed}`
   )
@@ -139,21 +149,62 @@ export function buildVocabulary(
   return { entities, domains, domainVariableByGroupIndex, entityAxisTypeByGroupIndex }
 }
 
-export async function extractShape(model: string, groups: readonly CanonicalGroup[]): Promise<ShapeResult> {
+type ShapeClassification = { group_index: number; role: "entityAxis" | "domainValues"; entity_axis_group_index: number | null }
+
+async function requestClassification(model: string, groups: readonly CanonicalGroup[], extraHint: string): Promise<{ readonly classifications: readonly ShapeClassification[]; readonly orderingAxes: readonly number[]; readonly costUsd: number | undefined; readonly ok: boolean }> {
   const result = await requestClueTool({
     model,
     systemPrompt: systemPrompt(groups),
-    userPrompt: "Classify every group above and flag any entity axes needing a synthesized ordering.",
+    userPrompt: `Classify every group above and flag any entity axes needing a synthesized ordering.${extraHint}`,
     schemaName: "classify_shape",
     jsonSchema: SHAPE_SCHEMA,
   })
-  if (!result.ok) {
-    return { entities: [], domains: [], domainVariableByGroupIndex: new Map(), entityAxisTypeByGroupIndex: new Map(), costUsd: result.costUsd, calls: 1 }
+  if (!result.ok) return { classifications: [], orderingAxes: [], costUsd: result.costUsd, ok: false }
+  const value = result.value as { classifications: readonly ShapeClassification[]; entity_axes_needing_synthesized_ordering: readonly number[] }
+  return { classifications: value.classifications, orderingAxes: value.entity_axes_needing_synthesized_ordering, costUsd: result.costUsd, ok: true }
+}
+
+/**
+ * Found live (2026-09-15, PZL-0004 dry-run): a model can classify EVERY group `entityAxis`,
+ * leaving zero domains — which cascades into `clue-schema.ts`'s zero-domain fallback (an
+ * UNSCOPED free-string schema, the one edge case that fallback's own comment documents as "this
+ * shouldn't happen" for a single global vocabulary call, but does happen here when shape
+ * misjudges a no-entity-axis puzzle like Whodunit). One retry, with the specific nudge that
+ * every-group-is-domainValues is a legitimate answer, catches the common case; a second
+ * zero-domain result is returned as-is (logged as `degenerate`) rather than looping indefinitely.
+ */
+export async function extractShape(model: string, groups: readonly CanonicalGroup[]): Promise<ShapeResult & { readonly degenerate: boolean }> {
+  let totalCost = 0
+  let anyCost = false
+  const addCost = (c: number | undefined) => {
+    if (c !== undefined) {
+      totalCost += c
+      anyCost = true
+    }
   }
-  const value = result.value as {
-    classifications: readonly { group_index: number; role: "entityAxis" | "domainValues"; entity_axis_group_index: number | null }[]
-    entity_axes_needing_synthesized_ordering: readonly number[]
+
+  const first = await requestClassification(model, groups, "")
+  addCost(first.costUsd)
+  let calls = 1
+  if (!first.ok) {
+    return { entities: [], domains: [], domainVariableByGroupIndex: new Map(), entityAxisTypeByGroupIndex: new Map(), costUsd: anyCost ? totalCost : undefined, calls, degenerate: true }
   }
-  const built = buildVocabulary(groups, value.classifications, value.entity_axes_needing_synthesized_ordering)
-  return { ...built, costUsd: result.costUsd, calls: 1 }
+  let built = buildVocabulary(groups, first.classifications, first.orderingAxes)
+
+  if (built.domains.length === 0 && groups.length > 0) {
+    const hint =
+      "\n\nYour previous answer classified EVERY group as entityAxis, leaving no domainValues at " +
+      "all — that means nothing has a value to assign. If this puzzle is narrowing down one " +
+      "unstated scenario (no real entity axis at all), reclassify every group as domainValues " +
+      "with a null entity_axis_group_index instead."
+    const retry = await requestClassification(model, groups, hint)
+    addCost(retry.costUsd)
+    calls += 1
+    if (retry.ok) {
+      const retryBuilt = buildVocabulary(groups, retry.classifications, retry.orderingAxes)
+      if (retryBuilt.domains.length > 0) built = retryBuilt
+    }
+  }
+
+  return { ...built, costUsd: anyCost ? totalCost : undefined, calls, degenerate: built.domains.length === 0 && groups.length > 0 }
 }
