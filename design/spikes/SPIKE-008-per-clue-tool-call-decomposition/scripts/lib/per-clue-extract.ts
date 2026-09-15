@@ -16,12 +16,28 @@ import { splitClues } from "./puzzles.ts"
 // extract.ts's private vocabularySystemPrompt), duplicated here in spirit only — that function
 // isn't exported — so this spike shares stage 1's design without paying for the monolithic
 // stage-2 call extractStaged would otherwise also make.
+//
+// SPIKE-011 fix 1, mirrored here: the real pipeline's vocabularySystemPrompt() now tells the
+// model to declare a positional domain for an implied ordering (the PZL-0001 fix). Kept in sync
+// by hand (same "duplicated in spirit only" reasoning as above) so this spike's own re-run of
+// the 14-puzzle sample actually exercises the fix, rather than silently missing it because this
+// file's copy predates it.
 const VOCABULARY_SYSTEM_PROMPT =
   "You are extracting the vocabulary of a constraint-satisfaction problem from a " +
   "natural-language logic puzzle. Identify the entities (each with a stable id and a type) " +
   "and the decision-variable domains (each with a variable name, the entity type it ranges " +
   "over, and its finite set of values). Represent every distinct attribute group as one " +
-  "domain; invent no values beyond what the prose states. No constraints yet — vocabulary only."
+  "domain; invent no values beyond what the prose states. No constraints yet — vocabulary only.\n\n" +
+  "If the puzzle establishes a spatial or temporal ORDERING among entities of some type " +
+  '(e.g. "three houses in a row, numbered 1 to 3 from left to right", "five appointments in ' +
+  'sequence") but does not separately name a domain of position labels, you MUST still ' +
+  "declare one: a domain whose variable is that ordering (e.g. position), whose entityType " +
+  'is the ordered entity type, and whose values are the sequence positions as strings ("1", ' +
+  '"2", ... in order) — one value per entity of that type. This is not "inventing a value ' +
+  "beyond what the prose states\" — the prose states the fact of the ordering; declaring the " +
+  "domain that represents it is required so a later constraint (e.g. \"the Blue House is " +
+  "directly to the left of the Red House\") has a shared numeric domain to reference. Only " +
+  "the domain's EXISTENCE is required here, never values beyond the plain position sequence."
 
 /** One clue's system prompt: the closed vocabulary (as enums, already enforced by the schema
  * itself — this text is guidance for WHICH tool fits, not a defense against invented values,

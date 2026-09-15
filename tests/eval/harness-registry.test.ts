@@ -1,7 +1,7 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { Effect } from "effect"
-import { EXTRACTION_PROMPT_VERSION, extractionPrompts } from "../../src/extraction/extract.ts"
+import { EXTRACTION_PROMPT_VERSION, STAGED_PROMPT_VERSION, extractionPrompts } from "../../src/extraction/extract.ts"
 import {
   WORKFLOW_TO_HARNESS_ID,
   compileRepairHarness,
@@ -43,10 +43,15 @@ test("registry: legacy workflow flags map to harness ids", () => {
 })
 
 test("registry: extraction harnesses share the current extraction prompt version", () => {
-  // direct-solve carries its own DIRECT_SOLVE_PROMPT_VERSION (own prompts, own assertion below).
-  for (const harness of listHarnesses().filter((h) => h.id !== "direct-solve")) {
+  // direct-solve carries its own DIRECT_SOLVE_PROMPT_VERSION (own prompts, own assertion below),
+  // and staged-single-shot carries its own STAGED_PROMPT_VERSION (ADR-009's separate two-stage
+  // prompt set, own assertion below) — this loop's coincidental pass before SPIKE-011's stage-1
+  // prompt revision (both version constants happened to equal 1) was itself the bug this
+  // exclusion fixes, not a regression this spike introduced.
+  for (const harness of listHarnesses().filter((h) => h.id !== "direct-solve" && h.id !== "staged-single-shot")) {
     assert.equal(harness.promptVersion, EXTRACTION_PROMPT_VERSION)
   }
+  assert.equal(lookupHarness("staged-single-shot")?.promptVersion, STAGED_PROMPT_VERSION)
 })
 
 test("prompts: extractionPrompts exposes the versioned prompt text", () => {
