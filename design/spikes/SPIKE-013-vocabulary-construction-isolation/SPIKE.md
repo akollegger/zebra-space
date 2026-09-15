@@ -137,3 +137,28 @@ fixes; ~2h full sweep and write-up. Hard stop at the time-box regardless of comp
 ## 4. Notes
 
 _(dated log, appended as work proceeds)_
+
+**2026-09-15 — environment friction on this Intel Mac, same class as SPIKE-003's torch pinning,
+now for `onnxruntime-node`.** `@huggingface/transformers@4.2.0` pulls `onnxruntime-node@1.24.3`,
+which — confirmed by inspecting the published npm tarball directly — bundles a prebuilt native
+binding for `darwin/arm64`/`linux`/`win32` but **not `darwin/x64`** (Intel Mac); this machine
+reports `process.arch === "x64"`, `process.platform === "darwin"` (confirmed via `uname -m` /
+`sw_vers`), so the default install crashes at first import
+(`Cannot find module '.../darwin/x64/onnxruntime_binding.node'`). Tried and rejected: forcing
+`@huggingface/transformers`'s web/WASM build via a direct file import (bypasses the package's
+`exports` map, which only exposes `node`/`default` conditions with no subpath wildcard) — it
+loads without crashing, but its ONNX backend list comes back empty (`env.backends` `[]`) and
+model loading fails outright; not investigated further given a simpler fix existed. Checked
+`onnxruntime-node`'s published tarballs directly (`npm pack --dry-run`) across recent versions:
+`darwin/x64` binaries are bundled through **1.23.0** and dropped starting at **1.24.x** (Intel
+Mac support removed upstream, not a config gap). Fixed via `package.json`'s `overrides` field,
+pinning `onnxruntime-node` to `1.23.0` — confirmed working end to end: model loads, runs
+inference, and (see below) produces exactly the clustering signal expected.
+
+**2026-09-15 — embedding clustering signal confirmed directly, before writing any pipeline
+code.** `Xenova/all-MiniLM-L6-v2` (384-dim, mean-pooled, L2-normalized) on the 8 words
+`Red/Blue/Green/Dog/Cat/1/2/3`: within-category cosine similarity 0.66-0.87 (colors 0.69-0.73,
+numbers 0.79-0.87, the 2-word animal pair 0.66), cross-category 0.28-0.41 — a clean, wide
+separation band. A fixed threshold around 0.5-0.55 should cluster these correctly with a simple
+greedy merge, no tuning-sensitive algorithm needed, consistent with this session's own earlier
+reasoning against pulling in a dedicated clustering library for group sizes this small.
