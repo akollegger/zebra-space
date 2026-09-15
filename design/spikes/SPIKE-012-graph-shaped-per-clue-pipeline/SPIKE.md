@@ -146,3 +146,52 @@ what was still open, rather than extending scope, per this skill's own conventio
 ## 4. Notes
 
 _(dated log, appended as work proceeds)_
+
+**2026-09-15 — steps 1-7 built, all offline-verified, zero cost so far.** Built
+`lib/inventory.ts` (literal-span mentions + substring validation), `lib/group.ts`
+(index-referenced categorization + `assignCanonicalIds`, code-only identifier assignment,
+mirroring `compile.ts`'s own `computeEntityTypeEnumNames` disambiguation-loop pattern),
+`lib/shape.ts` (the pivotal multiple-choice classification + `buildVocabulary`'s deterministic
+entity/domain construction, including per-axis-scoped positional-domain synthesis — named
+`${axisType}_position`, never a single bare `position`, the direct fix for the SPIKE-011 §4/§5.7
+PZL-0004 regression), `lib/clue-templates.ts` (reuses `clue-schema.ts`'s `generateClueTools`
+UNCHANGED — the per-domain-scoped, entity-scoped schema-generation SPIKE-008's own fix already
+solved — only restructuring how tools are OFFERED, filtered by a chosen template rather than all
+nine with `tool_choice: "auto"`), `lib/per-clue-typed.ts` (the two-step classify-then-fill call
+pair + repair-round, mirroring SPIKE-008's own per-clue repair pattern), `lib/oracle-repair.ts`
+(reuses SPIKE-008's `groundedFinding` UNCHANGED for the drop-one-clue/diff-solutions search; adds
+a new heuristic, `clueIndicesTouchingError`, to localize a COMPILE failure to a clue by matching
+quoted tokens in the `CompileError` message against each clue's own emitted constraint), and
+`lib/graph-pipeline-extract.ts` (the orchestrator, exposing `extractGraphPipeline` — steps 1-6,
+no repair — and `extractGraphPipelineWithRepair` — adds step 7).
+
+Verified in three stages, all zero-cost:
+- `smoke-test-shape.ts`: `assignCanonicalIds`/`buildVocabulary` reproduce three real puzzle
+  shapes by hand (PZL-0002's grid, PZL-0001's implied-ordering, PZL-0004's no-entity-axis
+  scalar-scenario-fallback) and compile/solve each via the REAL `compile()`/`solve()` — all
+  three pass, including a direct check that the synthesized positional domain is
+  entityType-scoped (`house_position`, not a bare `position`).
+- `smoke-test-e2e.ts`: a synthetic 2-clue puzzle driven through a stub HTTP server exercises
+  EVERY stage in sequence (inventory → group → shape → per-clue classify+fill ×2) — 7 total
+  calls as expected, producing a compilable, solvable model through the real compiler/solver.
+- `smoke-test-oracle-repair.ts`: a synthetic 3-clue puzzle with a deliberately-planted conflict
+  (two clues directly contradicting each other) proves `repairAndSolve` detects the conflict via
+  the real solver, correctly localizes it to one of the two actually-conflicting clues (not the
+  unrelated third), and converges to a satisfiable state within the 2-round bound. One iteration
+  needed: the test's own diagnostic (tracking only the LAST server call) initially mis-flagged a
+  real, correct two-round repair sequence as a failure — fixed by tracking every call's target
+  across all rounds, not the pipeline logic itself, which worked correctly on the first attempt.
+
+**Deferred within the time-box**: step 8 (selective back-translation) is NOT built in this pass.
+Per RFC-003 §7.3/SPIKE-008 §5.4, compile/solve-oracle repair (step 7) cannot catch a
+semantically-wrong-but-solvable extraction — back-translation is the mechanism for exactly that
+gap, so its absence here is a known scope limit, not an oversight. Given the time-box, this
+spike's core comparison (does the inventory→group→shape→per-clue-typing architecture itself beat
+`full-critic`/prior per-clue variants on `SOLVE_UNIQUE`/`MATCH`) is answerable from the two
+variants already built (`graph-pipeline` alone, `graph-pipeline+oracle-repair`) — adding
+selective back-translation as a third variant is named as a follow-up in the Conclusion rather
+than built here.
+
+`pnpm test` (196 pass, 1 skipped, 0 fail) and `pnpm lint` stay clean on the root project
+throughout — this spike's new code lives entirely under its own `scripts/lib/`, touching no
+shipped `src/` file.
