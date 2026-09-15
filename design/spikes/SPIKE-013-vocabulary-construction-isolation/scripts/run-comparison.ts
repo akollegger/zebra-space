@@ -32,6 +32,33 @@ interface VocabularyResult {
   readonly totalCalls: number
   readonly costUsd: number | undefined
   readonly score: ScoreResult | undefined
+  readonly error?: string
+}
+
+const FAILED_RESULT: Omit<VocabularyResult, "error"> = { entities: [], domains: [], totalCalls: 0, costUsd: undefined, score: undefined }
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/** Found live (2026-09-15): a transient OpenRouter 504 ("Network connection lost") crashed the
+ * entire sweep outright — none of SPIKE-012's inventory/group/shape helpers catch transport-
+ * level errors, they just let them propagate. One rep failing shouldn't cost every puzzle's
+ * already-collected data, so every variant call is wrapped here: retry once after a short
+ * delay, then record a `FAILED_RESULT` (never thrown) so the sweep — and this run's own JSON
+ * output — survives a single flaky call. */
+async function withRetry(label: string, fn: () => Promise<VocabularyResult>): Promise<VocabularyResult> {
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      return await fn()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      console.error(`  ${label}: attempt ${attempt} failed (${message.slice(0, 150)})`)
+      if (attempt === 2) return { ...FAILED_RESULT, error: message.slice(0, 300) }
+      await sleep(2000)
+    }
+  }
+  return { ...FAILED_RESULT, error: "unreachable" }
 }
 
 async function runLlmOnly(puzzleId: string, prose: string): Promise<VocabularyResult> {
@@ -101,6 +128,14 @@ async function main(): Promise<void> {
   const records: unknown[] = []
   let grandTotalCost = 0
 
+  // Found live (2026-09-15): the first full-sweep attempt crashed on a transient OpenRouter 504
+  // before this fix, losing every already-collected puzzle's data since the write only happened
+  // at the very end. Written incrementally to the SAME path now (one timestamp, chosen once) so
+  // a later crash keeps everything gathered so far, not just what withRetry couldn't recover.
+  const outDir = new URL("results/", import.meta.url)
+  await mkdir(outDir, { recursive: true })
+  const outPath = new URL(`comparison-${new Date().toISOString().replace(/[:.]/g, "-")}.json`, outDir)
+
   for (const puzzleId of puzzleIds) {
     console.log(`\n=== ${puzzleId} ${groundTruthFor(puzzleId) !== undefined ? "(scored)" : "(no ground truth — consistency only)"} ===`)
     const { prose } = await loadPuzzleProse(puzzleId)
@@ -110,20 +145,20 @@ async function main(): Promise<void> {
     const embeddedReps: VocabularyResult[] = []
 
     for (let rep = 0; rep < REPS; rep++) {
-      const lo = await runLlmOnly(puzzleId, prose)
+      const lo = await withRetry("llm-only", () => runLlmOnly(puzzleId, prose))
       llmOnlyReps.push(lo)
       grandTotalCost += lo.costUsd ?? 0
-      console.log(`  llm-only [${rep + 1}/${REPS}]: entities=${lo.entities.length} domains=${lo.domains.length} correct=${lo.score?.structurallyCorrect ?? "n/a"} cost=${lo.costUsd ?? "n/a"}`)
+      console.log(`  llm-only [${rep + 1}/${REPS}]: entities=${lo.entities.length} domains=${lo.domains.length} correct=${lo.score?.structurallyCorrect ?? "n/a"} cost=${lo.costUsd ?? "n/a"}${lo.error ? ` FAILED: ${lo.error}` : ""}`)
 
-      const ci = await runChunkedInventory(puzzleId, prose)
+      const ci = await withRetry("chunked-inventory", () => runChunkedInventory(puzzleId, prose))
       chunkedReps.push(ci)
       grandTotalCost += ci.costUsd ?? 0
-      console.log(`  chunked-inventory [${rep + 1}/${REPS}]: entities=${ci.entities.length} domains=${ci.domains.length} correct=${ci.score?.structurallyCorrect ?? "n/a"} cost=${ci.costUsd ?? "n/a"}`)
+      console.log(`  chunked-inventory [${rep + 1}/${REPS}]: entities=${ci.entities.length} domains=${ci.domains.length} correct=${ci.score?.structurallyCorrect ?? "n/a"} cost=${ci.costUsd ?? "n/a"}${ci.error ? ` FAILED: ${ci.error}` : ""}`)
 
-      const eg = await runEmbeddedGroup(puzzleId, prose)
+      const eg = await withRetry("embedded-group", () => runEmbeddedGroup(puzzleId, prose))
       embeddedReps.push(eg)
       grandTotalCost += eg.costUsd ?? 0
-      console.log(`  embedded-group [${rep + 1}/${REPS}]: entities=${eg.entities.length} domains=${eg.domains.length} correct=${eg.score?.structurallyCorrect ?? "n/a"} cost=${eg.costUsd ?? "n/a"}`)
+      console.log(`  embedded-group [${rep + 1}/${REPS}]: entities=${eg.entities.length} domains=${eg.domains.length} correct=${eg.score?.structurallyCorrect ?? "n/a"} cost=${eg.costUsd ?? "n/a"}${eg.error ? ` FAILED: ${eg.error}` : ""}`)
     }
 
     records.push({
@@ -135,12 +170,10 @@ async function main(): Promise<void> {
         "embedded-group": { reps: embeddedReps, consistency: selfConsistency(embeddedReps), scoreSummary: summarizeScores(embeddedReps) },
       },
     })
+
+    await writeFile(outPath, JSON.stringify(records, null, 2))
   }
 
-  const outDir = new URL("results/", import.meta.url)
-  await mkdir(outDir, { recursive: true })
-  const outPath = new URL(`comparison-${new Date().toISOString().replace(/[:.]/g, "-")}.json`, outDir)
-  await writeFile(outPath, JSON.stringify(records, null, 2))
   console.log(`\nWrote ${records.length} records to ${outPath.pathname}`)
   console.log(`\nTotal spend this run: $${grandTotalCost.toFixed(4)}`)
 }
