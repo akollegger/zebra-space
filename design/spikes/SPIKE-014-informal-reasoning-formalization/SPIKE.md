@@ -136,4 +136,63 @@ representation exists, per this skill's own manual-citation convention.
 
 ## 5. Findings
 
+### 5.1 `formalize-json`: 0/42 MATCH — a genuinely diagnosable negative result, not noise
+
+Raw: `results/formalize-json-2026-09-16T10-22-42-907Z.json`. n=3 reps × 14 puzzles, `gpt-4o-mini`
+for both Stage 1 (already-collected trace) and Stage 2 (formalization), **$0.0553 total**.
+
+| Outcome | Count | Share |
+|---|---|---|
+| `FORMALIZE_FAILED` (SchemaViolation — Stage 2 never even produced valid `ExtractedCsp`) | 13/42 | 31% |
+| `COMPILE_FAILED` | 13/42 | 31% |
+| `SOLVE_MULTIPLY_SATISFIABLE` (under-constrained — missing at least one clue) | 7/42 | 17% |
+| `SOLVE_UNSATISFIABLE` (over-constrained/contradictory) | 4/42 | 10% |
+| `SOLVE_UNIQUE` | 4/42 | 10% |
+| `SOLVE_ERROR` | 1/42 | 2% |
+
+**MATCH: 0/42.** Below even `full-critic`'s 2/14 (14%) — despite Stage 2 having the correct
+answer sitting in front of it the whole time. This directly answers this spike's core question
+for THIS specific implementation choice: single-call formalization into the existing, unmodified
+`ExtractedCsp` schema does NOT reproduce `post-hoc`'s vocabulary-only win once constraints are
+included.
+
+**Two concrete, previously-known failure classes reappeared, not novel ones:**
+
+- **Identifier collisions (4 of 13 `COMPILE_FAILED`)** — e.g. PZL-0003: `"domain variable
+  \"choice\" (entityType \"player\"), and domain variable \"choice\" (entityType \"opponent\")
+  all sanitize to the same MiniZinc identifier"`; PZL-0010's `"pedestrian"` domain value colliding
+  across two entity types; PZL-0033's `"beans"` entity id colliding with a domain value. This is
+  the EXACT failure class SPIKE-011/012 built an entire architecture around eliminating (§SPIKE-012
+  Question: "never let the model type a free-text identifier — it chooses or copies an existing
+  span, it never constructs one"). `formalize-json` reuses the RAW `ExtractedCsp` schema, which
+  still lets the model freely type domain-variable and entity-id strings on every call — it never
+  inherited SPIKE-012's code-assigned-identifier discipline, because that discipline lives in the
+  inventory→group pipeline's SEPARATE machinery, not in the schema itself.
+- **SchemaViolations (13/42, the single largest bucket)** — wrong types deep inside the schema's
+  own nested unions (`expression.op` expecting one of six literal operator strings but getting
+  something else; `target.value` expecting a number; a `derivedRule`'s nested `expression.operand`
+  not matching either `variableRef` or `literal`). Having the correct ANSWER already available
+  (Stage 1's trace) did not help Stage 2 navigate this schema's own structural complexity — 69KB,
+  134 `anyOf` unions, nesting depth 39 (SPIKE-013's own citation) — a different problem from
+  knowing what to say.
+
+**Even the puzzle this spike's own offline smoke test hand-verified as trivially solvable
+(PZL-0002) failed live**: rep 1 reached `SOLVE_MULTIPLY_SATISFIABLE`/MISMATCH (missing a clue —
+under-constrained, not wrong), reps 2-3 both failed to compile with `"linkedAttributes needs at
+least 2 attributes to link; got 1"` — a constraint-authoring mistake, not a naming collision or
+schema-shape violation, a THIRD distinct failure mode on the single easiest puzzle in the sample.
+
 ## 6. Conclusion
+
+**`formalize-json` alone does not settle this spike's question — it sharpens what to test next.**
+0/42 MATCH is a real, diagnosable result, not noise: both dominant failure classes
+(identifier collisions, schema-shape violations) are properties of the RAW `ExtractedCsp` schema
+itself, not of whether the model knew the right answer. This makes the `formalize-mzn` comparison
+(§2) more important than it looked before building `formalize-json`, not less — MiniZinc's own
+syntax has no equivalent to a 134-`anyOf`-union JSON schema to violate, and while it can't prevent
+a model from typing a colliding identifier, MiniZinc's own compiler catches that natively (the
+same class of error `compile.ts`'s `detectIdentifierCollision` was built to make actionable,
+per SPIKE-011). Whether that structural difference actually produces a higher MATCH rate — or
+`formalize-mzn` reproduces its own, different failure modes — is still open and untested.
+
+**Not yet concluded** — `formalize-mzn` has not been built. Status stays `in-progress`.
