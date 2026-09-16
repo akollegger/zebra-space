@@ -134,6 +134,24 @@ one more Stage-2 prompt, not a second pipeline.
    this variant measures, and simpler than standing up a real patch/diff library for a spike.
    Still bounded to ONE lint-then-apply round per rep, for direct comparison against
    `oracle-repair`'s own one-round bound.
+8. **`formalize-mzn+selfcheck-repair` (5th variant, added 2026-09-16, in response to "any
+   hypothesis about how to close the [direct-solve vs. formalize-mzn] gap?")**: neither prior
+   repair variant can even ATTEMPT a repair on a `SOLVE_UNIQUE`+`MISMATCH` rep — both `oracle-
+   repair` and `lint-repair` trigger only on `SOLVE_ERROR`/`Unsatisfiable`/`MultiplySatisfiable`,
+   because there is no ground truth at deployment time to detect a syntactically-fine-but-wrong
+   unique solve. This variant adds a cheap substitute for ground truth that's already sitting in
+   the pipeline: Stage 1's own worked solution already states a candidate final answer. When
+   Stage 2 solves UNIQUELY on a determinate puzzle, one forced-tool-call asks whether the solved
+   assignment matches the conclusion Stage 1's own trace reached (no puzzle-specific ground truth
+   needed — just internal self-consistency); a disagreement feeds the SAME lint-repair mechanism
+   §5.6 already validated (structured findings, exact-match applied in code), reusing it
+   unchanged rather than inventing a new apply mechanism, since §5.6's own finding was that
+   application was never the bottleneck. Gated to determinate puzzles only, matching the existing
+   `isDeterminate` gate on the solve-outcome trigger — a COP/ambiguous/subjective/non-problem
+   puzzle has no single "correct" answer for Stage 1 to disagree WITH, so firing this check on
+   those classes would only repair perfectly fine models against a nonsense signal (found live
+   during this variant's own dry run — see §5.8). Still bounded to ONE round of repair per rep,
+   whichever trigger fired it.
 
 ## 3. Time-box
 
@@ -214,6 +232,20 @@ to the answer key's own literal string, unlike `ExtractedCsp`-based paths). This
 defect, not a `formalize-mzn`-specific one — see §5.7 for the fix, its blast radius across every
 other spike/architecture in this project, and the corrected numbers for every affected result in
 this spike (§5.2, §5.3, §5.5, §5.6 all shift up slightly; the qualitative conclusions do not).
+
+**2026-09-16 — built `formalize-mzn+selfcheck-repair` (5th variant) in response to "any
+hypothesis about how to close the gap?"** First live dry run (2 puzzles, n=1 each) validated the
+mechanism runs end-to-end and behaves sensibly on two cases that turned out NOT to need repair
+(Stage 1 and Stage 2 genuinely agreed; the residual grading gap traced to a narrower, still-open
+digit-prefixed-identifier issue — e.g. `T9am` vs. the answer key's `9am` — distinct from §5.7's
+already-fixed case/separator gap). Full first sweep (n=3×14, ungated) regressed to **10/42**,
+WORSE than no repair at all — traced immediately to firing the self-check on COP/ambiguous/non-
+problem puzzles (PZL-0018/0022/0028), where there's no single "correct" answer for Stage 1 to
+disagree with, so it "corrected" perfectly fine models against a nonsense signal. Fixed by gating
+the self-check to determinate puzzles only (matching the existing gate on the solve-outcome
+trigger) and re-ran: **14/42**, beating every prior variant in this spike, with a clean,
+mechanistically-explained recovery: 3/3 self-check-triggered repairs recovered to `MATCH` (vs.
+0/14 for the old solve-outcome-triggered repairs, unchanged from §5.5/§5.6). Written up as §5.8.
 
 ## 5. Findings
 
@@ -592,6 +624,64 @@ targets are more capable of SOLVING a puzzle than of TRANSLATING/COMPILING it in
 form) generalizes to the frontier tier, and isn't a cheap-tier-specific familiarity gap with
 MiniZinc. It's real, and it's the same shape at both tiers measured so far.
 
+### 5.8 `formalize-mzn+selfcheck-repair` (5th variant): checking against Stage 1's own answer beats checking against the solve-outcome class alone
+
+§5.5/§5.6 both plateaued at the exact same 13/42, for the same diagnosed reason: neither repair
+variant could even ATTEMPT a fix on a `SOLVE_UNIQUE`+`MISMATCH` rep, since both trigger only on
+`SOLVE_ERROR`/`Unsatisfiable`/`MultiplySatisfiable` — there's no ground truth at deployment time
+to detect a syntactically-fine-but-wrong unique solve. This variant adds a substitute for ground
+truth that costs nothing extra to obtain: Stage 1's own worked solution already states a
+candidate final answer. One forced-tool-call, fired only when Stage 2 solves UNIQUELY on a
+determinate puzzle, asks whether the solved assignment matches Stage 1's own conclusion; a
+disagreement feeds the exact same lint-repair mechanism (§5.6) unchanged.
+
+**A first, ungated attempt regressed to 10/42 — worse than no repair at all.** The self-check
+fired on every `SOLVE_UNIQUE` rep regardless of puzzle type, including COP (PZL-0022), ambiguous
+(PZL-0028), and non-problem (PZL-0018) puzzles — classes with no single "correct" answer for
+Stage 1 to disagree WITH. On these, the check produced a nonsense signal (Stage 1's free-prose
+conclusion doesn't cleanly correspond to a determinate answer to compare against), triggering
+repair on models that were already fine and sometimes breaking them. Concretely: PZL-0022 (a COP
+puzzle) had reps that reached `OPTIMUM_ATTAINED` or a reasonable `FEASIBLE_ONLY` on their own,
+"repaired" into a worse state purely because the self-check had nothing sensible to compare
+against. **Fixed by gating the self-check to determinate puzzles only** — the same
+`isDeterminate` condition the solve-outcome trigger already used — found and fixed within the
+same pass, before spending anything further on a flawed mechanism.
+
+**The corrected, gated run: 14/42 (33%) — the best result in this spike, at $0.0151 (cheaper than
+either prior repair variant).**
+
+| | `formalize-mzn` (§5.3) | `+oracle-repair` (§5.5) | `+lint-repair` (§5.6) | `+selfcheck-repair` |
+|---|---|---|---|---|
+| MATCH | 13/42 (31%) | 13/42 (31%, corrected) | 13/42 (31%, corrected) | **14/42 (33%)** |
+| Cost | $0.0114 | $0.0182 | $0.0154 | $0.0151 |
+
+**The mechanistic contrast is the real finding, not the one-point headline gain.** Splitting this
+run's repairs by WHICH trigger fired them:
+
+| Trigger | Fired | Recovered to `MATCH` |
+|---|---|---|
+| Solve-outcome (`SOLVE_ERROR`/`Unsatisfiable`/`MultiplySatisfiable`) — same signal §5.5/§5.6 used | 14/42 | 0/14 (0%) |
+| Self-check discrepancy (new) | 3/42 | 3/3 (100%) |
+
+Every self-check-triggered repair in this sample recovered to `MATCH`; every solve-outcome-
+triggered repair in this sample did not — the identical pattern §5.5/§5.6 already found, now
+directly confirmed against a THIRD, better-diagnosed trigger rather than assumed. This is a small
+sample (3 successes) and shouldn't be over-read as "self-check repair always works" — but it
+directly confirms the hypothesis behind building this variant: **the bottleneck was never really
+about the repair-application mechanism (already fixed, §5.6) or even about having a signal at
+all (§5.5/§5.6 had one) — it's specifically that the solve-outcome-class signal is too coarse to
+diagnose a `SOLVE_UNIQUE`-but-wrong model, and a cheap, no-ground-truth-needed substitute (Stage
+1's own stated answer) is a genuinely better diagnostic for the one outcome class every prior
+repair variant was structurally blind to.**
+
+**What this doesn't fix**: self-check only ever fires 3-14/42 times (rare, since most `SOLVE_
+UNIQUE` reps already agree with Stage 1, correctly) and only helps when Stage 1's OWN reasoning
+was right to begin with — if Stage 1 itself got the puzzle wrong, a consistent-but-wrong pair
+raises no flag. It also doesn't touch §5.4's OTHER diagnosed failure class (silently dropping a
+stated constraint, incomplete relational coverage) when the resulting solve still happens to
+agree with Stage 1's own (also incomplete) conclusion. A meaningful, well-isolated improvement,
+not a solved problem.
+
 ## 6. Conclusion
 
 **Decoupling informal reasoning from formal emission generalizes from vocabulary to the whole
@@ -623,18 +713,25 @@ resemble a JSON-schema violation. Trading one schema's failure surface for a com
 different, and evidently more tractable, one is the actual mechanism behind this result, not a
 coincidence.
 
-**Two repair mechanisms were tried on top of `formalize-mzn`, and neither improved the MATCH
-rate — for an interesting, well-isolated reason.** `oracle-repair` (§5.5, whole-model
-regeneration from a coarse hint) and `lint-repair` (§5.6, structured findings applied as
-exact-match edits) landed at the same 13/42 (corrected, §5.7) as no repair at all — an exact tie,
-not merely "within noise." §5.6 specifically isolates WHY: making the application mechanism provably safe (never
-touches anything outside what it's told to fix) did not change the outcome, which means the
-bottleneck was never really about how a fix gets applied — it's that a single, coarse,
-outcome-class-only signal (no per-clue ground truth, no independent check that a proposed fix is
-complete) isn't enough to reliably diagnose what's actually wrong. `ExtractedCsp`'s per-clue
-tagging (SPIKE-012) is what makes ITS OWN repair loop able to localize a fix precisely; giving
-that up for `formalize-mzn`'s representation win (§5.1 vs. §5.2/§5.3) also gives up that
-diagnostic leverage, and no amount of engineering the APPLICATION step recovers it.
+**Three repair mechanisms were tried on top of `formalize-mzn`; the first two didn't improve the
+MATCH rate, and the third — the one built around a better SIGNAL, not a better applicator —
+did, modestly, for exactly the reason the first two predicted.** `oracle-repair` (§5.5,
+whole-model regeneration from a coarse hint) and `lint-repair` (§5.6, structured findings applied
+as exact-match edits) both landed at the same 13/42 (corrected, §5.7) as no repair at all — an
+exact tie, not merely "within noise." §5.6 specifically isolates WHY: making the application
+mechanism provably safe (never touches anything outside what it's told to fix) did not change the
+outcome, which means the bottleneck was never really about how a fix gets applied — it's that a
+single, coarse, outcome-class-only signal (no per-clue ground truth, no independent check that a
+proposed fix is complete) isn't enough to reliably diagnose what's actually wrong. `selfcheck-
+repair` (§5.8) tests that diagnosis directly by reusing `lint-repair`'s own, already-validated
+application mechanism unchanged and swapping in a better signal — comparing the solved assignment
+against Stage 1's own stated conclusion, no ground truth needed — and reached 14/42, with every
+self-check-triggered repair in the sample recovering to `MATCH` (3/3) against zero for the
+old solve-outcome-triggered repairs (0/14, unchanged from §5.5/§5.6). `ExtractedCsp`'s per-clue
+tagging (SPIKE-012) is what makes ITS OWN repair loop able to localize a fix precisely;
+`formalize-mzn` doesn't have that structure to give up (§5.1 vs. §5.2/§5.3), but §5.8 shows a
+cheap substitute — checking against Stage 1's own answer — recovers some of that same diagnostic
+leverage without it.
 
 **Recommended next steps**:
 1. `formalize-mzn`'s remaining `SOLVE_ERROR` causes (§5.3) are narrow and plausibly cheap to
@@ -645,13 +742,15 @@ diagnostic leverage, and no amount of engineering the APPLICATION step recovers 
    designing around — a silent, confidently-wrong unique result has no mechanical remedy and
    won't from prompting alone; any future work claiming higher confidence in this architecture
    should say explicitly which of the two failure classes its evidence actually rules out.
-3. A real fix for `formalize-mzn`'s repair ceiling (§5.5/§5.6) needs better DIAGNOSIS, not a
-   better patch-application mechanism — that half is already solved. Candidates worth trying
-   before assuming this ceiling is fixed: an independent second formalization pass to
-   cross-check against (closer to what `ExtractedCsp`'s per-clue structure gives SPIKE-012 for
-   free), or asking the model to verify its OWN model against each individual clue in turn
-   (closer to SPIKE-008's back-translation critic, previously found only partially effective for
-   this exact class of problem) before repair, not after.
+3. A real fix for `formalize-mzn`'s repair ceiling (§5.5/§5.6) needed better DIAGNOSIS, not a
+   better patch-application mechanism — §5.8 confirms this directly: checking the solved
+   assignment against Stage 1's own stated conclusion (free — no new ground truth, no extra
+   pipeline stage) moved MATCH from 13/42 to 14/42, with every self-check-triggered repair in
+   the sample recovering (3/3) against zero for the old outcome-class-only trigger (0/14).
+   Remaining candidates for further diagnostic leverage, not yet tried: asking the model to
+   verify its OWN model against each individual clue in turn (closer to SPIKE-008's
+   back-translation critic, previously found only partially effective for this exact class of
+   problem), or an independent second formalization pass to cross-check against.
 4. This spike's method (solve first, formalize the completed solve, verify via compile/solve) is
    confirmed as sound and worth building on; the open engineering questions are now narrowly
    about `formalize-mzn`'s prompt quality and repair diagnosis, not about whether this
@@ -663,5 +762,10 @@ diagnostic leverage, and no amount of engineering the APPLICATION step recovers 
    confirms the solve-vs-formalize gap is real and tier-independent, which sharpens (not
    undermines) recommendation 3 above — better diagnosis, not more prompt engineering at the
    cheap tier alone, is the right next investment.
+6. `selfcheck-repair` (§5.8) was only run at the cheap tier (`gpt-4o-mini`, same as §5.5/§5.6 for
+   direct comparison). Whether the same mechanism recovers a meaningfully larger share of the
+   frontier tier's own remaining gap (48% corrected vs. 93% `direct-solve`, recommendation 5b) is
+   untested — the runner already supports a `MODEL` override (mirrors `run-formalize-mzn.ts`'s
+   own), so this is a rerun, not new code, when that comparison is wanted.
 
 Status: done.
