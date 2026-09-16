@@ -98,6 +98,30 @@ test("gradeDeterminate: dispatches PZL-0006, subset, parallel arrays, flat recor
   assert.equal(flat.verdict, "MATCH")
 })
 
+test("gradeDeterminate: parallel-array path unwraps MiniZinc's {e: value} enum shape (found live 2026-09-16, PZL-0002's own historical full-critic runs)", () => {
+  // The exact shape a real solve() returns for an enum-typed domain — confirmed against
+  // design/spikes/SPIKE-008.../results/comparison-2026-09-15T11-24-35-879Z.json's committed
+  // PZL-0002 record, which silently misgraded a correct extraction as MISMATCH before this fix.
+  const wrapped = gradeDeterminate(
+    "PZL-0002",
+    { color: ["Blue", "Red", "Green"], animal: ["Dog", "Cat", "Zebra"] },
+    { color: [{ e: "Blue" }, { e: "Red" }, { e: "Green" }], animal: [{ e: "Dog" }, { e: "Cat" }, { e: "Zebra" }] },
+  )
+  assert.equal(wrapped.verdict, "MATCH")
+})
+
+test("gradeDeterminate: parallel-array path unwraps a doubly-nested single-key wrapper too (PR #32 review comment — recursive, not depth-1-only)", () => {
+  // No known live shape nests two levels deep today, but the unwrap is recursive on purpose
+  // (matching collectActualTokens's own recursive unwrap) so a future, deeper solved shape
+  // still resolves instead of silently stopping at depth 1.
+  const doublyWrapped = gradeDeterminate(
+    "PZL-0002",
+    { color: ["Blue"] },
+    { color: [{ outer: { e: "Blue" } }] },
+  )
+  assert.equal(doublyWrapped.verdict, "MATCH")
+})
+
 test("gradeDeterminate: a non-scalar subset item grades MISMATCH, never throws", () => {
   const result = gradeDeterminate("PZL-0014", { items: [["Rice"]] }, { item: ["Rice"] })
   assert.equal(result.verdict, "MISMATCH")

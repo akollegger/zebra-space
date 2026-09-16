@@ -1,0 +1,3487 @@
+[
+  {
+    "id": "PZL-0001",
+    "sourceOutcome": "MISMATCH",
+    "reps": [
+      {
+        "outcome": "COMPILE_FAILED",
+        "detail": "Operator \"abs\" takes exactly 1 operand, got 2.",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.00263655,
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "House 1",
+              "type": "house"
+            },
+            {
+              "id": "House 2",
+              "type": "house"
+            },
+            {
+              "id": "House 3",
+              "type": "house"
+            },
+            {
+              "id": "House 4",
+              "type": "house"
+            },
+            {
+              "id": "House 5",
+              "type": "house"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "color",
+              "entityType": "house",
+              "values": [
+                "red",
+                "green",
+                "ivory",
+                "yellow",
+                "blue"
+              ]
+            },
+            {
+              "variable": "nationality",
+              "entityType": "house",
+              "values": [
+                "Norwegian",
+                "Ukrainian",
+                "Englishman",
+                "Spaniard",
+                "Japanese"
+              ]
+            },
+            {
+              "variable": "drink",
+              "entityType": "house",
+              "values": [
+                "milk",
+                "tea",
+                "coffee",
+                "orange juice",
+                "water"
+              ]
+            },
+            {
+              "variable": "cigar",
+              "entityType": "house",
+              "values": [
+                "Old Gold",
+                "Kools",
+                "Chesterfields",
+                "Lucky Strike",
+                "Parliaments"
+              ]
+            },
+            {
+              "variable": "pet",
+              "entityType": "house",
+              "values": [
+                "dog",
+                "snails",
+                "fox",
+                "horse",
+                "zebra"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "assignment",
+              "entity": "House 1",
+              "variable": "nationality",
+              "value": "Norwegian"
+            },
+            {
+              "kind": "assignment",
+              "entity": "House 3",
+              "variable": "drink",
+              "value": "milk"
+            },
+            {
+              "kind": "linkedAttributes",
+              "entityType": "house",
+              "attributes": [
+                {
+                  "variable": "nationality",
+                  "value": "Englishman"
+                },
+                {
+                  "variable": "color",
+                  "value": "red"
+                }
+              ]
+            },
+            {
+              "kind": "linkedAttributes",
+              "entityType": "house",
+              "attributes": [
+                {
+                  "variable": "color",
+                  "value": "blue"
+                },
+                {
+                  "variable": "nationality",
+                  "value": "Ukrainian"
+                }
+              ]
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "-",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "color",
+                    "entity": "House 5"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "color",
+                    "entity": "House 4"
+                  }
+                ]
+              },
+              "comparator": "==",
+              "target": {
+                "kind": "literal",
+                "value": 1
+              }
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "abs",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "house",
+                    "entity": "House 4"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "house",
+                    "entity": "House 5"
+                  }
+                ]
+              },
+              "comparator": ">=",
+              "target": {
+                "kind": "literal",
+                "value": 1
+              }
+            },
+            {
+              "kind": "ruleTableConstraint",
+              "table": "owns",
+              "a": {
+                "kind": "variableRef",
+                "variable": "cigar",
+                "entity": "House 4"
+              },
+              "b": {
+                "kind": "literal",
+                "value": "snails"
+              }
+            },
+            {
+              "kind": "linkedAttributes",
+              "entityType": "house",
+              "attributes": [
+                {
+                  "variable": "cigar",
+                  "value": "Kools"
+                },
+                {
+                  "variable": "color",
+                  "value": "yellow"
+                }
+              ]
+            },
+            {
+              "kind": "assignment",
+              "entity": "House 5",
+              "variable": "drink",
+              "value": "coffee"
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "abs",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "color",
+                    "entity": "House 1"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "color",
+                    "entity": "House 2"
+                  }
+                ]
+              },
+              "comparator": ">=",
+              "target": {
+                "kind": "literal",
+                "value": 1
+              }
+            },
+            {
+              "kind": "derivedRule",
+              "appliesTo": "house",
+              "condition": {
+                "kind": "relation",
+                "name": "nextTo"
+              },
+              "thenConstraints": [
+                {
+                  "kind": "linkedAttributes",
+                  "entityType": "house",
+                  "attributes": [
+                    {
+                      "variable": "cigar",
+                      "value": "Chesterfields"
+                    },
+                    {
+                      "variable": "pet",
+                      "value": "fox"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "outcome": "FORMALIZE_FAILED",
+        "detail": "SchemaViolation: Missing key\n  at [\"constraints\"][3][\"comparator\"]",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.00154335
+      },
+      {
+        "outcome": "COMPILE_FAILED",
+        "detail": "Operator \"abs\" takes exactly 1 operand, got 2.",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.00161175,
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "House 1",
+              "type": "house"
+            },
+            {
+              "id": "House 2",
+              "type": "house"
+            },
+            {
+              "id": "House 3",
+              "type": "house"
+            },
+            {
+              "id": "House 4",
+              "type": "house"
+            },
+            {
+              "id": "House 5",
+              "type": "house"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "color",
+              "entityType": "house",
+              "values": [
+                "red",
+                "green",
+                "blue",
+                "yellow",
+                "ivory"
+              ]
+            },
+            {
+              "variable": "nationality",
+              "entityType": "house",
+              "values": [
+                "Norwegian",
+                "Ukrainian",
+                "Englishman",
+                "Spaniard",
+                "Japanese"
+              ]
+            },
+            {
+              "variable": "drink",
+              "entityType": "house",
+              "values": [
+                "milk",
+                "tea",
+                "orange juice",
+                "coffee",
+                "water"
+              ]
+            },
+            {
+              "variable": "cigar",
+              "entityType": "house",
+              "values": [
+                "Kools",
+                "Chesterfields",
+                "Old Gold",
+                "Parliaments",
+                "Lucky Strike"
+              ]
+            },
+            {
+              "variable": "pet",
+              "entityType": "house",
+              "values": [
+                "dog",
+                "snails",
+                "fox",
+                "horse",
+                "zebra"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "assignment",
+              "entity": "House 1",
+              "variable": "nationality",
+              "value": "Norwegian"
+            },
+            {
+              "kind": "assignment",
+              "entity": "House 3",
+              "variable": "drink",
+              "value": "milk"
+            },
+            {
+              "kind": "assignment",
+              "entity": "House 2",
+              "variable": "color",
+              "value": "blue"
+            },
+            {
+              "kind": "assignment",
+              "entity": "House 5",
+              "variable": "color",
+              "value": "green"
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "abs",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "number",
+                    "entity": "House 5"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "number",
+                    "entity": "House 4"
+                  }
+                ]
+              },
+              "comparator": "==",
+              "target": {
+                "kind": "literal",
+                "value": 1
+              }
+            },
+            {
+              "kind": "linkedAttributes",
+              "entityType": "house",
+              "attributes": [
+                {
+                  "variable": "color",
+                  "value": "red"
+                },
+                {
+                  "variable": "nationality",
+                  "value": "Englishman"
+                }
+              ]
+            },
+            {
+              "kind": "linkedAttributes",
+              "entityType": "house",
+              "attributes": [
+                {
+                  "variable": "nationality",
+                  "value": "Spaniard"
+                },
+                {
+                  "variable": "pet",
+                  "value": "dog"
+                }
+              ]
+            },
+            {
+              "kind": "linkedAttributes",
+              "entityType": "house",
+              "attributes": [
+                {
+                  "variable": "color",
+                  "value": "yellow"
+                },
+                {
+                  "variable": "cigar",
+                  "value": "Kools"
+                }
+              ]
+            },
+            {
+              "kind": "linkedAttributes",
+              "entityType": "house",
+              "attributes": [
+                {
+                  "variable": "drink",
+                  "value": "tea"
+                },
+                {
+                  "variable": "nationality",
+                  "value": "Ukrainian"
+                }
+              ]
+            },
+            {
+              "kind": "linkedAttributes",
+              "entityType": "house",
+              "attributes": [
+                {
+                  "variable": "pet",
+                  "value": "snails"
+                },
+                {
+                  "variable": "cigar",
+                  "value": "Old Gold"
+                }
+              ]
+            },
+            {
+              "kind": "linkedAttributes",
+              "entityType": "house",
+              "attributes": [
+                {
+                  "variable": "drink",
+                  "value": "coffee"
+                },
+                {
+                  "variable": "color",
+                  "value": "green"
+                }
+              ]
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "abs",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "number",
+                    "entity": "House 2"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "number",
+                    "entity": "House 1"
+                  }
+                ]
+              },
+              "comparator": "==",
+              "target": {
+                "kind": "literal",
+                "value": 1
+              }
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "abs",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "number",
+                    "entity": "House 3"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "number",
+                    "entity": "House 4"
+                  }
+                ]
+              },
+              "comparator": "==",
+              "target": {
+                "kind": "literal",
+                "value": 1
+              }
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "-",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "number",
+                    "entity": "House 4"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "number",
+                    "entity": "House 5"
+                  }
+                ]
+              },
+              "comparator": "==",
+              "target": {
+                "kind": "literal",
+                "value": 1
+              }
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "abs",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "number",
+                    "entity": "House 3"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "number",
+                    "entity": "House 2"
+                  }
+                ]
+              },
+              "comparator": "==",
+              "target": {
+                "kind": "literal",
+                "value": 1
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "PZL-0002",
+    "sourceOutcome": "MATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_MULTIPLY_SATISFIABLE",
+        "detail": "",
+        "verdict": "MISMATCH",
+        "gradeDetail": "expected unique solution, got MultiplySatisfiable",
+        "costUsd": 0.0011985,
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "House1",
+              "type": "House"
+            },
+            {
+              "id": "House2",
+              "type": "House"
+            },
+            {
+              "id": "House3",
+              "type": "House"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "color",
+              "entityType": "House",
+              "values": [
+                "Blue",
+                "Red",
+                "Green"
+              ]
+            },
+            {
+              "variable": "animal",
+              "entityType": "House",
+              "values": [
+                "Dog",
+                "Cat",
+                "Zebra"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "assignment",
+              "entity": "House2",
+              "variable": "color",
+              "value": "Red"
+            },
+            {
+              "kind": "assignment",
+              "entity": "House2",
+              "variable": "animal",
+              "value": "Cat"
+            },
+            {
+              "kind": "assignment",
+              "entity": "House1",
+              "variable": "color",
+              "value": "Blue"
+            },
+            {
+              "kind": "assignment",
+              "entity": "House1",
+              "variable": "animal",
+              "value": "Dog"
+            },
+            {
+              "kind": "assignment",
+              "entity": "House3",
+              "variable": "color",
+              "value": "Green"
+            }
+          ]
+        },
+        "mzn": "enum House = {House1, House2, House3};\nenum Values_Blue_Red_Green = {Blue, Red, Green};\nenum Values_Dog_Cat_Zebra = {Dog, Cat, Zebra};\narray[House] of var Values_Blue_Red_Green: color;\narray[House] of var Values_Dog_Cat_Zebra: animal;\n\nconstraint color[House2] = Red;\nconstraint animal[House2] = Cat;\nconstraint color[House1] = Blue;\nconstraint animal[House1] = Dog;\nconstraint color[House3] = Green;\n\nsolve satisfy;\n"
+      },
+      {
+        "outcome": "COMPILE_FAILED",
+        "detail": "linkedAttributes needs at least 2 attributes to link; got 1.",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.0012003,
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "house1",
+              "type": "house"
+            },
+            {
+              "id": "house2",
+              "type": "house"
+            },
+            {
+              "id": "house3",
+              "type": "house"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "house-color",
+              "entityType": "house",
+              "values": [
+                "Blue",
+                "Red",
+                "Green"
+              ]
+            },
+            {
+              "variable": "house-animal",
+              "entityType": "house",
+              "values": [
+                "Dog",
+                "Cat",
+                "Zebra"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "assignment",
+              "entity": "house2",
+              "variable": "house-color",
+              "value": "Red"
+            },
+            {
+              "kind": "assignment",
+              "entity": "house2",
+              "variable": "house-animal",
+              "value": "Cat"
+            },
+            {
+              "kind": "assignment",
+              "entity": "house1",
+              "variable": "house-color",
+              "value": "Blue"
+            },
+            {
+              "kind": "assignment",
+              "entity": "house1",
+              "variable": "house-animal",
+              "value": "Dog"
+            },
+            {
+              "kind": "linkedAttributes",
+              "entityType": "house",
+              "attributes": [
+                {
+                  "variable": "house-color",
+                  "value": "Blue"
+                },
+                {
+                  "variable": "house-animal",
+                  "value": "Dog"
+                }
+              ]
+            },
+            {
+              "kind": "linkedAttributes",
+              "entityType": "house",
+              "attributes": [
+                {
+                  "variable": "house-color",
+                  "value": "Red"
+                },
+                {
+                  "variable": "house-animal",
+                  "value": "Cat"
+                }
+              ]
+            },
+            {
+              "kind": "linkedAttributes",
+              "entityType": "house",
+              "attributes": [
+                {
+                  "variable": "house-color",
+                  "value": "Green"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "outcome": "COMPILE_FAILED",
+        "detail": "linkedAttributes needs at least 2 attributes to link; got 1.",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.0011643,
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "H1",
+              "type": "House"
+            },
+            {
+              "id": "H2",
+              "type": "House"
+            },
+            {
+              "id": "H3",
+              "type": "House"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "color",
+              "entityType": "House",
+              "values": [
+                "Blue",
+                "Red",
+                "Green"
+              ]
+            },
+            {
+              "variable": "animal",
+              "entityType": "House",
+              "values": [
+                "Dog",
+                "Cat",
+                "Zebra"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "assignment",
+              "entity": "H2",
+              "variable": "color",
+              "value": "Red"
+            },
+            {
+              "kind": "assignment",
+              "entity": "H2",
+              "variable": "animal",
+              "value": "Cat"
+            },
+            {
+              "kind": "assignment",
+              "entity": "H1",
+              "variable": "color",
+              "value": "Blue"
+            },
+            {
+              "kind": "assignment",
+              "entity": "H1",
+              "variable": "animal",
+              "value": "Dog"
+            },
+            {
+              "kind": "assignment",
+              "entity": "H3",
+              "variable": "color",
+              "value": "Green"
+            },
+            {
+              "kind": "linkedAttributes",
+              "entityType": "House",
+              "attributes": [
+                {
+                  "variable": "animal",
+                  "value": "Zebra"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "PZL-0003",
+    "sourceOutcome": "MATCH",
+    "reps": [
+      {
+        "outcome": "COMPILE_FAILED",
+        "detail": "Identifier collision: domain variable \"choice\" (entityType \"player\"), and domain variable \"choice\" (entityType \"opponent\") all sanitize to the same MiniZinc identifier \"choice\" — MiniZinc's enum/variable namespace is global, so one of these needs a different name in the extraction.",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.0011703,
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "player_choice",
+              "type": "player"
+            },
+            {
+              "id": "opponent_choice",
+              "type": "opponent"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "choice",
+              "entityType": "player",
+              "values": [
+                "Paper",
+                "Rock",
+                "Scissors"
+              ]
+            },
+            {
+              "variable": "choice",
+              "entityType": "opponent",
+              "values": [
+                "Paper",
+                "Rock",
+                "Scissors"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "ruleTable",
+              "name": "beats",
+              "a": "Paper",
+              "b": "Rock"
+            },
+            {
+              "kind": "ruleTable",
+              "name": "beats",
+              "a": "Rock",
+              "b": "Scissors"
+            },
+            {
+              "kind": "ruleTable",
+              "name": "beats",
+              "a": "Scissors",
+              "b": "Paper"
+            },
+            {
+              "kind": "ruleTableConstraint",
+              "table": "beats",
+              "a": {
+                "kind": "variableRef",
+                "variable": "choice",
+                "entity": "player_choice"
+              },
+              "b": {
+                "kind": "literal",
+                "value": "Rock"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "outcome": "SOLVE_UNSATISFIABLE",
+        "detail": "",
+        "verdict": "MISMATCH",
+        "gradeDetail": "expected unique solution, got Unsatisfiable",
+        "costUsd": 0.0011223,
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "player",
+              "type": "player"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "choice",
+              "entityType": "player",
+              "values": [
+                "Paper",
+                "Rock",
+                "Scissors"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "ruleTable",
+              "name": "beats",
+              "a": "Paper",
+              "b": "Rock"
+            },
+            {
+              "kind": "ruleTable",
+              "name": "beats",
+              "a": "Rock",
+              "b": "Scissors"
+            },
+            {
+              "kind": "ruleTable",
+              "name": "beats",
+              "a": "Scissors",
+              "b": "Paper"
+            },
+            {
+              "kind": "assignment",
+              "entity": "opponent",
+              "variable": "choice",
+              "value": "Rock"
+            },
+            {
+              "kind": "ruleTableConstraint",
+              "table": "beats",
+              "a": {
+                "kind": "variableRef",
+                "variable": "choice",
+                "entity": "player"
+              },
+              "b": {
+                "kind": "literal",
+                "value": "Rock"
+              }
+            }
+          ]
+        },
+        "mzn": "enum Values_Paper_Rock_Scissors = {Paper, Rock, Scissors};\nvar Values_Paper_Rock_Scissors: choice;\n\nconstraint choice = Rock;\nconstraint (choice = Paper /\\ Rock = Rock) \\/ (choice = Rock /\\ Rock = Scissors) \\/ (choice = Scissors /\\ Rock = Paper);\n\nsolve satisfy;\n"
+      },
+      {
+        "outcome": "COMPILE_FAILED",
+        "detail": "Identifier collision: domain variable \"move\" (entityType \"player\"), and domain variable \"move\" (entityType \"opponent\") all sanitize to the same MiniZinc identifier \"move\" — MiniZinc's enum/variable namespace is global, so one of these needs a different name in the extraction.",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.0011403,
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "player",
+              "type": "player"
+            },
+            {
+              "id": "opponent",
+              "type": "opponent"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "move",
+              "entityType": "player",
+              "values": [
+                "rock",
+                "paper",
+                "scissors"
+              ]
+            },
+            {
+              "variable": "move",
+              "entityType": "opponent",
+              "values": [
+                "rock",
+                "paper",
+                "scissors"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "ruleTable",
+              "name": "beats",
+              "a": "paper",
+              "b": "rock"
+            },
+            {
+              "kind": "ruleTable",
+              "name": "beats",
+              "a": "rock",
+              "b": "scissors"
+            },
+            {
+              "kind": "ruleTable",
+              "name": "beats",
+              "a": "scissors",
+              "b": "paper"
+            },
+            {
+              "kind": "assignment",
+              "entity": "opponent",
+              "variable": "move",
+              "value": "rock"
+            },
+            {
+              "kind": "ruleTableConstraint",
+              "table": "beats",
+              "a": {
+                "kind": "variableRef",
+                "variable": "move",
+                "entity": "player"
+              },
+              "b": {
+                "kind": "literal",
+                "value": "rock"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "PZL-0004",
+    "sourceOutcome": "MATCH",
+    "reps": [
+      {
+        "outcome": "FORMALIZE_FAILED",
+        "detail": "SchemaViolation: Expected number\n  at [\"constraints\"][0][\"expression\"][\"value\"]",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.0013095
+      },
+      {
+        "outcome": "FORMALIZE_FAILED",
+        "detail": "SchemaViolation: Expected \"+\" | \"-\" | \"*\" | \"/\" | \"min\" | \"max\" | \"abs\"\n  at [\"constraints\"][0][\"expression\"][\"op\"]",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.0012807
+      },
+      {
+        "outcome": "SOLVE_MULTIPLY_SATISFIABLE",
+        "detail": "",
+        "verdict": "MISMATCH",
+        "gradeDetail": "expected unique solution, got MultiplySatisfiable",
+        "costUsd": 0.0012051,
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "suspect",
+              "type": "suspects"
+            },
+            {
+              "id": "weapon",
+              "type": "weapons"
+            },
+            {
+              "id": "room",
+              "type": "rooms"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "suspects",
+              "entityType": "suspects",
+              "values": [
+                "Miss Scarlett",
+                "Colonel Mustard",
+                "Professor Plum"
+              ]
+            },
+            {
+              "variable": "weapons",
+              "entityType": "weapons",
+              "values": [
+                "Candlestick",
+                "Revolver",
+                "Rope"
+              ]
+            },
+            {
+              "variable": "rooms",
+              "entityType": "rooms",
+              "values": [
+                "Kitchen",
+                "Library",
+                "Conservatory"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "literal",
+                "value": 0
+              },
+              "comparator": "!=",
+              "target": "Colonel Mustard"
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "literal",
+                "value": 0
+              },
+              "comparator": "!=",
+              "target": "Miss Scarlett"
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "literal",
+                "value": 0
+              },
+              "comparator": "!=",
+              "target": "Revolver"
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "literal",
+                "value": 0
+              },
+              "comparator": "!=",
+              "target": "Rope"
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "literal",
+                "value": 0
+              },
+              "comparator": "!=",
+              "target": "Kitchen"
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "literal",
+                "value": 0
+              },
+              "comparator": "!=",
+              "target": "Library"
+            }
+          ]
+        },
+        "mzn": "enum Values_Miss_Scarlett_Colonel_Mustard_Professor_Plum = {Miss_Scarlett, Colonel_Mustard, Professor_Plum};\nenum Values_Candlestick_Revolver_Rope = {Candlestick, Revolver, Rope};\nenum Values_Kitchen_Library_Conservatory = {Kitchen, Library, Conservatory};\nvar Values_Miss_Scarlett_Colonel_Mustard_Professor_Plum: suspects;\nvar Values_Candlestick_Revolver_Rope: weapons;\nvar Values_Kitchen_Library_Conservatory: rooms;\n\nconstraint 0 != Colonel_Mustard;\nconstraint 0 != Miss_Scarlett;\nconstraint 0 != Revolver;\nconstraint 0 != Rope;\nconstraint 0 != Kitchen;\nconstraint 0 != Library;\n\nsolve satisfy;\n"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0007",
+    "sourceOutcome": "MATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "MISMATCH",
+        "gradeDetail": "missing tokens: 9, 5, 6, 7, 1, 0, 8, 2",
+        "costUsd": 0.00138435,
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "SEND",
+              "type": "word"
+            },
+            {
+              "id": "MORE",
+              "type": "word"
+            },
+            {
+              "id": "MONEY",
+              "type": "word"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "S",
+              "entityType": "word",
+              "values": [
+                "9"
+              ]
+            },
+            {
+              "variable": "E",
+              "entityType": "word",
+              "values": [
+                "5"
+              ]
+            },
+            {
+              "variable": "N",
+              "entityType": "word",
+              "values": [
+                "6"
+              ]
+            },
+            {
+              "variable": "D",
+              "entityType": "word",
+              "values": [
+                "7"
+              ]
+            },
+            {
+              "variable": "M",
+              "entityType": "word",
+              "values": [
+                "1"
+              ]
+            },
+            {
+              "variable": "O",
+              "entityType": "word",
+              "values": [
+                "0"
+              ]
+            },
+            {
+              "variable": "R",
+              "entityType": "word",
+              "values": [
+                "8"
+              ]
+            },
+            {
+              "variable": "Y",
+              "entityType": "word",
+              "values": [
+                "2"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "assignment",
+              "entity": "SEND",
+              "variable": "S",
+              "value": "9"
+            },
+            {
+              "kind": "assignment",
+              "entity": "SEND",
+              "variable": "E",
+              "value": "5"
+            },
+            {
+              "kind": "assignment",
+              "entity": "SEND",
+              "variable": "N",
+              "value": "6"
+            },
+            {
+              "kind": "assignment",
+              "entity": "SEND",
+              "variable": "D",
+              "value": "7"
+            },
+            {
+              "kind": "assignment",
+              "entity": "MORE",
+              "variable": "M",
+              "value": "1"
+            },
+            {
+              "kind": "assignment",
+              "entity": "MORE",
+              "variable": "O",
+              "value": "0"
+            },
+            {
+              "kind": "assignment",
+              "entity": "MORE",
+              "variable": "R",
+              "value": "8"
+            },
+            {
+              "kind": "assignment",
+              "entity": "MONEY",
+              "variable": "Y",
+              "value": "2"
+            },
+            {
+              "kind": "assignment",
+              "entity": "MONEY",
+              "variable": "N",
+              "value": "6"
+            },
+            {
+              "kind": "assignment",
+              "entity": "MONEY",
+              "variable": "O",
+              "value": "0"
+            },
+            {
+              "kind": "assignment",
+              "entity": "MONEY",
+              "variable": "M",
+              "value": "1"
+            },
+            {
+              "kind": "assignment",
+              "entity": "MONEY",
+              "variable": "E",
+              "value": "5"
+            }
+          ]
+        },
+        "mzn": "enum word = {SEND, MORE, MONEY};\narray[word] of var 9..9: S;\narray[word] of var 5..5: E;\narray[word] of var 6..6: N;\narray[word] of var 7..7: D;\narray[word] of var 1..1: M;\narray[word] of var 0..0: O;\narray[word] of var 8..8: R;\narray[word] of var 2..2: Y;\n\nconstraint S[SEND] = 9;\nconstraint E[SEND] = 5;\nconstraint N[SEND] = 6;\nconstraint D[SEND] = 7;\nconstraint M[MORE] = 1;\nconstraint O[MORE] = 0;\nconstraint R[MORE] = 8;\nconstraint Y[MONEY] = 2;\nconstraint N[MONEY] = 6;\nconstraint O[MONEY] = 0;\nconstraint M[MONEY] = 1;\nconstraint E[MONEY] = 5;\n\nsolve satisfy;\n"
+      },
+      {
+        "outcome": "FORMALIZE_FAILED",
+        "detail": "SchemaViolation: Expected { readonly \"kind\": \"variableRef\", ... } | { readonly \"kind\": \"literal\", ... }\n  at [\"constraints\"][0][\"expression\"][\"operands\"][0][\"operands\"][0]",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.00156915
+      },
+      {
+        "outcome": "FORMALIZE_FAILED",
+        "detail": "SchemaViolation: Expected { readonly \"kind\": \"variableRef\", ... } | { readonly \"kind\": \"literal\", ... }\n  at [\"constraints\"][8][\"expression\"][\"operands\"][0][\"operands\"][0]",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.00156495
+      }
+    ]
+  },
+  {
+    "id": "PZL-0010",
+    "sourceOutcome": "MATCH",
+    "reps": [
+      {
+        "outcome": "COMPILE_FAILED",
+        "detail": "Identifier collision: domain value \"pedestrian\" (domain \"order\", entityType \"pedestrian\"), and domain value \"pedestrian\" (domain \"order\", entityType \"intersection\") all sanitize to the same MiniZinc identifier \"pedestrian\" — MiniZinc's enum/variable namespace is global, so one of these needs a different name in the extraction.",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.00135555,
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "pedestrian",
+              "type": "pedestrian"
+            },
+            {
+              "id": "southCar",
+              "type": "car"
+            },
+            {
+              "id": "eastCar",
+              "type": "car"
+            },
+            {
+              "id": "northCar",
+              "type": "car"
+            },
+            {
+              "id": "westCar",
+              "type": "car"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "order",
+              "entityType": "pedestrian",
+              "values": [
+                "pedestrian",
+                "southCar",
+                "eastCar",
+                "northCar",
+                "westCar"
+              ]
+            },
+            {
+              "variable": "order",
+              "entityType": "car",
+              "values": [
+                "southCar",
+                "eastCar",
+                "northCar",
+                "westCar"
+              ]
+            },
+            {
+              "variable": "order",
+              "entityType": "intersection",
+              "values": [
+                "southCar",
+                "pedestrian",
+                "eastCar",
+                "northCar",
+                "westCar"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "min",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "order",
+                    "entity": "southCar"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "order",
+                    "entity": "pedestrian"
+                  }
+                ]
+              },
+              "comparator": "<",
+              "target": "1"
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "min",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "order",
+                    "entity": "pedestrian"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "order",
+                    "entity": "eastCar"
+                  }
+                ]
+              },
+              "comparator": "<",
+              "target": "2"
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "min",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "order",
+                    "entity": "northCar"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "order",
+                    "entity": "westCar"
+                  }
+                ]
+              },
+              "comparator": "<",
+              "target": "4"
+            },
+            {
+              "kind": "adjacency",
+              "relation": "arrives",
+              "a": "eastCar",
+              "b": "pedestrian",
+              "variable": "order"
+            },
+            {
+              "kind": "adjacency",
+              "relation": "arrives",
+              "a": "southCar",
+              "b": "pedestrian",
+              "variable": "order"
+            }
+          ]
+        }
+      },
+      {
+        "outcome": "SOLVE_ERROR",
+        "detail": "ModelSyntaxError: Error: type error: type-inst variable $T instantiated with incompatible types (var Values_South_Car_East_Car_North_Car_West_Car vs Values_Pedestrian) ($T has enum mismatch: `Values_Pedestrian` vs `Val",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.00126195,
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "pedestrian",
+              "type": "Pedestrian"
+            },
+            {
+              "id": "south_car",
+              "type": "Car"
+            },
+            {
+              "id": "east_car",
+              "type": "Car"
+            },
+            {
+              "id": "north_car",
+              "type": "Car"
+            },
+            {
+              "id": "west_car",
+              "type": "Car"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "order",
+              "entityType": "Car",
+              "values": [
+                "South Car",
+                "East Car",
+                "North Car",
+                "West Car"
+              ]
+            },
+            {
+              "variable": "pedestrianOrder",
+              "entityType": "Pedestrian",
+              "values": [
+                "Pedestrian"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "literal",
+                "value": 1
+              },
+              "comparator": "=",
+              "target": {
+                "kind": "variableRef",
+                "variable": "order",
+                "entity": "south_car"
+              }
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "literal",
+                "value": 1
+              },
+              "comparator": "=",
+              "target": {
+                "kind": "variableRef",
+                "variable": "pedestrianOrder",
+                "entity": "pedestrian"
+              }
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "literal",
+                "value": 1
+              },
+              "comparator": "=",
+              "target": {
+                "kind": "variableRef",
+                "variable": "order",
+                "entity": "east_car"
+              }
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "literal",
+                "value": 1
+              },
+              "comparator": "=",
+              "target": {
+                "kind": "variableRef",
+                "variable": "order",
+                "entity": "north_car"
+              }
+            },
+            {
+              "kind": "allDifferent",
+              "variable": "order"
+            },
+            {
+              "kind": "linkedAttributes",
+              "entityType": "Car",
+              "attributes": [
+                {
+                  "variable": "order",
+                  "value": "South Car"
+                },
+                {
+                  "variable": "order",
+                  "value": "Pedestrian"
+                },
+                {
+                  "variable": "order",
+                  "value": "East Car"
+                },
+                {
+                  "variable": "order",
+                  "value": "North Car"
+                },
+                {
+                  "variable": "order",
+                  "value": "West Car"
+                }
+              ]
+            }
+          ]
+        },
+        "mzn": "include \"globals.mzn\";\n\nenum Car = {south_car, east_car, north_car, west_car};\nenum Values_South_Car_East_Car_North_Car_West_Car = {South_Car, East_Car, North_Car, West_Car};\nenum Values_Pedestrian = {Pedestrian};\narray[Car] of var Values_South_Car_East_Car_North_Car_West_Car: order;\nvar Values_Pedestrian: pedestrianOrder;\n\nconstraint 1 = order[south_car];\nconstraint 1 = pedestrianOrder;\nconstraint 1 = order[east_car];\nconstraint 1 = order[north_car];\nconstraint all_different(order);\nconstraint forall(e in Car)(order[e] = South_Car <-> (order[e] = Pedestrian /\\ order[e] = East_Car /\\ order[e] = North_Car /\\ order[e] = West_Car));\n\nsolve satisfy;\n"
+      },
+      {
+        "outcome": "COMPILE_FAILED",
+        "detail": "Unrecognized adjacency relation \"first_after\".",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.00124575,
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "Pedestrian",
+              "type": "person"
+            },
+            {
+              "id": "Car_North",
+              "type": "vehicle"
+            },
+            {
+              "id": "Car_South",
+              "type": "vehicle"
+            },
+            {
+              "id": "Car_East",
+              "type": "vehicle"
+            },
+            {
+              "id": "Car_West",
+              "type": "vehicle"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "pass_order",
+              "entityType": "intersection",
+              "values": [
+                "Pedestrian",
+                "Car_North",
+                "Car_South",
+                "Car_East",
+                "Car_West"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "literal",
+                "value": 1
+              },
+              "comparator": "<=",
+              "target": {
+                "kind": "variableRef",
+                "variable": "pass_order",
+                "entity": "Car_South"
+              }
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "literal",
+                "value": 1
+              },
+              "comparator": "<=",
+              "target": {
+                "kind": "variableRef",
+                "variable": "pass_order",
+                "entity": "Pedestrian"
+              }
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "literal",
+                "value": 1
+              },
+              "comparator": "<=",
+              "target": {
+                "kind": "variableRef",
+                "variable": "pass_order",
+                "entity": "Car_East"
+              }
+            },
+            {
+              "kind": "adjacency",
+              "relation": "first_after",
+              "a": "Car_South",
+              "b": "Pedestrian",
+              "variable": "pass_order"
+            },
+            {
+              "kind": "adjacency",
+              "relation": "first_after",
+              "a": "Pedestrian",
+              "b": "Car_East",
+              "variable": "pass_order"
+            },
+            {
+              "kind": "adjacency",
+              "relation": "first_after",
+              "a": "Car_North",
+              "b": "Car_West",
+              "variable": "pass_order"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "PZL-0011",
+    "sourceOutcome": "MATCH",
+    "reps": [
+      {
+        "outcome": "FORMALIZE_FAILED",
+        "detail": "SchemaViolation: Expected \"+\" | \"-\" | \"*\" | \"/\" | \"min\" | \"max\" | \"abs\"\n  at [\"constraints\"][0][\"expression\"][\"op\"]",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.0013701
+      },
+      {
+        "outcome": "SOLVE_UNSATISFIABLE",
+        "detail": "",
+        "verdict": "MISMATCH",
+        "gradeDetail": "expected unique solution, got Unsatisfiable",
+        "costUsd": 0.0012303,
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "Priya",
+              "type": "Applicant"
+            },
+            {
+              "id": "Sam",
+              "type": "Applicant"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "creditScore",
+              "entityType": "Applicant",
+              "values": [
+                "680",
+                "750"
+              ]
+            },
+            {
+              "variable": "monthlyIncome",
+              "entityType": "Applicant",
+              "values": [
+                "9000"
+              ]
+            },
+            {
+              "variable": "monthlyDebt",
+              "entityType": "Applicant",
+              "values": [
+                "3200"
+              ]
+            },
+            {
+              "variable": "requestedLoanAmount",
+              "entityType": "Applicant",
+              "values": [
+                "exceeds policy limit"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "/",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "monthlyDebt",
+                    "entity": "Priya"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "monthlyIncome",
+                    "entity": "Priya"
+                  }
+                ]
+              },
+              "comparator": "<=",
+              "target": {
+                "kind": "literal",
+                "value": 0.43
+              }
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "min",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "creditScore",
+                    "entity": "Priya"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "creditScore",
+                    "entity": "Sam"
+                  }
+                ]
+              },
+              "comparator": ">=",
+              "target": {
+                "kind": "literal",
+                "value": 600
+              }
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "variableRef",
+                "variable": "requestedLoanAmount",
+                "entity": "Priya"
+              },
+              "comparator": ">",
+              "target": {
+                "kind": "literal",
+                "value": 0
+              }
+            }
+          ]
+        },
+        "mzn": "enum Applicant = {Priya, Sam};\nenum Values_exceeds_policy_limit = {exceeds_policy_limit};\narray[Applicant] of var 680..750: creditScore;\narray[Applicant] of var 9000..9000: monthlyIncome;\narray[Applicant] of var 3200..3200: monthlyDebt;\narray[Applicant] of var Values_exceeds_policy_limit: requestedLoanAmount;\n\nconstraint (monthlyDebt[Priya] / monthlyIncome[Priya]) <= 0.43;\nconstraint min([creditScore[Priya], creditScore[Sam]]) >= 600;\nconstraint requestedLoanAmount[Priya] > 0;\n\nsolve satisfy;\n"
+      },
+      {
+        "outcome": "COMPILE_FAILED",
+        "detail": "Condition variable \"monthlyIncome\" is entity-indexed — combining an entity-indexed condition inside \"and\" isn't supported; only scalar conditions can be conjoined this way.",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.0014019,
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "Priya",
+              "type": "Applicant"
+            },
+            {
+              "id": "Sam",
+              "type": "Applicant"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "creditScore",
+              "entityType": "Applicant",
+              "values": [
+                "680",
+                "750"
+              ]
+            },
+            {
+              "variable": "monthlyIncome",
+              "entityType": "Applicant",
+              "values": [
+                "9000"
+              ]
+            },
+            {
+              "variable": "monthlyDebt",
+              "entityType": "Applicant",
+              "values": [
+                "3200"
+              ]
+            },
+            {
+              "variable": "requestedLoanAmount",
+              "entityType": "Applicant",
+              "values": [
+                "exceeds_policy_limit"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "/",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "monthlyDebt",
+                    "entity": "Priya"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "monthlyIncome",
+                    "entity": "Priya"
+                  }
+                ]
+              },
+              "comparator": "<",
+              "target": {
+                "kind": "literal",
+                "value": 0.43
+              }
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "min",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "creditScore",
+                    "entity": "Priya"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "creditScore",
+                    "entity": "Sam"
+                  }
+                ]
+              },
+              "comparator": ">=",
+              "target": {
+                "kind": "literal",
+                "value": 600
+              }
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "literal",
+                "value": 0
+              },
+              "comparator": "!=",
+              "target": {
+                "kind": "literal",
+                "value": 0
+              }
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "min",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "creditScore",
+                    "entity": "Priya"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "creditScore",
+                    "entity": "Sam"
+                  }
+                ]
+              },
+              "comparator": ">=",
+              "target": {
+                "kind": "literal",
+                "value": 600
+              }
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "/",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "monthlyDebt",
+                    "entity": "Priya"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "monthlyIncome",
+                    "entity": "Priya"
+                  }
+                ]
+              },
+              "comparator": ">=",
+              "target": {
+                "kind": "literal",
+                "value": 0.43
+              }
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "min",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "monthlyDebt",
+                    "entity": "Priya"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "monthlyIncome",
+                    "entity": "Priya"
+                  }
+                ]
+              },
+              "comparator": "<=",
+              "target": {
+                "kind": "literal",
+                "value": 0
+              }
+            },
+            {
+              "kind": "derivedRule",
+              "appliesTo": "loanOutcome",
+              "condition": {
+                "kind": "and",
+                "conditions": [
+                  {
+                    "kind": "comparison",
+                    "variable": "monthlyIncome",
+                    "operator": ">=",
+                    "value": "requestedLoanAmount"
+                  },
+                  {
+                    "kind": "comparison",
+                    "variable": "monthlyIncome",
+                    "operator": "<=",
+                    "value": "9000"
+                  }
+                ]
+              },
+              "thenConstraints": [
+                {
+                  "kind": "assignment",
+                  "entity": "Priya",
+                  "variable": "loanOutcome",
+                  "value": "Counter-Offer"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "PZL-0012",
+    "sourceOutcome": "MISMATCH",
+    "reps": [
+      {
+        "outcome": "FORMALIZE_FAILED",
+        "detail": "SchemaViolation: Expected number\n  at [\"constraints\"][1][\"expression\"][\"operands\"][1][\"value\"]",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.0012921
+      },
+      {
+        "outcome": "COMPILE_FAILED",
+        "detail": "Operator \"abs\" takes exactly 1 operand, got 2.",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.0012147,
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "Drug A",
+              "type": "Medication"
+            },
+            {
+              "id": "Drug B",
+              "type": "Medication"
+            },
+            {
+              "id": "Drug C",
+              "type": "Medication"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "schedule",
+              "entityType": "Medication",
+              "values": [
+                "9am",
+                "11am",
+                "4pm"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "+",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "schedule",
+                    "entity": "Drug A"
+                  },
+                  {
+                    "kind": "literal",
+                    "value": 4
+                  }
+                ]
+              },
+              "comparator": ">=",
+              "target": {
+                "kind": "variableRef",
+                "variable": "schedule",
+                "entity": "Drug B"
+              }
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "abs",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "schedule",
+                    "entity": "Drug C"
+                  },
+                  {
+                    "kind": "literal",
+                    "value": 1
+                  }
+                ]
+              },
+              "comparator": ">=",
+              "target": {
+                "kind": "literal",
+                "value": 2
+              }
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "abs",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "schedule",
+                    "entity": "Drug C"
+                  },
+                  {
+                    "kind": "literal",
+                    "value": 10
+                  }
+                ]
+              },
+              "comparator": ">=",
+              "target": {
+                "kind": "literal",
+                "value": 2
+              }
+            }
+          ]
+        }
+      },
+      {
+        "outcome": "COMPILE_FAILED",
+        "detail": "Operator \"abs\" takes exactly 1 operand, got 2.",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.0012219,
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "Drug A",
+              "type": "medication"
+            },
+            {
+              "id": "Drug B",
+              "type": "medication"
+            },
+            {
+              "id": "Drug C",
+              "type": "medication"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "medication_time",
+              "entityType": "medication",
+              "values": [
+                "9am",
+                "11am",
+                "4pm"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "+",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "medication_time",
+                    "entity": "Drug A"
+                  },
+                  {
+                    "kind": "literal",
+                    "value": 4
+                  }
+                ]
+              },
+              "comparator": ">=",
+              "target": {
+                "kind": "variableRef",
+                "variable": "medication_time",
+                "entity": "Drug B"
+              }
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "abs",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "medication_time",
+                    "entity": "Drug C"
+                  },
+                  {
+                    "kind": "literal",
+                    "value": 8
+                  }
+                ]
+              },
+              "comparator": ">=",
+              "target": {
+                "kind": "literal",
+                "value": 2
+              }
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "abs",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "medication_time",
+                    "entity": "Drug C"
+                  },
+                  {
+                    "kind": "literal",
+                    "value": 13
+                  }
+                ]
+              },
+              "comparator": ">=",
+              "target": {
+                "kind": "literal",
+                "value": 2
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "PZL-0015",
+    "sourceOutcome": "DECLINED_CORRECTLY",
+    "reps": [
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "UNDECLINED",
+        "gradeDetail": "no decline path yet (failing condition: Demand)",
+        "costUsd": 0.00108495,
+        "extractedCsp": {
+          "entities": [],
+          "domains": [],
+          "constraints": []
+        },
+        "mzn": "\n\n\n\nsolve satisfy;\n"
+      },
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "UNDECLINED",
+        "gradeDetail": "no decline path yet (failing condition: Demand)",
+        "costUsd": 0.00105615,
+        "extractedCsp": {
+          "entities": [],
+          "domains": [],
+          "constraints": []
+        },
+        "mzn": "\n\n\n\nsolve satisfy;\n"
+      },
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "UNDECLINED",
+        "gradeDetail": "no decline path yet (failing condition: Demand)",
+        "costUsd": 0.00104655,
+        "extractedCsp": {
+          "entities": [],
+          "domains": [],
+          "constraints": []
+        },
+        "mzn": "\n\n\n\nsolve satisfy;\n"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0018",
+    "sourceOutcome": "DECLINED_CORRECTLY",
+    "reps": [
+      {
+        "outcome": "FORMALIZE_FAILED",
+        "detail": "SchemaViolation: Expected number\n  at [\"constraints\"][1][\"target\"][\"value\"]",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.00116475
+      },
+      {
+        "outcome": "FORMALIZE_FAILED",
+        "detail": "SchemaViolation: Expected number\n  at [\"constraints\"][1][\"target\"][\"value\"]",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.00114375
+      },
+      {
+        "outcome": "FORMALIZE_FAILED",
+        "detail": "SchemaViolation: Expected number\n  at [\"constraints\"][1][\"target\"][\"value\"]",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.00113655
+      }
+    ]
+  },
+  {
+    "id": "PZL-0022",
+    "sourceOutcome": "MISMATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_UNSATISFIABLE",
+        "detail": "",
+        "verdict": "INFEASIBLE",
+        "gradeDetail": "no solution enumerated",
+        "costUsd": 0.0013986,
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "item1",
+              "type": "item"
+            },
+            {
+              "id": "item2",
+              "type": "item"
+            },
+            {
+              "id": "item3",
+              "type": "item"
+            },
+            {
+              "id": "item4",
+              "type": "item"
+            },
+            {
+              "id": "item5",
+              "type": "item"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "weight",
+              "entityType": "item",
+              "values": [
+                "2",
+                "4",
+                "3",
+                "5",
+                "6"
+              ]
+            },
+            {
+              "variable": "value",
+              "entityType": "item",
+              "values": [
+                "6",
+                "5",
+                "4",
+                "8",
+                "7"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "assignment",
+              "entity": "item4",
+              "variable": "weight",
+              "value": "2"
+            },
+            {
+              "kind": "assignment",
+              "entity": "item4",
+              "variable": "value",
+              "value": "6"
+            },
+            {
+              "kind": "allDifferent",
+              "variable": "weight"
+            },
+            {
+              "kind": "allDifferent",
+              "variable": "value"
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "+",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "weight",
+                    "entity": "item1"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "weight",
+                    "entity": "item2"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "weight",
+                    "entity": "item3"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "weight",
+                    "entity": "item4"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "weight",
+                    "entity": "item5"
+                  }
+                ]
+              },
+              "comparator": "<=",
+              "target": 10
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "+",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "value",
+                    "entity": "item1"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "value",
+                    "entity": "item2"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "value",
+                    "entity": "item3"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "value",
+                    "entity": "item4"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "value",
+                    "entity": "item5"
+                  }
+                ]
+              },
+              "comparator": ">=",
+              "target": 0
+            }
+          ]
+        },
+        "mzn": "include \"globals.mzn\";\n\nenum item = {item1, item2, item3, item4, item5};\narray[item] of var 2..6: weight;\narray[item] of var 4..8: value;\n\nconstraint weight[item4] = 2;\nconstraint value[item4] = 6;\nconstraint all_different(weight);\nconstraint all_different(value);\nconstraint (weight[item1] + weight[item2] + weight[item3] + weight[item4] + weight[item5]) <= 10;\nconstraint (value[item1] + value[item2] + value[item3] + value[item4] + value[item5]) >= 0;\n\nsolve satisfy;\n"
+      },
+      {
+        "outcome": "SOLVE_MULTIPLY_SATISFIABLE",
+        "detail": "",
+        "verdict": "FEASIBLE_ONLY",
+        "gradeDetail": "optimum total_value=18 not in capped output",
+        "costUsd": 0.0013392,
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "item1",
+              "type": "item"
+            },
+            {
+              "id": "item2",
+              "type": "item"
+            },
+            {
+              "id": "item3",
+              "type": "item"
+            },
+            {
+              "id": "item4",
+              "type": "item"
+            },
+            {
+              "id": "item5",
+              "type": "item"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "weight",
+              "entityType": "item",
+              "values": [
+                "2",
+                "3",
+                "4",
+                "5",
+                "6"
+              ]
+            },
+            {
+              "variable": "value",
+              "entityType": "item",
+              "values": [
+                "4",
+                "5",
+                "6",
+                "7",
+                "8"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "assignment",
+              "entity": "item4",
+              "variable": "weight",
+              "value": "2"
+            },
+            {
+              "kind": "assignment",
+              "entity": "item4",
+              "variable": "value",
+              "value": "6"
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "+",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "weight",
+                    "entity": "item1"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "weight",
+                    "entity": "item2"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "weight",
+                    "entity": "item4"
+                  }
+                ]
+              },
+              "comparator": "<=",
+              "target": 10
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "+",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "value",
+                    "entity": "item1"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "value",
+                    "entity": "item2"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "value",
+                    "entity": "item4"
+                  }
+                ]
+              },
+              "comparator": ">=",
+              "target": 15
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "+",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "weight",
+                    "entity": "item1"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "weight",
+                    "entity": "item4"
+                  }
+                ]
+              },
+              "comparator": "<=",
+              "target": 10
+            },
+            {
+              "kind": "linkedAttributes",
+              "entityType": "item",
+              "attributes": [
+                {
+                  "variable": "weight",
+                  "value": "4"
+                },
+                {
+                  "variable": "value",
+                  "value": "5"
+                }
+              ]
+            },
+            {
+              "kind": "linkedAttributes",
+              "entityType": "item",
+              "attributes": [
+                {
+                  "variable": "weight",
+                  "value": "3"
+                },
+                {
+                  "variable": "value",
+                  "value": "4"
+                }
+              ]
+            }
+          ]
+        },
+        "mzn": "enum item = {item1, item2, item3, item4, item5};\narray[item] of var 2..6: weight;\narray[item] of var 4..8: value;\n\nconstraint weight[item4] = 2;\nconstraint value[item4] = 6;\nconstraint (weight[item1] + weight[item2] + weight[item4]) <= 10;\nconstraint (value[item1] + value[item2] + value[item4]) >= 15;\nconstraint (weight[item1] + weight[item4]) <= 10;\nconstraint forall(e in item)(weight[e] = 4 <-> value[e] = 5);\nconstraint forall(e in item)(weight[e] = 3 <-> value[e] = 4);\n\nsolve satisfy;\n"
+      },
+      {
+        "outcome": "SOLVE_MULTIPLY_SATISFIABLE",
+        "detail": "",
+        "verdict": "FEASIBLE_ONLY",
+        "gradeDetail": "optimum total_value=18 not in capped output",
+        "costUsd": 0.0013428,
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "item1",
+              "type": "item"
+            },
+            {
+              "id": "item2",
+              "type": "item"
+            },
+            {
+              "id": "item3",
+              "type": "item"
+            },
+            {
+              "id": "item4",
+              "type": "item"
+            },
+            {
+              "id": "item5",
+              "type": "item"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "weight",
+              "entityType": "item",
+              "values": [
+                "2",
+                "3",
+                "4",
+                "5",
+                "6"
+              ]
+            },
+            {
+              "variable": "value",
+              "entityType": "item",
+              "values": [
+                "4",
+                "5",
+                "6",
+                "7",
+                "8"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "assignment",
+              "entity": "item4",
+              "variable": "weight",
+              "value": "2"
+            },
+            {
+              "kind": "assignment",
+              "entity": "item4",
+              "variable": "value",
+              "value": "6"
+            },
+            {
+              "kind": "allDifferent",
+              "variable": "value"
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "+",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "weight",
+                    "entity": "item1"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "weight",
+                    "entity": "item2"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "weight",
+                    "entity": "item4"
+                  }
+                ]
+              },
+              "comparator": "<=",
+              "target": 10
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "+",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "value",
+                    "entity": "item1"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "value",
+                    "entity": "item2"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "value",
+                    "entity": "item4"
+                  }
+                ]
+              },
+              "comparator": ">=",
+              "target": 15
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "+",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "weight",
+                    "entity": "item1"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "weight",
+                    "entity": "item2"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "weight",
+                    "entity": "item4"
+                  }
+                ]
+              },
+              "comparator": "<=",
+              "target": 10
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "+",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "weight",
+                    "entity": "item4"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "weight",
+                    "entity": "item1"
+                  }
+                ]
+              },
+              "comparator": "<=",
+              "target": 10
+            }
+          ]
+        },
+        "mzn": "include \"globals.mzn\";\n\nenum item = {item1, item2, item3, item4, item5};\narray[item] of var 2..6: weight;\narray[item] of var 4..8: value;\n\nconstraint weight[item4] = 2;\nconstraint value[item4] = 6;\nconstraint all_different(value);\nconstraint (weight[item1] + weight[item2] + weight[item4]) <= 10;\nconstraint (value[item1] + value[item2] + value[item4]) >= 15;\nconstraint (weight[item1] + weight[item2] + weight[item4]) <= 10;\nconstraint (weight[item4] + weight[item1]) <= 10;\n\nsolve satisfy;\n"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0028",
+    "sourceOutcome": "NO_MATCHING_READING",
+    "reps": [
+      {
+        "outcome": "SOLVE_UNSATISFIABLE",
+        "detail": "",
+        "verdict": "NO_MATCHING_READING",
+        "gradeDetail": "pipeline outcome \"unsatisfiable\" matches no reading",
+        "costUsd": 0.0012252,
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "house1",
+              "type": "house"
+            },
+            {
+              "id": "house2",
+              "type": "house"
+            },
+            {
+              "id": "house3",
+              "type": "house"
+            },
+            {
+              "id": "house4",
+              "type": "house"
+            },
+            {
+              "id": "house5",
+              "type": "house"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "house-color",
+              "entityType": "house",
+              "values": [
+                "red",
+                "blue",
+                "green",
+                "yellow",
+                "white"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "assignment",
+              "entity": "house1",
+              "variable": "house-color",
+              "value": "red"
+            },
+            {
+              "kind": "assignment",
+              "entity": "house4",
+              "variable": "house-color",
+              "value": "white"
+            },
+            {
+              "kind": "allDifferent",
+              "variable": "house-color"
+            },
+            {
+              "kind": "linkedAttributes",
+              "entityType": "house",
+              "attributes": [
+                {
+                  "variable": "house-color",
+                  "value": "blue"
+                },
+                {
+                  "variable": "house-color",
+                  "value": "green"
+                }
+              ]
+            }
+          ]
+        },
+        "mzn": "include \"globals.mzn\";\n\nenum house = {house1, house2, house3, house4, house5};\nenum Values_red_blue_green_yellow_white = {red, blue, green, yellow, white};\narray[house] of var Values_red_blue_green_yellow_white: house_color;\n\nconstraint house_color[house1] = red;\nconstraint house_color[house4] = white;\nconstraint all_different(house_color);\nconstraint forall(e in house)(house_color[e] = blue <-> house_color[e] = green);\n\nsolve satisfy;\n"
+      },
+      {
+        "outcome": "FORMALIZE_FAILED",
+        "detail": "SchemaViolation: Expected \"+\" | \"-\" | \"*\" | \"/\" | \"min\" | \"max\" | \"abs\"\n  at [\"constraints\"][2][\"expression\"][\"op\"]",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.001176
+      },
+      {
+        "outcome": "SOLVE_MULTIPLY_SATISFIABLE",
+        "detail": "",
+        "verdict": "READING_MATCHED",
+        "gradeDetail": "outcome matches a \"multiply satisfiable\" reading",
+        "costUsd": 0.001149,
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "house1",
+              "type": "house"
+            },
+            {
+              "id": "house2",
+              "type": "house"
+            },
+            {
+              "id": "house3",
+              "type": "house"
+            },
+            {
+              "id": "house4",
+              "type": "house"
+            },
+            {
+              "id": "house5",
+              "type": "house"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "color",
+              "entityType": "house",
+              "values": [
+                "red",
+                "blue",
+                "green",
+                "yellow",
+                "white"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "assignment",
+              "entity": "house1",
+              "variable": "color",
+              "value": "red"
+            },
+            {
+              "kind": "assignment",
+              "entity": "house4",
+              "variable": "color",
+              "value": "white"
+            },
+            {
+              "kind": "linkedAttributes",
+              "entityType": "house",
+              "attributes": [
+                {
+                  "variable": "color",
+                  "value": "blue"
+                },
+                {
+                  "variable": "color",
+                  "value": "green"
+                }
+              ]
+            }
+          ]
+        },
+        "mzn": "enum house = {house1, house2, house3, house4, house5};\nenum Values_red_blue_green_yellow_white = {red, blue, green, yellow, white};\narray[house] of var Values_red_blue_green_yellow_white: color;\n\nconstraint color[house1] = red;\nconstraint color[house4] = white;\nconstraint forall(e in house)(color[e] = blue <-> color[e] = green);\n\nsolve satisfy;\n"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0033",
+    "sourceOutcome": "PREMISE_SILENTLY_PROMOTED",
+    "reps": [
+      {
+        "outcome": "FORMALIZE_FAILED",
+        "detail": "SchemaViolation: Expected number\n  at [\"constraints\"][1][\"target\"][\"value\"]",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.00221175
+      },
+      {
+        "outcome": "COMPILE_FAILED",
+        "detail": "Identifier collision: entity id \"beans\", and domain value \"beans\" (domain \"item\", entityType \"grocery\") all sanitize to the same MiniZinc identifier \"beans\" — MiniZinc's enum/variable namespace is global, so one of these needs a different name in the extraction.",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.00123795,
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "iceCream",
+              "type": "grocery"
+            },
+            {
+              "id": "beans",
+              "type": "grocery"
+            },
+            {
+              "id": "flour",
+              "type": "grocery"
+            },
+            {
+              "id": "bananas",
+              "type": "grocery"
+            },
+            {
+              "id": "compartment1",
+              "type": "compartment"
+            },
+            {
+              "id": "compartment2",
+              "type": "compartment"
+            },
+            {
+              "id": "compartment3",
+              "type": "compartment"
+            },
+            {
+              "id": "compartment4",
+              "type": "compartment"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "item",
+              "entityType": "grocery",
+              "values": [
+                "ice cream",
+                "beans",
+                "flour",
+                "bananas"
+              ]
+            },
+            {
+              "variable": "compartment",
+              "entityType": "compartment",
+              "values": [
+                "compartment1",
+                "compartment2",
+                "compartment3",
+                "compartment4"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "assignment",
+              "entity": "compartment1",
+              "variable": "item",
+              "value": "ice cream"
+            },
+            {
+              "kind": "allDifferent",
+              "variable": "item"
+            },
+            {
+              "kind": "assignment",
+              "entity": "compartment2",
+              "variable": "item",
+              "value": "beans"
+            },
+            {
+              "kind": "assignment",
+              "entity": "compartment3",
+              "variable": "item",
+              "value": "flour"
+            },
+            {
+              "kind": "assignment",
+              "entity": "compartment4",
+              "variable": "item",
+              "value": "bananas"
+            }
+          ]
+        }
+      },
+      {
+        "outcome": "SOLVE_MULTIPLY_SATISFIABLE",
+        "detail": "",
+        "verdict": "PREMISE_FREE_MATCH",
+        "gradeDetail": "premise-free outcome (multiply satisfiable) as expected",
+        "costUsd": 0.00118515,
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "item1",
+              "type": "groceryItem"
+            },
+            {
+              "id": "item2",
+              "type": "groceryItem"
+            },
+            {
+              "id": "item3",
+              "type": "groceryItem"
+            },
+            {
+              "id": "item4",
+              "type": "groceryItem"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "compartment",
+              "entityType": "groceryItem",
+              "values": [
+                "Compartment 1",
+                "Compartment 2",
+                "Compartment 3",
+                "Compartment 4"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "assignment",
+              "entity": "item1",
+              "variable": "compartment",
+              "value": "Compartment 1"
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "literal",
+                "value": 0
+              },
+              "comparator": "!=",
+              "target": {
+                "kind": "variableRef",
+                "variable": "compartment",
+                "entity": "item2"
+              }
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "literal",
+                "value": 0
+              },
+              "comparator": "!=",
+              "target": {
+                "kind": "variableRef",
+                "variable": "compartment",
+                "entity": "item3"
+              }
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "literal",
+                "value": 0
+              },
+              "comparator": "!=",
+              "target": {
+                "kind": "variableRef",
+                "variable": "compartment",
+                "entity": "item4"
+              }
+            }
+          ]
+        },
+        "mzn": "enum groceryItem = {item1, item2, item3, item4};\nenum Values_Compartment_1_Compartment_2_Compartment_3_Compartment_4 = {Compartment_1, Compartment_2, Compartment_3, Compartment_4};\narray[groceryItem] of var Values_Compartment_1_Compartment_2_Compartment_3_Compartment_4: compartment;\n\nconstraint compartment[item1] = Compartment_1;\nconstraint 0 != compartment[item2];\nconstraint 0 != compartment[item3];\nconstraint 0 != compartment[item4];\n\nsolve satisfy;\n"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0038",
+    "sourceOutcome": "MATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_MULTIPLY_SATISFIABLE",
+        "detail": "",
+        "verdict": "MISMATCH",
+        "gradeDetail": "expected unique solution, got MultiplySatisfiable",
+        "costUsd": 0.0012627,
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "tortoise",
+              "type": "animal"
+            },
+            {
+              "id": "parrot",
+              "type": "animal"
+            },
+            {
+              "id": "goat",
+              "type": "animal"
+            },
+            {
+              "id": "rabbit",
+              "type": "animal"
+            },
+            {
+              "id": "wolf",
+              "type": "animal"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "pen",
+              "entityType": "animal",
+              "values": [
+                "1",
+                "2",
+                "3",
+                "4",
+                "5"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "assignment",
+              "entity": "tortoise",
+              "variable": "pen",
+              "value": "1"
+            },
+            {
+              "kind": "assignment",
+              "entity": "parrot",
+              "variable": "pen",
+              "value": "2"
+            },
+            {
+              "kind": "assignment",
+              "entity": "goat",
+              "variable": "pen",
+              "value": "3"
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "variableRef",
+                "variable": "pen",
+                "entity": "rabbit"
+              },
+              "comparator": "<",
+              "target": {
+                "kind": "variableRef",
+                "variable": "pen",
+                "entity": "wolf"
+              }
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "variableRef",
+                "variable": "pen",
+                "entity": "wolf"
+              },
+              "comparator": ">",
+              "target": {
+                "kind": "variableRef",
+                "variable": "pen",
+                "entity": "rabbit"
+              }
+            }
+          ]
+        },
+        "mzn": "enum animal = {tortoise, parrot, goat, rabbit, wolf};\narray[animal] of var 1..5: pen;\n\nconstraint pen[tortoise] = 1;\nconstraint pen[parrot] = 2;\nconstraint pen[goat] = 3;\nconstraint pen[rabbit] < pen[wolf];\nconstraint pen[wolf] > pen[rabbit];\n\nsolve satisfy;\n"
+      },
+      {
+        "outcome": "COMPILE_FAILED",
+        "detail": "Operator \"abs\" takes exactly 1 operand, got 2.",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.0012093,
+        "extractedCsp": {
+          "entities": [
+            {
+              "id": "tortoise",
+              "type": "animal"
+            },
+            {
+              "id": "parrot",
+              "type": "animal"
+            },
+            {
+              "id": "goat",
+              "type": "animal"
+            },
+            {
+              "id": "rabbit",
+              "type": "animal"
+            },
+            {
+              "id": "wolf",
+              "type": "animal"
+            }
+          ],
+          "domains": [
+            {
+              "variable": "pen",
+              "entityType": "animal",
+              "values": [
+                "1",
+                "2",
+                "3",
+                "4",
+                "5"
+              ]
+            }
+          ],
+          "constraints": [
+            {
+              "kind": "assignment",
+              "entity": "tortoise",
+              "variable": "pen",
+              "value": "1"
+            },
+            {
+              "kind": "assignment",
+              "entity": "parrot",
+              "variable": "pen",
+              "value": "2"
+            },
+            {
+              "kind": "assignment",
+              "entity": "goat",
+              "variable": "pen",
+              "value": "3"
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "variableRef",
+                "variable": "pen",
+                "entity": "rabbit"
+              },
+              "comparator": "<",
+              "target": {
+                "kind": "variableRef",
+                "variable": "pen",
+                "entity": "wolf"
+              }
+            },
+            {
+              "kind": "arithmetic",
+              "expression": {
+                "kind": "binaryOp",
+                "op": "abs",
+                "operands": [
+                  {
+                    "kind": "variableRef",
+                    "variable": "pen",
+                    "entity": "wolf"
+                  },
+                  {
+                    "kind": "variableRef",
+                    "variable": "pen",
+                    "entity": "rabbit"
+                  }
+                ]
+              },
+              "comparator": ">=",
+              "target": {
+                "kind": "literal",
+                "value": 1
+              }
+            }
+          ]
+        }
+      },
+      {
+        "outcome": "FORMALIZE_FAILED",
+        "detail": "SchemaViolation: Expected \"+\" | \"-\" | \"*\" | \"/\" | \"min\" | \"max\" | \"abs\"\n  at [\"constraints\"][3][\"expression\"][\"op\"]",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.0012183
+      }
+    ]
+  }
+]

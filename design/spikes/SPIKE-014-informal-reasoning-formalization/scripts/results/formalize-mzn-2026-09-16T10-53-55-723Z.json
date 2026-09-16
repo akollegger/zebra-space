@@ -1,0 +1,422 @@
+[
+  {
+    "id": "PZL-0001",
+    "sourceOutcome": "MISMATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_ERROR",
+        "detail": "ModelSyntaxError: Error: type error: no function or predicate with name `find' found, did you mean `'in''?\n/private/var/folders/t_/xcdyhzm5185g8bsc5klh4y6h0000gn/T/minizinc-BsPwsy/model.mzn:29.106-124\n",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.00062265,
+        "mzn": "include \"globals.mzn\";\n\nenum Color = {Red, Green, Ivory, Yellow, Blue};\nenum Nationality = {Englishman, Spaniard, Ukrainian, Norwegian, Japanese};\nenum Drink = {Coffee, Tea, Milk, OrangeJuice, Water};\nenum Cigar = {OldGold, Kools, Chesterfields, LuckyStrike, Parliaments};\nenum Pet = {Dog, Snails, Fox, Horse, Zebra};\n\narray[1..5] of var Color: houseColor;\narray[1..5] of var Nationality: houseNationality;\narray[1..5] of var Drink: houseDrink;\narray[1..5] of var Cigar: houseCigar;\narray[1..5] of var Pet: housePet;\n\nconstraint houseNationality[1] == Norwegian;\nconstraint houseDrink[3] == Milk;\nconstraint houseColor[2] == Blue;\nconstraint houseColor[1] == Yellow;\n\nconstraint houseDrink[5] == Coffee;\n\nconstraint houseNationality[4] == Englishman -> houseColor[4] == Red;\nconstraint houseNationality[2] == Spaniard -> housePet[2] == Dog;\nconstraint houseNationality[4] == Ukrainian -> houseDrink[2] == Tea;\nconstraint houseColor[5] == Green /\\ houseColor[4] == Ivory;\n\nconstraint houseCigar[1] == Kools;\nconstraint housePet[6] == Snails /\\ houseCigar[6] == OldGold;\nconstraint houseCigar[6] == Chesterfields -> exists(i in 1..5)(houseCigar[i] == Chesterfields /\\ abs(i - find(housePet, Fox)) == 1);\nconstraint houseCigar[1] == Kools -> exists(i in 1..5)(houseCigar[i] == Kools /\\ abs(i - find(housePet, Horse)) == 1);\nconstraint houseCigar[5] == LuckyStrike -> houseDrink[5] == OrangeJuice;\nconstraint houseCigar[4] == Parliaments -> houseNationality[4] == Japanese;\n\nconstraint all_different(houseColor);\nconstraint all_different(houseNationality);\nconstraint all_different(houseDrink);\nconstraint all_different(houseCigar);\nconstraint all_different(housePet);\n\nsolve satisfy;"
+      },
+      {
+        "outcome": "SOLVE_UNSATISFIABLE",
+        "detail": "",
+        "verdict": "MISMATCH",
+        "gradeDetail": "expected unique solution, got Unsatisfiable",
+        "costUsd": 0.00066465,
+        "mzn": "include \"globals.mzn\";\n\nenum COLOR = {red, green, ivory, yellow, blue};\nenum NATIONALITY = {englishman, spaniard, ukrainian, norwegian, japanese};\nenum DRINK = {coffee, tea, milk, orange_juice, water};\nenum CIGAR = {old_gold, kools, chesterfields, lucky_strike, parliaments};\nenum PET = {dog, snails, fox, horse, zebra};\n\nint: N = 5;\n\narray[1..N] of var COLOR: house_color;\narray[1..N] of var NATIONALITY: house_nationality;\narray[1..N] of var DRINK: house_drink;\narray[1..N] of var CIGAR: house_cigar;\narray[1..N] of var PET: house_pet;\n\n% Clue 1: The Englishman lives in the red house.\nconstraint forall(i in 1..N)(house_nationality[i] = englishman -> house_color[i] = red);\n\n% Clue 2: The Spaniard owns the dog.\nconstraint forall(i in 1..N)(house_nationality[i] = spaniard -> house_pet[i] = dog);\n\n% Clue 3: Coffee is drunk in the green house.\nconstraint forall(i in 1..N)(house_color[i] = green -> house_drink[i] = coffee);\n\n% Clue 4: The Ukrainian drinks tea.\nconstraint forall(i in 1..N)(house_nationality[i] = ukrainian -> house_drink[i] = tea);\n\n% Clue 5: The green house is immediately to the right of the ivory house.\nconstraint forall(i in 1..N-1)(house_color[i] = ivory -> house_color[i+1] = green);\n\n% Clue 6: The Old Gold smoker owns snails.\nconstraint forall(i in 1..N)(house_cigar[i] = old_gold -> house_pet[i] = snails);\n\n% Clue 7: Kools are smoked in the yellow house.\nconstraint forall(i in 1..N)(house_cigar[i] = kools -> house_color[i] = yellow);\n\n% Clue 8: Milk is drunk in the middle house.\nconstraint house_drink[3] = milk;\n\n% Clue 9: The Norwegian lives in the first house.\nconstraint house_nationality[1] = norwegian;\n\n% Clue 10: The man who smokes Chesterfields lives in the house next to the man with the fox.\nconstraint forall(i in 1..N-1)(house_cigar[i] = chesterfields -> house_pet[i+1] = fox \\/ house_pet[i] = fox -> house_cigar[i+1] = chesterfields);\n\n% Clue 11: Kools are smoked in the house next to the house where the horse is kept.\nconstraint forall(i in 1..N-1)(house_cigar[i] = kools -> house_pet[i+1] = horse \\/ house_pet[i] = horse -> house_cigar[i+1] = kools);\n\n% Clue 12: The Lucky Strike smoker drinks orange juice.\nconstraint forall(i in 1..N)(house_cigar[i] = lucky_strike -> house_drink[i] = orange_juice);\n\n% Clue 13: The Japanese smokes Parliaments.\nconstraint forall(i in 1..N)(house_nationality[i] = japanese -> house_cigar[i] = parliaments);\n\n% Clue 14: The Norwegian lives next to the blue house.\nconstraint house_color[2] = blue /\\ house_nationality[1] = norwegian;\n\n% All different constraints\nconstraint alldifferent(house_color);\nconstraint alldifferent(house_nationality);\nconstraint alldifferent(house_drink);\nconstraint alldifferent(house_cigar);\nconstraint alldifferent(house_pet);"
+      },
+      {
+        "outcome": "SOLVE_MULTIPLY_SATISFIABLE",
+        "detail": "",
+        "verdict": "MISMATCH",
+        "gradeDetail": "expected unique solution, got MultiplySatisfiable",
+        "costUsd": 0.00059745,
+        "mzn": "include \"globals.mzn\";\n\nenum HOUSE_COLOR = {red, green, ivory, yellow, blue};\nenum NATIONALITY = {Englishman, Spaniard, Ukrainian, Norwegian, Japanese};\nenum DRINK = {coffee, tea, milk, orange_juice, water};\nenum CIGAR = {Old_Gold, Kools, Chesterfields, Lucky_Strike, Parliaments};\nenum PET = {dog, snails, fox, horse, zebra};\n\narray[1..5] of var HOUSE_COLOR: color;\narray[1..5] of var NATIONALITY: nationality;\narray[1..5] of var DRINK: drink;\narray[1..5] of var CIGAR: cigar;\narray[1..5] of var PET: pet;\n\nconstraint\n    nationality[1] = Norwegian /\\  % The Norwegian lives in the first house.\n    drink[3] = milk /\\  % Milk is drunk in the middle house (House 3).\n    color[2] = blue /\\  % The Norwegian lives next to the blue house.\n    \n    % The Englishman lives in the red house.\n    exists(i in 1..5)(nationality[i] = Englishman -> color[i] = red) /\\\n    \n    % The Spaniard owns the dog.\n    exists(i in 1..5)(nationality[i] = Spaniard -> pet[i] = dog) /\\\n    \n    % Coffee is drunk in the green house.\n    exists(i in 1..5)(color[i] = green -> drink[i] = coffee) /\\\n    \n    % The Ukrainian drinks tea.\n    exists(i in 1..5)(nationality[i] = Ukrainian -> drink[i] = tea) /\\\n    \n    % The green house is immediately to the right of the ivory house.\n    forall(i in 1..4)(color[i] = ivory -> color[i+1] = green) /\\\n    \n    % The Old Gold smoker owns snails.\n    exists(i in 1..5)(cigar[i] = Old_Gold -> pet[i] = snails) /\\\n    \n    % Kools are smoked in the yellow house.\n    exists(i in 1..5)(color[i] = yellow -> cigar[i] = Kools) /\\\n    \n    % The man who smokes Chesterfields lives in the house next to the man with the fox.\n    forall(i in 1..4)(cigar[i] = Chesterfields <-> pet[i+1] = fox) /\\\n    forall(i in 2..5)(cigar[i] = Chesterfields <-> pet[i-1] = fox) /\\\n    \n    % Kools are smoked in the house next to the house where the horse is kept.\n    forall(i in 1..4)(cigar[i] = Kools <-> pet[i+1] = horse) /\\\n    forall(i in 2..5)(cigar[i] = Kools <-> pet[i-1] = horse) /\\\n    \n    % The Lucky Strike smoker drinks orange juice.\n    exists(i in 1..5)(cigar[i] = Lucky_Strike -> drink[i] = orange_juice) /\\\n    \n    % The Japanese smokes Parliaments.\n    exists(i in 1..5)(nationality[i] = Japanese -> cigar[i] = Parliaments);"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0002",
+    "sourceOutcome": "MATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "MATCH",
+        "gradeDetail": "all rows match under overlap alignment",
+        "costUsd": 0.000303,
+        "mzn": "include \"globals.mzn\";\n\nenum COLOR = { Blue, Red, Green };\nenum ANIMAL = { Dog, Cat, Zebra };\narray[1..3] of var COLOR: houseColor;\narray[1..3] of var ANIMAL: houseAnimal;\n\n% Constraints based on the clues\nconstraint houseColor[2] == Red;  % The Red House is the middle house\nconstraint houseColor[1] == Blue;  % The Blue House is directly to the left of the Red House\nconstraint houseAnimal[1] == Dog;  % The Dog lives in the Blue House\nconstraint houseAnimal[2] == Cat;  % The Cat lives in the Red House\nconstraint alldifferent(houseColor); % All colors must be different\nconstraint alldifferent(houseAnimal); % All animals must be different\n\n% The Zebra must live in the remaining house\nconstraint houseAnimal[3] == Zebra;\n\nsolve satisfy;"
+      },
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "MATCH",
+        "gradeDetail": "all rows match under overlap alignment",
+        "costUsd": 0.0003198,
+        "mzn": "include \"globals.mzn\";\n\nenum COLOR = {Blue, Red, Green};\nenum ANIMAL = {Dog, Cat, Zebra};\n\narray[1..3] of var COLOR: houseColor;\narray[1..3] of var ANIMAL: houseAnimal;\n\n% Constraints based on the clues\nconstraint houseColor[2] = Red; % 2. The Red House is the middle house.\nconstraint houseColor[1] = Blue; % 3. The Blue House is directly to the left of the Red House.\nconstraint houseAnimal[1] = Dog; % 4. The Dog lives in the Blue House.\nconstraint houseAnimal[2] = Cat; % 1. The Cat lives in the Red House.\n\n% Remaining house color and animal assignment\nconstraint houseColor[3] = Green; % The only color left for House 3\nconstraint houseAnimal[3] = Zebra; % The only animal left for House 3\n\n% Ensure all house colors and animals are different\nconstraint alldifferent(houseColor);\nconstraint alldifferent(houseAnimal);"
+      },
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "MATCH",
+        "gradeDetail": "all rows match under overlap alignment",
+        "costUsd": 0.0002628,
+        "mzn": "include \"globals.mzn\";\n\nenum COLOR = {Blue, Red, Green};\nenum ANIMAL = {Dog, Cat, Zebra};\n\narray[1..3] of var COLOR: houseColor;\narray[1..3] of var ANIMAL: houseAnimal;\n\nconstraint houseColor[2] = Red; \nconstraint houseColor[1] = Blue; \nconstraint houseColor[3] = Green; \n\nconstraint houseAnimal[1] = Dog;\nconstraint houseAnimal[2] = Cat;\nconstraint houseAnimal[3] = Zebra;\n\nconstraint alldifferent(houseColor);\nconstraint alldifferent(houseAnimal);"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0003",
+    "sourceOutcome": "MATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "MATCH",
+        "gradeDetail": "all expected tokens present",
+        "costUsd": 0.00018,
+        "mzn": "include \"globals.mzn\";\n\nenum CHOICE = {Paper, Rock, Scissors};\n\nvar CHOICE: playerChoice;\n\nconstraint playerChoice = Paper;\n\nsolve satisfy;"
+      },
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "MATCH",
+        "gradeDetail": "all expected tokens present",
+        "costUsd": 0.000183,
+        "mzn": "include \"globals.mzn\";\n\nenum MOVE = { Paper, Rock, Scissors };\n\nvar MOVE: yourMove;\n\nconstraint yourMove = Paper; % You should play Paper to win against Rock"
+      },
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "MATCH",
+        "gradeDetail": "all expected tokens present",
+        "costUsd": 0.00018,
+        "mzn": "include \"globals.mzn\";\n\nenum CHOICE = {Paper, Rock, Scissors};\n\nvar CHOICE: playerChoice;\n\nconstraint playerChoice = Paper;\n\nsolve satisfy;"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0004",
+    "sourceOutcome": "MATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "MATCH",
+        "gradeDetail": "all expected tokens present",
+        "costUsd": 0.0002616,
+        "mzn": "include \"globals.mzn\";\n\nenum SUSPECT = { Miss_Scarlett, Colonel_Mustard, Professor_Plum };\nenum WEAPON = { Candlestick, Revolver, Rope };\nenum ROOM = { Kitchen, Library, Conservatory };\n\nvar SUSPECT: culprit;\nvar WEAPON: murder_weapon;\nvar ROOM: murder_room;\n\nconstraint culprit != Colonel_Mustard;\nconstraint culprit != Miss_Scarlett;\nconstraint murder_weapon != Revolver;\nconstraint murder_weapon != Rope;\nconstraint murder_room != Kitchen;\nconstraint murder_room != Library;\n\nsolve satisfy;"
+      },
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "MATCH",
+        "gradeDetail": "all expected tokens present",
+        "costUsd": 0.0002652,
+        "mzn": "include \"globals.mzn\";\n\nenum SUSPECTS = {Miss_Scarlett, Colonel_Mustard, Professor_Plum};\nenum WEAPONS = {Candlestick, Revolver, Rope};\nenum ROOMS = {Kitchen, Library, Conservatory};\n\nvar SUSPECTS: culprit;\nvar WEAPONS: murderWeapon;\nvar ROOMS: murderRoom;\n\nconstraint culprit != Colonel_Mustard;\nconstraint culprit != Miss_Scarlett;\nconstraint murderWeapon != Revolver;\nconstraint murderWeapon != Rope;\nconstraint murderRoom != Kitchen;\nconstraint murderRoom != Library;\n\nsolve satisfy;"
+      },
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "MATCH",
+        "gradeDetail": "all expected tokens present",
+        "costUsd": 0.0001788,
+        "mzn": "include \"globals.mzn\";\n\nenum SUSPECTS = {Miss_Scarlett, Colonel_Mustard, Professor_Plum};\nenum WEAPONS = {Candlestick, Revolver, Rope};\nenum ROOMS = {Kitchen, Library, Conservatory};\n\nvar SUSPECTS: culprit;\nvar WEAPONS: murder_weapon;\nvar ROOMS: murder_room;\n\nconstraint culprit != Colonel_Mustard;\nconstraint culprit != Miss_Scarlett;\nconstraint murder_weapon != Revolver;\nconstraint murder_weapon != Rope;\nconstraint murder_room != Kitchen;\nconstraint murder_room != Library;\n\nsolve satisfy;"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0007",
+    "sourceOutcome": "MATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "MATCH",
+        "gradeDetail": "all expected tokens present",
+        "costUsd": 0.00036405,
+        "mzn": "include \"globals.mzn\";\n\nenum LETTER = {S, E, N, D, M, O, R, Y};\narray[LETTER] of var 0..9: digits;\n\nconstraint alldifferent(digits);\n\n% Constraints for S and M\nconstraint digits[S] >= 1;\nconstraint digits[M] >= 1;\n\n% Equation representing SEND + MORE = MONEY\nconstraint \n    (1000 * digits[S] + 100 * digits[E] + 10 * digits[N] + digits[D]) +\n    (1000 * digits[M] + 100 * digits[O] + 10 * digits[R] + digits[E]) =\n    (10000 * digits[M] + 1000 * digits[O] + 100 * digits[N] + 10 * digits[E] + digits[Y]);"
+      },
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "MATCH",
+        "gradeDetail": "all expected tokens present",
+        "costUsd": 0.00024405,
+        "mzn": "include \"globals.mzn\";\n\nenum LETTERS = {S, E, N, D, M, O, R, Y};\n\narray[LETTERS] of var 0..9: digit;\n\n% Constraints\nconstraint digit[S] != 0; % S cannot be 0\nconstraint digit[M] != 0; % M cannot be 0\nconstraint alldifferent(digit);\n\n% SEND + MORE = MONEY\nconstraint (1000 * digit[S] + 100 * digit[E] + 10 * digit[N] + digit[D]) +\n           (1000 * digit[M] + 100 * digit[O] + 10 * digit[R] + digit[E]) =\n           (10000 * digit[M] + 1000 * digit[O] + 100 * digit[N] + 10 * digit[E] + digit[Y]);"
+      },
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "MATCH",
+        "gradeDetail": "all expected tokens present",
+        "costUsd": 0.00024465,
+        "mzn": "include \"globals.mzn\";\n\nenum LETTERS = {S, E, N, D, M, O, R, Y};\narray[LETTERS] of var 0..9: digits;\n\n% Constraints for leading digits\nconstraint digits[S] > 0;\nconstraint digits[M] > 0;\n\n% Unique digits for each letter\nconstraint alldifferent(digits);\n\n% Equation representing SEND + MORE = MONEY\nconstraint (1000 * digits[S] + 100 * digits[E] + 10 * digits[N] + digits[D]) +\n            (1000 * digits[M] + 100 * digits[O] + 10 * digits[R] + digits[E]) =\n            (10000 * digits[M] + 1000 * digits[O] + 100 * digits[N] + 10 * digits[E] + digits[Y]);\n\nsolve satisfy;"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0010",
+    "sourceOutcome": "MATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_MULTIPLY_SATISFIABLE",
+        "detail": "",
+        "verdict": "MISMATCH",
+        "gradeDetail": "expected unique solution, got MultiplySatisfiable",
+        "costUsd": 0.00021585,
+        "mzn": "include \"globals.mzn\";\n\nenum POSITION = { North, East, South, West, Pedestrian };\n\narray[POSITION] of var 1..5: order;\n\n% The pedestrian always goes before the East car\nconstraint order[Pedestrian] < order[East];\n\n% The South car arrives before the pedestrian and the East car\nconstraint order[South] < order[Pedestrian];\n\n% The North car and the West car arrive at the same moment, after the pedestrian and the East car\nconstraint order[Pedestrian] < order[North] /\\ order[Pedestrian] < order[West];\n\n% The North car goes before the West car due to the clockwise right-of-way\nconstraint order[North] < order[West];\n\n% All positions must be different\nconstraint alldifferent(order);"
+      },
+      {
+        "outcome": "SOLVE_UNSATISFIABLE",
+        "detail": "",
+        "verdict": "MISMATCH",
+        "gradeDetail": "expected unique solution, got Unsatisfiable",
+        "costUsd": 0.00027225,
+        "mzn": "include \"globals.mzn\";\n\nenum Direction = {North, East, South, West, Pedestrian};\n\narray[1..5] of var Direction: order;\n\nconstraint alldifferent(order);\n\n% The South car arrives first\nconstraint order[1] = South;\n\n% The Pedestrian and East car arrive at the same moment\nconstraint (order[2] = Pedestrian \\/ order[2] = East) /\\\n           (order[3] = Pedestrian \\/ order[3] = East);\n\n% The South car arrives before the Pedestrian and East car\nconstraint order[2] != East /\\ order[2] != Pedestrian;\n\n% The North car and West car arrive at the same moment after the Pedestrian and East car\nconstraint (order[4] = North \\/ order[4] = West) /\\\n           (order[5] = North \\/ order[5] = West);\n\n% Since North car goes before West car due to clockwise priority\nconstraint order[4] = North;\n\n% Ensure the order of Pedestrian before East car\nconstraint order[2] = Pedestrian \\/ order[3] = Pedestrian;\n\n% Ensure ordering for East car\nconstraint order[2] = East \\/ order[3] = East;"
+      },
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "MATCH",
+        "gradeDetail": "all rows match under overlap alignment",
+        "costUsd": 0.00019545,
+        "mzn": "include \"globals.mzn\";\n\nenum Direction = {North, South, East, West, Pedestrian};\n\narray[1..5] of var Direction: order;\n\n% Rules for the order of the cars and pedestrian\nconstraint order[1] = South; % South car goes first\nconstraint order[2] = Pedestrian; % Pedestrian goes second\nconstraint order[3] = East; % East car goes third\nconstraint order[4] = North; % North car goes fourth\nconstraint order[5] = West; % West car goes fifth\n\n% There are no other possible arrangements due to the problem constraints"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0011",
+    "sourceOutcome": "MATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_ERROR",
+        "detail": "ModelSyntaxError: /private/var/folders/t_/xcdyhzm5185g8bsc5klh4y6h0000gn/T/minizinc-o03pEb/model.mzn:12.38-42:\nvar float: dtiRatio = combinedDebt / float(combinedIncome);\n                                     ^^^^^\nErro",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.0003186,
+        "mzn": "include \"globals.mzn\";\n\nenum ApplicationOutcome = { Denied, Approved, CounterOffer };\n\nvar int: priyaCreditScore = 680;\nvar int: samCreditScore = 750;\nvar int: combinedIncome = 9000;\nvar int: combinedDebt = 3200;\nvar ApplicationOutcome: loanOutcome;\n\nvar int: creditTier = min(priyaCreditScore, samCreditScore);\nvar float: dtiRatio = combinedDebt / float(combinedIncome);\n\nconstraint \n    (creditTier >= 600) /\\\n    (dtiRatio <= 0.43) /\\\n    (exists(amount in 0..combinedIncome)(amount > combinedIncome -> loanOutcome = CounterOffer) /\\\n    (loanOutcome = Approved) \\/ \n    (loanOutcome = Denied));\n\nsolve satisfy;"
+      },
+      {
+        "outcome": "SOLVE_ERROR",
+        "detail": "ModelSyntaxError: /private/var/folders/t_/xcdyhzm5185g8bsc5klh4y6h0000gn/T/minizinc-0nCgTp/model.mzn:16.31-35:\n        var float: dtiRatio = float(combinedDebt) / combinedIncome\n                              ^^^^^\nErro",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.0002334,
+        "mzn": "include \"globals.mzn\";\n\nenum Outcome = {Denied, Approved, CounterOffer};\n\nvar int: priyaCreditScore = 680;\nvar int: samCreditScore = 750;\nvar int: combinedIncome = 9000;\nvar int: combinedDebt = 3200;\nvar int: requestedLoanAmount;\n\nvar Outcome: applicationOutcome;\n\nconstraint \n    let {\n        var int: creditTier = min(priyaCreditScore, samCreditScore);\n        var float: dtiRatio = float(combinedDebt) / combinedIncome\n    } in\n    (creditTier < 600 -> applicationOutcome = Denied) /\\\n    (dtiRatio > 0.43 -> applicationOutcome = Denied) /\\\n    (applicationOutcome != Denied -> \n        (requestedLoanAmount <= combinedIncome * 4.5 -> applicationOutcome = Approved) /\\\n        (requestedLoanAmount > combinedIncome * 4.5 -> applicationOutcome = CounterOffer)\n    );"
+      },
+      {
+        "outcome": "SOLVE_ERROR",
+        "detail": "ModelSyntaxError: /private/var/folders/t_/xcdyhzm5185g8bsc5klh4y6h0000gn/T/minizinc-M699rW/model.mzn:12.38-42:\nvar float: dtiRatio = combinedDebt / float(combinedIncome);\n                                     ^^^^^\nErro",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.0002646,
+        "mzn": "include \"globals.mzn\";\n\nenum Outcome = { Denied, Approved, CounterOffer };\n\nvar int: priyaCreditScore = 680;\nvar int: samCreditScore = 750;\nvar int: combinedIncome = 9000;\nvar int: combinedDebt = 3200;\nvar Outcome: applicationOutcome;\n\nvar int: creditTier = min(priyaCreditScore, samCreditScore);\nvar float: dtiRatio = combinedDebt / float(combinedIncome);\n\nconstraint \n    (creditTier < 600 -> applicationOutcome = Denied) /\\\n    (dtiRatio > 0.43 -> applicationOutcome = Denied) /\\\n    (creditTier >= 600 /\\ dtiRatio <= 0.43 -> \n        (applicationOutcome = Approved \\/ applicationOutcome = CounterOffer) /\\ \n        (applicationOutcome = CounterOffer -> requestedLoanAmount > policyLimit)\n    );\n\n% Assuming some variables for requested loan amount and policy limit are defined\nvar int: requestedLoanAmount; % This should be set to the actual value for constraint evaluation\nvar int: policyLimit; % This should be set to the actual policy limit \n\n% Example constraints for requested loan amount and policy limit\nconstraint requestedLoanAmount > policyLimit;"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0012",
+    "sourceOutcome": "MISMATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_MULTIPLY_SATISFIABLE",
+        "detail": "",
+        "verdict": "MISMATCH",
+        "gradeDetail": "expected unique solution, got MultiplySatisfiable",
+        "costUsd": 0.0001752,
+        "mzn": "include \"globals.mzn\";\n\nenum DRUG = { A, B, C };\narray[DRUG] of var { 9, 11, 16 }: drugTime;\n\n% Constraints\nconstraint drugTime[B] >= drugTime[A] + 4; % Drug B must be taken at least 4 hours after Drug A\nconstraint drugTime[C] != 9 /\\ drugTime[C] != 11; % Drug C must be taken at least 2 hours away from meals"
+      },
+      {
+        "outcome": "SOLVE_MULTIPLY_SATISFIABLE",
+        "detail": "",
+        "verdict": "MISMATCH",
+        "gradeDetail": "expected unique solution, got MultiplySatisfiable",
+        "costUsd": 0.0002124,
+        "mzn": "include \"globals.mzn\";\n\nenum DRUG = { A, B, C };\narray[DRUG] of var 9..16: drugTime;\n\n% Constraints\n% Constraint #1: Drug B must be taken at least 4 hours after Drug A\nconstraint drugTime[B] >= drugTime[A] + 4;\n\n% Constraint #2: Drug C must be taken at least 2 hours away from any meal\n% Meals are at 8am (8) and 1pm (13)\nconstraint drugTime[C] < 8 \\/ drugTime[C] > 10 /\\ \n          drugTime[C] < 11 \\/ drugTime[C] > 13 /\\ \n          drugTime[C] < 15;\n\n% Possible time slots for medication\nconstraint alldifferent(drugTime);"
+      },
+      {
+        "outcome": "SOLVE_ERROR",
+        "detail": "ModelSyntaxError: /private/var/folders/t_/xcdyhzm5185g8bsc5klh4y6h0000gn/T/minizinc-WGlGHd/model.mzn:4.14:\nenum TIME = {9, 11, 16};\n             ^\nError: syntax error, unexpected integer literal, expecting '}'\n",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.0001848,
+        "mzn": "include \"globals.mzn\";\n\nenum DRUG = {A, B, C};\nenum TIME = {9, 11, 16};\n\narray[DRUG] of var TIME: drugTime;\n\nconstraint \n    drugTime[B] >= drugTime[A] + 4 /\\ \n    (drugTime[C] < 8 \\/ drugTime[C] > 10) /\\\n    (drugTime[C] < 11 \\/ drugTime[C] > 13);\n\narray[1..3] of var DRUG: allDrugs;\n\nconstraint alldifferent(allDrugs);"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0015",
+    "sourceOutcome": "DECLINED_CORRECTLY",
+    "reps": [
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "UNDECLINED",
+        "gradeDetail": "no decline path yet (failing condition: Demand)",
+        "costUsd": 0.00020925,
+        "mzn": "include \"globals.mzn\";\n\n% Since there are no specific details provided, we will create an empty model.\n\n% Variables declaration (none)\n% No variables to declare due to absence of information\n\n% Domains declaration (none)\n% No domains to declare due to absence of information\n\n% Constraints declaration (none)\n% No constraints to declare due to absence of information"
+      },
+      {
+        "outcome": "SOLVE_MULTIPLY_SATISFIABLE",
+        "detail": "",
+        "verdict": "UNDECLINED",
+        "gradeDetail": "no decline path yet (failing condition: Demand)",
+        "costUsd": 0.00025845,
+        "mzn": "include \"globals.mzn\";\n\n% Since there are no specific variables, domains, or constraints provided,\n% we cannot define any variables or constraints for a solvable CSP.\n\n% Here is a placeholder MiniZinc model that defines a generic structure,\n% but it does not represent any specific problem as no details were given.\n\n% Definition of a variable (example only, no actual problem)\narray[1..3] of var 1..5: variableA;\n\n% Example enum (no specific context given)\nenum Colors = {Red, Green, Blue};\n\n% Placeholder for constraints (no actual constraints since no problem details)\nconstraint forall(i in 1..3)(variableA[i] > 0);\n\n% This demonstrates the structure but does not solve any extracted CSP."
+      },
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "UNDECLINED",
+        "gradeDetail": "no decline path yet (failing condition: Demand)",
+        "costUsd": 0.00017385,
+        "mzn": "% No solvable CSP can be extracted from the provided prose."
+      }
+    ]
+  },
+  {
+    "id": "PZL-0018",
+    "sourceOutcome": "DECLINED_CORRECTLY",
+    "reps": [
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "UNDECLINED",
+        "gradeDetail": "no decline path yet (failing condition: Relevance)",
+        "costUsd": 0.00026805,
+        "mzn": "include \"globals.mzn\";\n\nenum NEIGHBORS = {Ana, Bo, Cy};\narray[1..3] of var NEIGHBORS: house;\n\n% Constraints based on the problem statement\nconstraint house[1] = Ana;  % Ana lives in house 1\nconstraint house[2] != Bo;   % Bo does not live in house 2\n\n% The remaining houses must be occupied by Bo and Cy\nconstraint alldifferent(house);\n\n% Since Ana is in house 1, Bo must be in house 3, and Cy in house 2\n% This is derived from the constraints above, but can be left implied."
+      },
+      {
+        "outcome": "SOLVE_ERROR",
+        "detail": "ModelSyntaxError: /private/var/folders/t_/xcdyhzm5185g8bsc5klh4y6h0000gn/T/minizinc-iTmLAd/model.mzn:4.16:\nenum HOUSES = {1, 2, 3};\n               ^\nError: syntax error, unexpected integer literal, expecting '}'\n",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.00025305,
+        "mzn": "include \"globals.mzn\";\n\nenum NEIGHBORS = {Ana, Bo, Cy};\nenum HOUSES = {1, 2, 3};\n\narray[NEIGHBORS] of var HOUSES: houses;\n\n% Constraints from the puzzle\nconstraint houses[Ana] = 1; % Ana lives in house 1\nconstraint houses[Bo] != 2;  % Bo does not live in house 2\n\n% Each neighbor must live in a different house\nconstraint alldifferent(houses);\n\nsolve satisfy;"
+      },
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "UNDECLINED",
+        "gradeDetail": "no decline path yet (failing condition: Relevance)",
+        "costUsd": 0.00027045,
+        "mzn": "include \"globals.mzn\";\n\nenum NEIGHBORS = {Ana, Bo, Cy};\narray[1..3] of var NEIGHBORS: neighbors;\n\n% Constraints based on the information provided\nconstraint neighbors[1] = Ana; % Ana lives in house 1\nconstraint neighbors[2] != Bo;  % Bo does not live in house 2\n\n% Bo must live in house 3 because Ana is in house 1 and Bo cannot be in house 2\nconstraint neighbors[3] = Bo;\n\n% Cy must therefore live in house 2\nconstraint neighbors[2] = Cy;\n\n% We cannot identify the loudest laugh without additional information"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0022",
+    "sourceOutcome": "MISMATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_ERROR",
+        "detail": "ModelSyntaxError: Multiple syntax errors:\n/private/var/folders/t_/xcdyhzm5185g8bsc5klh4y6h0000gn/T/minizinc-wV2tjB/model.mzn:9.26-32:\narray[ITEM] of var 0..1: include; % 1 if item is included, 0 otherwise\n             ",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.0003861,
+        "mzn": "include \"globals.mzn\";\n\nenum ITEM = { Bag_of_rice, Hardcover_book_set, Cast_iron_skillet, First_aid_kit, Toolbox };\narray[ITEM] of int: weights = [4, 3, 5, 2, 6];\narray[ITEM] of int: values = [5, 4, 8, 6, 7];\n\nint: max_weight = 10;\n\narray[ITEM] of var 0..1: include; % 1 if item is included, 0 otherwise\n\n% The first-aid kit must be included\nconstraint include[First_aid_kit] == 1;\n\n% Total weight constraint\nconstraint sum(i in ITEM)(weights[i] * include[i]) <= max_weight;\n\n% Maximize total value\nvar int: total_value = sum(i in ITEM)(values[i] * include[i]);\n% Objective\nsolve maximize total_value;"
+      },
+      {
+        "outcome": "SOLVE_ERROR",
+        "detail": "ModelSyntaxError: Error: type error: identifier `rice' already defined\n/private/var/folders/t_/xcdyhzm5185g8bsc5klh4y6h0000gn/T/minizinc-woikQO/model.mzn:3.15-18\n",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.0003423,
+        "mzn": "include \"globals.mzn\";\n\nenum ITEM = { rice, book_set, skillet, first_aid_kit, toolbox };\n\narray[ITEM] of int: weights = [4, 3, 5, 2, 6];  % weights of each item\narray[ITEM] of int: values = [5, 4, 8, 6, 7];   % values of each item\n\nvar 0..1: rice;          % 1 if packed, 0 otherwise\nvar 0..1: book_set;      % 1 if packed, 0 otherwise\nvar 0..1: skillet;       % 1 if packed, 0 otherwise\nvar 0..1: first_aid_kit = 1; % must be included\nvar 0..1: toolbox;       % 1 if packed, 0 otherwise\n\n% Total weight cannot exceed 10kg\nconstraint\n    weights[rice] * rice + \n    weights[book_set] * book_set + \n    weights[skillet] * skillet + \n    weights[first_aid_kit] * first_aid_kit + \n    weights[toolbox] * toolbox <= 10;\n\n% Maximize total value\nvar int: total_value = \n    values[rice] * rice + \n    values[book_set] * book_set + \n    values[skillet] * skillet + \n    values[first_aid_kit] * first_aid_kit + \n    values[toolbox] * toolbox;\n\nsolve maximize total_value;"
+      },
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "FEASIBLE_ONLY",
+        "gradeDetail": "optimum total_value=18 not in capped output",
+        "costUsd": 0.0002397,
+        "mzn": "include \"globals.mzn\";\n\nenum Item = { rice, book_set, skillet, first_aid, toolbox };\narray[Item] of int: weights = [4, 3, 5, 2, 6];\narray[Item] of int: values = [5, 4, 8, 6, 7];\n\nint: max_weight = 10;\narray[Item] of var 0..1: x;\n\n% The first-aid kit must be included\nconstraint x[first_aid] == 1;\n\n% Total weight constraint\nconstraint sum(i in Item)(weights[i] * x[i]) <= max_weight;\n\n% Objective: maximize total value\nsolve maximize sum(i in Item)(values[i] * x[i]);"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0028",
+    "sourceOutcome": "NO_MATCHING_READING",
+    "reps": [
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "NO_MATCHING_READING",
+        "gradeDetail": "pipeline outcome \"uniquely solvable\" matches no reading",
+        "costUsd": 0.0002955,
+        "mzn": "include \"globals.mzn\";\n\nenum COLOR = {red, blue, green, yellow, white};\n\narray[1..5] of var COLOR: houseColor;\n\n% Constraints based on the clues:\nconstraint houseColor[1] = red;         % The red house is house 1.\nconstraint houseColor[4] = white;       % The white house is house 4.\n\n% The green house is to the right of the blue house\nconstraint exists(i in 1..4)(houseColor[i] = blue /\\ houseColor[i + 1] = green);\n\n% Ensure all houses have different colors\nconstraint alldifferent(houseColor);"
+      },
+      {
+        "outcome": "SOLVE_MULTIPLY_SATISFIABLE",
+        "detail": "",
+        "verdict": "READING_MATCHED",
+        "gradeDetail": "outcome matches a \"multiply satisfiable\" reading",
+        "costUsd": 0.0001887,
+        "mzn": "include \"globals.mzn\";\n\nenum COLOR = {red, blue, green, yellow, white};\narray[1..5] of var COLOR: houseColors;\n\nconstraint houseColors[1] = red;\nconstraint houseColors[4] = white;\n\n% The green house is to the right of the blue house\nconstraint forall(i in 1..3)(houseColors[i] = blue -> exists(j in (i+1)..5)(houseColors[j] = green));\n\n% Ensure all colors are different\nconstraint alldifferent(houseColors);\n\nsolve satisfy;"
+      },
+      {
+        "outcome": "SOLVE_MULTIPLY_SATISFIABLE",
+        "detail": "",
+        "verdict": "READING_MATCHED",
+        "gradeDetail": "outcome matches a \"multiply satisfiable\" reading",
+        "costUsd": 0.0001869,
+        "mzn": "include \"globals.mzn\";\n\nenum COLOR = {red, blue, green, yellow, white};\narray[1..5] of var COLOR: houseColor;\n\nconstraint houseColor[1] == red;  % The red house is house 1\nconstraint houseColor[4] == white; % The white house is house 4\nconstraint exists(i in 1..3)(houseColor[i] == blue /\\ houseColor[i+1] == green); % The green house is to the right of the blue house\n\nsolve satisfy;"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0033",
+    "sourceOutcome": "PREMISE_SILENTLY_PROMOTED",
+    "reps": [
+      {
+        "outcome": "SOLVE_MULTIPLY_SATISFIABLE",
+        "detail": "",
+        "verdict": "PREMISE_FREE_MATCH",
+        "gradeDetail": "premise-free outcome (multiply satisfiable) as expected",
+        "costUsd": 0.00024465,
+        "mzn": "include \"globals.mzn\";\n\nenum Item = { ice_cream, beans, flour, bananas };\narray[1..4] of var Item: compartments;\n\n% Compartment 1 is a freezer (below freezing)\n% Compartment 2, 3, and 4 are unrefrigerated (above freezing)\n\n% Constraint: ice cream must be in the freezer\nconstraint compartments[1] == ice_cream;\n\n% Each compartment must hold a different item\nconstraint alldifferent(compartments);"
+      },
+      {
+        "outcome": "SOLVE_MULTIPLY_SATISFIABLE",
+        "detail": "",
+        "verdict": "PREMISE_FREE_MATCH",
+        "gradeDetail": "premise-free outcome (multiply satisfiable) as expected",
+        "costUsd": 0.00022905,
+        "mzn": "include \"globals.mzn\";\n\nenum ITEM = { ice_cream, beans, flour, bananas };\narray[1..4] of var ITEM: compartments;\n\n% Constraint that ice cream must be in the freezer (compartment 1)\nconstraint compartments[1] = ice_cream;\n\n% Ensure all items are placed in separate compartments\nconstraint alldifferent(compartments);"
+      },
+      {
+        "outcome": "SOLVE_MULTIPLY_SATISFIABLE",
+        "detail": "",
+        "verdict": "PREMISE_FREE_MATCH",
+        "gradeDetail": "premise-free outcome (multiply satisfiable) as expected",
+        "costUsd": 0.00021285,
+        "mzn": "include \"globals.mzn\";\n\nenum ITEM = { ice_cream, beans, flour, bananas };\narray[1..4] of var ITEM: compartment;\n\nconstraint compartment[1] = ice_cream;\n\nconstraint alldifferent(compartment);"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0038",
+    "sourceOutcome": "MATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_MULTIPLY_SATISFIABLE",
+        "detail": "",
+        "verdict": "MISMATCH",
+        "gradeDetail": "expected unique solution, got MultiplySatisfiable",
+        "costUsd": 0.0003096,
+        "mzn": "include \"globals.mzn\";\n\nenum ANIMAL = {tortoise, parrot, goat, rabbit, wolf};\narray[1..5] of var ANIMAL: pens;\n\n% Given positions\nconstraint pens[1] = tortoise;\nconstraint pens[2] = parrot;\nconstraint pens[3] = goat;\n\n% The rabbit is in a lower-numbered pen than the wolf\nconstraint forall(i in 1..5)( \n    (pens[i] = rabbit) -> (exists(j in (i+1)..5)(pens[j] = wolf))\n);\n\n% The wolf preys on the rabbit — there's no explicit need for additional constraints related to this\n% since it is implied through the previous constraints."
+      },
+      {
+        "outcome": "SOLVE_ERROR",
+        "detail": "ModelSyntaxError: /private/var/folders/t_/xcdyhzm5185g8bsc5klh4y6h0000gn/T/minizinc-P9dha2/model.mzn:15.38-39:\nconstraint forall(i in 1..5)(pens[i] <> rabbit \\/ pens[i + 1] <> wolf);\n                                   ",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.0002094,
+        "mzn": "include \"globals.mzn\";\n\nenum ANIMAL = {tortoise, parrot, goat, rabbit, wolf};\narray[1..5] of var ANIMAL: pens;\n\n% Constraints based on the problem statement\nconstraint pens[1] = tortoise;\nconstraint pens[2] = parrot;\nconstraint pens[3] = goat;\n\n% Rabbit must be in a lower-numbered pen than wolf\nconstraint exists(r in 1..4)(exists(w in (r+1)..5)(pens[r] = rabbit /\\ pens[w] = wolf));\n\n% Wolf preys on rabbit (this can be represented by the placements)\nconstraint forall(i in 1..5)(pens[i] <> rabbit \\/ pens[i + 1] <> wolf);\n\nsolve satisfy;"
+      },
+      {
+        "outcome": "SOLVE_MULTIPLY_SATISFIABLE",
+        "detail": "",
+        "verdict": "MISMATCH",
+        "gradeDetail": "expected unique solution, got MultiplySatisfiable",
+        "costUsd": 0.0001986,
+        "mzn": "include \"globals.mzn\";\n\nenum ANIMAL = {tortoise, parrot, goat, rabbit, wolf};\narray[1..5] of var ANIMAL: pen;\n\nconstraint pen[1] = tortoise;\nconstraint pen[2] = parrot;\nconstraint pen[3] = goat;\n\nconstraint forall(i in 1..5)(\n    (pen[i] = rabbit) -> (exists(j in (i+1)..5)(pen[j] = wolf))\n);\n\nconstraint forall(i in 1..5)(\n    (pen[i] = wolf) -> (exists(j in 1..(i-1))(pen[j] = rabbit))\n);\n\nsolve satisfy;"
+      }
+    ]
+  }
+]

@@ -98,6 +98,23 @@ function tokenOf(value: unknown): string | undefined {
   return typeof value === "string" || typeof value === "number" ? String(value) : undefined
 }
 
+/** MiniZinc's own JSON output wraps an enum-typed scalar one level deep ({e: value} — see
+ * `collectActualTokens`'s own comment, "seen live on PZL-0004"). Unwraps recursively, matching
+ * `collectActualTokens`'s own recursive unwrap, rather than assuming exactly one level — a
+ * different solved shape nesting deeper should still resolve, not silently stop at depth 1.
+ * `tokenOf` itself does not unwrap, so any caller reading directly from a solved `Assignment`
+ * (rather than through `collectActualTokens`) needs this first. */
+function unwrapSingleKeyRecord(value: unknown): unknown {
+  if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+    const entries = Object.entries(value as Record<string, unknown>)
+    // entries[0] is statically string|undefined under noUncheckedIndexedAccess even though the
+    // length check above guarantees it exists at runtime — the `!` reflects that gap, not a
+    // skipped safety check.
+    if (entries.length === 1) return unwrapSingleKeyRecord(entries[0]![1])
+  }
+  return value
+}
+
 // --- Parallel-array grading (ADR-007 §2.2) --------------------------------------------
 
 /** Aligns each expected key to the unmatched actual key with the most vocabulary overlap. */
@@ -283,7 +300,11 @@ export function gradeSubset(
 // --- Determinate dispatch ---------------------------------------------------------------
 
 /** Keys whose answers are parallel arrays graded by row-multiset comparison. */
-const PARALLEL_ARRAY_PUZZLES = new Set(["PZL-0001", "PZL-0002", "PZL-0008", "PZL-0010"])
+/** Exported so callers preparing an `Assignment` for grading (e.g. `recoverEntityKeyedArrays`)
+ * can skip transforms that only make sense for OTHER answer-key shapes — these puzzles' answer
+ * keys are positional-by-declared-order, never entity-id-keyed, so an entity-keying transform
+ * is actively counterproductive here, not just unnecessary (found live 2026-09-16). */
+export const PARALLEL_ARRAY_PUZZLES = new Set(["PZL-0001", "PZL-0002", "PZL-0008", "PZL-0010"])
 
 /**
  * Grades a determinate puzzle's solved assignment against its answer-key entry. Dispatches on
@@ -342,7 +363,13 @@ export function gradeDeterminate(
       const tokens: string[] = []
       let scalar = true
       for (const item of arr) {
-        const token = tokenOf(item)
+        // Found live (2026-09-16): an enum-valued domain solves as {e: value} per array slot
+        // (the same shape collectActualTokens already unwraps elsewhere in this file) — without
+        // unwrapping here, every item fails tokenOf, the whole key is silently dropped from
+        // actualArrays, and alignArraysByOverlap starves for anything to align against
+        // ("no unambiguous alignment"). Confirmed this was misgrading real, correct
+        // full-critic extractions as MISMATCH on PZL-0001/0002/0010's own historical runs.
+        const token = tokenOf(unwrapSingleKeyRecord(item))
         if (token === undefined) {
           scalar = false
           break

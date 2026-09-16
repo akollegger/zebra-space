@@ -86,7 +86,7 @@ async function main(): Promise<void> {
     const solved = await compileAndSolve(result.extractedCsp)
     const recovered =
       solved.solveResult !== undefined && solved.solveResult._tag === "UniquelySolvable"
-        ? { ...solved.solveResult, assignment: recoverEntityKeyedArrays(solved.solveResult.assignment, result.extractedCsp) }
+        ? { ...solved.solveResult, assignment: recoverEntityKeyedArrays(puzzleId, solved.solveResult.assignment, result.extractedCsp) }
         : solved.solveResult
     // A vocabulary-proposal call failure (PR #28 review) means the assembled CSP may be
     // missing real content from that clue — grading it as a normal pass/fail would misrepresent
