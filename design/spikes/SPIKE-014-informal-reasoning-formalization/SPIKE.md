@@ -117,6 +117,23 @@ one more Stage-2 prompt, not a second pipeline.
    `determinate` (or omits `outcome`, which defaults to determinate) — other puzzle types
    (COP, ambiguous, non-problem, subjective) can legitimately be non-unique, so repair must not
    fire on solution-count alone without checking what the puzzle actually is.
+7. **`formalize-mzn+lint-repair` (4th variant, added 2026-09-16, after §5.5 diagnosed WHY
+   oracle-repair's recovery rate was so low)**: §5.5 found the whole-model-regeneration repair
+   call is exposed to the same failure mode as the original formalization — it can fix what it's
+   hinted at while silently breaking or leaving broken something else, since regenerating the
+   entire file gives no guarantee the unaffected parts stay unaffected. This variant splits
+   "repair" into two narrower steps instead of one broad one: (a) a LINT pass — same problem
+   description as `oracle-repair`'s hint, but the model returns STRUCTURED FINDINGS
+   (`{locate, issue, suggestedFix}[]`, a forced tool call) rather than a rewritten file, where
+   `locate` must be an exact, verbatim substring of the CURRENT draft; (b) APPLY each finding as
+   an exact-match string replacement, in CODE — not by asking the model to write the file again —
+   mirroring the Edit tool's own contract: a `locate` that doesn't match the draft exactly once
+   is skipped (recorded, never guessed), and everything outside a matched region is left
+   byte-for-byte untouched. The draft is kept in-memory (an explicit string threaded through the
+   pipeline, not re-derived each round) rather than materialized on disk — sufficient for what
+   this variant measures, and simpler than standing up a real patch/diff library for a spike.
+   Still bounded to ONE lint-then-apply round per rep, for direct comparison against
+   `oracle-repair`'s own one-round bound.
 
 ## 3. Time-box
 
@@ -166,6 +183,24 @@ repair reliably triggered and incorporated its hint (e.g. correctly added a miss
 `alldifferent` when told to), but 0/4 recovered to MATCH — confirming the mechanism works before
 committing to the full n=3×14 sweep. Full sweep: 12/42 MATCH vs. `formalize-mzn` alone's 13/42,
 at 60% more cost — flat-to-slightly-worse, not an improvement. Written up as §5.5.
+
+**2026-09-16 — the user pointed out oracle-repair wasn't actually a linter-shaped fix**: "this
+isn't introducing a linter-like collection of actionable feedback with suggested remediation,
+followed by targeted line-edits." Correct, and it explains §5.5's low recovery rate precisely —
+full-file regeneration is exposed to the same failure mode as the original formalization call.
+Proposed and built the split (lint → structured findings; apply → exact-match code-driven edits)
+as a 4th variant, confirming in-memory draft (not a real on-disk file) was sufficient before
+building. Verified `applyFindings` offline (5 checks: clean apply, untouched-region preservation,
+non-unique-match skip, not-found skip, sequential multi-finding application) before spending
+anything; a live dry run on the same two hardest puzzles showed the exact-match mechanism's own
+failure boundary directly — the identical finding, resampled, sometimes reproduces the draft
+byte-for-byte and sometimes doesn't. Full sweep: 12/42 MATCH, same as oracle-repair, at $0.0154 —
+the surgical-application half of the redesign worked exactly as intended (14/18 findings applied
+cleanly, confirmed never to touch untouched regions), but recovery to MATCH did not improve
+(0/14), isolating the actual bottleneck as diagnostic accuracy, not application mechanics.
+Written up as §5.6. (Also fixed a real document-structure bug found while writing this up: §5.3
+had drifted to a physical position after "## 6. Conclusion" from an earlier edit, silently
+breaking the section's logical order without erroring — reordered the whole file.)
 
 ## 5. Findings
 
@@ -260,6 +295,40 @@ shape violations) at all — direct-to-MiniZinc genuinely trades one failure sur
 different one, exactly the open question this variant existed to test, not a strict improvement
 that inherits nothing new.
 
+### 5.3 The narrow fix worked, partially — 13/42 MATCH, `SOLVE_ERROR` down from 36% to 21%
+
+Applied all three targeted fixes from §5.2/§6's recommended next step: a mechanical
+find-and-replace normalizing doubled escape-backslashes (`/\\`→`/\`, `\\/`→`\/`) applied
+regardless of the prompt, plus two prompt instructions (numeric quantities are `int`, not
+`enum`; each `exists`/`forall` is its own closed scope, nest rather than chain). Re-ran the
+identical n=3 × 14 sweep. Raw: `results/formalize-mzn-2026-09-16T10-53-55-723Z.json`, **$0.0114**.
+
+| Outcome | Before (§5.2) | After |
+|---|---|---|
+| `SOLVE_ERROR` | 15/42 (36%) | 9/42 (21%) |
+| `SOLVE_UNIQUE` | 16/42 | 19/42 |
+| **MATCH** | **11/42 (26%)** | **13/42 (31%)** |
+
+A real, further improvement — confirmed live on the three originally-failing puzzles before the
+full re-run: PZL-0010 (escaped operators) and PZL-0028 (generator scoping) no longer show those
+specific errors at all. **But the fix was partial, not complete, on two counts:**
+
+- **The `enum`-for-numeric-values mistake recurred** — once on PZL-0012 again (`enum TIME = {9,
+  11, 16};`, the exact same puzzle) and newly on PZL-0018 (`enum HOUSES = {1, 2, 3};`, a
+  DIFFERENT puzzle previously unaffected). A prompt instruction reduces but does not reliably
+  eliminate this mistake — expected, since prompting shapes probability, not a hard guarantee,
+  and this is exactly why the instruction was paired with (not substituted for) the fully
+  mechanical operator-escaping fix wherever a mechanical fix was actually possible.
+- **Two NEW `SOLVE_ERROR` causes appeared that weren't in the original three** — PZL-0001
+  invented a nonexistent MiniZinc builtin (`` no function or predicate with name `find' ``), and
+  PZL-0011 hit a float-typed intermediate variable declaration issue (`var float: dtiRatio =
+  combinedDebt / ...`) not seen before. Also a fresh identifier collision on PZL-0022
+  (`` identifier `rice' already defined ``) — the SAME class as before, just on a different
+  puzzle this run. None of this is a regression from the fix itself (the three targeted causes
+  did shrink); it's normal LLM sampling variance surfacing a different slice of the same broad
+  "the model doesn't always write flawless MiniZinc" reality — `SOLVE_ERROR` is a large,
+  heterogeneous bucket, not one bug with three faces.
+
 ### 5.4 Characterizing `formalize-mzn`'s semantic failures: self-flagging vs. silent, not syntactic vs. semantic
 
 The user's framing going in was "syntactic problems are fixable, semantic ones will likely
@@ -347,6 +416,63 @@ wasn't told about.** That's the real cost of giving up per-clue tagging for the 
 win §5.2 found: repair-ability is one of the things `ExtractedCsp`'s structure was buying, even
 though its own formalization accuracy was worse to begin with.
 
+### 5.6 `formalize-mzn+lint-repair` (4th variant): surgical application works, diagnosis remains the bottleneck
+
+§5.5's whole-model regeneration is exposed to the same failure mode as the original
+formalization call — it can fix what it's hinted at while silently breaking or leaving broken
+something else, since nothing guarantees the unaffected parts stay unaffected. Split repair into
+two narrower steps to test that hypothesis directly: (a) LINT — one forced tool call returning
+STRUCTURED FINDINGS (`{locate, issue, suggestedFix}[]`) instead of a rewritten file, where
+`locate` must be an exact, verbatim substring of the current draft; (b) APPLY — each finding as
+an exact-match string replacement, in CODE, mirroring the Edit tool's own contract: a `locate`
+that doesn't match the draft exactly once is skipped (recorded, never guessed), so everything
+outside a matched region stays byte-for-byte untouched. Draft kept in-memory. Verified offline
+first (5 checks: clean single-finding apply, untouched-region preservation, a non-unique-match
+skip, a not-found skip, sequential multi-finding application) — all zero-cost, all passed before
+spending anything. Same trigger condition as §5.5. Raw:
+`results/formalize-mzn-lint-repair-2026-09-16T14-55-14-668Z.json`, **$0.0154**.
+
+| | `formalize-mzn` (§5.3) | `+oracle-repair` (§5.5) | `+lint-repair` |
+|---|---|---|---|
+| MATCH | 13/42 (31%) | 12/42 (29%) | 12/42 (29%) |
+| Cost | $0.0114 | $0.0182 | $0.0154 |
+
+Same flat-to-slightly-worse headline as `oracle-repair` — but the mechanism behind that number is
+now genuinely different, and worth separating from the number itself.
+
+**The surgical-application half of the redesign worked exactly as intended.** 18 findings were
+proposed across 14 triggered repairs; 14/18 (78%) applied cleanly — the model's `locate` snippet
+matched the current draft exactly once. Re-running one puzzle's lint call standalone (PZL-0010)
+showed the mechanism's own failure boundary directly: the identical finding, resampled, sometimes
+reproduces the draft byte-for-byte (applies) and sometimes drifts by even a little whitespace
+(silently, correctly, skipped rather than misapplied) — the honest cost of exact-match
+discipline is trading recall (an occasional real fix goes unapplied because the snippet didn't
+reproduce verbatim) for precision (never a wrong guess), by design, not a flaw.
+
+**But 0/14 triggered repairs recovered to `MATCH`** — nominally worse than `oracle-repair`'s
+1/17, though at this sample size (14 vs. 17 trials, 0 vs. 1 successes) the difference isn't
+statistically meaningful; the honest reading is both are near-zero. Of the 9 reps that stayed
+`SOLVE_ERROR` after repair, 8 had their finding APPLIED cleanly — meaning the surgical edit went
+in exactly as proposed, and either the model's own `suggestedFix` text was itself syntactically
+broken, or a second, undiagnosed problem remained untouched. A concrete example: PZL-0012's
+finding correctly added `alldifferent(drugTime)` — the exact fix the hint pointed at — and
+applied without disturbing anything else, but the puzzle still graded `MultiplySatisfiable`: the
+constraint set remained incomplete in a way the one-shot lint pass never surfaced (an
+under-specified meal-time boundary condition, the same class of gap §5.4 already catalogued).
+
+**This isolates the actual bottleneck cleanly: it was never really about HOW a fix gets
+applied.** §5.5 speculated that oracle-repair's low recovery rate came from whole-file
+regeneration silently corrupting the parts that were already right. This variant tests that
+hypothesis directly by removing the corruption risk entirely (exact-match, code-applied edits,
+verified never to touch untouched regions) — and the recovery rate did not improve. The real
+constraint is DIAGNOSTIC accuracy under a single, coarse, outcome-class-only signal (no per-clue
+ground truth, no independent check on whether a proposed fix is actually complete), not the
+mechanics of applying whatever gets diagnosed. A linter-shaped repair is a genuine engineering
+improvement in one respect — it can never make things worse outside what it explicitly touches,
+a real, verifiable safety property `oracle-repair` lacks — but it inherits the SAME diagnostic
+ceiling, because diagnosis and application were never actually the same problem; only
+application was fixed here.
+
 ## 6. Conclusion
 
 **Decoupling informal reasoning from formal emission generalizes from vocabulary to the whole
@@ -360,86 +486,56 @@ serialize directly"?) with evidence rather than assertion: for THIS task, yes, a
 "close enough" — direct MiniZinc clearly outperformed the purpose-built `ExtractedCsp` JSON
 schema it was compared against.
 
-**`formalize-mzn`'s 26% MATCH is the strongest result any compile/solve-VERIFIED architecture
+**`formalize-mzn`'s 26-31% MATCH is the strongest result any compile/solve-VERIFIED architecture
 has reached across this entire spike line** (SPIKE-008 through SPIKE-014) — genuinely ahead of
-`full-critic`'s 2/14 (14%), at roughly 1/200th the cost ($0.01 vs. ~$2.10 for a 14-puzzle pass),
-and reached with a single call per puzzle, no critic loop, no per-clue decomposition. It remains
-well below `direct-solve`'s own raw judge-graded rate (64%/93%) — but that comparison isn't
-apples-to-apples: `direct-solve` has no compilable artifact and is graded by a judge reading
-prose, while `formalize-mzn`'s number survives an independent, mechanical compile-and-solve gate
-direct-solve was never subjected to.
+`full-critic`'s 2/14 (14%), at roughly 1/100th the cost ($0.01-0.02 vs. ~$2.10 for a 14-puzzle
+pass), and reached with a single call per puzzle, no critic loop, no per-clue decomposition. It
+remains well below `direct-solve`'s own raw judge-graded rate (64%/93%) — but that comparison
+isn't apples-to-apples: `direct-solve` has no compilable artifact and is graded by a judge
+reading prose, while `formalize-mzn`'s number survives an independent, mechanical compile-and-
+solve gate direct-solve was never subjected to.
 
-**The two variants' failure modes don't overlap at all** — `formalize-json`'s were both
-properties of the JSON schema itself (identifier collisions the schema still lets the model
-freely type; violations deep in a 134-`anyOf`-union structure). `formalize-mzn`'s dominant
-failure (`SOLVE_ERROR`, 36%) is MiniZinc's own compiler catching real mistakes — an escaped-
-operator typo, a category-vs-quantity modeling error, a generator-scoping misunderstanding — none
-of which resemble a JSON-schema violation. Trading one schema's failure surface for a
-completely different, and evidently more tractable, one is the actual mechanism behind this
-result, not a coincidence.
+**The two Stage-2 representations' failure modes don't overlap at all** — `formalize-json`'s
+were both properties of the JSON schema itself (identifier collisions the schema still lets the
+model freely type; violations deep in a 134-`anyOf`-union structure). `formalize-mzn`'s dominant
+failure (`SOLVE_ERROR`) is MiniZinc's own compiler catching real mistakes — an escaped-operator
+typo, a category-vs-quantity modeling error, a generator-scoping misunderstanding — none of which
+resemble a JSON-schema violation. Trading one schema's failure surface for a completely
+different, and evidently more tractable, one is the actual mechanism behind this result, not a
+coincidence.
 
-### 5.3 The narrow fix worked, partially — 13/42 MATCH, `SOLVE_ERROR` down from 36% to 21%
-
-Applied all three targeted fixes from §5.2/§6's recommended next step: a mechanical
-find-and-replace normalizing doubled escape-backslashes (`/\\`→`/\`, `\\/`→`\/`) applied
-regardless of the prompt, plus two prompt instructions (numeric quantities are `int`, not
-`enum`; each `exists`/`forall` is its own closed scope, nest rather than chain). Re-ran the
-identical n=3 × 14 sweep. Raw: `results/formalize-mzn-2026-09-16T10-53-55-723Z.json`, **$0.0114**.
-
-| Outcome | Before (§5.2) | After |
-|---|---|---|
-| `SOLVE_ERROR` | 15/42 (36%) | 9/42 (21%) |
-| `SOLVE_UNIQUE` | 16/42 | 19/42 |
-| **MATCH** | **11/42 (26%)** | **13/42 (31%)** |
-
-A real, further improvement — confirmed live on the three originally-failing puzzles before the
-full re-run: PZL-0010 (escaped operators) and PZL-0028 (generator scoping) no longer show those
-specific errors at all. **But the fix was partial, not complete, on two counts:**
-
-- **The `enum`-for-numeric-values mistake recurred** — once on PZL-0012 again (`enum TIME = {9,
-  11, 16};`, the exact same puzzle) and newly on PZL-0018 (`enum HOUSES = {1, 2, 3};`, a
-  DIFFERENT puzzle previously unaffected). A prompt instruction reduces but does not reliably
-  eliminate this mistake — expected, since prompting shapes probability, not a hard guarantee,
-  and this is exactly why the instruction was paired with (not substituted for) the fully
-  mechanical operator-escaping fix wherever a mechanical fix was actually possible.
-- **Two NEW `SOLVE_ERROR` causes appeared that weren't in the original three** — PZL-0001
-  invented a nonexistent MiniZinc builtin (`` no function or predicate with name `find' ``), and
-  PZL-0011 hit a float-typed intermediate variable declaration issue (`var float: dtiRatio =
-  combinedDebt / ...`) not seen before. Also a fresh identifier collision on PZL-0022
-  (`` identifier `rice' already defined ``) — the SAME class as before, just on a different
-  puzzle this run. None of this is a regression from the fix itself (the three targeted causes
-  did shrink); it's normal LLM sampling variance surfacing a different slice of the same broad
-  "the model doesn't always write flawless MiniZinc" reality — `SOLVE_ERROR` is a large,
-  heterogeneous bucket, not one bug with three faces.
-
-**This spike is concluded here, not because the ceiling is reached, but because the marginal
-next fix would be chasing an open-ended, ever-shifting list of narrow MiniZinc authoring
-mistakes one at a time** — a genuinely different kind of work (prompt-tuning iteration) than
-this spike's actual question (does the architecture and representation choice matter). That
-question is answered: yes, decisively, for both axes.
+**Two repair mechanisms were tried on top of `formalize-mzn`, and neither improved the MATCH
+rate — for an interesting, well-isolated reason.** `oracle-repair` (§5.5, whole-model
+regeneration from a coarse hint) and `lint-repair` (§5.6, structured findings applied as
+exact-match edits) landed at the same 12/42, both flat-to-slightly-worse than no repair at all
+(13/42). §5.6 specifically isolates WHY: making the application mechanism provably safe (never
+touches anything outside what it's told to fix) did not change the outcome, which means the
+bottleneck was never really about how a fix gets applied — it's that a single, coarse,
+outcome-class-only signal (no per-clue ground truth, no independent check that a proposed fix is
+complete) isn't enough to reliably diagnose what's actually wrong. `ExtractedCsp`'s per-clue
+tagging (SPIKE-012) is what makes ITS OWN repair loop able to localize a fix precisely; giving
+that up for `formalize-mzn`'s representation win (§5.1 vs. §5.2/§5.3) also gives up that
+diagnostic leverage, and no amount of engineering the APPLICATION step recovers it.
 
 **Recommended next steps**:
-1. Iterating further on `formalize-mzn`'s prompt (catching the recurring `enum`-for-numbers
-   mistake more reliably, and the newly-seen float/hallucinated-builtin/identifier-collision
-   causes) is legitimate follow-up work, but belongs to implementation hardening now, not to this
-   spike's own empirical question — that question has its answer (§5.1/§5.2/§6).
-2. This spike's method (solve first, formalize the completed solve, verify via compile/solve) is
-   confirmed as sound; the open engineering question is now narrowly about `formalize-mzn`'s
-   prompt quality, not about whether this architectural direction is worth pursuing.
-3. §5.4's self-flagging/silent distinction, not "syntactic vs. semantic," is the axis worth
+1. `formalize-mzn`'s remaining `SOLVE_ERROR` causes (§5.3) are narrow and plausibly cheap to
+   address further, but that's implementation hardening (prompt-tuning iteration), not this
+   spike's own empirical question — which is answered: the architecture works, and the
+   representation choice matters enormously (§5.1 vs. §5.2/§5.3).
+2. §5.4's self-flagging/silent distinction, not "syntactic vs. semantic," is the axis worth
    designing around — a silent, confidently-wrong unique result has no mechanical remedy and
    won't from prompting alone; any future work claiming higher confidence in this architecture
    should say explicitly which of the two failure classes its evidence actually rules out.
-4. **§5.5 tested whether oracle-repair actually delivers on (3)'s "already has a validated
-   remedy" claim, adapted to `formalize-mzn`'s flat structure — and it doesn't, in this specific
-   form.** One bounded round with a generic, whole-model hint recovered only 1/17 triggered
-   repairs to `MATCH` (flat-to-slightly-worse net effect, 60% more cost). The mechanism isn't
-   broken — it reliably does what it's told (e.g. correctly adding a missing `alldifferent` when
-   hinted) — the gap is `formalize-mzn`'s lack of `ExtractedCsp`'s per-clue tagging, which is
-   what let SPIKE-012's own oracle-repair localize a fix precisely instead of re-diagnosing an
-   entire model from one coarse signal. A future attempt at MiniZinc-side repair should look for
-   a way to localize the hint (e.g. asking the model to identify which specific comment/clue its
-   own model most likely mis-encoded, before asking it to fix anything) rather than assume a
-   generic outcome-class hint is enough — that's a real design problem, not a tuning knob.
+3. A real fix for `formalize-mzn`'s repair ceiling (§5.5/§5.6) needs better DIAGNOSIS, not a
+   better patch-application mechanism — that half is already solved. Candidates worth trying
+   before assuming this ceiling is fixed: an independent second formalization pass to
+   cross-check against (closer to what `ExtractedCsp`'s per-clue structure gives SPIKE-012 for
+   free), or asking the model to verify its OWN model against each individual clue in turn
+   (closer to SPIKE-008's back-translation critic, previously found only partially effective for
+   this exact class of problem) before repair, not after.
+4. This spike's method (solve first, formalize the completed solve, verify via compile/solve) is
+   confirmed as sound and worth building on; the open engineering questions are now narrowly
+   about `formalize-mzn`'s prompt quality and repair diagnosis, not about whether this
+   architectural direction is worth pursuing.
 
 Status: done.
