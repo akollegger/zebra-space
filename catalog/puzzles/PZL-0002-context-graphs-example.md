@@ -8,6 +8,15 @@ constraints: 4
 source: https://medium.com/neo4j/context-graphs-agentic-decisions-9a125f22f411
 difficulty: unknown
 created: 2026-08-11
+groundTruth:
+  entityAxisSize: 3
+  expectedDomains:
+    - alternatives:
+        - names: [color]
+          values: [Blue, Red, Green]
+    - alternatives:
+        - names: [animal]
+          values: [Dog, Cat, Zebra]
 ---
 
 Three houses stand in a row, numbered 1 to 3 from left to right. Each has a unique color —

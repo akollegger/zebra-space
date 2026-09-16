@@ -8,6 +8,12 @@ constraints: 7
 source: null
 difficulty: unknown
 created: 2026-08-12
+groundTruth:
+  entityAxisSize: 5
+  expectedDomains:
+    - alternatives:
+        - names: [order]
+          values: [South, Pedestrian, East, North, West]
 ---
 
 A four-way stop intersection has arms North, South, East, and West, plus a pedestrian crosswalk

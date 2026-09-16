@@ -10,8 +10,59 @@ natural-language prose.
 - File: `puzzles/PZL-NNNN-short-name.md`, `NNNN` zero-padded to 4 digits, sequential.
 - Frontmatter: `id`, `title`, `tier` (placeholder `unknown`), `variables`/`domains`/`constraints`
   (CSP-neutral size), `source` (URL, or `null` for hand-authored), `difficulty` (placeholder
-  `unknown`), `created`.
+  `unknown`), `created`, optional `groundTruth` (see below).
 - Body: unstructured prose — the puzzle as its author chose to write it.
+
+### `groundTruth` (optional)
+
+The expected **vocabulary shape** for a determinate puzzle — the entity-axis size and domain
+names/value-sets a correct extraction must produce — hand-verified once against a real,
+known-successful extraction (not derived mechanically from `eval/answer-keys.json`, whose own
+shape varies too much per puzzle to parse generically). This is a non-breaking frontmatter
+extension per [ADR-001](../design/adr/ADR-001-catalog-format-seeding.md) §2.1, distinct from
+that ADR's still-reserved `solution` field: `groundTruth` describes the *schema* a vocabulary-
+construction stage should produce (used to score SPIKE-013's `llm-only`/`chunked-inventory`/
+`embedded-group` variants), not the puzzle's actual answer/assignment.
+
+```yaml
+groundTruth:
+  entityAxisSize: 5    # size of the primary entity axis clues reference by identity
+  expectedDomains:
+    - alternatives:                          # one or more mutually exclusive valid framings —
+        - names: [color]                     # a domain matches if it fully matches ANY ONE
+          values: [Yellow, Blue, Red, Ivory, Green]  # alternative's OWN (names, values) pair
+```
+
+Named `expectedDomains`, not `domains` — `tests/catalog/catalog.test.ts` reads frontmatter with a
+deliberately naive flat line-scanner (this format is otherwise flat scalars only), so a nested
+key reusing the top-level `domains` count field's name silently overwrote it with an empty string
+(found live 2026-09-16, a real CI failure — the naive scanner has no concept of YAML nesting, it
+just maps every `key:` line it sees, last one wins).
+
+Scoring is coverage-only: every listed domain must be found, matching one whole `alternatives`
+entry — a produced vocabulary with *extra* domains beyond what's listed is never penalized
+(mirrors ADR-007 §2.2's "subset, not exact match" lesson).
+
+**Each `alternatives` entry is one atomic (names, values) pair — never matched independently.**
+`names` may list more than one acceptable spelling *for that same entry's values* (PZL-0001's
+`cigarette`/`smoke`, PZL-0011's `outcome`/`decision`), since every spelling maps to the identical
+value set there. A domain that can legitimately be modeled two structurally different ways
+(PZL-0038: entities-as-animals with a `pen` domain ranging 1-5, or entities-as-pens with an
+`animal` domain) needs two separate `alternatives` entries, each pairing its own name with its
+own values — pairing `pen` with the animal-name values, or `animal` with `1-5`, would be a
+scrambled, invalid vocabulary. A flat cross-product of all names against all value-sets (the
+original shape here) can't tell that scrambled combination apart from a valid one — confirmed
+live (2026-09-16): a domain literally named `pen` holding the five animal names scored
+`structurallyCorrect: true` under the old shape, purely because "pen" and the animal-name list
+each appeared *somewhere* in truth, independently. Puzzles with more valid alternative vocabulary
+shapes, or ones with plausible-but-wrong combinations worth guarding against, should add more
+`alternatives` entries rather than widening any one entry's `names`/`values` — that's exactly
+where real-world constraint problems (many valid encodings, most cross-combinations of which are
+nonsense) get harder than this catalog's classic puzzles.
+
+Currently populated for the 9 determinate puzzles SPIKE-013 hand-verified (PZL-0001, 0002, 0003,
+0004, 0007, 0010, 0011, 0012, 0038); add it for others only after the same hand-verification the
+format requires (step 4 below), not by guessing from the prose.
 
 ## Index
 

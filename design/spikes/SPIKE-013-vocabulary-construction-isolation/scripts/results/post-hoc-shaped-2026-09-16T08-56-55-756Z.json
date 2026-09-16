@@ -1,0 +1,3306 @@
+[
+  {
+    "id": "PZL-0001",
+    "sourceOutcome": "MISMATCH",
+    "hasGroundTruth": true,
+    "reps": [
+      {
+        "entities": [
+          {
+            "id": "five_houses",
+            "type": "house"
+          },
+          {
+            "id": "the_green_house",
+            "type": "house"
+          },
+          {
+            "id": "the_ivory_house",
+            "type": "house"
+          },
+          {
+            "id": "the_yellow_house",
+            "type": "house"
+          },
+          {
+            "id": "the_blue_house",
+            "type": "house"
+          },
+          {
+            "id": "the_Englishman",
+            "type": "suspect"
+          },
+          {
+            "id": "the_Ukrainian",
+            "type": "suspect"
+          },
+          {
+            "id": "the_Norwegian",
+            "type": "suspect"
+          },
+          {
+            "id": "the_Japanese",
+            "type": "suspect"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "color",
+            "entityType": "house",
+            "values": [
+              "the red house"
+            ]
+          },
+          {
+            "variable": "beverage",
+            "entityType": "house",
+            "values": [
+              "Coffee",
+              "tea",
+              "Milk",
+              "orange juice"
+            ]
+          },
+          {
+            "variable": "cigarette",
+            "entityType": "house",
+            "values": [
+              "the Old Gold smoker",
+              "Kools",
+              "Parliaments"
+            ]
+          },
+          {
+            "variable": "pet",
+            "entityType": "house",
+            "values": [
+              "the dog",
+              "the man with the fox",
+              "snails"
+            ]
+          },
+          {
+            "variable": "house_location",
+            "entityType": "house",
+            "values": [
+              "the first house",
+              "the house where the horse is kept"
+            ]
+          },
+          {
+            "variable": "house_position",
+            "entityType": "house",
+            "values": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5"
+            ]
+          }
+        ],
+        "totalCalls": 4,
+        "costUsd": 0.00093855,
+        "score": {
+          "puzzleId": "PZL-0001",
+          "entityAxisSizeMatch": true,
+          "expectedEntityAxisSize": 5,
+          "producedEntityAxisSizes": [
+            5,
+            4
+          ],
+          "domainResults": [
+            {
+              "expectedAlternativeNames": [
+                [
+                  "color"
+                ]
+              ],
+              "matched": false,
+              "matchedViaEmbedding": false
+            },
+            {
+              "expectedAlternativeNames": [
+                [
+                  "nationality"
+                ]
+              ],
+              "matched": false,
+              "matchedViaEmbedding": false
+            },
+            {
+              "expectedAlternativeNames": [
+                [
+                  "pet"
+                ]
+              ],
+              "matched": false,
+              "matchedViaEmbedding": false
+            },
+            {
+              "expectedAlternativeNames": [
+                [
+                  "drink"
+                ]
+              ],
+              "matched": false,
+              "matchedViaEmbedding": false
+            },
+            {
+              "expectedAlternativeNames": [
+                [
+                  "cigarette",
+                  "smoke"
+                ]
+              ],
+              "matched": false,
+              "matchedViaEmbedding": false
+            }
+          ],
+          "domainsCovered": 0,
+          "domainsTotal": 5,
+          "structurallyCorrect": false
+        }
+      },
+      {
+        "entities": [
+          {
+            "id": "Englishman",
+            "type": "suspect"
+          },
+          {
+            "id": "Spaniard",
+            "type": "suspect"
+          },
+          {
+            "id": "Ukrainian",
+            "type": "suspect"
+          },
+          {
+            "id": "Norwegian",
+            "type": "suspect"
+          },
+          {
+            "id": "Japanese",
+            "type": "suspect"
+          },
+          {
+            "id": "red_house",
+            "type": "house"
+          },
+          {
+            "id": "green_house",
+            "type": "house"
+          },
+          {
+            "id": "ivory_house",
+            "type": "house"
+          },
+          {
+            "id": "yellow_house",
+            "type": "house"
+          },
+          {
+            "id": "first_house",
+            "type": "house"
+          },
+          {
+            "id": "blue_house",
+            "type": "house"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "pet",
+            "entityType": "house",
+            "values": [
+              "dog",
+              "horse"
+            ]
+          },
+          {
+            "variable": "beverage",
+            "entityType": "house",
+            "values": [
+              "Coffee",
+              "tea",
+              "Milk",
+              "Lucky Strike",
+              "orange juice"
+            ]
+          },
+          {
+            "variable": "cigarette",
+            "entityType": "house",
+            "values": [
+              "Old Gold",
+              "Kools",
+              "Chesterfields",
+              "Parliaments"
+            ]
+          },
+          {
+            "variable": "house_position",
+            "entityType": "house",
+            "values": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6"
+            ]
+          }
+        ],
+        "totalCalls": 3,
+        "costUsd": 0.00045585,
+        "score": {
+          "puzzleId": "PZL-0001",
+          "entityAxisSizeMatch": true,
+          "expectedEntityAxisSize": 5,
+          "producedEntityAxisSizes": [
+            5,
+            6
+          ],
+          "domainResults": [
+            {
+              "expectedAlternativeNames": [
+                [
+                  "color"
+                ]
+              ],
+              "matched": false,
+              "matchedViaEmbedding": false
+            },
+            {
+              "expectedAlternativeNames": [
+                [
+                  "nationality"
+                ]
+              ],
+              "matched": false,
+              "matchedViaEmbedding": false
+            },
+            {
+              "expectedAlternativeNames": [
+                [
+                  "pet"
+                ]
+              ],
+              "matched": false,
+              "matchedViaEmbedding": false
+            },
+            {
+              "expectedAlternativeNames": [
+                [
+                  "drink"
+                ]
+              ],
+              "matched": false,
+              "matchedViaEmbedding": false
+            },
+            {
+              "expectedAlternativeNames": [
+                [
+                  "cigarette",
+                  "smoke"
+                ]
+              ],
+              "matched": false,
+              "matchedViaEmbedding": false
+            }
+          ],
+          "domainsCovered": 0,
+          "domainsTotal": 5,
+          "structurallyCorrect": false
+        }
+      },
+      {
+        "entities": [
+          {
+            "id": "five_houses",
+            "type": "house"
+          },
+          {
+            "id": "red_house",
+            "type": "house"
+          },
+          {
+            "id": "green_house",
+            "type": "house"
+          },
+          {
+            "id": "ivory_house",
+            "type": "house"
+          },
+          {
+            "id": "blue_house",
+            "type": "house"
+          },
+          {
+            "id": "Englishman",
+            "type": "suspect"
+          },
+          {
+            "id": "Spaniard",
+            "type": "suspect"
+          },
+          {
+            "id": "Ukrainian",
+            "type": "suspect"
+          },
+          {
+            "id": "Norwegian",
+            "type": "suspect"
+          },
+          {
+            "id": "Japanese",
+            "type": "suspect"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "color",
+            "entityType": "house",
+            "values": [
+              "Milk"
+            ]
+          },
+          {
+            "variable": "drink",
+            "entityType": "house",
+            "values": [
+              "Coffee",
+              "tea",
+              "Lucky Strike",
+              "orange juice"
+            ]
+          },
+          {
+            "variable": "pet",
+            "entityType": "house",
+            "values": [
+              "dog",
+              "fox",
+              "horse"
+            ]
+          },
+          {
+            "variable": "cigarette",
+            "entityType": "house",
+            "values": [
+              "Old Gold",
+              "Kools",
+              "Chesterfields",
+              "Parliaments"
+            ]
+          },
+          {
+            "variable": "house_position",
+            "entityType": "house",
+            "values": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5"
+            ]
+          }
+        ],
+        "totalCalls": 3,
+        "costUsd": 0.00047325000000000004,
+        "score": {
+          "puzzleId": "PZL-0001",
+          "entityAxisSizeMatch": true,
+          "expectedEntityAxisSize": 5,
+          "producedEntityAxisSizes": [
+            5,
+            5
+          ],
+          "domainResults": [
+            {
+              "expectedAlternativeNames": [
+                [
+                  "color"
+                ]
+              ],
+              "matched": false,
+              "matchedViaEmbedding": false
+            },
+            {
+              "expectedAlternativeNames": [
+                [
+                  "nationality"
+                ]
+              ],
+              "matched": false,
+              "matchedViaEmbedding": false
+            },
+            {
+              "expectedAlternativeNames": [
+                [
+                  "pet"
+                ]
+              ],
+              "matched": false,
+              "matchedViaEmbedding": false
+            },
+            {
+              "expectedAlternativeNames": [
+                [
+                  "drink"
+                ]
+              ],
+              "matched": false,
+              "matchedViaEmbedding": false
+            },
+            {
+              "expectedAlternativeNames": [
+                [
+                  "cigarette",
+                  "smoke"
+                ]
+              ],
+              "matched": false,
+              "matchedViaEmbedding": false
+            }
+          ],
+          "domainsCovered": 0,
+          "domainsTotal": 5,
+          "structurallyCorrect": false
+        }
+      }
+    ],
+    "consistency": {
+      "entityAxisAgreement": "1/3",
+      "domainSetAgreement": "1/3"
+    },
+    "scoreSummary": {
+      "structurallyCorrectRate": "0/3",
+      "totalCost": 0.0018676500000000002
+    }
+  },
+  {
+    "id": "PZL-0002",
+    "sourceOutcome": "MATCH",
+    "hasGroundTruth": true,
+    "reps": [
+      {
+        "entities": [
+          {
+            "id": "The_Cat_lives_in_the_Red_House_",
+            "type": "house"
+          },
+          {
+            "id": "The_Red_House_is_the_middle_house_",
+            "type": "house"
+          },
+          {
+            "id": "the_Green_House",
+            "type": "house"
+          },
+          {
+            "id": "Red_House",
+            "type": "house"
+          },
+          {
+            "id": "middle_house",
+            "type": "house"
+          },
+          {
+            "id": "Blue_House",
+            "type": "house"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "color",
+            "entityType": "house",
+            "values": [
+              "Blue",
+              "Red",
+              "Green"
+            ]
+          },
+          {
+            "variable": "animal",
+            "entityType": "house",
+            "values": [
+              "Dog",
+              "Cat",
+              "Zebra"
+            ]
+          },
+          {
+            "variable": "house_position",
+            "entityType": "house",
+            "values": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6"
+            ]
+          }
+        ],
+        "totalCalls": 4,
+        "costUsd": 0.00047174999999999995,
+        "score": {
+          "puzzleId": "PZL-0002",
+          "entityAxisSizeMatch": false,
+          "expectedEntityAxisSize": 3,
+          "producedEntityAxisSizes": [
+            6
+          ],
+          "domainResults": [
+            {
+              "expectedAlternativeNames": [
+                [
+                  "color"
+                ]
+              ],
+              "matched": true,
+              "matchedProducedName": "color",
+              "matchedViaEmbedding": false
+            },
+            {
+              "expectedAlternativeNames": [
+                [
+                  "animal"
+                ]
+              ],
+              "matched": true,
+              "matchedProducedName": "animal",
+              "matchedViaEmbedding": false
+            }
+          ],
+          "domainsCovered": 2,
+          "domainsTotal": 2,
+          "structurallyCorrect": false
+        }
+      },
+      {
+        "entities": [
+          {
+            "id": "middle_house",
+            "type": "house"
+          },
+          {
+            "id": "Blue_House",
+            "type": "house"
+          },
+          {
+            "id": "Red_House",
+            "type": "house"
+          },
+          {
+            "id": "Green_House",
+            "type": "house"
+          },
+          {
+            "id": "The_Red_House_is_the_middle_house_",
+            "type": "house"
+          },
+          {
+            "id": "The_Blue_House_is_directly_to_the_left_of_the_Red_House_",
+            "type": "house"
+          },
+          {
+            "id": "the_scenario",
+            "type": "scenario"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "color",
+            "entityType": "house",
+            "values": [
+              "Blue",
+              "Red",
+              "Green"
+            ]
+          },
+          {
+            "variable": "animal",
+            "entityType": "scenario",
+            "values": [
+              "Cat",
+              "Dog",
+              "Zebra"
+            ]
+          },
+          {
+            "variable": "house_position",
+            "entityType": "house",
+            "values": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6"
+            ]
+          }
+        ],
+        "totalCalls": 4,
+        "costUsd": 0.00046259999999999997,
+        "score": {
+          "puzzleId": "PZL-0002",
+          "entityAxisSizeMatch": false,
+          "expectedEntityAxisSize": 3,
+          "producedEntityAxisSizes": [
+            6,
+            1
+          ],
+          "domainResults": [
+            {
+              "expectedAlternativeNames": [
+                [
+                  "color"
+                ]
+              ],
+              "matched": true,
+              "matchedProducedName": "color",
+              "matchedViaEmbedding": false
+            },
+            {
+              "expectedAlternativeNames": [
+                [
+                  "animal"
+                ]
+              ],
+              "matched": true,
+              "matchedProducedName": "animal",
+              "matchedViaEmbedding": false
+            }
+          ],
+          "domainsCovered": 2,
+          "domainsTotal": 2,
+          "structurallyCorrect": false
+        }
+      },
+      {
+        "entities": [
+          {
+            "id": "v1",
+            "type": "house"
+          },
+          {
+            "id": "v2",
+            "type": "house"
+          },
+          {
+            "id": "v3",
+            "type": "house"
+          },
+          {
+            "id": "Red_House",
+            "type": "house"
+          },
+          {
+            "id": "middle_house",
+            "type": "house"
+          },
+          {
+            "id": "Blue_House",
+            "type": "house"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "color",
+            "entityType": "house",
+            "values": [
+              "Blue",
+              "Red",
+              "Green"
+            ]
+          },
+          {
+            "variable": "animal",
+            "entityType": "house",
+            "values": [
+              "Dog",
+              "Cat",
+              "Zebra"
+            ]
+          },
+          {
+            "variable": "house_position",
+            "entityType": "house",
+            "values": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6"
+            ]
+          }
+        ],
+        "totalCalls": 3,
+        "costUsd": 0.0003213,
+        "score": {
+          "puzzleId": "PZL-0002",
+          "entityAxisSizeMatch": false,
+          "expectedEntityAxisSize": 3,
+          "producedEntityAxisSizes": [
+            6
+          ],
+          "domainResults": [
+            {
+              "expectedAlternativeNames": [
+                [
+                  "color"
+                ]
+              ],
+              "matched": true,
+              "matchedProducedName": "color",
+              "matchedViaEmbedding": false
+            },
+            {
+              "expectedAlternativeNames": [
+                [
+                  "animal"
+                ]
+              ],
+              "matched": true,
+              "matchedProducedName": "animal",
+              "matchedViaEmbedding": false
+            }
+          ],
+          "domainsCovered": 2,
+          "domainsTotal": 2,
+          "structurallyCorrect": false
+        }
+      }
+    ],
+    "consistency": {
+      "entityAxisAgreement": "2/3",
+      "domainSetAgreement": "3/3"
+    },
+    "scoreSummary": {
+      "structurallyCorrectRate": "0/3",
+      "totalCost": 0.0012556499999999999
+    }
+  },
+  {
+    "id": "PZL-0003",
+    "sourceOutcome": "MATCH",
+    "hasGroundTruth": true,
+    "reps": [
+      {
+        "entities": [
+          {
+            "id": "the_scenario",
+            "type": "scenario"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "item",
+            "entityType": "scenario",
+            "values": [
+              "paper",
+              "rock",
+              "scissors",
+              "Paper",
+              "Rock",
+              "Scissors"
+            ]
+          }
+        ],
+        "totalCalls": 3,
+        "costUsd": 0.0002493,
+        "score": {
+          "puzzleId": "PZL-0003",
+          "entityAxisSizeMatch": false,
+          "expectedEntityAxisSize": 2,
+          "producedEntityAxisSizes": [
+            1
+          ],
+          "domainResults": [
+            {
+              "expectedAlternativeNames": [
+                [
+                  "move"
+                ]
+              ],
+              "matched": false,
+              "matchedViaEmbedding": false
+            }
+          ],
+          "domainsCovered": 0,
+          "domainsTotal": 1,
+          "structurallyCorrect": false
+        }
+      },
+      {
+        "entities": [
+          {
+            "id": "the_scenario",
+            "type": "scenario"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "item",
+            "entityType": "scenario",
+            "values": [
+              "paper",
+              "rock",
+              "scissors",
+              "Paper",
+              "Rock",
+              "Scissors"
+            ]
+          }
+        ],
+        "totalCalls": 3,
+        "costUsd": 0.00024150000000000002,
+        "score": {
+          "puzzleId": "PZL-0003",
+          "entityAxisSizeMatch": false,
+          "expectedEntityAxisSize": 2,
+          "producedEntityAxisSizes": [
+            1
+          ],
+          "domainResults": [
+            {
+              "expectedAlternativeNames": [
+                [
+                  "move"
+                ]
+              ],
+              "matched": false,
+              "matchedViaEmbedding": false
+            }
+          ],
+          "domainsCovered": 0,
+          "domainsTotal": 1,
+          "structurallyCorrect": false
+        }
+      },
+      {
+        "entities": [
+          {
+            "id": "the_scenario",
+            "type": "scenario"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "tool",
+            "entityType": "scenario",
+            "values": [
+              "paper",
+              "rock",
+              "scissors"
+            ]
+          }
+        ],
+        "totalCalls": 3,
+        "costUsd": 0.00023129999999999998,
+        "score": {
+          "puzzleId": "PZL-0003",
+          "entityAxisSizeMatch": false,
+          "expectedEntityAxisSize": 2,
+          "producedEntityAxisSizes": [
+            1
+          ],
+          "domainResults": [
+            {
+              "expectedAlternativeNames": [
+                [
+                  "move"
+                ]
+              ],
+              "matched": false,
+              "matchedViaEmbedding": false
+            }
+          ],
+          "domainsCovered": 0,
+          "domainsTotal": 1,
+          "structurallyCorrect": false
+        }
+      }
+    ],
+    "consistency": {
+      "entityAxisAgreement": "3/3",
+      "domainSetAgreement": "2/3"
+    },
+    "scoreSummary": {
+      "structurallyCorrectRate": "0/3",
+      "totalCost": 0.0007221
+    }
+  },
+  {
+    "id": "PZL-0004",
+    "sourceOutcome": "MATCH",
+    "hasGroundTruth": true,
+    "reps": [
+      {
+        "entities": [
+          {
+            "id": "Miss_Scarlett",
+            "type": "suspect"
+          },
+          {
+            "id": "Colonel_Mustard",
+            "type": "suspect"
+          },
+          {
+            "id": "Professor_Plum",
+            "type": "suspect"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "weapon",
+            "entityType": "suspect",
+            "values": [
+              "Candlestick",
+              "Revolver",
+              "Rope"
+            ]
+          },
+          {
+            "variable": "room",
+            "entityType": "suspect",
+            "values": [
+              "Kitchen",
+              "Library",
+              "Conservatory"
+            ]
+          }
+        ],
+        "totalCalls": 3,
+        "costUsd": 0.00032025,
+        "score": {
+          "puzzleId": "PZL-0004",
+          "entityAxisSizeMatch": false,
+          "expectedEntityAxisSize": 1,
+          "producedEntityAxisSizes": [
+            3
+          ],
+          "domainResults": [
+            {
+              "expectedAlternativeNames": [
+                [
+                  "suspect"
+                ]
+              ],
+              "matched": false,
+              "matchedViaEmbedding": false
+            },
+            {
+              "expectedAlternativeNames": [
+                [
+                  "weapon"
+                ]
+              ],
+              "matched": true,
+              "matchedProducedName": "weapon",
+              "matchedViaEmbedding": false
+            },
+            {
+              "expectedAlternativeNames": [
+                [
+                  "room"
+                ]
+              ],
+              "matched": true,
+              "matchedProducedName": "room",
+              "matchedViaEmbedding": false
+            }
+          ],
+          "domainsCovered": 2,
+          "domainsTotal": 3,
+          "structurallyCorrect": false
+        }
+      },
+      {
+        "entities": [
+          {
+            "id": "Miss_Scarlett",
+            "type": "suspect"
+          },
+          {
+            "id": "Colonel_Mustard",
+            "type": "suspect"
+          },
+          {
+            "id": "Professor_Plum",
+            "type": "suspect"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "weapon",
+            "entityType": "suspect",
+            "values": [
+              "Candlestick",
+              "Revolver",
+              "Rope"
+            ]
+          },
+          {
+            "variable": "room",
+            "entityType": "suspect",
+            "values": [
+              "Kitchen",
+              "Library",
+              "Conservatory"
+            ]
+          }
+        ],
+        "totalCalls": 3,
+        "costUsd": 0.00032025,
+        "score": {
+          "puzzleId": "PZL-0004",
+          "entityAxisSizeMatch": false,
+          "expectedEntityAxisSize": 1,
+          "producedEntityAxisSizes": [
+            3
+          ],
+          "domainResults": [
+            {
+              "expectedAlternativeNames": [
+                [
+                  "suspect"
+                ]
+              ],
+              "matched": false,
+              "matchedViaEmbedding": false
+            },
+            {
+              "expectedAlternativeNames": [
+                [
+                  "weapon"
+                ]
+              ],
+              "matched": true,
+              "matchedProducedName": "weapon",
+              "matchedViaEmbedding": false
+            },
+            {
+              "expectedAlternativeNames": [
+                [
+                  "room"
+                ]
+              ],
+              "matched": true,
+              "matchedProducedName": "room",
+              "matchedViaEmbedding": false
+            }
+          ],
+          "domainsCovered": 2,
+          "domainsTotal": 3,
+          "structurallyCorrect": false
+        }
+      },
+      {
+        "entities": [
+          {
+            "id": "Miss_Scarlett",
+            "type": "suspect"
+          },
+          {
+            "id": "Colonel_Mustard",
+            "type": "suspect"
+          },
+          {
+            "id": "Professor_Plum",
+            "type": "suspect"
+          }
+        ],
+        "domains": [],
+        "totalCalls": 4,
+        "costUsd": 0.00039795,
+        "score": {
+          "puzzleId": "PZL-0004",
+          "entityAxisSizeMatch": false,
+          "expectedEntityAxisSize": 1,
+          "producedEntityAxisSizes": [
+            3
+          ],
+          "domainResults": [
+            {
+              "expectedAlternativeNames": [
+                [
+                  "suspect"
+                ]
+              ],
+              "matched": false,
+              "matchedViaEmbedding": false
+            },
+            {
+              "expectedAlternativeNames": [
+                [
+                  "weapon"
+                ]
+              ],
+              "matched": false,
+              "matchedViaEmbedding": false
+            },
+            {
+              "expectedAlternativeNames": [
+                [
+                  "room"
+                ]
+              ],
+              "matched": false,
+              "matchedViaEmbedding": false
+            }
+          ],
+          "domainsCovered": 0,
+          "domainsTotal": 3,
+          "structurallyCorrect": false
+        }
+      }
+    ],
+    "consistency": {
+      "entityAxisAgreement": "3/3",
+      "domainSetAgreement": "2/3"
+    },
+    "scoreSummary": {
+      "structurallyCorrectRate": "0/3",
+      "totalCost": 0.00103845
+    }
+  },
+  {
+    "id": "PZL-0007",
+    "sourceOutcome": "MATCH",
+    "hasGroundTruth": true,
+    "reps": [
+      {
+        "entities": [
+          {
+            "id": "the_scenario",
+            "type": "scenario"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "letters",
+            "entityType": "scenario",
+            "values": [
+              "S",
+              "E",
+              "N",
+              "D",
+              "M",
+              "O",
+              "R",
+              "Y"
+            ]
+          }
+        ],
+        "totalCalls": 3,
+        "costUsd": 0.00040755,
+        "score": {
+          "puzzleId": "PZL-0007",
+          "entityAxisSizeMatch": false,
+          "expectedEntityAxisSize": 8,
+          "producedEntityAxisSizes": [
+            1
+          ],
+          "domainResults": [
+            {
+              "expectedAlternativeNames": [
+                [
+                  "digit"
+                ]
+              ],
+              "matched": false,
+              "matchedViaEmbedding": false
+            }
+          ],
+          "domainsCovered": 0,
+          "domainsTotal": 1,
+          "structurallyCorrect": false
+        }
+      },
+      {
+        "entities": [
+          {
+            "id": "the_scenario",
+            "type": "scenario"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "letter",
+            "entityType": "scenario",
+            "values": [
+              "S",
+              "E",
+              "N",
+              "D",
+              "M",
+              "O",
+              "R",
+              "Y"
+            ]
+          }
+        ],
+        "totalCalls": 3,
+        "costUsd": 0.00032415000000000005,
+        "score": {
+          "puzzleId": "PZL-0007",
+          "entityAxisSizeMatch": false,
+          "expectedEntityAxisSize": 8,
+          "producedEntityAxisSizes": [
+            1
+          ],
+          "domainResults": [
+            {
+              "expectedAlternativeNames": [
+                [
+                  "digit"
+                ]
+              ],
+              "matched": false,
+              "matchedViaEmbedding": false
+            }
+          ],
+          "domainsCovered": 0,
+          "domainsTotal": 1,
+          "structurallyCorrect": false
+        }
+      },
+      {
+        "entities": [
+          {
+            "id": "the_scenario",
+            "type": "scenario"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "letter",
+            "entityType": "scenario",
+            "values": [
+              "S",
+              "E",
+              "N",
+              "D",
+              "M",
+              "O",
+              "R",
+              "Y"
+            ]
+          }
+        ],
+        "totalCalls": 3,
+        "costUsd": 0.00030179999999999996,
+        "score": {
+          "puzzleId": "PZL-0007",
+          "entityAxisSizeMatch": false,
+          "expectedEntityAxisSize": 8,
+          "producedEntityAxisSizes": [
+            1
+          ],
+          "domainResults": [
+            {
+              "expectedAlternativeNames": [
+                [
+                  "digit"
+                ]
+              ],
+              "matched": false,
+              "matchedViaEmbedding": false
+            }
+          ],
+          "domainsCovered": 0,
+          "domainsTotal": 1,
+          "structurallyCorrect": false
+        }
+      }
+    ],
+    "consistency": {
+      "entityAxisAgreement": "3/3",
+      "domainSetAgreement": "2/3"
+    },
+    "scoreSummary": {
+      "structurallyCorrectRate": "0/3",
+      "totalCost": 0.0010335000000000001
+    }
+  },
+  {
+    "id": "PZL-0010",
+    "sourceOutcome": "MATCH",
+    "hasGroundTruth": true,
+    "reps": [
+      {
+        "entities": [
+          {
+            "id": "South_car",
+            "type": "vehicle"
+          },
+          {
+            "id": "East_car",
+            "type": "vehicle"
+          },
+          {
+            "id": "North_car",
+            "type": "vehicle"
+          },
+          {
+            "id": "West_car",
+            "type": "vehicle"
+          },
+          {
+            "id": "the_scenario",
+            "type": "scenario"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "direction",
+            "entityType": "scenario",
+            "values": [
+              "North",
+              "South",
+              "East",
+              "West",
+              "eastern"
+            ]
+          }
+        ],
+        "totalCalls": 3,
+        "costUsd": 0.00034544999999999997,
+        "score": {
+          "puzzleId": "PZL-0010",
+          "entityAxisSizeMatch": false,
+          "expectedEntityAxisSize": 5,
+          "producedEntityAxisSizes": [
+            4,
+            1
+          ],
+          "domainResults": [
+            {
+              "expectedAlternativeNames": [
+                [
+                  "order"
+                ]
+              ],
+              "matched": false,
+              "matchedViaEmbedding": false
+            }
+          ],
+          "domainsCovered": 0,
+          "domainsTotal": 1,
+          "structurallyCorrect": false
+        }
+      },
+      {
+        "entities": [
+          {
+            "id": "pedestrian",
+            "type": "transportation"
+          },
+          {
+            "id": "crosswalk",
+            "type": "transportation"
+          },
+          {
+            "id": "cars",
+            "type": "transportation"
+          },
+          {
+            "id": "South_car",
+            "type": "transportation"
+          },
+          {
+            "id": "East_car",
+            "type": "transportation"
+          },
+          {
+            "id": "North_car",
+            "type": "transportation"
+          },
+          {
+            "id": "West_car",
+            "type": "transportation"
+          },
+          {
+            "id": "the_scenario",
+            "type": "scenario"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "direction",
+            "entityType": "scenario",
+            "values": [
+              "North",
+              "South",
+              "East",
+              "West",
+              "eastern"
+            ]
+          }
+        ],
+        "totalCalls": 3,
+        "costUsd": 0.00034605,
+        "score": {
+          "puzzleId": "PZL-0010",
+          "entityAxisSizeMatch": false,
+          "expectedEntityAxisSize": 5,
+          "producedEntityAxisSizes": [
+            7,
+            1
+          ],
+          "domainResults": [
+            {
+              "expectedAlternativeNames": [
+                [
+                  "order"
+                ]
+              ],
+              "matched": false,
+              "matchedViaEmbedding": false
+            }
+          ],
+          "domainsCovered": 0,
+          "domainsTotal": 1,
+          "structurallyCorrect": false
+        }
+      },
+      {
+        "entities": [
+          {
+            "id": "car",
+            "type": "vehicle"
+          },
+          {
+            "id": "South_car",
+            "type": "vehicle"
+          },
+          {
+            "id": "East_car",
+            "type": "vehicle"
+          },
+          {
+            "id": "North_car",
+            "type": "vehicle"
+          },
+          {
+            "id": "West_car",
+            "type": "vehicle"
+          },
+          {
+            "id": "a_car",
+            "type": "vehicle"
+          },
+          {
+            "id": "cars",
+            "type": "vehicle"
+          },
+          {
+            "id": "two_cars",
+            "type": "vehicle"
+          },
+          {
+            "id": "pedestrian_2",
+            "type": "pedestrian"
+          },
+          {
+            "id": "A_pedestrian",
+            "type": "pedestrian"
+          },
+          {
+            "id": "A_pedestrian_using_a_crosswalk",
+            "type": "pedestrian"
+          },
+          {
+            "id": "the_pedestrian",
+            "type": "pedestrian"
+          },
+          {
+            "id": "the_scenario",
+            "type": "scenario"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "direction",
+            "entityType": "scenario",
+            "values": [
+              "North",
+              "South",
+              "East",
+              "West",
+              "each direction",
+              "the eastern approach",
+              "the direction that crosswalk crosses",
+              "the eastern crosswalk"
+            ]
+          },
+          {
+            "variable": "location",
+            "entityType": "scenario",
+            "values": [
+              "four-way stop intersection",
+              "pedestrian crosswalk",
+              "intersection",
+              "A four-way stop intersection",
+              "a pedestrian crosswalk",
+              "the intersection",
+              "a crosswalk"
+            ]
+          },
+          {
+            "variable": "rules",
+            "entityType": "scenario",
+            "values": [
+              "General rules",
+              "right-of-way",
+              "clockwise",
+              "whichever",
+              "the order they arrive"
+            ]
+          }
+        ],
+        "totalCalls": 4,
+        "costUsd": 0.0006693000000000001,
+        "score": {
+          "puzzleId": "PZL-0010",
+          "entityAxisSizeMatch": false,
+          "expectedEntityAxisSize": 5,
+          "producedEntityAxisSizes": [
+            8,
+            4,
+            1
+          ],
+          "domainResults": [
+            {
+              "expectedAlternativeNames": [
+                [
+                  "order"
+                ]
+              ],
+              "matched": false,
+              "matchedViaEmbedding": false
+            }
+          ],
+          "domainsCovered": 0,
+          "domainsTotal": 1,
+          "structurallyCorrect": false
+        }
+      }
+    ],
+    "consistency": {
+      "entityAxisAgreement": "1/3",
+      "domainSetAgreement": "2/3"
+    },
+    "scoreSummary": {
+      "structurallyCorrectRate": "0/3",
+      "totalCost": 0.0013608000000000001
+    }
+  },
+  {
+    "id": "PZL-0011",
+    "sourceOutcome": "MATCH",
+    "hasGroundTruth": true,
+    "reps": [
+      {
+        "entities": [
+          {
+            "id": "Priya",
+            "type": "people"
+          },
+          {
+            "id": "Sam",
+            "type": "people"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "credit_items",
+            "entityType": "people",
+            "values": [
+              "credit tier",
+              "credit scores",
+              "loan",
+              "credit score",
+              "policy limits",
+              "requested loan amount",
+              "mortgage"
+            ]
+          },
+          {
+            "variable": "financial_metrics",
+            "entityType": "people",
+            "values": [
+              "debt-to-income (DTI) ratio",
+              "combined monthly debt",
+              "combined monthly income",
+              "combined income",
+              "$9,000",
+              "$3,200",
+              "43%",
+              "35.56%",
+              "600",
+              "debt-to-income",
+              "DTI",
+              "combined monthly debt payments",
+              "policy limit"
+            ]
+          },
+          {
+            "variable": "credit_scores2",
+            "entityType": "people",
+            "values": [
+              "680",
+              "750"
+            ]
+          }
+        ],
+        "totalCalls": 4,
+        "costUsd": 0.00060045,
+        "score": {
+          "puzzleId": "PZL-0011",
+          "entityAxisSizeMatch": false,
+          "expectedEntityAxisSize": 1,
+          "producedEntityAxisSizes": [
+            2
+          ],
+          "domainResults": [
+            {
+              "expectedAlternativeNames": [
+                [
+                  "outcome",
+                  "decision"
+                ]
+              ],
+              "matched": false,
+              "matchedViaEmbedding": false
+            }
+          ],
+          "domainsCovered": 0,
+          "domainsTotal": 1,
+          "structurallyCorrect": false
+        }
+      },
+      {
+        "entities": [
+          {
+            "id": "Priya",
+            "type": "persons"
+          },
+          {
+            "id": "Sam",
+            "type": "persons"
+          },
+          {
+            "id": "the_scenario",
+            "type": "scenario"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "financial_terms",
+            "entityType": "persons",
+            "values": [
+              "mortgage",
+              "credit tier",
+              "credit scores",
+              "debt-to-income",
+              "DTI",
+              "credit score"
+            ]
+          },
+          {
+            "variable": "credit_scores2",
+            "entityType": "scenario",
+            "values": [
+              "600",
+              "680",
+              "750"
+            ]
+          },
+          {
+            "variable": "application_status",
+            "entityType": "persons",
+            "values": [
+              "Denied",
+              "Approved",
+              "Counter-Offer"
+            ]
+          },
+          {
+            "variable": "financial_metrics",
+            "entityType": "persons",
+            "values": [
+              "combined monthly income",
+              "combined monthly debt payments",
+              "requested loan amount"
+            ]
+          },
+          {
+            "variable": "percentages",
+            "entityType": "persons",
+            "values": [
+              "43%"
+            ]
+          }
+        ],
+        "totalCalls": 3,
+        "costUsd": 0.00080205,
+        "score": {
+          "puzzleId": "PZL-0011",
+          "entityAxisSizeMatch": true,
+          "expectedEntityAxisSize": 1,
+          "producedEntityAxisSizes": [
+            2,
+            1
+          ],
+          "domainResults": [
+            {
+              "expectedAlternativeNames": [
+                [
+                  "outcome",
+                  "decision"
+                ]
+              ],
+              "matched": false,
+              "matchedViaEmbedding": false
+            }
+          ],
+          "domainsCovered": 0,
+          "domainsTotal": 1,
+          "structurallyCorrect": false
+        }
+      },
+      {
+        "entities": [
+          {
+            "id": "Priya",
+            "type": "names"
+          },
+          {
+            "id": "Sam",
+            "type": "names"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "credit",
+            "entityType": "names",
+            "values": [
+              "credit tier",
+              "credit scores",
+              "600",
+              "Priya's credit score",
+              "680",
+              "Sam's credit score",
+              "750"
+            ]
+          },
+          {
+            "variable": "financial_details",
+            "entityType": "names",
+            "values": [
+              "mortgage",
+              "combined monthly income",
+              "$9,000",
+              "combined monthly debt payments",
+              "requested loan amount"
+            ]
+          }
+        ],
+        "totalCalls": 3,
+        "costUsd": 0.00039119999999999997,
+        "score": {
+          "puzzleId": "PZL-0011",
+          "entityAxisSizeMatch": false,
+          "expectedEntityAxisSize": 1,
+          "producedEntityAxisSizes": [
+            2
+          ],
+          "domainResults": [
+            {
+              "expectedAlternativeNames": [
+                [
+                  "outcome",
+                  "decision"
+                ]
+              ],
+              "matched": false,
+              "matchedViaEmbedding": false
+            }
+          ],
+          "domainsCovered": 0,
+          "domainsTotal": 1,
+          "structurallyCorrect": false
+        }
+      }
+    ],
+    "consistency": {
+      "entityAxisAgreement": "2/3",
+      "domainSetAgreement": "1/3"
+    },
+    "scoreSummary": {
+      "structurallyCorrectRate": "0/3",
+      "totalCost": 0.0017937
+    }
+  },
+  {
+    "id": "PZL-0012",
+    "sourceOutcome": "MISMATCH",
+    "hasGroundTruth": true,
+    "reps": [
+      {
+        "entities": [
+          {
+            "id": "the_scenario",
+            "type": "scenario"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "drug",
+            "entityType": "scenario",
+            "values": [
+              "Drug A",
+              "Drug B",
+              "Drug C"
+            ]
+          },
+          {
+            "variable": "time",
+            "entityType": "scenario",
+            "values": [
+              "9am",
+              "11am",
+              "4pm",
+              "8am",
+              "1pm",
+              "4 hours",
+              "2 hours",
+              "6am",
+              "10am",
+              "3pm"
+            ]
+          }
+        ],
+        "totalCalls": 3,
+        "costUsd": 0.00034995,
+        "score": {
+          "puzzleId": "PZL-0012",
+          "entityAxisSizeMatch": false,
+          "expectedEntityAxisSize": 3,
+          "producedEntityAxisSizes": [
+            1
+          ],
+          "domainResults": [
+            {
+              "expectedAlternativeNames": [
+                [
+                  "time"
+                ]
+              ],
+              "matched": true,
+              "matchedProducedName": "time",
+              "matchedViaEmbedding": false
+            }
+          ],
+          "domainsCovered": 1,
+          "domainsTotal": 1,
+          "structurallyCorrect": false
+        }
+      },
+      {
+        "entities": [
+          {
+            "id": "the_scenario",
+            "type": "scenario"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "drug",
+            "entityType": "scenario",
+            "values": [
+              "Drug A",
+              "Drug B",
+              "Drug C"
+            ]
+          },
+          {
+            "variable": "time",
+            "entityType": "scenario",
+            "values": [
+              "9am",
+              "11am",
+              "4pm",
+              "8am",
+              "1pm",
+              "4 hours",
+              "2 hours",
+              "6am",
+              "10am",
+              "3pm"
+            ]
+          }
+        ],
+        "totalCalls": 3,
+        "costUsd": 0.00035655,
+        "score": {
+          "puzzleId": "PZL-0012",
+          "entityAxisSizeMatch": false,
+          "expectedEntityAxisSize": 3,
+          "producedEntityAxisSizes": [
+            1
+          ],
+          "domainResults": [
+            {
+              "expectedAlternativeNames": [
+                [
+                  "time"
+                ]
+              ],
+              "matched": true,
+              "matchedProducedName": "time",
+              "matchedViaEmbedding": false
+            }
+          ],
+          "domainsCovered": 1,
+          "domainsTotal": 1,
+          "structurallyCorrect": false
+        }
+      },
+      {
+        "entities": [
+          {
+            "id": "v9am",
+            "type": "time"
+          },
+          {
+            "id": "v11am",
+            "type": "time"
+          },
+          {
+            "id": "v4pm",
+            "type": "time"
+          },
+          {
+            "id": "v8am",
+            "type": "time"
+          },
+          {
+            "id": "v1pm",
+            "type": "time"
+          },
+          {
+            "id": "v6am",
+            "type": "time"
+          },
+          {
+            "id": "v10am",
+            "type": "time"
+          },
+          {
+            "id": "v3pm",
+            "type": "time"
+          },
+          {
+            "id": "the_scenario",
+            "type": "scenario"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "drug",
+            "entityType": "scenario",
+            "values": [
+              "Drug A",
+              "Drug B",
+              "Drug C"
+            ]
+          },
+          {
+            "variable": "constraint_",
+            "entityType": "time",
+            "values": [
+              "Constraint #1",
+              "at least 4 hours after Drug A",
+              "Constraint #2",
+              "at least 2 hours away from any meal",
+              "4 hours",
+              "2 hours",
+              "any meal"
+            ]
+          },
+          {
+            "variable": "time_position",
+            "entityType": "time",
+            "values": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8"
+            ]
+          }
+        ],
+        "totalCalls": 4,
+        "costUsd": 0.00057735,
+        "score": {
+          "puzzleId": "PZL-0012",
+          "entityAxisSizeMatch": false,
+          "expectedEntityAxisSize": 3,
+          "producedEntityAxisSizes": [
+            8,
+            1
+          ],
+          "domainResults": [
+            {
+              "expectedAlternativeNames": [
+                [
+                  "time"
+                ]
+              ],
+              "matched": false,
+              "matchedViaEmbedding": false
+            }
+          ],
+          "domainsCovered": 0,
+          "domainsTotal": 1,
+          "structurallyCorrect": false
+        }
+      }
+    ],
+    "consistency": {
+      "entityAxisAgreement": "2/3",
+      "domainSetAgreement": "2/3"
+    },
+    "scoreSummary": {
+      "structurallyCorrectRate": "0/3",
+      "totalCost": 0.00128385
+    }
+  },
+  {
+    "id": "PZL-0015",
+    "sourceOutcome": "DECLINED_CORRECTLY",
+    "hasGroundTruth": false,
+    "reps": [
+      {
+        "entities": [
+          {
+            "id": "the_scenario",
+            "type": "scenario"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "variable",
+            "entityType": "scenario",
+            "values": [
+              "variables",
+              "elements",
+              "values",
+              "Domains",
+              "possible values",
+              "domains",
+              "constraints",
+              "components"
+            ]
+          },
+          {
+            "variable": "constraint_",
+            "entityType": "scenario",
+            "values": [
+              "Constraints"
+            ]
+          },
+          {
+            "variable": "relationship",
+            "entityType": "scenario",
+            "values": [
+              "relationships"
+            ]
+          },
+          {
+            "variable": "assignment",
+            "entityType": "scenario",
+            "values": [
+              "assign"
+            ]
+          },
+          {
+            "variable": "solution",
+            "entityType": "scenario",
+            "values": [
+              "Final answer",
+              "solution",
+              "solutions"
+            ]
+          }
+        ],
+        "totalCalls": 4,
+        "costUsd": 0.00041475
+      },
+      {
+        "entities": [
+          {
+            "id": "the_scenario",
+            "type": "scenario"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "solution",
+            "entityType": "scenario",
+            "values": [
+              "Worked solution",
+              "solution",
+              "solvable CSP"
+            ]
+          },
+          {
+            "variable": "variables",
+            "entityType": "scenario",
+            "values": [
+              "variables"
+            ]
+          },
+          {
+            "variable": "domains",
+            "entityType": "scenario",
+            "values": [
+              "domains"
+            ]
+          },
+          {
+            "variable": "constraints",
+            "entityType": "scenario",
+            "values": [
+              "constraints"
+            ]
+          },
+          {
+            "variable": "elements",
+            "entityType": "scenario",
+            "values": [
+              "elements"
+            ]
+          },
+          {
+            "variable": "values",
+            "entityType": "scenario",
+            "values": [
+              "values",
+              "possible values",
+              "value"
+            ]
+          },
+          {
+            "variable": "relationships",
+            "entityType": "scenario",
+            "values": [
+              "relationships"
+            ]
+          },
+          {
+            "variable": "assignment",
+            "entityType": "scenario",
+            "values": [
+              "assign"
+            ]
+          },
+          {
+            "variable": "solution_status",
+            "entityType": "scenario",
+            "values": [
+              "unique solution",
+              "multiple solutions",
+              "no solutions"
+            ]
+          }
+        ],
+        "totalCalls": 4,
+        "costUsd": 0.0004989
+      },
+      {
+        "entities": [
+          {
+            "id": "the_scenario",
+            "type": "scenario"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "problem_type",
+            "entityType": "scenario",
+            "values": [
+              "Constraint Satisfaction Problem",
+              "CSP"
+            ]
+          },
+          {
+            "variable": "components",
+            "entityType": "scenario",
+            "values": [
+              "variables",
+              "domains",
+              "constraints",
+              "elements",
+              "values",
+              "assigned values",
+              "possible values",
+              "required components"
+            ]
+          },
+          {
+            "variable": "solutions",
+            "entityType": "scenario",
+            "values": [
+              "multiple solutions",
+              "no solutions",
+              "unique solution",
+              "solvable CSP"
+            ]
+          }
+        ],
+        "totalCalls": 4,
+        "costUsd": 0.00039975
+      }
+    ],
+    "consistency": {
+      "entityAxisAgreement": "3/3",
+      "domainSetAgreement": "1/3"
+    }
+  },
+  {
+    "id": "PZL-0018",
+    "sourceOutcome": "DECLINED_CORRECTLY",
+    "hasGroundTruth": false,
+    "reps": [
+      {
+        "entities": [
+          {
+            "id": "Ana",
+            "type": "suspect"
+          },
+          {
+            "id": "Bo",
+            "type": "suspect"
+          },
+          {
+            "id": "Cy",
+            "type": "suspect"
+          },
+          {
+            "id": "house_1",
+            "type": "house"
+          },
+          {
+            "id": "house_2",
+            "type": "house"
+          },
+          {
+            "id": "house_3",
+            "type": "house"
+          }
+        ],
+        "domains": [],
+        "totalCalls": 4,
+        "costUsd": 0.00042315
+      },
+      {
+        "entities": [
+          {
+            "id": "Ana",
+            "type": "suspect"
+          },
+          {
+            "id": "Bo",
+            "type": "suspect"
+          },
+          {
+            "id": "Cy",
+            "type": "suspect"
+          },
+          {
+            "id": "house_1",
+            "type": "house"
+          },
+          {
+            "id": "house_2",
+            "type": "house"
+          },
+          {
+            "id": "house_3",
+            "type": "house"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "sound",
+            "entityType": "house",
+            "values": [
+              "loudest laugh"
+            ]
+          },
+          {
+            "variable": "house_position",
+            "entityType": "house",
+            "values": [
+              "1",
+              "2",
+              "3"
+            ]
+          }
+        ],
+        "totalCalls": 3,
+        "costUsd": 0.0003162
+      },
+      {
+        "entities": [
+          {
+            "id": "Ana",
+            "type": "suspect"
+          },
+          {
+            "id": "Bo",
+            "type": "suspect"
+          },
+          {
+            "id": "Cy",
+            "type": "suspect"
+          },
+          {
+            "id": "house_1",
+            "type": "house"
+          },
+          {
+            "id": "house_2",
+            "type": "house"
+          },
+          {
+            "id": "house_3",
+            "type": "house"
+          }
+        ],
+        "domains": [],
+        "totalCalls": 4,
+        "costUsd": 0.00041654999999999996
+      }
+    ],
+    "consistency": {
+      "entityAxisAgreement": "3/3",
+      "domainSetAgreement": "2/3"
+    }
+  },
+  {
+    "id": "PZL-0022",
+    "sourceOutcome": "MISMATCH",
+    "hasGroundTruth": false,
+    "reps": [
+      {
+        "entities": [
+          {
+            "id": "v10_kg",
+            "type": "weight"
+          },
+          {
+            "id": "v4_kg",
+            "type": "weight"
+          },
+          {
+            "id": "v3_kg",
+            "type": "weight"
+          },
+          {
+            "id": "v5_kg",
+            "type": "weight"
+          },
+          {
+            "id": "v2_kg",
+            "type": "weight"
+          },
+          {
+            "id": "v6_kg",
+            "type": "weight"
+          },
+          {
+            "id": "v9_kg",
+            "type": "weight"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "food",
+            "entityType": "weight",
+            "values": [
+              "Bag of rice",
+              "Cast-iron skillet"
+            ]
+          },
+          {
+            "variable": "book",
+            "entityType": "weight",
+            "values": [
+              "Hardcover book set"
+            ]
+          },
+          {
+            "variable": "kit",
+            "entityType": "weight",
+            "values": [
+              "First-aid kit"
+            ]
+          },
+          {
+            "variable": "tool",
+            "entityType": "weight",
+            "values": [
+              "Toolbox"
+            ]
+          },
+          {
+            "variable": "weight_position",
+            "entityType": "weight",
+            "values": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7"
+            ]
+          }
+        ],
+        "totalCalls": 3,
+        "costUsd": 0.0005211
+      },
+      {
+        "entities": [
+          {
+            "id": "shipping_box",
+            "type": "package"
+          },
+          {
+            "id": "care_package",
+            "type": "package"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "weight",
+            "entityType": "package",
+            "values": [
+              "10 kg",
+              "4 kg",
+              "5",
+              "3 kg",
+              "5 kg",
+              "8",
+              "2 kg",
+              "6 kg",
+              "first-aid kit",
+              "8 kg",
+              "7 kg",
+              "9 kg"
+            ]
+          },
+          {
+            "variable": "book",
+            "entityType": "package",
+            "values": [
+              "Hardcover book set",
+              "First-aid kit + Hardcover book set",
+              "First-aid kit + Cast-iron skillet",
+              "First-aid kit + Bag of rice + Hardcover book set"
+            ]
+          },
+          {
+            "variable": "cooking_equipment",
+            "entityType": "package",
+            "values": [
+              "Cast-iron skillet",
+              "First-aid kit + Bag of rice",
+              "First-aid kit + Toolbox"
+            ]
+          },
+          {
+            "variable": "first_aid_kit2",
+            "entityType": "package",
+            "values": [
+              "First-aid kit"
+            ]
+          },
+          {
+            "variable": "value",
+            "entityType": "package",
+            "values": [
+              "value of 6",
+              "Value: 5",
+              "Value: 4",
+              "Value: 8",
+              "Value: 6",
+              "Value: 7"
+            ]
+          },
+          {
+            "variable": "package_position",
+            "entityType": "package",
+            "values": [
+              "1",
+              "2"
+            ]
+          }
+        ],
+        "totalCalls": 3,
+        "costUsd": 0.00070215
+      },
+      {
+        "entities": [
+          {
+            "id": "the_scenario",
+            "type": "scenario"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "weights",
+            "entityType": "scenario",
+            "values": [
+              "10 kg",
+              "4 kg",
+              "5",
+              "3 kg",
+              "5 kg",
+              "2 kg",
+              "6 kg",
+              "9 kg"
+            ]
+          }
+        ],
+        "totalCalls": 3,
+        "costUsd": 0.0003516
+      }
+    ],
+    "consistency": {
+      "entityAxisAgreement": "1/3",
+      "domainSetAgreement": "1/3"
+    }
+  },
+  {
+    "id": "PZL-0028",
+    "sourceOutcome": "NO_MATCHING_READING",
+    "hasGroundTruth": false,
+    "reps": [
+      {
+        "entities": [
+          {
+            "id": "v1",
+            "type": "house"
+          },
+          {
+            "id": "blue",
+            "type": "house"
+          },
+          {
+            "id": "House_1",
+            "type": "house"
+          },
+          {
+            "id": "House_2",
+            "type": "house"
+          },
+          {
+            "id": "House_3",
+            "type": "house"
+          },
+          {
+            "id": "House_4",
+            "type": "house"
+          },
+          {
+            "id": "House_5",
+            "type": "house"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "number",
+            "entityType": "house",
+            "values": [
+              "5"
+            ]
+          },
+          {
+            "variable": "color",
+            "entityType": "house",
+            "values": [
+              "red",
+              "green",
+              "yellow",
+              "white"
+            ]
+          },
+          {
+            "variable": "house_color_relation",
+            "entityType": "house",
+            "values": [
+              "The red house is house 1",
+              "The white house is house 4",
+              "The green house is to the right of the blue house"
+            ]
+          },
+          {
+            "variable": "house_position",
+            "entityType": "house",
+            "values": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7"
+            ]
+          }
+        ],
+        "totalCalls": 3,
+        "costUsd": 0.00043034999999999997
+      },
+      {
+        "entities": [
+          {
+            "id": "house_1",
+            "type": "house"
+          },
+          {
+            "id": "house_5",
+            "type": "house"
+          },
+          {
+            "id": "The_red_house",
+            "type": "house"
+          },
+          {
+            "id": "The_white_house",
+            "type": "house"
+          },
+          {
+            "id": "The_green_house",
+            "type": "house"
+          },
+          {
+            "id": "The_white_house_is_house_4",
+            "type": "house"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "color",
+            "entityType": "house",
+            "values": [
+              "red",
+              "blue",
+              "green",
+              "yellow",
+              "white"
+            ]
+          }
+        ],
+        "totalCalls": 4,
+        "costUsd": 0.00049845
+      },
+      {
+        "entities": [
+          {
+            "id": "house_1",
+            "type": "house"
+          },
+          {
+            "id": "house_4",
+            "type": "house"
+          },
+          {
+            "id": "house_2",
+            "type": "house"
+          },
+          {
+            "id": "house_3",
+            "type": "house"
+          },
+          {
+            "id": "house_5",
+            "type": "house"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "color",
+            "entityType": "house",
+            "values": [
+              "red",
+              "blue",
+              "green",
+              "yellow",
+              "white"
+            ]
+          },
+          {
+            "variable": "house_with_color",
+            "entityType": "house",
+            "values": [
+              "House 1: Red",
+              "The red house is house 1.",
+              "The white house is house 4."
+            ]
+          },
+          {
+            "variable": "house_position",
+            "entityType": "house",
+            "values": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5"
+            ]
+          }
+        ],
+        "totalCalls": 4,
+        "costUsd": 0.00061185
+      }
+    ],
+    "consistency": {
+      "entityAxisAgreement": "1/3",
+      "domainSetAgreement": "1/3"
+    }
+  },
+  {
+    "id": "PZL-0033",
+    "sourceOutcome": "PREMISE_SILENTLY_PROMOTED",
+    "hasGroundTruth": false,
+    "reps": [
+      {
+        "entities": [
+          {
+            "id": "the_four_compartments",
+            "type": "compartments"
+          },
+          {
+            "id": "Compartment_1",
+            "type": "compartments"
+          },
+          {
+            "id": "Compartments_2",
+            "type": "compartments"
+          },
+          {
+            "id": "Compartment_2",
+            "type": "compartments"
+          },
+          {
+            "id": "Compartment_3",
+            "type": "compartments"
+          },
+          {
+            "id": "Compartment_4",
+            "type": "compartments"
+          },
+          {
+            "id": "the_only_compartment_that_is_below_freezing",
+            "type": "compartments"
+          },
+          {
+            "id": "the_only_suitable_compartment_for_the_ice_cream",
+            "type": "compartments"
+          },
+          {
+            "id": "the_scenario",
+            "type": "scenario"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "food",
+            "entityType": "scenario",
+            "values": [
+              "a tub of ice cream",
+              "a can of beans",
+              "a bag of flour",
+              "a bunch of bananas"
+            ]
+          },
+          {
+            "variable": "temperature",
+            "entityType": "compartments",
+            "values": [
+              "below freezing",
+              "unrefrigerated",
+              "above freezing",
+              "The ice cream melts above freezing"
+            ]
+          },
+          {
+            "variable": "compartments_position",
+            "entityType": "compartments",
+            "values": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8"
+            ]
+          }
+        ],
+        "totalCalls": 3,
+        "costUsd": 0.0003864
+      },
+      {
+        "entities": [
+          {
+            "id": "the_scenario",
+            "type": "scenario"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "food_items",
+            "entityType": "scenario",
+            "values": [
+              "tub of ice cream",
+              "can of beans",
+              "bag of flour",
+              "bunch of bananas",
+              "ice cream"
+            ]
+          },
+          {
+            "variable": "storage_types",
+            "entityType": "scenario",
+            "values": [
+              "freezer",
+              "below freezing",
+              "unrefrigerated",
+              "above freezing",
+              "suitable compartment"
+            ]
+          }
+        ],
+        "totalCalls": 4,
+        "costUsd": 0.00048105
+      },
+      {
+        "entities": [
+          {
+            "id": "four_compartments",
+            "type": "compartments"
+          },
+          {
+            "id": "Compartment_1",
+            "type": "compartments"
+          },
+          {
+            "id": "Compartment_2",
+            "type": "compartments"
+          },
+          {
+            "id": "Compartment_3",
+            "type": "compartments"
+          },
+          {
+            "id": "Compartment_4",
+            "type": "compartments"
+          },
+          {
+            "id": "the_scenario",
+            "type": "scenario"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "food",
+            "entityType": "scenario",
+            "values": [
+              "tub of ice cream",
+              "can of beans",
+              "bag of flour",
+              "bunch of bananas",
+              "ice cream",
+              "melts"
+            ]
+          },
+          {
+            "variable": "temperature_conditions",
+            "entityType": "scenario",
+            "values": [
+              "below freezing",
+              "unrefrigerated",
+              "above freezing"
+            ]
+          },
+          {
+            "variable": "compartments_position",
+            "entityType": "compartments",
+            "values": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5"
+            ]
+          }
+        ],
+        "totalCalls": 3,
+        "costUsd": 0.00036344999999999997
+      }
+    ],
+    "consistency": {
+      "entityAxisAgreement": "1/3",
+      "domainSetAgreement": "1/3"
+    }
+  },
+  {
+    "id": "PZL-0038",
+    "sourceOutcome": "MATCH",
+    "hasGroundTruth": true,
+    "reps": [
+      {
+        "entities": [
+          {
+            "id": "wolf",
+            "type": "animal"
+          },
+          {
+            "id": "rabbit",
+            "type": "animal"
+          },
+          {
+            "id": "goat",
+            "type": "animal"
+          },
+          {
+            "id": "parrot",
+            "type": "animal"
+          },
+          {
+            "id": "tortoise",
+            "type": "animal"
+          },
+          {
+            "id": "pen_1",
+            "type": "pen"
+          },
+          {
+            "id": "pen_2",
+            "type": "pen"
+          },
+          {
+            "id": "pen_3",
+            "type": "pen"
+          },
+          {
+            "id": "pen_4",
+            "type": "pen"
+          },
+          {
+            "id": "pen_5",
+            "type": "pen"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "wall",
+            "entityType": "pen",
+            "values": [
+              "solid concrete wall"
+            ]
+          },
+          {
+            "variable": "pen_type",
+            "entityType": "pen",
+            "values": [
+              "lower-numbered pen"
+            ]
+          },
+          {
+            "variable": "pen_position",
+            "entityType": "pen",
+            "values": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5"
+            ]
+          }
+        ],
+        "totalCalls": 3,
+        "costUsd": 0.00040169999999999995,
+        "score": {
+          "puzzleId": "PZL-0038",
+          "entityAxisSizeMatch": true,
+          "expectedEntityAxisSize": 5,
+          "producedEntityAxisSizes": [
+            5,
+            5
+          ],
+          "domainResults": [
+            {
+              "expectedAlternativeNames": [
+                [
+                  "pen"
+                ],
+                [
+                  "animal"
+                ]
+              ],
+              "matched": true,
+              "matchedProducedName": "pen_position",
+              "matchedViaEmbedding": true
+            }
+          ],
+          "domainsCovered": 1,
+          "domainsTotal": 1,
+          "structurallyCorrect": true
+        }
+      },
+      {
+        "entities": [
+          {
+            "id": "pens",
+            "type": "pen"
+          },
+          {
+            "id": "pen_1",
+            "type": "pen"
+          },
+          {
+            "id": "pen_2",
+            "type": "pen"
+          },
+          {
+            "id": "pen_3",
+            "type": "pen"
+          },
+          {
+            "id": "pen_4",
+            "type": "pen"
+          },
+          {
+            "id": "pen_5",
+            "type": "pen"
+          },
+          {
+            "id": "the_scenario",
+            "type": "scenario"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "animal",
+            "entityType": "scenario",
+            "values": [
+              "wolf",
+              "rabbit",
+              "goat",
+              "parrot",
+              "tortoise",
+              "animal"
+            ]
+          },
+          {
+            "variable": "pen_position",
+            "entityType": "pen",
+            "values": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6"
+            ]
+          }
+        ],
+        "totalCalls": 3,
+        "costUsd": 0.0003747,
+        "score": {
+          "puzzleId": "PZL-0038",
+          "entityAxisSizeMatch": false,
+          "expectedEntityAxisSize": 5,
+          "producedEntityAxisSizes": [
+            6,
+            1
+          ],
+          "domainResults": [
+            {
+              "expectedAlternativeNames": [
+                [
+                  "pen"
+                ],
+                [
+                  "animal"
+                ]
+              ],
+              "matched": true,
+              "matchedProducedName": "animal",
+              "matchedViaEmbedding": false
+            }
+          ],
+          "domainsCovered": 1,
+          "domainsTotal": 1,
+          "structurallyCorrect": false
+        }
+      },
+      {
+        "entities": [
+          {
+            "id": "five_animals",
+            "type": "animal"
+          },
+          {
+            "id": "wolf",
+            "type": "animal"
+          },
+          {
+            "id": "rabbit",
+            "type": "animal"
+          },
+          {
+            "id": "goat",
+            "type": "animal"
+          },
+          {
+            "id": "parrot",
+            "type": "animal"
+          },
+          {
+            "id": "tortoise",
+            "type": "animal"
+          },
+          {
+            "id": "five_holding_pens",
+            "type": "pen"
+          },
+          {
+            "id": "pen_1",
+            "type": "pen"
+          },
+          {
+            "id": "pen_2",
+            "type": "pen"
+          },
+          {
+            "id": "pen_3",
+            "type": "pen"
+          },
+          {
+            "id": "pen_4",
+            "type": "pen"
+          },
+          {
+            "id": "pen_5",
+            "type": "pen"
+          },
+          {
+            "id": "Pen_1",
+            "type": "pen"
+          },
+          {
+            "id": "Pen_2",
+            "type": "pen"
+          },
+          {
+            "id": "Pen_3",
+            "type": "pen"
+          },
+          {
+            "id": "Pen_4",
+            "type": "pen"
+          },
+          {
+            "id": "Pen_5",
+            "type": "pen"
+          },
+          {
+            "id": "the_scenario",
+            "type": "scenario"
+          }
+        ],
+        "domains": [
+          {
+            "variable": "location",
+            "entityType": "scenario",
+            "values": [
+              "wildlife park"
+            ]
+          },
+          {
+            "variable": "pen_position",
+            "entityType": "pen",
+            "values": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11"
+            ]
+          }
+        ],
+        "totalCalls": 4,
+        "costUsd": 0.00059685,
+        "score": {
+          "puzzleId": "PZL-0038",
+          "entityAxisSizeMatch": false,
+          "expectedEntityAxisSize": 5,
+          "producedEntityAxisSizes": [
+            6,
+            11,
+            1
+          ],
+          "domainResults": [
+            {
+              "expectedAlternativeNames": [
+                [
+                  "pen"
+                ],
+                [
+                  "animal"
+                ]
+              ],
+              "matched": true,
+              "matchedProducedName": "pen_position",
+              "matchedViaEmbedding": true
+            }
+          ],
+          "domainsCovered": 1,
+          "domainsTotal": 1,
+          "structurallyCorrect": false
+        }
+      }
+    ],
+    "consistency": {
+      "entityAxisAgreement": "1/3",
+      "domainSetAgreement": "1/3"
+    },
+    "scoreSummary": {
+      "structurallyCorrectRate": "1/3",
+      "totalCost": 0.00137325
+    }
+  }
+]

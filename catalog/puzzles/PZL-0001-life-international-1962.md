@@ -8,6 +8,24 @@ constraints: 14
 source: https://en.wikipedia.org/wiki/Zebra_Puzzle
 difficulty: unknown
 created: 2026-08-11
+groundTruth:
+  entityAxisSize: 5
+  expectedDomains:
+    - alternatives:
+        - names: [color]
+          values: [Yellow, Blue, Red, Ivory, Green]
+    - alternatives:
+        - names: [nationality]
+          values: [Norwegian, Ukrainian, Englishman, Spaniard, Japanese]
+    - alternatives:
+        - names: [pet]
+          values: [Fox, Horse, Snails, Dog, Zebra]
+    - alternatives:
+        - names: [drink]
+          values: [Water, Tea, Milk, Orange Juice, Coffee]
+    - alternatives:
+        - names: [cigarette, smoke]
+          values: [Kools, Chesterfields, Old Gold, Lucky Strike, Parliaments]
 ---
 
 There are five houses.

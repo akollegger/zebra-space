@@ -8,6 +8,12 @@ constraints: 4
 source: null
 difficulty: unknown
 created: 2026-08-11
+groundTruth:
+  entityAxisSize: 2  # player + opponent
+  expectedDomains:
+    - alternatives:
+        - names: [move]
+          values: [Paper, Rock, Scissors]
 ---
 
 You're playing paper-rock-scissors.

@@ -8,6 +8,16 @@ constraints: 7
 source: null
 difficulty: unknown
 created: 2026-08-12
+groundTruth:
+  entityAxisSize: 1  # one implicit "application"/"scenario" entity
+  # Only the final decision domain is required — intermediate known-fact domains (credit score,
+  # income, debt) a real extraction may also declare are legitimate but not required, since
+  # declaring given facts as domains vs. compile-time constants is itself an underdetermined
+  # modeling choice this ground truth doesn't take a position on.
+  expectedDomains:
+    - alternatives:
+        - names: [outcome, decision]
+          values: ["Denied", "Approved", "Counter-Offer"]
 ---
 
 Priya and Sam are applying jointly for a mortgage.

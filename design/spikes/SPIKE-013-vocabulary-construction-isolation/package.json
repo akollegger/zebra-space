@@ -1,0 +1,19 @@
+{
+  "name": "spike-013-vocabulary-construction-isolation",
+  "private": true,
+  "type": "module",
+  "description": "Throwaway spike code for SPIKE-013 (RFC-003, isolating vocabulary construction). Not part of the zebra-space package tree.",
+  "dependencies": {
+    "wink-nlp": "^2.4.0",
+    "wink-eng-lite-web-model": "^1.8.1",
+    "@huggingface/transformers": "^4.2.0"
+  },
+  "overrides": {
+    "onnxruntime-node": "1.23.0"
+  },
+  "allowScripts": {
+    "onnxruntime-node@1.23.0": true,
+    "protobufjs@7.6.6": true,
+    "sharp@0.34.5": true
+  }
+}

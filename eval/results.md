@@ -220,3 +220,53 @@ Model: `qwen/qwen3.8-27b` (frontier: `anthropic/claude-sonnet-4.5 (default)`) ·
 | PZL-0038 | TIMEOUT |
 
 Full detail: `eval/results/2026-09-07T14-39-36-024Z.json`
+
+---
+
+## 2026-09-15T14:59:37Z — commit `1709d40f`
+
+Model: `openai/gpt-4o-mini` (frontier: `anthropic/claude-sonnet-4.5 (default)`) · harness `direct-solve` (prompt v2) · 14 puzzle-runs · pass rate **9/14 (64%)** · estimated $0.74 · measured/fallback $0.14
+
+| Puzzle | Outcome |
+|---|---|
+| PZL-0001 | MISMATCH (This is a determinate puzzle requiring the complete unique solution with every value matching the ex) |
+| PZL-0002 | MATCH |
+| PZL-0003 | MATCH |
+| PZL-0004 | MATCH |
+| PZL-0007 | MATCH |
+| PZL-0010 | MATCH |
+| PZL-0011 | MATCH |
+| PZL-0012 | MISMATCH (This is a determinate puzzle requiring a unique solution where every assignment must match. The expe) |
+| PZL-0015 | DECLINED_CORRECTLY |
+| PZL-0018 | DECLINED_CORRECTLY |
+| PZL-0022 | MISMATCH (This is a COP (constraint optimization problem) where only the optimum VALUE matters. The expected a) |
+| PZL-0028 | NO_MATCHING_READING (This is an ambiguous puzzle with two valid readings of "to the right of": (1) immediately adjacent () |
+| PZL-0033 | PREMISE_SILENTLY_PROMOTED (This is a subjective-class puzzle. The solver must reach the premise-free outcome WITHOUT importing ) |
+| PZL-0038 | MATCH |
+
+Full detail: `eval/results/2026-09-15T14-59-37-368Z.json`
+
+---
+
+## 2026-09-15T15:02:32Z — commit `1709d40f`
+
+Model: `anthropic/claude-sonnet-4.5` (frontier: `anthropic/claude-sonnet-4.5 (default)`) · harness `direct-solve` (prompt v2) · 14 puzzle-runs · pass rate **13/14 (93%)** · estimated $1.43 · measured/fallback $0.28
+
+| Puzzle | Outcome |
+|---|---|
+| PZL-0001 | MATCH |
+| PZL-0002 | MATCH |
+| PZL-0003 | MATCH |
+| PZL-0004 | MATCH |
+| PZL-0007 | MATCH |
+| PZL-0010 | MATCH |
+| PZL-0011 | MATCH |
+| PZL-0012 | MATCH |
+| PZL-0015 | DECLINED_CORRECTLY |
+| PZL-0018 | DECLINED_CORRECTLY |
+| PZL-0022 | OPTIMUM_ATTAINED |
+| PZL-0028 | READING_MATCHED |
+| PZL-0033 | PREMISE_SILENTLY_PROMOTED (This is a subjective puzzle. The expected outcome is that the solver should report the puzzle as unc) |
+| PZL-0038 | MATCH |
+
+Full detail: `eval/results/2026-09-15T15-02-32-354Z.json`

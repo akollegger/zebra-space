@@ -8,6 +8,18 @@ constraints: 6
 source: null
 difficulty: unknown
 created: 2026-08-11
+groundTruth:
+  entityAxisSize: 1  # one implicit "murder"/"scenario" entity
+  expectedDomains:
+    - alternatives:
+        - names: [suspect]
+          values: [Miss Scarlett, Colonel Mustard, Professor Plum]
+    - alternatives:
+        - names: [weapon]
+          values: [Candlestick, Revolver, Rope]
+    - alternatives:
+        - names: [room]
+          values: [Kitchen, Library, Conservatory]
 ---
 
 There has been a murder. The culprit is one of three suspects, using one of three weapons, in

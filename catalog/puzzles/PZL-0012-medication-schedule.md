@@ -8,6 +8,12 @@ constraints: 3
 source: null
 difficulty: unknown
 created: 2026-08-12
+groundTruth:
+  entityAxisSize: 3  # the three drugs
+  expectedDomains:
+    - alternatives:
+        - names: [time]
+          values: ["9am", "11am", "4pm"]
 ---
 
 A patient takes three medications — Drug A, Drug B, and Drug C — once each today, at 9am,
