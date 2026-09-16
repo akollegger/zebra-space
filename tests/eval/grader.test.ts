@@ -20,14 +20,31 @@ import {
 // ADR-007 §2.2: normalization reuses the compiler's sanitizeIdentifier (no duplicate) plus
 // the integer passthrough and the versioned alias table.
 
-test("normalizeToken: integers pass through, identifiers sanitize, aliases resolve", () => {
+test("normalizeToken: integers pass through, identifiers sanitize+fold, aliases resolve", () => {
   assert.deepEqual(normalizeToken("42", {}), { normalized: "42", aliasApplied: false })
-  assert.deepEqual(normalizeToken("Orange Juice", {}), { normalized: "Orange_Juice", aliasApplied: false })
-  assert.deepEqual(normalizeToken("true", {}), { normalized: "true_", aliasApplied: false })
+  assert.deepEqual(normalizeToken("Orange Juice", {}), { normalized: "orangejuice", aliasApplied: false })
+  assert.deepEqual(normalizeToken("true", {}), { normalized: "true", aliasApplied: false })
   const aliases = { "hardcover book set": ["book_set"] }
-  assert.deepEqual(normalizeToken("book_set", aliases), { normalized: "hardcover_book_set", aliasApplied: true })
-  assert.deepEqual(normalizeToken("hardcover book set", aliases), { normalized: "hardcover_book_set", aliasApplied: true })
+  assert.deepEqual(normalizeToken("book_set", aliases), { normalized: "hardcoverbookset", aliasApplied: true })
+  assert.deepEqual(normalizeToken("hardcover book set", aliases), { normalized: "hardcoverbookset", aliasApplied: true })
   assert.deepEqual(normalizeToken("unrelated", aliases), { normalized: "unrelated", aliasApplied: false })
+})
+
+// Found live 2026-09-16 (SPIKE-014 `formalize-mzn` blast-radius investigation): a model
+// authoring a MiniZinc identifier directly is free to choose any spelling convention for the
+// SAME value the answer key spells one particular way — sanitizeIdentifier alone (no
+// case-folding, no separator-bridging) treated every one of these as a different token, so a
+// genuinely correct solve graded as a false MISMATCH. Confirmed against 17 re-solved,
+// hand-checked cases from a real frontier-tier run before this fix.
+test("normalizeToken: case and separator-style variants of the same value converge (formalize-mzn grading gap)", () => {
+  const variants = ["Lucky Strike", "Lucky_Strike", "LuckyStrike", "LUCKY_STRIKE", "lucky strike"]
+  const normalized = variants.map((v) => normalizeToken(v, {}).normalized)
+  assert.equal(new Set(normalized).size, 1, `expected all variants to converge, got: ${normalized.join(", ")}`)
+})
+
+test("gradeFlatRecord: a model-authored identifier in a different case/separator convention still matches", () => {
+  const result = gradeFlatRecord({ suspect: "Professor Plum" }, { suspect: "PROFESSOR_PLUM" })
+  assert.equal(result.verdict, "MATCH")
 })
 
 test("gradeParallelArrays: identical grids match regardless of entity declaration order", () => {

@@ -19,7 +19,12 @@ import { gradeSolved } from "../../SPIKE-008-per-clue-tool-call-decomposition/sc
 import { formalizeToMinizinc } from "./lib/formalize-mzn.ts"
 import type { SolveResult, SolverError } from "../../../../src/solver/types.ts"
 
-const MODEL = "openai/gpt-4o-mini"
+// MODEL override lets this same runner test whether the solve-vs-formalize asymmetry
+// (direct-solve 64%/93% vs. formalize-mzn 31%, both gpt-4o-mini) is a cheap-tier familiarity gap
+// with MiniZinc specifically, or holds at the frontier tier too — pair with a resultsFile
+// pointing at that tier's own direct-solve traces so Stage 1 and Stage 2 are the SAME model,
+// the correct apples-to-apples comparison (each tier judged against its own solve rate).
+const MODEL = process.env.MODEL ?? "openai/gpt-4o-mini"
 const REPS = Number(process.env.REPS ?? 3)
 
 // Same source file formalize-json used — direct comparison on the identical Stage-1 traces.

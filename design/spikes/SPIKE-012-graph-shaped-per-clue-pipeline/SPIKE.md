@@ -251,11 +251,20 @@ $1.00-$1.50 estimate. Raw:
 
 ### 5.1 Headline: `SOLVE_UNIQUE` moved off zero for the first time in four spikes — `MATCH` did not
 
+> **Correction (2026-09-16):** re-checked as part of scoping the blast radius of a grader
+> token-normalization gap found and fixed in SPIKE-014 (see that spike's §5.7). PZL-0003's own
+> `SOLVE_UNIQUE` rep (both variants, discussed in §5.2 below) was actually a correct extraction —
+> the *extraction* step itself wrote `"paper"` where the answer key spells it `"Paper"`, and the
+> grader's case-sensitive comparison graded it `MISMATCH` before the fix. **`MATCH` is 1/42 for
+> each variant, not 0/42** — a small but real correction to this section's headline and to §5.2/§6
+> below, which otherwise stand as originally written (the fix does not change PZL-0007's
+> genuinely-broken-extraction case, or any other puzzle in this table).
+
 | Variant | `SOLVE_UNIQUE` | `MATCH` | Gradable (not `COMPILE_FAILED`/`SOLVE_ERROR`) | Cost (14×3) | Calls |
 |---|---|---|---|---|---|
 | `full-critic` (baseline, single sample, reused from SPIKE-011) | 11/14 (79%) | 2/14 (14%) | 13/14 | ~$2.06 (1 rep) | 168 |
-| `graph-pipeline` | **6/42 (14%)** | **0/42 (0%)** | 28/42 (67%) | $0.0564 | 530 |
-| `graph-pipeline+oracle-repair` | **6/42 (14%)** | **0/42 (0%)** | 32/42 (76%) | $0.0663 | 586 |
+| `graph-pipeline` | **6/42 (14%)** | 0/42 (0%) → corrected **1/42 (2%)** | 28/42 (67%) | $0.0564 | 530 |
+| `graph-pipeline+oracle-repair` | **6/42 (14%)** | 0/42 (0%) → corrected **1/42 (2%)** | 32/42 (76%) | $0.0663 | 586 |
 
 This is the first per-clue-style architecture across SPIKE-008/009/010/011/012 to reach
 `SOLVE_UNIQUE` at all — every prior per-clue variant, in every prior spike, scored exactly 0/14.
@@ -263,11 +272,12 @@ Gradable rate (67-76%) is also the highest yet for a per-clue variant, exceeding
 post-fix `per-clue`'s 8/14 (57%) and `per-clue+reconcile`'s 9/14 (64%). Cost stays two orders of
 magnitude below `full-critic` even at 3x the sampling (n=3 here vs. n=1 for the baseline).
 
-**But `MATCH` is still exactly 0/42** — not one single genuinely correct extraction on a
-determinate puzzle, across 84 total attempts (both variants combined). SPIKE-011 §5.1's own
-warning about conflating "gradable" with "correct" applies with full force to this spike's own
-`SOLVE_UNIQUE` number too: reaching a uniquely-solvable model is necessary but not sufficient,
-and this design's `SOLVE_UNIQUE` gains do not convert into `MATCH` gains anywhere in this sample.
+**`MATCH` is 1/42 per variant (corrected above), not exactly 0/42** — a single genuinely correct
+extraction (PZL-0003, §5.2), out of 84 total attempts (both variants combined). SPIKE-011 §5.1's
+own warning about conflating "gradable" with "correct" still applies with almost full force to
+this spike's own `SOLVE_UNIQUE` number: reaching a uniquely-solvable model is necessary but not
+sufficient, and this design's `SOLVE_UNIQUE` gains convert into a `MATCH` gain in exactly one case
+in this sample, not zero.
 
 ### 5.2 Every `SOLVE_UNIQUE` lands on the SAME non-MATCH class `full-critic` also gets — never a puzzle `full-critic` gets wrong
 
@@ -277,15 +287,25 @@ Per-puzzle detail (raw JSON has all 3 reps per cell):
 |---|---|---|---|
 | PZL-0022 (COP) | 2/3 | `FEASIBLE_ONLY` (same class as baseline) | `SOLVE_MULTIPLY_SATISFIABLE`/`FEASIBLE_ONLY` |
 | PZL-0015 (non-problem, no decline mechanism) | 3/3 | `UNDECLINED` (same class as baseline) | `SOLVE_UNIQUE`/`UNDECLINED` |
-| PZL-0003 (Rock Paper Scissors) | 1/3 | `MISMATCH` (same class as baseline) | `SOLVE_UNIQUE`/`MISMATCH` |
-| PZL-0007 (SEND+MORE=MONEY, oracle-repair only) | 0/3 → 1/3 with repair | `MISMATCH` (same class as baseline) | `SOLVE_UNIQUE`/`MISMATCH` |
+| PZL-0003 (Rock Paper Scissors) | 1/3 | `MISMATCH` → corrected **`MATCH`** (grader fix, see §5.1's correction note) | `SOLVE_UNIQUE`/`MISMATCH` |
+| PZL-0007 (SEND+MORE=MONEY, oracle-repair only) | 0/3 → 1/3 with repair | `MISMATCH` (genuinely broken extraction — empty `domains`/`constraints` — confirmed unaffected by the grader fix) | `SOLVE_UNIQUE`/`MISMATCH` |
 
 Every single `SOLVE_UNIQUE` this design reaches lands on the exact same outcome class
-`full-critic` already reaches for that same puzzle — `FEASIBLE_ONLY` for the one COP puzzle,
-`UNDECLINED` for the one non-problem puzzle with no decline mechanism, `MISMATCH` for two
-determinate-but-wrong puzzles. **In no case does this design solve correctly a puzzle
-`full-critic` gets wrong, or reach `SOLVE_UNIQUE` at all on a puzzle `full-critic` doesn't
-already reach it on.** Worse, on the two puzzles where `full-critic` achieves a genuine `MATCH`
+`full-critic` already reaches for that same puzzle, **except PZL-0003 (corrected above), where
+this design now grades `MATCH`** — `FEASIBLE_ONLY` for the one COP puzzle, `UNDECLINED` for the
+one non-problem puzzle with no decline mechanism, `MISMATCH` for the one still-genuinely-wrong
+determinate puzzle (PZL-0007). Whether this is a case where the design gets right something
+`full-critic` gets wrong is unclear, not confirmed: re-checking `full-critic`'s own PZL-0003
+baseline against the fixed grader, it's STILL `MISMATCH` ("missing tokens: Paper") — but for a
+reason the case-fold fix doesn't touch. `full-critic`'s extraction models PZL-0003 with two
+entities (`you`/`opponent`), so `recoverEntityKeyedArrays` turns the solved `move` array into a
+two-key entity-keyed object; `gradeFlatRecord`'s token collection only unwraps a SINGLE-key
+nested record, so a two-key one is silently skipped entirely and neither value is ever compared.
+(This design's own extraction uses one synthetic entity for the whole scenario, so the same
+recovery step produces a single-key object that unwraps fine — incidentally avoiding the bug,
+not fixing it.) This is a second, distinct grader/recovery-interaction defect, not yet fixed —
+noted here rather than fixed in this pass, and NOT something the case-fold fix (SPIKE-014 §5.7)
+addresses. Worse, on the two puzzles where `full-critic` achieves a genuine `MATCH`
 (PZL-0004, PZL-0011), this design scores **0/3 `SOLVE_UNIQUE` on both, across both variants** —
 strictly regressing on exactly the puzzles that matter most for this comparison. PZL-0004's
 failure is the shape-misclassification family already documented in §4 (partially mitigated, not
@@ -304,7 +324,8 @@ on this specific puzzle, not just once.
 
 `graph-pipeline+oracle-repair`'s gradable rate (76%) exceeds plain `graph-pipeline`'s (67%) — repair
 rounds fired most heavily on PZL-0002, PZL-0018, PZL-0010 (2 rounds each, every rep) — but
-`SOLVE_UNIQUE` stayed identical (6/42 both) and `MATCH` stayed at 0 for both. This mirrors
+`SOLVE_UNIQUE` stayed identical (6/42 both) and `MATCH` stayed at 1/42 for both (corrected, §5.1).
+This mirrors
 SPIKE-008 §5.4's own finding about the grounded-revision critic (recovers some puzzles from an
 ungraded failure into a graded-but-still-wrong state, without moving genuine correctness) —
 the SAME critic module (`groundedFinding`, reused unchanged here), doing the same thing, on a
@@ -312,16 +333,26 @@ structurally different pipeline.
 
 ## 6. Conclusion
 
-**Real, first-of-its-kind progress on one axis (`SOLVE_UNIQUE`, 0/14 → 6/42), zero progress on
-the axis that actually matters (`MATCH`, 0/14 → 0/42).** This spike's central question (§1) was
-whether the inventory→group→shape→per-clue-typing→oracle-repair redesign — never letting a model
-type a free-text identifier, splitting "which kind" from "fill the slots" into two calls — would
-raise `SOLVE_UNIQUE`/`MATCH` above the 0/14 every prior per-clue variant scored. It partially
-does (§5.1): this is the first per-clue-shaped architecture across five spikes to reach
-`SOLVE_UNIQUE` at all, and its gradable rate is the highest yet measured for this architecture
-family. But `MATCH` did not move, and every single `SOLVE_UNIQUE` this design reaches (§5.2)
-lands on a puzzle and outcome class `full-critic` already reaches — this design has not yet
-demonstrated it can get RIGHT anything `full-critic` gets wrong, and it demonstrably regresses on
+> **Correction (2026-09-16):** a grader token-normalization gap, found and fixed in SPIKE-014
+> (§5.7 there), was regraded across this spike's own results too. `MATCH` moved from an exact
+> 0/42 to **1/42 for both variants** (§5.1) — real, but small: the headline "zero progress on
+> `MATCH`" below is now "near-zero, not exactly zero," and does not change this section's overall
+> conclusion. Whether this design also out-performs `full-critic` on that one puzzle is genuinely
+> unclear, not confirmed — see §5.2's own correction note for a second, distinct, still-open
+> grader/recovery-interaction defect found while checking this.
+
+**Real, first-of-its-kind progress on one axis (`SOLVE_UNIQUE`, 0/14 → 6/42), near-zero progress
+on the axis that actually matters (`MATCH`, 0/14 → 1/42, corrected above).** This spike's central
+question (§1) was whether the inventory→group→shape→per-clue-typing→oracle-repair redesign —
+never letting a model type a free-text identifier, splitting "which kind" from "fill the slots"
+into two calls — would raise `SOLVE_UNIQUE`/`MATCH` above the 0/14 every prior per-clue variant
+scored. It partially does (§5.1): this is the first per-clue-shaped architecture across five
+spikes to reach `SOLVE_UNIQUE` at all, and its gradable rate is the highest yet measured for this
+architecture family. `MATCH` moved only marginally (0/14 → 1/42, corrected), and every
+`SOLVE_UNIQUE` this design reaches except one (§5.2) lands on a puzzle and outcome class
+`full-critic` already reaches — this design has not clearly demonstrated it can get RIGHT
+anything `full-critic` gets wrong (its one apparent win, PZL-0003, is confounded by a second,
+unfixed grading defect on `full-critic`'s own side — §5.2), and it demonstrably regresses on
 the two puzzles `full-critic` gets right in this exact sample.
 
 **On the secondary question (§1): the "never type an identifier" design closed the specific
