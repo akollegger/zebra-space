@@ -102,6 +102,21 @@ one more Stage-2 prompt, not a second pipeline.
    SPIKE-013's finding that closed classification can regress when fed noisier input: inspect
    actual COMPILE_FAILED/solve-mismatch cases, not just the aggregate rate, the same discipline
    every prior spike in this line has followed.
+6. **`formalize-mzn+oracle-repair` (3rd variant, added 2026-09-16, per §5.4/§6's own recommended
+   next step)**: compile/solve as a REPAIR ORACLE, not a fidelity gate — RFC-003 §7.3's original
+   framing, and the exact principle SPIKE-012's `oracle-repair.ts` already validated for the
+   `ExtractedCsp` path. `formalize-mzn` has no per-clue tagging to localize a repair to (a single
+   undifferentiated MiniZinc blob, unlike SPIKE-012's per-clue-tagged constraints) — this variant
+   instead feeds back the WHOLE previous model plus the SPECIFIC solve-outcome signal (§5.4's own
+   three diagnosed mechanisms restated as repair hints: a compile error, "no solution" pointing at
+   an over-strict/contradictory constraint, "multiple solutions" pointing at a likely-missing
+   `alldifferent` or an incompletely-covered relational clue) and asks for a corrected whole
+   model. Bounded to ONE repair round per rep, matching SPIKE-008/012's own precedent for
+   predictable cost. Repair triggers on `SOLVE_ERROR` always, or on
+   `Unsatisfiable`/`MultiplySatisfiable` only when the puzzle's own answer-key entry declares it
+   `determinate` (or omits `outcome`, which defaults to determinate) — other puzzle types
+   (COP, ambiguous, non-problem, subjective) can legitimately be non-unique, so repair must not
+   fire on solution-count alone without checking what the puzzle actually is.
 
 ## 3. Time-box
 
@@ -142,6 +157,15 @@ semantic, and — checked specifically, not assumed — zero of the 42 runs prod
 "confidently wrong, no signal" case, though that's an observation from a small sample, not a
 guarantee (this session's own `direct-solve` work already found that exact failure mode is real
 in free prose). Written up as §5.4.
+
+**2026-09-16 — folded oracle-repair in as a 3rd variant**, per §5.4/§6's own recommended next
+step: `formalize-mzn+oracle-repair`, adapting SPIKE-012's oracle-repair.ts principle (compile/
+solve as a repair oracle, not a fidelity gate) to a flat MiniZinc blob with no per-clue tagging
+to localize to. Live dry run on the two hardest known cases (PZL-0010, PZL-0038) first, at n=2:
+repair reliably triggered and incorporated its hint (e.g. correctly added a missing
+`alldifferent` when told to), but 0/4 recovered to MATCH — confirming the mechanism works before
+committing to the full n=3×14 sweep. Full sweep: 12/42 MATCH vs. `formalize-mzn` alone's 13/42,
+at 60% more cost — flat-to-slightly-worse, not an improvement. Written up as §5.5.
 
 ## 5. Findings
 
@@ -284,6 +308,45 @@ compile/solve signal distinguishes it from a correct result); catching it would 
 independent second formalization to cross-check against, or ground truth, neither available at
 deployment time. That ceiling doesn't move with more prompt engineering.
 
+### 5.5 `formalize-mzn+oracle-repair` (3rd variant): the mechanism works exactly as designed, and that isn't enough
+
+Built and ran the repair loop §5.4/§6 recommended: one bounded round, whole-model feedback (the
+previous MiniZinc plus the specific solve-outcome signal, restated as one of §5.4's three
+diagnosed mechanisms), triggered on `SOLVE_ERROR` always or on `Unsatisfiable`/
+`MultiplySatisfiable` only for puzzles the answer key declares determinate. Same n=3 × 14 sweep,
+same source traces. Raw: `results/formalize-mzn-oracle-repair-2026-09-16T13-46-27-278Z.json`,
+**$0.0182** (60% more than §5.3's `formalize-mzn` alone).
+
+| | `formalize-mzn` (§5.3) | `formalize-mzn+oracle-repair` |
+|---|---|---|
+| MATCH | 13/42 (31%) | 12/42 (29%) |
+| Cost | $0.0114 | $0.0182 |
+
+**Flat-to-slightly-worse, not an improvement** — the 1-point difference is well within noise for
+n=42, so the honest reading is "no measurable effect," not "repair hurt." Repair triggered
+17/42 times (40% of all reps needed it); of those:
+
+| Result after repair | Count |
+|---|---|
+| Still `SOLVE_ERROR` (repair itself introduced another syntax mistake) | 7/17 (41%) |
+| Reached a valid solve, still wrong grade | 9/17 (53%) |
+| Recovered to `MATCH` | 1/17 (6%) |
+
+**The mechanism behaves exactly as predicted in §5.4/§6 — that's the finding, not a bug.** The
+one success (PZL-0007) confirms repair CAN work. But a single generic, whole-model hint mostly
+either fails the same way again (a repair call is just as capable of introducing a NEW syntax
+mistake as the original call, since it's the same model doing similar work) or nudges the model
+toward a DIFFERENT wrong model rather than the specific fix needed — visible concretely in a
+follow-up inspection of PZL-0038's repaired attempt: the hint correctly prompted the model to add
+the missing `alldifferent` (fixing exactly what was hinted), but the underlying quantifier-scope
+bug (`exists` where `forall` was needed — a mechanism not named in this run's generic hint) was
+untouched, so it stayed `MultiplySatisfiable` anyway. **Without SPIKE-012's per-clue localization
+— which `formalize-mzn`'s flat, undifferentiated text structurally cannot provide — a repair
+round can fix what it's specifically told, but has no way to discover a DIFFERENT problem it
+wasn't told about.** That's the real cost of giving up per-clue tagging for the representation
+win §5.2 found: repair-ability is one of the things `ExtractedCsp`'s structure was buying, even
+though its own formalization accuracy was worse to begin with.
+
 ## 6. Conclusion
 
 **Decoupling informal reasoning from formal emission generalizes from vocabulary to the whole
@@ -364,10 +427,19 @@ question is answered: yes, decisively, for both axes.
    confirmed as sound; the open engineering question is now narrowly about `formalize-mzn`'s
    prompt quality, not about whether this architectural direction is worth pursuing.
 3. §5.4's self-flagging/silent distinction, not "syntactic vs. semantic," is the axis worth
-   designing around next: a self-flagging semantic failure (`Unsatisfiable`/
-   `MultiplySatisfiable`) already has a validated remedy (SPIKE-012's oracle-repair) waiting to
-   be pointed at `formalize-mzn`; a silent, confidently-wrong unique result does not, and won't
-   from prompting alone — any future work claiming higher confidence in this architecture should
-   say explicitly which of the two failure classes its evidence actually rules out.
+   designing around — a silent, confidently-wrong unique result has no mechanical remedy and
+   won't from prompting alone; any future work claiming higher confidence in this architecture
+   should say explicitly which of the two failure classes its evidence actually rules out.
+4. **§5.5 tested whether oracle-repair actually delivers on (3)'s "already has a validated
+   remedy" claim, adapted to `formalize-mzn`'s flat structure — and it doesn't, in this specific
+   form.** One bounded round with a generic, whole-model hint recovered only 1/17 triggered
+   repairs to `MATCH` (flat-to-slightly-worse net effect, 60% more cost). The mechanism isn't
+   broken — it reliably does what it's told (e.g. correctly adding a missing `alldifferent` when
+   hinted) — the gap is `formalize-mzn`'s lack of `ExtractedCsp`'s per-clue tagging, which is
+   what let SPIKE-012's own oracle-repair localize a fix precisely instead of re-diagnosing an
+   entire model from one coarse signal. A future attempt at MiniZinc-side repair should look for
+   a way to localize the hint (e.g. asking the model to identify which specific comment/clue its
+   own model most likely mis-encoded, before asking it to fix anything) rather than assume a
+   generic outcome-class hint is enough — that's a real design problem, not a tuning knob.
 
 Status: done.

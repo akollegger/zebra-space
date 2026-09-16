@@ -76,8 +76,9 @@ function userPrompt(prose: string, trace: string): string {
 }
 
 /** The model tends to wrap code in a fenced block even when told not to add commentary — strip
- * it if present, otherwise use the response as-is (trimmed). */
-function extractMzn(raw: string): string {
+ * it if present, otherwise use the response as-is (trimmed). Exported for mzn-oracle-repair.ts,
+ * which needs the identical post-processing on its own completion. */
+export function extractMzn(raw: string): string {
   const fenced = raw.match(/```(?:minizinc|mzn)?\n([\s\S]*?)```/)
   return (fenced?.[1] ?? raw).trim()
 }
@@ -86,8 +87,9 @@ function extractMzn(raw: string): string {
  * backslash (`/\\`, `\\/`) as if escaping them for a quoted string, which is never valid
  * MiniZinc either way this run — a purely mechanical, always-safe normalization, kept alongside
  * (not instead of) the prompt instruction against it, since a deterministic fix costs nothing
- * and a prompt instruction alone is not guaranteed to hold on every sample. */
-function normalizeEscapedOperators(mzn: string): string {
+ * and a prompt instruction alone is not guaranteed to hold on every sample. Exported for
+ * mzn-oracle-repair.ts, which needs the identical post-processing on its own completion. */
+export function normalizeEscapedOperators(mzn: string): string {
   return mzn.replace(/\/\\{2,}/g, "/\\").replace(/\\{2,}\//g, "\\/")
 }
 
