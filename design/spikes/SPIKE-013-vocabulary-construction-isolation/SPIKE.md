@@ -372,6 +372,52 @@ names — the same shape.ts-style multiple-choice move, applied to a solved trac
 blind vocabulary guess — rather than free-form entity/domain construction from an unconstrained
 prompt.
 
+### 5.8 A 5th variant tests that directly — and it's a clear regression, not the fix
+
+Raw: `results/post-hoc-shaped-2026-09-16T08-56-55-756Z.json`. Same n=3, same 14 puzzles.
+`post-hoc-shaped` reuses SPIKE-012's exact `inventory.ts` -> `group.ts` -> `shape.ts` pipeline
+UNCHANGED — the same closed entityAxis/domainValues classification `shape.ts` already does for
+`llm-only` — the only change is feeding `extractInventory` the puzzle prose concatenated with the
+already-solved direct-solve trace, instead of prose alone.
+
+| Variant | Structurally correct | Entity-axis size matches | Domain-slot coverage |
+|---|---|---|---|
+| `llm-only` (blind, no trace) | 0/45 | 7/45 (16%) | 28/80 (35%) |
+| `post-hoc` (free-form, WITH trace) | **9/27 (33%)** | **16/27 (59%)** | **28/48 (58%)** |
+| `post-hoc-shaped` (closed classification, WITH trace) | 1/27 (4%) | 5/27 (19%) | 15/48 (31%) |
+
+**This falsifies the hypothesis behind §5.7's recommended next step.** Giving the proven closed
+classification mechanism a solved trace as extra context did not fix `post-hoc`'s failures — it
+regressed all the way back to roughly `llm-only`'s blind-guess numbers, discarding almost all of
+`post-hoc`'s gain. The fix isn't "closed classification good, free-form bad" in isolation; both
+inputs and mechanism matter together, and this pairing was worse than either half alone would
+suggest.
+
+**Inspecting two puzzles shows the closed classification failing in BOTH directions this time**,
+not just the one direction `post-hoc` failed in:
+
+- **PZL-0004** (whodunit; expected 1 scenario entity, 3 domains) — `post-hoc-shaped` classified
+  `suspect` as the entity axis (3 entities: Miss Scarlett/Colonel Mustard/Professor Plum) with
+  `weapon`/`room` as its domains. Structurally coherent (unlike `post-hoc`'s flat 9-entity
+  free-for-all), but still wrong: this puzzle narrows down ONE scenario, and treating suspects as
+  an entity axis implies each suspect independently gets a weapon+room assignment, which isn't
+  this puzzle's semantics at all — precisely the "is this an entity axis or one unstated
+  scenario" judgment call `shape.ts`'s own system prompt explicitly warns against getting wrong.
+- **PZL-0007** (SEND+MORE=MONEY; expected 8 letter-entities, 1 `digit` domain) — `post-hoc-shaped`
+  collapsed ALL EIGHT letters into a single synthesized scenario entity, with one `letters`
+  domain holding `["S","E","N","D","M","O","R","Y"]` as VALUES rather than as 8 independent
+  entities each taking a `digit` value — the opposite-direction version of the same
+  entityAxis/domainValues judgment call, also wrong.
+
+**A plausible mechanism, not yet directly confirmed**: `post-hoc`'s advantage likely comes from
+asking the model for a compressed SUMMARY of a structure it already resolved, in one call, with
+the answer already sitting in front of it. `post-hoc-shaped` instead asks `inventory`/`group` to
+re-derive candidate spans and categories from a much longer, more repetitive, more discursive
+text (prose + a multi-step reasoning trace, often several times the length of the prose alone) —
+more raw material to enumerate and cluster, and apparently more opportunity for `shape`'s
+classification call to misjudge entity-axis-vs-domain-values than the terse original prose gave
+it. Richer input did not mean cleaner input here.
+
 **Isolating vocabulary construction confirms, more directly than any prior spike in this line,
 that it is itself the dominant source of the non-determinism SPIKE-004 first found** — not
 merely inherited from downstream constraint-extraction complexity. §5.5's self-consistency
@@ -407,15 +453,29 @@ one clean example (PZL-0001) — that vocabulary shape can survive a solve that 
 because it's committed to early. Its failures are not random noise: they reproduce the SAME
 entity-axis-vs-domain-values confusion `shape.ts` exists to prevent (§5.7's PZL-0004 case),
 because this variant's transcription step is still a free-form construction, just against a
-solved trace instead of a blind guess. That points at a cheap, targeted fix — give Stage 2 the
-same closed multiple-choice classification `shape.ts` already uses, rather than open-ended
-entity/domain construction — before pursuing the narrower fixes below, since `post-hoc` is now
-the strongest baseline this spike has measured.
+solved trace instead of a blind guess.
+
+**A 5th variant tested the obvious fix for that — and falsified it (§5.8).** Reusing `shape.ts`'s
+proven closed classification unchanged, fed the solved trace as extra inventory input, was
+expected to combine `post-hoc`'s accuracy with `shape.ts`'s structural safety. Instead it
+regressed almost all the way back to `llm-only`'s blind-guess numbers (4% structurally correct,
+vs. `post-hoc`'s 33%) — and inspection showed the SAME entityAxis/domainValues judgment call still
+going wrong, in both directions (PZL-0004: values wrongly promoted to an entity axis; PZL-0007:
+entities wrongly collapsed into one domain's values). The mechanism and the input turned out not
+to be independent: closed classification's safety depends on a clean, terse candidate list to
+classify, and concatenating a long, repetitive reasoning trace onto the prose degraded that input
+enough to erase the mechanism's benefit. `post-hoc`'s free-form transcription remains the
+strongest baseline this spike has measured — it's summarizing an already-resolved structure in
+one step, not re-deriving candidates from a much longer document.
 
 **Recommended next steps, in order**:
-0. Re-run `post-hoc` with a `shape.ts`-style closed classification for Stage 2 instead of free-
-   form entity/domain construction (§5.7) — the single highest-leverage next experiment, since
-   this variant already outperforms every other one before that fix.
+0. Do NOT pursue `post-hoc-shaped`'s specific mechanism (closed classification over prose+trace)
+   further without changing what's fed to it — e.g. classify over the trace's OWN already-stated
+   structure (a final answer table's row/column labels) rather than re-running inventory/group
+   over the whole concatenated text, which is what actually degraded here (§5.8). Whether a
+   narrower, more targeted version of "closed classification + solved trace" can beat `post-hoc`
+   is still an open question this pass didn't answer — it only shows this specific combination
+   doesn't work.
 1. Fix referring-expression entity inflation (§5.2) directly in `group.ts`'s prompt — likely the
    single highest-leverage, most narrowly-scoped fix available: explicitly instruct that a
    compound mention combining a domain-value word with the entity axis's own generic noun (e.g.
