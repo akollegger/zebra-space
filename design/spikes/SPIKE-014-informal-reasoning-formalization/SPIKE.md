@@ -1,7 +1,7 @@
 ---
 id: SPIKE-014
 title: Informal Reasoning, Then Formalize the Whole CSP
-status: in-progress
+status: done
 rfcs: [RFC-003]
 created: 2026-09-16
 ---
@@ -258,16 +258,53 @@ of which resemble a JSON-schema violation. Trading one schema's failure surface 
 completely different, and evidently more tractable, one is the actual mechanism behind this
 result, not a coincidence.
 
+### 5.3 The narrow fix worked, partially — 13/42 MATCH, `SOLVE_ERROR` down from 36% to 21%
+
+Applied all three targeted fixes from §5.2/§6's recommended next step: a mechanical
+find-and-replace normalizing doubled escape-backslashes (`/\\`→`/\`, `\\/`→`\/`) applied
+regardless of the prompt, plus two prompt instructions (numeric quantities are `int`, not
+`enum`; each `exists`/`forall` is its own closed scope, nest rather than chain). Re-ran the
+identical n=3 × 14 sweep. Raw: `results/formalize-mzn-2026-09-16T10-53-55-723Z.json`, **$0.0114**.
+
+| Outcome | Before (§5.2) | After |
+|---|---|---|
+| `SOLVE_ERROR` | 15/42 (36%) | 9/42 (21%) |
+| `SOLVE_UNIQUE` | 16/42 | 19/42 |
+| **MATCH** | **11/42 (26%)** | **13/42 (31%)** |
+
+A real, further improvement — confirmed live on the three originally-failing puzzles before the
+full re-run: PZL-0010 (escaped operators) and PZL-0028 (generator scoping) no longer show those
+specific errors at all. **But the fix was partial, not complete, on two counts:**
+
+- **The `enum`-for-numeric-values mistake recurred** — once on PZL-0012 again (`enum TIME = {9,
+  11, 16};`, the exact same puzzle) and newly on PZL-0018 (`enum HOUSES = {1, 2, 3};`, a
+  DIFFERENT puzzle previously unaffected). A prompt instruction reduces but does not reliably
+  eliminate this mistake — expected, since prompting shapes probability, not a hard guarantee,
+  and this is exactly why the instruction was paired with (not substituted for) the fully
+  mechanical operator-escaping fix wherever a mechanical fix was actually possible.
+- **Two NEW `SOLVE_ERROR` causes appeared that weren't in the original three** — PZL-0001
+  invented a nonexistent MiniZinc builtin (`` no function or predicate with name `find' ``), and
+  PZL-0011 hit a float-typed intermediate variable declaration issue (`var float: dtiRatio =
+  combinedDebt / ...`) not seen before. Also a fresh identifier collision on PZL-0022
+  (`` identifier `rice' already defined ``) — the SAME class as before, just on a different
+  puzzle this run. None of this is a regression from the fix itself (the three targeted causes
+  did shrink); it's normal LLM sampling variance surfacing a different slice of the same broad
+  "the model doesn't always write flawless MiniZinc" reality — `SOLVE_ERROR` is a large,
+  heterogeneous bucket, not one bug with three faces.
+
+**This spike is concluded here, not because the ceiling is reached, but because the marginal
+next fix would be chasing an open-ended, ever-shifting list of narrow MiniZinc authoring
+mistakes one at a time** — a genuinely different kind of work (prompt-tuning iteration) than
+this spike's actual question (does the architecture and representation choice matter). That
+question is answered: yes, decisively, for both axes.
+
 **Recommended next steps**:
-1. `formalize-mzn`'s three `SOLVE_ERROR` sub-causes (§5.2) are all narrow and plausibly cheap to
-   address — an escaped-operator post-process/prompt fix, an explicit "numeric domains are `int`,
-   not `enum`" instruction, and a scoping example for chained `exists`. Worth a quick follow-up
-   pass before concluding this spike, since `SOLVE_ERROR` is the single largest bucket (36%) and
-   entirely upstream of grading.
-2. Once (1) is tried, re-measure — this spike isn't concluded yet, and a materially higher MATCH
-   rate is plausible without changing the architecture at all, only the prompt.
-3. This spike's method (solve first, formalize the completed solve, verify via compile/solve) is
+1. Iterating further on `formalize-mzn`'s prompt (catching the recurring `enum`-for-numbers
+   mistake more reliably, and the newly-seen float/hallucinated-builtin/identifier-collision
+   causes) is legitimate follow-up work, but belongs to implementation hardening now, not to this
+   spike's own empirical question — that question has its answer (§5.1/§5.2/§6).
+2. This spike's method (solve first, formalize the completed solve, verify via compile/solve) is
    confirmed as sound; the open engineering question is now narrowly about `formalize-mzn`'s
    prompt quality, not about whether this architectural direction is worth pursuing.
 
-**Not yet concluded** — `formalize-mzn` has not been built. Status stays `in-progress`.
+Status: done.

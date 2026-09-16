@@ -42,8 +42,24 @@ function systemPrompt(): string {
     "- If the puzzle narrows down ONE unstated scenario rather than several distinct entities",
     '  (e.g. "there has been a murder — who did it, with what, where?"), declare each attribute',
     "  as a single scalar `var SomeEnum`, not an array.",
+    "- `enum` is ONLY for a closed set of NAMED categories (colors, animals, suspects, days of",
+    "  the week spelled out, ...). A quantity that is actually a NUMBER — a time, a count, a",
+    "  score, an amount — must be a plain `int`/numeric domain (e.g. `array[DRUG] of var {9, 11,",
+    '  16}: drugTime;` or `var 0..23: hour;`), never `enum TIME = { 9, 11, 16 };` — enum members',
+    "  must be identifiers, not numeric literals, and that is a compile error.",
     "- State every clue as one or more `constraint` statements in plain MiniZinc syntax, using",
     "  `alldifferent`/`forall`/arithmetic/comparison operators as needed.",
+    "- Write the logical-and/or operators EXACTLY as `/\\` and `\\/` (each is ONE backslash) —",
+    "  do NOT double them (`/\\\\`, `\\\\/`) as if escaping a string literal; this is raw source",
+    "  text, not a quoted string, and a doubled backslash is a syntax error.",
+    "- Each `exists(i in ...)(...)` or `forall(i in ...)(...)` is its OWN closed expression — a",
+    "  generator variable (e.g. `i`) is only in scope INSIDE that same pair of parentheses. If a",
+    '  clue needs one quantified variable to constrain a SECOND search ("the entity with attr1=x',
+    'is somewhere before the entity with attr2=y"), nest the second exists/forall INSIDE the',
+    "  first's body (so `j` in `exists(i in ...)(exists(j in (i+1)..N)(...))` can reference `i`) —",
+    "  never write two side-by-side `exists(...)` calls joined by `->` or another operator and",
+    "  expect a generator variable from the first to be visible in the second; it will not be,",
+    "  and referencing it there is an undefined-identifier compile error.",
     "- Do NOT include an `output` item — every declared decision variable is emitted",
     "  automatically as JSON by the solver that runs this model, and an explicit output item",
     "  would only get in the way of that.",
@@ -66,6 +82,15 @@ function extractMzn(raw: string): string {
   return (fenced?.[1] ?? raw).trim()
 }
 
+/** Found live 2026-09-16 (PZL-0010): the model sometimes doubles the and/or operators' single
+ * backslash (`/\\`, `\\/`) as if escaping them for a quoted string, which is never valid
+ * MiniZinc either way this run — a purely mechanical, always-safe normalization, kept alongside
+ * (not instead of) the prompt instruction against it, since a deterministic fix costs nothing
+ * and a prompt instruction alone is not guaranteed to hold on every sample. */
+function normalizeEscapedOperators(mzn: string): string {
+  return mzn.replace(/\/\\{2,}/g, "/\\").replace(/\\{2,}\//g, "\\/")
+}
+
 export interface FormalizeMznResult {
   readonly mzn: string | undefined
   readonly costUsd: number | undefined
@@ -83,7 +108,7 @@ export async function formalizeToMinizinc(model: string, prose: string, trace: s
       systemPrompt: systemPrompt(),
       userPrompt: userPrompt(prose, trace),
     }).pipe(
-      Effect.map((result): FormalizeMznResult => ({ mzn: extractMzn(result.value), costUsd: result.costUsd, ok: true })),
+      Effect.map((result): FormalizeMznResult => ({ mzn: normalizeEscapedOperators(extractMzn(result.value)), costUsd: result.costUsd, ok: true })),
       Effect.catch((e) => Effect.succeed<FormalizeMznResult>({ mzn: undefined, costUsd: e.costUsd, ok: false, error: e.message })),
     ),
   )
