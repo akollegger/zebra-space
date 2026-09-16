@@ -21,7 +21,7 @@ export interface ProducedDomain {
 }
 
 export interface DomainMatchResult {
-  readonly expectedNames: readonly string[];
+  readonly expectedAlternativeNames: readonly (readonly string[])[];
   readonly matched: boolean
   readonly matchedProducedName: string | undefined
   readonly matchedViaEmbedding: boolean
@@ -64,32 +64,44 @@ export async function scoreVocabulary(
     let matchedProducedName: string | undefined
     let matchedViaEmbedding = false
 
-    for (const d of domains) {
-      const exactNameMatch = expected.names.some((n) => normalize(n) === normalize(d.variable))
-      let nameMatches = exactNameMatch
-      let viaEmbedding = false
-      if (!nameMatches) {
-        for (const n of expected.names) {
-          if (await semanticNameMatch(n, d.variable)) {
-            nameMatches = true
-            viaEmbedding = true
-            break
+    outer: for (const d of domains) {
+      // Each alternative is checked as one atomic (names, values) PAIR — never a name from one
+      // alternative crossed with the values of another. PZL-0038 needs this: "pen" only pairs
+      // with 1-5, "animal" only pairs with the animal names; a domain named "pen" holding the
+      // animal names is a scrambled, invalid vocabulary that must NOT score as a match, even
+      // though "pen" and the animal-name list each independently appear somewhere in truth.
+      for (const alt of expected.alternatives) {
+        const exactNameMatch = alt.names.some((n) => normalize(n) === normalize(d.variable))
+        let nameMatches = exactNameMatch
+        let viaEmbedding = false
+        if (!nameMatches) {
+          for (const n of alt.names) {
+            if (await semanticNameMatch(n, d.variable)) {
+              nameMatches = true
+              viaEmbedding = true
+              break
+            }
           }
         }
-      }
-      if (!nameMatches) continue
+        if (!nameMatches) continue
 
-      const producedValues = normalizeSet(d.values)
-      const valuesCovered = expected.valueSets.some((valueSet) => valueSet.every((v) => producedValues.has(normalize(v))))
-      if (valuesCovered) {
-        matched = true
-        matchedProducedName = d.variable
-        matchedViaEmbedding = viaEmbedding
-        break
+        const producedValues = normalizeSet(d.values)
+        const valuesCovered = alt.values.every((v) => producedValues.has(normalize(v)))
+        if (valuesCovered) {
+          matched = true
+          matchedProducedName = d.variable
+          matchedViaEmbedding = viaEmbedding
+          break outer
+        }
       }
     }
 
-    domainResults.push({ expectedNames: expected.names, matched, matchedProducedName, matchedViaEmbedding })
+    domainResults.push({
+      expectedAlternativeNames: expected.alternatives.map((alt) => alt.names),
+      matched,
+      matchedProducedName,
+      matchedViaEmbedding,
+    })
   }
 
   const domainsCovered = domainResults.filter((d) => d.matched).length

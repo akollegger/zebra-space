@@ -86,6 +86,24 @@ async function testIsomorphicOrLogic() {
   check("pen-entities + animal(names) domain ALSO scores correct (the inverse representation)", scoreB!.structurallyCorrect)
 }
 
+async function testScrambledCrossPairingRejected() {
+  console.log("\n=== PZL-0038: a domain named \"pen\" holding the ANIMAL names is a scrambled, invalid pairing — must NOT match ===")
+  // Found live (2026-09-16): under the original flat {names, valueSets} shape (any name x any
+  // valueSet), this scored structurallyCorrect: true, because "pen" and the animal-name list
+  // each appeared somewhere in truth independently — exactly the failure the `alternatives`
+  // pairing exists to rule out.
+  const entities = Array.from({ length: 5 }, (_, i) => ({ id: `p${i}`, type: "pen" }))
+  const domains = [{ variable: "pen", entityType: "pen", values: ["tortoise", "parrot", "goat", "rabbit", "wolf"] }]
+  const score = await scoreVocabulary("PZL-0038", entities, domains, noSemanticMatch)
+  check("scrambled pen/animal-values pairing NOT structurallyCorrect", !score!.structurallyCorrect, JSON.stringify(score))
+
+  console.log("=== PZL-0038: same check the other way — \"animal\" named domain holding pen NUMBERS ===")
+  const entitiesAnimal = Array.from({ length: 5 }, (_, i) => ({ id: `a${i}`, type: "animal" }))
+  const domainsAnimal = [{ variable: "animal", entityType: "animal", values: ["1", "2", "3", "4", "5"] }]
+  const scoreAnimal = await scoreVocabulary("PZL-0038", entitiesAnimal, domainsAnimal, noSemanticMatch)
+  check("scrambled animal/pen-values pairing NOT structurallyCorrect", !scoreAnimal!.structurallyCorrect, JSON.stringify(scoreAnimal))
+}
+
 async function testExtraDomainsNeverPenalized() {
   console.log("\n=== PZL-0010: an extra domain beyond ground truth is never penalized (coverage, not exact match) ===")
   const entities = Array.from({ length: 5 }, (_, i) => ({ id: `t${i}`, type: "traveler" }))
@@ -102,6 +120,7 @@ async function main() {
   await testWrongCase()
   await testCaseFoldMatch()
   await testIsomorphicOrLogic()
+  await testScrambledCrossPairingRejected()
   await testExtraDomainsNeverPenalized()
   console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) FAILED.`)
   process.exit(failures === 0 ? 0 : 1)

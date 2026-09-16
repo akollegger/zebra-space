@@ -3,17 +3,16 @@
 // PZL-0015/0018 non-problem; "correct" has no single meaning for those five, so this spike
 // scores only the nine where it does).
 //
-// NOT mechanically derived from eval/answer-keys.json alone — that file's own shape varies too
-// much to parse generically (parallel arrays for PZL-0001/0002/0010; a flat digit-map for
-// PZL-0007; a single scalar for PZL-0003/0011; a dict-keyed-by-entity for PZL-0038 — confirmed
-// by inspecting src/eval/grader.ts's own gradeDeterminate dispatch, which is itself partly
-// puzzle-id-specific rather than fully generic). Instead, hand-verified once against the REAL,
-// already-known-successful extraction each puzzle produced in full-critic runs (SPIKE-011's
-// results/comparison-2026-09-15T11-24-35-879Z.json — the run that achieved MATCH on PZL-0004/
-// PZL-0011, and reached SOLVE_UNIQUE on every puzzle here) — grounding "expected" in a real
-// working vocabulary shape, not a guess.
+// Originally hand-derived and hardcoded here directly; now read from each puzzle's own
+// `groundTruth` frontmatter field (catalog/README.md's "groundTruth (optional)" section) —
+// preserving the same hand-verification (against SPIKE-011's real, known-successful
+// full-critic extractions) durably in the catalog itself, so any future spike/eval can reuse it
+// without re-deriving it or re-reading this spike-local file. `GroundTruthEntry`/`groundTruthFor`
+// keep their original shape so run-comparison.ts needed zero changes; `ExpectedDomain` itself was
+// reshaped (see `DomainAlternative` below) after a real scoring bug was found live (2026-09-16).
 //
-// Two puzzles need an explicit note on why the shape isn't a single obvious answer:
+// Two puzzles need an explicit note on why the shape isn't a single obvious answer (kept on the
+// frontmatter itself now, not just here):
 // - PZL-0010's real successful extraction ALSO declared a second domain ("arrivalTime") beyond
 //   what the answer key's own "order" key requires — a legitimate, even more complete
 //   vocabulary. Scoring is a COVERAGE check (every expected domain must be found), never an
@@ -21,17 +20,33 @@
 //   mirrors ADR-007 §2.2's own "subset, not exact match" lesson for the real grader.
 // - PZL-0038's real successful extraction modeled the INVERSE of the answer key's own shape
 //   (entities = the 5 animals, one domain "pen" ranging 1..5 — rather than entities = 5 pens,
-//   domain "animal") — an equally valid isomorphic representation. `valueSets` lists both
-//   acceptable value sets; either counts as a match.
+//   domain "animal") — an equally valid isomorphic representation, encoded as two separate
+//   `alternatives`, each pairing its own name with its own values (never crossed).
+
+import { readFileSync, readdirSync } from "node:fs"
+import { fileURLToPath } from "node:url"
+import { parse } from "yaml"
+
+/** One atomic, self-consistent (name, values) pairing — checked as a PAIR, never a name from one
+ * alternative crossed with another alternative's values (see score.ts's `outer` loop comment).
+ * `names` may still list more than one acceptable spelling for the SAME value set (PZL-0001's
+ * "cigarette"/"smoke", PZL-0011's "outcome"/"decision") — that's safe because every name in the
+ * list maps to the identical `values`, so there's no cross-pairing to confuse. What's NOT safe is
+ * letting two alternatives that each have their OWN distinct values share one flat name/valueSet
+ * list, which is exactly the bug this shape replaces (found live 2026-09-16: a domain named
+ * "pen" holding PZL-0038's animal names scored `structurallyCorrect: true` under the old flat
+ * `{names, valueSets}` shape, which matched names and value-sets independently). */
+export interface DomainAlternative {
+  readonly names: readonly string[]
+  readonly values: readonly string[]
+}
 
 export interface ExpectedDomain {
-  /** Canonical name(s) this domain might reasonably be called — fuzzy-matched by score.ts, not
-   * required to match verbatim. */
-  readonly names: readonly string[]
-  /** Acceptable value sets — usually one; PZL-0038 has two because either of an isomorphic
-   * pair of representations is correct. A produced domain matches if its value set covers ANY
-   * one of these (subset/coverage, not exact-count — extra values are fine). */
-  readonly valueSets: readonly (readonly string[])[]
+  /** One or more mutually exclusive valid (name, values) pairings — a produced domain matches if
+   * it matches ANY ONE alternative in full (subset/coverage on that alternative's own values,
+   * not exact-count — extra values are fine). PZL-0038 has two alternatives because either of an
+   * isomorphic pair of representations is correct; every other puzzle here has exactly one. */
+  readonly alternatives: readonly DomainAlternative[]
 }
 
 export interface GroundTruthEntry {
@@ -45,79 +60,35 @@ export interface GroundTruthEntry {
   readonly domains: readonly ExpectedDomain[]
 }
 
-export const GROUND_TRUTH: readonly GroundTruthEntry[] = [
-  {
-    puzzleId: "PZL-0001",
-    expectedEntityAxisSize: 5,
-    domains: [
-      { names: ["color"], valueSets: [["Yellow", "Blue", "Red", "Ivory", "Green"]] },
-      { names: ["nationality"], valueSets: [["Norwegian", "Ukrainian", "Englishman", "Spaniard", "Japanese"]] },
-      { names: ["pet"], valueSets: [["Fox", "Horse", "Snails", "Dog", "Zebra"]] },
-      { names: ["drink"], valueSets: [["Water", "Tea", "Milk", "Orange Juice", "Coffee"]] },
-      { names: ["cigarette", "smoke"], valueSets: [["Kools", "Chesterfields", "Old Gold", "Lucky Strike", "Parliaments"]] },
-    ],
-  },
-  {
-    puzzleId: "PZL-0002",
-    expectedEntityAxisSize: 3,
-    domains: [
-      { names: ["color"], valueSets: [["Blue", "Red", "Green"]] },
-      { names: ["animal"], valueSets: [["Dog", "Cat", "Zebra"]] },
-    ],
-  },
-  {
-    puzzleId: "PZL-0003",
-    expectedEntityAxisSize: 2, // player + opponent
-    domains: [{ names: ["move"], valueSets: [["Paper", "Rock", "Scissors"]] }],
-  },
-  {
-    puzzleId: "PZL-0004",
-    expectedEntityAxisSize: 1, // one implicit "murder"/"scenario" entity
-    domains: [
-      { names: ["suspect"], valueSets: [["Miss Scarlett", "Colonel Mustard", "Professor Plum"]] },
-      { names: ["weapon"], valueSets: [["Candlestick", "Revolver", "Rope"]] },
-      { names: ["room"], valueSets: [["Kitchen", "Library", "Conservatory"]] },
-    ],
-  },
-  {
-    puzzleId: "PZL-0007",
-    expectedEntityAxisSize: 8, // the letters S,E,N,D,M,O,R,Y
-    domains: [{ names: ["digit"], valueSets: [["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]] }],
-  },
-  {
-    puzzleId: "PZL-0010",
-    expectedEntityAxisSize: 5,
-    domains: [{ names: ["order"], valueSets: [["South", "Pedestrian", "East", "North", "West"]] }],
-  },
-  {
-    puzzleId: "PZL-0011",
-    expectedEntityAxisSize: 1, // one implicit "application"/"scenario" entity
-    // Only the final decision domain is required — the intermediate known-fact domains
-    // (credit scores, income, debt) a real extraction may also declare are legitimate but not
-    // required, since declaring given facts as domains vs. compile-time constants is itself an
-    // underdetermined modeling choice this spike doesn't take a position on.
-    domains: [{ names: ["outcome", "decision"], valueSets: [["Denied", "Approved", "Counter-Offer"]] }],
-  },
-  {
-    puzzleId: "PZL-0012",
-    expectedEntityAxisSize: 3, // the three drugs
-    domains: [{ names: ["time"], valueSets: [["9am", "11am", "4pm"]] }],
-  },
-  {
-    puzzleId: "PZL-0038",
-    expectedEntityAxisSize: 5,
-    domains: [
-      {
-        names: ["pen", "animal"],
-        valueSets: [
-          ["1", "2", "3", "4", "5"],
-          ["tortoise", "parrot", "goat", "rabbit", "wolf"],
-        ],
-      },
-    ],
-  },
-]
+const PUZZLES_DIR = new URL("../../../../../catalog/puzzles/", import.meta.url)
+
+interface RawGroundTruth {
+  readonly entityAxisSize: number
+  readonly domains: readonly { readonly alternatives: readonly DomainAlternative[] }[]
+}
+
+function loadGroundTruth(): ReadonlyMap<string, GroundTruthEntry> {
+  const dir = fileURLToPath(PUZZLES_DIR)
+  const map = new Map<string, GroundTruthEntry>()
+  for (const file of readdirSync(dir)) {
+    if (!file.endsWith(".md")) continue
+    const raw = readFileSync(new URL(file, PUZZLES_DIR), "utf8")
+    const match = raw.match(/^---\n([\s\S]*?)\n---\n/)
+    if (match === null) continue
+    const frontmatter = parse(match[1]!) as { id?: string; groundTruth?: RawGroundTruth }
+    if (frontmatter.id === undefined || frontmatter.groundTruth === undefined) continue
+    map.set(frontmatter.id, {
+      puzzleId: frontmatter.id,
+      expectedEntityAxisSize: frontmatter.groundTruth.entityAxisSize,
+      domains: frontmatter.groundTruth.domains,
+    })
+  }
+  return map
+}
+
+// Read once, at module load — the catalog is static within a single spike run.
+const GROUND_TRUTH = loadGroundTruth()
 
 export function groundTruthFor(puzzleId: string): GroundTruthEntry | undefined {
-  return GROUND_TRUTH.find((g) => g.puzzleId === puzzleId)
+  return GROUND_TRUTH.get(puzzleId)
 }

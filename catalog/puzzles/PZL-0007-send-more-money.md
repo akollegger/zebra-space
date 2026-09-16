@@ -8,6 +8,12 @@ constraints: 4
 source: https://en.wikipedia.org/wiki/Verbal_arithmetic
 difficulty: unknown
 created: 2026-08-12
+groundTruth:
+  entityAxisSize: 8  # the letters S,E,N,D,M,O,R,Y
+  domains:
+    - alternatives:
+        - names: [digit]
+          values: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
 ---
 
 Each letter below stands for a unique digit from 0 to 9. The same letter always stands for the
