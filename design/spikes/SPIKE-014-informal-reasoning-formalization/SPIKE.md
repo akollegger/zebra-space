@@ -682,6 +682,35 @@ stated constraint, incomplete relational coverage) when the resulting solve stil
 agree with Stage 1's own (also incomplete) conclusion. A meaningful, well-isolated improvement,
 not a solved problem.
 
+**Frontier-tier re-run (`claude-sonnet-4.5`, recommendation 6 acted on): 21/42 (50%), and an
+honestly different, less flattering story than the cheap tier.** Raw: `results/formalize-mzn-
+selfcheck-repair-2026-09-16T18-34-49-722Z.json`, **$0.5663**. Regraded against the current
+(already-fixed) grader with zero verdict changes — confirms this run isn't hiding any further
+case/separator-fold undercounting. But **the repair mechanism itself did NOTHING in this entire
+run**: self-check fired 27/42 times and found zero discrepancies (0/27); solve-failure repair
+fired only 2/42 times (both `FEASIBLE_ONLY` COP reps, neither recovered). Every rep's final
+verdict is exactly what a plain `formalize-mzn` call would have produced — the 21/42 vs. the
+corrected `formalize-mzn`-alone frontier baseline's 20/42 (§5.7) is a ±1 difference between two
+independently-sampled runs, not a demonstrated effect of this variant's repair logic. **At this
+tier, when Stage 2 solves uniquely, it (near-)always already agrees with Stage 1's own
+conclusion** — the self-check has nothing to catch, unlike the cheap tier where it caught 3/14
+and fixed all 3.
+
+Manually re-verifying (this session's now-standing practice of not taking a raw `SOLVE_UNIQUE`+
+`MISMATCH` count at face value) the 2 puzzles still graded `MISMATCH` here — PZL-0010 and
+PZL-0012, the SAME two puzzles §5.7's own re-verification of the un-repaired frontier baseline
+already flagged — found **both are actually correct solves**, hidden by two further grading gaps
+distinct from §5.7's already-fixed one: PZL-0012's model wrote `enum TIME = {T9, T11, T16}`, a
+digit-prefixed identifier convention (`T9` vs. the answer key's `9am`) the case/separator fix
+doesn't bridge; PZL-0010's model is genuinely correct (`order[South]=1`, then `Pedestrian <
+East < North < West` — exactly `South, Pedestrian, East, North, West`) but represents it as
+"each entity's rank," the inverse of the answer key's "each rank's entity," which the grader's
+array-alignment logic can't reconcile. Neither is something `checkSelfConsistency` could
+plausibly be expected to catch — it verifies Stage 1↔Stage 2 agreement, not answer-key
+correctness, and correctly reported "consistent" on both since Stage 1 and Stage 2 genuinely DO
+agree; the grader's remaining blind spot is a separate problem. Left open, not fixed here — two
+more named, narrow grading gaps for a future pass, same spirit as §5.7's PZL-0007 finding.
+
 ## 6. Conclusion
 
 **Decoupling informal reasoning from formal emission generalizes from vocabulary to the whole
@@ -762,10 +791,21 @@ leverage without it.
    confirms the solve-vs-formalize gap is real and tier-independent, which sharpens (not
    undermines) recommendation 3 above — better diagnosis, not more prompt engineering at the
    cheap tier alone, is the right next investment.
-6. `selfcheck-repair` (§5.8) was only run at the cheap tier (`gpt-4o-mini`, same as §5.5/§5.6 for
-   direct comparison). Whether the same mechanism recovers a meaningfully larger share of the
-   frontier tier's own remaining gap (48% corrected vs. 93% `direct-solve`, recommendation 5b) is
-   untested — the runner already supports a `MODEL` override (mirrors `run-formalize-mzn.ts`'s
-   own), so this is a rerun, not new code, when that comparison is wanted.
+6. `selfcheck-repair` (§5.8) run at the frontier tier: 21/42 (50%), essentially flat against the
+   corrected `formalize-mzn`-alone baseline (20/42) — but honestly, not because the mechanism
+   failed to help; it never got the chance to. Self-check fired 27/42 times and found ZERO
+   discrepancies; at this tier, Stage 2 already agrees with Stage 1 almost every time it solves
+   uniquely, unlike the cheap tier (§5.8's own 3/14 catch rate). The frontier tier's remaining
+   gap (recommendation 5b) is NOT a Stage-1-vs-Stage-2 disagreement — it needs a different
+   diagnostic than this variant provides, not a bigger dose of the same one.
+7. Verifying recommendation 6 surfaced two MORE grading gaps, distinct from §5.7's already-fixed
+   one, both still open: a digit-prefixed-identifier convention (`T9` vs. the answer key's `9am`,
+   PZL-0012) and a rank-vs-name array inversion the grader's alignment logic can't reconcile
+   (PZL-0010, a genuinely correct solve represented as "each entity's rank" rather than "each
+   rank's entity"). Both were present in BOTH the un-repaired frontier baseline (§5.7) and this
+   variant's own frontier run — a pre-existing limitation this spike surfaced, not something
+   `selfcheck-repair` introduced. If fixed, the frontier tier's TRUE `formalize-mzn`-family rate
+   is closer to 23/42 (55%) than the reported 20-21/42 — still well below `direct-solve`'s 93%,
+   so this doesn't change recommendation 5b's conclusion, only its precision.
 
 Status: done.
