@@ -182,17 +182,92 @@ under-constrained, not wrong), reps 2-3 both failed to compile with `"linkedAttr
 least 2 attributes to link; got 1"` — a constraint-authoring mistake, not a naming collision or
 schema-shape violation, a THIRD distinct failure mode on the single easiest puzzle in the sample.
 
+### 5.2 `formalize-mzn`: 11/42 MATCH — beats every schema-constrained architecture measured so far
+
+Raw: `results/formalize-mzn-2026-09-16T10-37-00-630Z.json`. Same n=3 × 14 puzzles, same source
+traces, same `gpt-4o-mini` for both stages. **$0.0100 total** — a fifth of `formalize-json`'s
+spend, since a plain prose completion is cheaper than a forced tool call against a 69KB schema.
+
+| Outcome | Count | Share |
+|---|---|---|
+| `SOLVE_ERROR` (MiniZinc itself rejected the model — never reached grading) | 15/42 | 36% |
+| `SOLVE_UNIQUE` | 16/42 | 38% |
+| `SOLVE_MULTIPLY_SATISFIABLE` | 7/42 | 17% |
+| `SOLVE_UNSATISFIABLE` | 4/42 | 10% |
+
+**MATCH: 11/42 (26%).** PZL-0004 and PZL-0007 hit 3/3 outright. This is a real, order-of-
+magnitude improvement over `formalize-json`'s 0/42 (§5.1), and it beats `full-critic`'s 2/14
+(14%) too — the strongest MATCH rate any compile/solve-VERIFIED architecture has reached in this
+entire spike line (SPIKE-008 through SPIKE-014), not just a proxy score. Still well below
+`direct-solve`'s own raw judge-graded rate (64%/93%) — expected, since this variant adds a REAL
+verification gate (must actually compile, solve, and match) that `direct-solve`'s prose judging
+never enforces at all.
+
+**`SOLVE_ERROR` is the dominant failure, and it's MiniZinc's own compiler rejecting the model —
+three concrete, distinct sub-causes, all narrow:**
+
+- **Escaped-operator corruption** (PZL-0010, both failing reps) — the model wrote `/\\`/`\\/`
+  (an extra backslash) instead of MiniZinc's actual conjunction/disjunction operators `/\`/`\/`,
+  as if escaping them for a string literal rather than writing raw source. A narrow, mechanical
+  mistake — plausibly fixable by post-processing (`/\\` -> `/\`) or a prompt callout, not a
+  reasoning failure.
+- **`enum` used for genuinely numeric values** (PZL-0012) — `enum TIME = { 9, 11, 16 };` is
+  invalid MiniZinc (enum members must be identifiers, not numeric literals); the times should
+  have been a plain `int` domain (e.g. `array[DRUG] of var {9,11,16}: drugTime;` or an offset
+  int range), not an enum. A genuine category-vs-quantity modeling mistake, distinct from the
+  identifier-collision class `formalize-json` hit.
+- **Generator-scope misunderstanding** (PZL-0028) — `(exists(i in 1..4)(...) -> exists(j in
+  (i+1)..5)(...))` treats the first `exists`'s bound variable `i` as if it stayed in scope across
+  the `->` into a syntactically SEPARATE second `exists` — each `exists(...)` is its own closed
+  expression in MiniZinc, so `i` is undefined in the second. A real structural misunderstanding
+  of the language's scoping, not a typo.
+
+None of these three resemble `formalize-json`'s failure modes (identifier collisions, schema-
+shape violations) at all — direct-to-MiniZinc genuinely trades one failure surface for a
+different one, exactly the open question this variant existed to test, not a strict improvement
+that inherits nothing new.
+
 ## 6. Conclusion
 
-**`formalize-json` alone does not settle this spike's question — it sharpens what to test next.**
-0/42 MATCH is a real, diagnosable result, not noise: both dominant failure classes
-(identifier collisions, schema-shape violations) are properties of the RAW `ExtractedCsp` schema
-itself, not of whether the model knew the right answer. This makes the `formalize-mzn` comparison
-(§2) more important than it looked before building `formalize-json`, not less — MiniZinc's own
-syntax has no equivalent to a 134-`anyOf`-union JSON schema to violate, and while it can't prevent
-a model from typing a colliding identifier, MiniZinc's own compiler catches that natively (the
-same class of error `compile.ts`'s `detectIdentifierCollision` was built to make actionable,
-per SPIKE-011). Whether that structural difference actually produces a higher MATCH rate — or
-`formalize-mzn` reproduces its own, different failure modes — is still open and untested.
+**Decoupling informal reasoning from formal emission generalizes from vocabulary to the whole
+CSP — but only for one of the two representations tried, and the representation choice turns
+out to matter enormously.** `formalize-json` (0/42) and `formalize-mzn` (11/42, 26%) started
+from the IDENTICAL Stage-1 traces and the identical "transcribe, don't re-solve" framing — the
+only thing that differed was what Stage 2 formalized into. That one variable moved the MATCH
+rate from below every prior architecture to above all of them. This directly answers RFC-003
+§7.1's founding question (is the intermediate representation "close enough to a MiniZinc AST to
+serialize directly"?) with evidence rather than assertion: for THIS task, yes, and not just
+"close enough" — direct MiniZinc clearly outperformed the purpose-built `ExtractedCsp` JSON
+schema it was compared against.
+
+**`formalize-mzn`'s 26% MATCH is the strongest result any compile/solve-VERIFIED architecture
+has reached across this entire spike line** (SPIKE-008 through SPIKE-014) — genuinely ahead of
+`full-critic`'s 2/14 (14%), at roughly 1/200th the cost ($0.01 vs. ~$2.10 for a 14-puzzle pass),
+and reached with a single call per puzzle, no critic loop, no per-clue decomposition. It remains
+well below `direct-solve`'s own raw judge-graded rate (64%/93%) — but that comparison isn't
+apples-to-apples: `direct-solve` has no compilable artifact and is graded by a judge reading
+prose, while `formalize-mzn`'s number survives an independent, mechanical compile-and-solve gate
+direct-solve was never subjected to.
+
+**The two variants' failure modes don't overlap at all** — `formalize-json`'s were both
+properties of the JSON schema itself (identifier collisions the schema still lets the model
+freely type; violations deep in a 134-`anyOf`-union structure). `formalize-mzn`'s dominant
+failure (`SOLVE_ERROR`, 36%) is MiniZinc's own compiler catching real mistakes — an escaped-
+operator typo, a category-vs-quantity modeling error, a generator-scoping misunderstanding — none
+of which resemble a JSON-schema violation. Trading one schema's failure surface for a
+completely different, and evidently more tractable, one is the actual mechanism behind this
+result, not a coincidence.
+
+**Recommended next steps**:
+1. `formalize-mzn`'s three `SOLVE_ERROR` sub-causes (§5.2) are all narrow and plausibly cheap to
+   address — an escaped-operator post-process/prompt fix, an explicit "numeric domains are `int`,
+   not `enum`" instruction, and a scoping example for chained `exists`. Worth a quick follow-up
+   pass before concluding this spike, since `SOLVE_ERROR` is the single largest bucket (36%) and
+   entirely upstream of grading.
+2. Once (1) is tried, re-measure — this spike isn't concluded yet, and a materially higher MATCH
+   rate is plausible without changing the architecture at all, only the prompt.
+3. This spike's method (solve first, formalize the completed solve, verify via compile/solve) is
+   confirmed as sound; the open engineering question is now narrowly about `formalize-mzn`'s
+   prompt quality, not about whether this architectural direction is worth pursuing.
 
 **Not yet concluded** — `formalize-mzn` has not been built. Status stays `in-progress`.
