@@ -134,6 +134,15 @@ serve the future graph representation" question, finally measurable rather than 
 this note back into RFC-003 §7.1 (or wherever the future gram-representation ADR lands) when that
 representation exists, per this skill's own manual-citation convention.
 
+**2026-09-16 — the user pushed on failure-mode characterization after the spike was already
+`done`** ("syntactic problems are fixable, semantic ones will likely remain a challenge") —
+re-inspected §5.3's raw result JSON specifically to check this against actual data rather than
+answer in the abstract. Found the real axis is self-flagging vs. silent, not syntactic vs.
+semantic, and — checked specifically, not assumed — zero of the 42 runs produced the dangerous
+"confidently wrong, no signal" case, though that's an observation from a small sample, not a
+guarantee (this session's own `direct-solve` work already found that exact failure mode is real
+in free prose). Written up as §5.4.
+
 ## 5. Findings
 
 ### 5.1 `formalize-json`: 0/42 MATCH — a genuinely diagnosable negative result, not noise
@@ -227,6 +236,54 @@ shape violations) at all — direct-to-MiniZinc genuinely trades one failure sur
 different one, exactly the open question this variant existed to test, not a strict improvement
 that inherits nothing new.
 
+### 5.4 Characterizing `formalize-mzn`'s semantic failures: self-flagging vs. silent, not syntactic vs. semantic
+
+The user's framing going in was "syntactic problems are fixable, semantic ones will likely
+remain a challenge" — directionally right, but the actual dividing line in the data is sharper:
+whether a semantic slip changes the solve's OUTCOME CLASS (self-flagging, catchable without the
+answer key) or lands on a different, wrong, but still-unique answer (silent, catchable only with
+ground truth). Every non-MATCH result that compiled and solved (20/42, §5.3's post-fix run) falls
+into one of three concrete mechanisms:
+
+- **Silently dropping an explicitly-stated global constraint** (PZL-0038, whose Stage-1 solve was
+  already `MATCH`). The prose says outright "one animal per pen"; the model correctly encoded
+  three of five animal assignments and the rabbit-before-wolf clue, and simply never emitted
+  `alldifferent(pens)`. Nothing catches this at compile time — the program is well-formed, just
+  permissively under-constrained. Result: `MultiplySatisfiable`, not a wrong unique answer.
+- **Incomplete relational coverage** (PZL-0010, Stage-1 solve already `MATCH`). A compound
+  ordering clue across four positions was only partially transcribed — three pairwise relations
+  captured, one (East relative to North/West) missing entirely, leaving a partial order where the
+  puzzle needs a total one. A genuine transcription gap, not a typo. Result: `MultiplySatisfiable`.
+- **Self-contradiction across restated constraints** (PZL-0010, a different rep). Two separate
+  `constraint` lines directly negate each other (`order[2]` must be Pedestrian-or-East in one
+  line, neither in another) — apparently from encoding overlapping clues twice without
+  cross-checking consistency. Result: `Unsatisfiable`.
+
+**None of the 42 runs produced the genuinely dangerous case** — a syntactically valid, uniquely
+solvable model that grades `MISMATCH` on a determinate puzzle, with zero signal anything went
+wrong. Every semantic slip observed moved the *solution count* itself (to 0 or >1) rather than
+landing on a different exactly-one-solution set. This plausibly reflects real structure in this
+puzzle genre — these puzzles are usually tightly constrained, so garbling a constraint more often
+changes cardinality than swaps in a different valid unique answer — but it is an observation
+from n=3×14=42 samples, not a guarantee: this same session's `direct-solve` work already found the
+"confident, wrong, no signal" failure mode is real in free prose (PZL-0001, `gpt-4o-mini`), and
+nothing about MiniZinc's syntax makes a model structurally immune to producing its equivalent —
+it simply didn't appear in this sample.
+
+**Confirms RFC-003 §7.3's orthogonality claim concretely, not just in the abstract**: 4 of the
+semantic failures occurred on puzzles whose Stage-1 reasoning was already correct (`MATCH`) —
+Stage 2 (formalization) introduced the error independently. Correct reasoning does not insure
+against a bad transcription; solvability and translation-fidelity really are separate risks.
+
+**What's actionable now, and what isn't**: the self-flagging failures (`Unsatisfiable`/
+`MultiplySatisfiable`) have a concrete, already-validated remedy in this project — SPIKE-012's
+oracle-repair pattern (re-prompt using the specific solve-outcome signal as a localized
+correction cue) — a cheap next experiment for `formalize-mzn`, not a research problem. The
+silent, confidently-wrong case has no mechanical remedy from inside this pipeline at all (no
+compile/solve signal distinguishes it from a correct result); catching it would need either an
+independent second formalization to cross-check against, or ground truth, neither available at
+deployment time. That ceiling doesn't move with more prompt engineering.
+
 ## 6. Conclusion
 
 **Decoupling informal reasoning from formal emission generalizes from vocabulary to the whole
@@ -306,5 +363,11 @@ question is answered: yes, decisively, for both axes.
 2. This spike's method (solve first, formalize the completed solve, verify via compile/solve) is
    confirmed as sound; the open engineering question is now narrowly about `formalize-mzn`'s
    prompt quality, not about whether this architectural direction is worth pursuing.
+3. §5.4's self-flagging/silent distinction, not "syntactic vs. semantic," is the axis worth
+   designing around next: a self-flagging semantic failure (`Unsatisfiable`/
+   `MultiplySatisfiable`) already has a validated remedy (SPIKE-012's oracle-repair) waiting to
+   be pointed at `formalize-mzn`; a silent, confidently-wrong unique result does not, and won't
+   from prompting alone — any future work claiming higher confidence in this architecture should
+   say explicitly which of the two failure classes its evidence actually rules out.
 
 Status: done.
