@@ -256,7 +256,7 @@ function gradeVariant(puzzleId: string, answerKeys: Awaited<ReturnType<typeof lo
   if (solveResult === undefined) return { verdict: "N/A", detail: "no solve result" }
   const recovered =
     solveResult._tag === "UniquelySolvable" && extractedCsp !== undefined
-      ? { ...solveResult, assignment: recoverEntityKeyedArrays(solveResult.assignment, extractedCsp) }
+      ? { ...solveResult, assignment: recoverEntityKeyedArrays(puzzleId, solveResult.assignment, extractedCsp) }
       : solveResult
   return gradeSolved(puzzleId, answerKeys[puzzleId], recovered)
 }

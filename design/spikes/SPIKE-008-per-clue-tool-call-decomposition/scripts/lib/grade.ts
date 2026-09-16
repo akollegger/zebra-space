@@ -5,7 +5,7 @@
 // the real eval harness uses.
 
 import { sanitizeIdentifier } from "../../../../../src/compiler/compile.ts"
-import { gradeAmbiguous, gradeCop, gradeDeterminate, gradeNonProblem, gradeSubjective, type GraderVerdict } from "../../../../../src/eval/grader.ts"
+import { gradeAmbiguous, gradeCop, gradeDeterminate, gradeNonProblem, gradeSubjective, PARALLEL_ARRAY_PUZZLES, type GraderVerdict } from "../../../../../src/eval/grader.ts"
 import type { Assignment, SolveResult } from "../../../../../src/solver/types.ts"
 import type { ExtractedCsp } from "../../../../../src/extraction/types.ts"
 import type { AnswerKeyEntry } from "./puzzles.ts"
@@ -13,7 +13,13 @@ import type { AnswerKeyEntry } from "./puzzles.ts"
 /** Mirrors scripts/eval-extraction.ts's recoverEntityKeyedArrays: MiniZinc's own
  * --output-mode json never keys an entity-indexed array by its enum, so the grader can't
  * compare against the answer key's entity ids without restoring that vocabulary. */
-export function recoverEntityKeyedArrays(assignment: Assignment, extractedCsp: ExtractedCsp): Assignment {
+export function recoverEntityKeyedArrays(puzzleId: string, assignment: Assignment, extractedCsp: ExtractedCsp): Assignment {
+  // PARALLEL_ARRAY_PUZZLES' own answer keys are positional-by-declared-order, never entity-id-
+  // keyed (e.g. PZL-0002's "Arrays are positional by house, 1-3 left to right") — converting
+  // their solved arrays into entity-keyed objects here actively breaks gradeDeterminate's
+  // parallel-array path rather than being merely unnecessary for it (found live 2026-09-16,
+  // mirrors the same fix in scripts/eval-extraction.ts's own copy).
+  if (PARALLEL_ARRAY_PUZZLES.has(puzzleId)) return assignment
   const recovered: Record<string, unknown> = { ...assignment }
   for (const domain of extractedCsp.domains) {
     const key = sanitizeIdentifier(domain.variable)

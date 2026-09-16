@@ -82,7 +82,7 @@ async function main(): Promise<void> {
     const solved = await compileAndSolve(result.extractedCsp)
     const recovered =
       solved.solveResult !== undefined && solved.solveResult._tag === "UniquelySolvable"
-        ? { ...solved.solveResult, assignment: recoverEntityKeyedArrays(solved.solveResult.assignment, result.extractedCsp) }
+        ? { ...solved.solveResult, assignment: recoverEntityKeyedArrays(puzzleId, solved.solveResult.assignment, result.extractedCsp) }
         : solved.solveResult
     const grade = solved.solveResult !== undefined ? gradeSolved(puzzleId, answerKeys[puzzleId], recovered!) : { verdict: "N/A", detail: solved.detail }
 

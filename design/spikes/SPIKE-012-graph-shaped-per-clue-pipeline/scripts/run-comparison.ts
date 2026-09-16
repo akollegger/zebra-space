@@ -77,7 +77,7 @@ async function gradeAgainstKey(
   solveResult: SolveResult | undefined,
 ): Promise<{ readonly verdict: string; readonly detail: string }> {
   if (solveResult === undefined) return { verdict: "N/A", detail: "no solve result" }
-  const recovered = solveResult._tag === "UniquelySolvable" ? { ...solveResult, assignment: recoverEntityKeyedArrays(solveResult.assignment, extractedCsp) } : solveResult
+  const recovered = solveResult._tag === "UniquelySolvable" ? { ...solveResult, assignment: recoverEntityKeyedArrays(puzzleId, solveResult.assignment, extractedCsp) } : solveResult
   return gradeSolved(puzzleId, answerKeys[puzzleId], recovered)
 }
 

@@ -51,6 +51,7 @@ import {
   gradeSubjective,
   isExcludedVerdict,
   isPassingVerdict,
+  PARALLEL_ARRAY_PUZZLES,
   type AliasTable,
   type AmbiguousReading,
   type GraderVerdict,
@@ -238,7 +239,14 @@ async function listPuzzleFiles(filterIds: readonly string[]): Promise<Puzzle[]> 
  * mapping keyed by row NUMBERS that don't match any entity id): the grader owns that shape
  * explicitly instead.
  */
-function recoverEntityKeyedArrays(assignment: Assignment, extractedCsp: ExtractedCsp): Assignment {
+function recoverEntityKeyedArrays(puzzleId: string, assignment: Assignment, extractedCsp: ExtractedCsp): Assignment {
+  // Found live (2026-09-16): PARALLEL_ARRAY_PUZZLES' own answer keys are positional-by-
+  // declared-order (e.g. PZL-0002's "Arrays are positional by house, 1-3 left to right"), never
+  // entity-id-keyed — converting their solved arrays into entity-keyed objects here actively
+  // breaks gradeDeterminate's parallel-array path (its Array.isArray check then silently drops
+  // the key), rather than merely being unnecessary for it. Confirmed against every committed
+  // historical full-critic run for PZL-0001/0002/0010: all misgraded MISMATCH for this reason.
+  if (PARALLEL_ARRAY_PUZZLES.has(puzzleId)) return assignment
   const recovered: Record<string, unknown> = { ...assignment }
   for (const domain of extractedCsp.domains) {
     // solve()'s assignment keys are minizinc's own (compile.ts-sanitized) identifiers, e.g.
@@ -530,7 +538,7 @@ async function runOnePuzzle(
   const csp = extractedCsp as { domains?: unknown }
   const recovered =
     solveResult._tag === "UniquelySolvable" && Array.isArray(csp.domains)
-      ? recoverEntityKeyedArrays(solveResult.assignment, extractedCsp as ExtractedCsp)
+      ? recoverEntityKeyedArrays(puzzle.id, solveResult.assignment, extractedCsp as ExtractedCsp)
       : null
   const graded = gradeSolved(
     puzzle.id,
