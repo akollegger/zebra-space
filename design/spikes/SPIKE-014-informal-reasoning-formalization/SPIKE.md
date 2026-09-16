@@ -1,7 +1,7 @@
 ---
 id: SPIKE-014
 title: Informal Reasoning, Then Formalize the Whole CSP
-status: planned
+status: in-progress
 rfcs: [RFC-003]
 created: 2026-09-16
 ---
@@ -118,6 +118,21 @@ of completeness — if either variant needs materially more prompt-engineering t
 allows, that itself is a finding worth recording, not a reason to blow through the box.
 
 ## 4. Notes
+
+**2026-09-16 — worth reviving once a gram representation is defined.** RFC-003 §5.1/§7.1 and
+`CLAUDE.md`'s own architecture pointer (`@relateby/pattern`'s gram graphs, via `Gram.parse`/
+`Gram.stringify`/`StandardGraph.fromPatterns`) both anticipate a THIRD representation this spike
+doesn't test: puzzles as graphs, not just `ExtractedCsp` JSON or MiniZinc text. No gram schema
+exists yet for this domain (entities/domains/constraints as a graph shape hasn't been designed),
+so it's out of scope now — but once it is, this spike's exact method (solve first in free prose,
+formalize the completed solve into a candidate representation, verify via a representation-
+appropriate check) is a good way to evaluate that representation's coherence, expressiveness, and
+equivalence to the other two: does a solved trace formalize into a gram pattern at least as
+reliably as into `ExtractedCsp`/MiniZinc, and does the resulting graph express everything the
+other two representations do (RFC-003 §7.1's own "or does it need to be independent... to also
+serve the future graph representation" question, finally measurable rather than asserted)? Cite
+this note back into RFC-003 §7.1 (or wherever the future gram-representation ADR lands) when that
+representation exists, per this skill's own manual-citation convention.
 
 ## 5. Findings
 
