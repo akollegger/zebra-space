@@ -468,31 +468,27 @@ enough to erase the mechanism's benefit. `post-hoc`'s free-form transcription re
 strongest baseline this spike has measured — it's summarizing an already-resolved structure in
 one step, not re-deriving candidates from a much longer document.
 
-**Recommended next steps, in order**:
-0. Do NOT pursue `post-hoc-shaped`'s specific mechanism (closed classification over prose+trace)
-   further without changing what's fed to it — e.g. classify over the trace's OWN already-stated
-   structure (a final answer table's row/column labels) rather than re-running inventory/group
-   over the whole concatenated text, which is what actually degraded here (§5.8). Whether a
-   narrower, more targeted version of "closed classification + solved trace" can beat `post-hoc`
-   is still an open question this pass didn't answer — it only shows this specific combination
-   doesn't work.
-1. Fix referring-expression entity inflation (§5.2) directly in `group.ts`'s prompt — likely the
-   single highest-leverage, most narrowly-scoped fix available: explicitly instruct that a
-   compound mention combining a domain-value word with the entity axis's own generic noun (e.g.
-   "Red House" when "house" is already a group) describes an EXISTING entity, not a new one.
-   Cheap to test in isolation against this same 9-puzzle ground truth before touching anything
-   else.
-2. Do not pursue `embedded-group`'s current mechanism further without first trying a materially
-   different clustering approach (e.g. a similarity graph + connected components, less prone to
-   single-linkage's chaining failure mode, or a puzzle-scale-aware threshold instead of one fixed
-   constant) — the embedding signal earns another attempt; greedy single-linkage at a fixed
-   threshold does not.
-3. PZL-0010's rule-vs-value confusion (§5.4) is a genuinely new failure class worth its own
-   follow-up once the higher-leverage fix in (1) is tried — likely needs `shape`'s own
-   classification to recognize and exclude procedural/conditional clue content, not just
-   entity-axis-vs-domain-values.
-4. Any future re-measurement of this stage should keep reporting entity-axis-match and
-   domain-coverage SEPARATELY (§5.1), not just a single collapsed correctness flag — this spike's
-   own headline number would have been badly misleading reported alone.
+**Deprioritized, not pursued further within this spike** (decided 2026-09-16, after §5.7/§5.8):
+fixing referring-expression entity inflation in `group.ts` (§5.2), trying a better clustering
+mechanism for `embedded-group` (§5.6), and PZL-0010's rule-vs-value confusion (§5.4) are all real,
+correctly-diagnosed issues — but every one of them is a narrowing fix to the BLIND-guess
+architecture (`llm-only`/`chunked-inventory`/`embedded-group`), whose best measured ceiling
+(`embedded-group`'s 24% entity-axis agreement) still sits well below `post-hoc`'s 59% and 33%
+structurally correct — achieved by a fundamentally different mechanism (solve first, transcribe
+after) that none of these fixes touch. Polishing the losing architecture once a decisively better
+one is already measured is not a good use of a time-boxed spike; these are recorded here as
+correct, evidence-backed findings, not abandoned as wrong, in case a future need (e.g. a context
+where solving isn't an option) makes the blind-guess path relevant again.
+
+**What this spike settles, and what it hands off**: vocabulary construction in isolation (this
+spike's actual question, per §1) is answered — blind construction is unreliable (§5.5's self-
+consistency numbers), and solving first, then transcribing vocabulary as a side effect, is
+measurably far more reliable (§5.7) — with one falsified shortcut along the way (§5.8: naively
+combining that with closed classification does not stack, it regresses). The natural next
+question is no longer about vocabulary alone: does the same solve-first-then-extract pattern
+generalize from vocabulary to the WHOLE CSP, constraints included? That's a distinct, higher-
+stakes empirical question (this session's own recurring "informal reasoning as a means to an end,
+or a side-effect-producing step" discussion) and belongs in its own spike, with its own Question/
+Method/Time-box, rather than further extending this one past its original scope.
 
 Status: done.
