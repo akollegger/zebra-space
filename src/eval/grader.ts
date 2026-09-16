@@ -99,13 +99,18 @@ function tokenOf(value: unknown): string | undefined {
 }
 
 /** MiniZinc's own JSON output wraps an enum-typed scalar one level deep ({e: value} — see
- * `collectActualTokens`'s own comment, "seen live on PZL-0004"). `collectActualTokens` already
- * unwraps this recursively; `tokenOf` does not, so any caller reading directly from a solved
- * `Assignment` (rather than through `collectActualTokens`) needs this first. */
+ * `collectActualTokens`'s own comment, "seen live on PZL-0004"). Unwraps recursively, matching
+ * `collectActualTokens`'s own recursive unwrap, rather than assuming exactly one level — a
+ * different solved shape nesting deeper should still resolve, not silently stop at depth 1.
+ * `tokenOf` itself does not unwrap, so any caller reading directly from a solved `Assignment`
+ * (rather than through `collectActualTokens`) needs this first. */
 function unwrapSingleKeyRecord(value: unknown): unknown {
   if (value !== null && typeof value === "object" && !Array.isArray(value)) {
     const entries = Object.entries(value as Record<string, unknown>)
-    if (entries.length === 1 && entries[0] !== undefined) return entries[0][1]
+    // entries[0] is statically string|undefined under noUncheckedIndexedAccess even though the
+    // length check above guarantees it exists at runtime — the `!` reflects that gap, not a
+    // skipped safety check.
+    if (entries.length === 1) return unwrapSingleKeyRecord(entries[0]![1])
   }
   return value
 }

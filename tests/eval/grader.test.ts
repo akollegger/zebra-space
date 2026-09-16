@@ -110,6 +110,18 @@ test("gradeDeterminate: parallel-array path unwraps MiniZinc's {e: value} enum s
   assert.equal(wrapped.verdict, "MATCH")
 })
 
+test("gradeDeterminate: parallel-array path unwraps a doubly-nested single-key wrapper too (PR #32 review comment — recursive, not depth-1-only)", () => {
+  // No known live shape nests two levels deep today, but the unwrap is recursive on purpose
+  // (matching collectActualTokens's own recursive unwrap) so a future, deeper solved shape
+  // still resolves instead of silently stopping at depth 1.
+  const doublyWrapped = gradeDeterminate(
+    "PZL-0002",
+    { color: ["Blue"] },
+    { color: [{ outer: { e: "Blue" } }] },
+  )
+  assert.equal(doublyWrapped.verdict, "MATCH")
+})
+
 test("gradeDeterminate: a non-scalar subset item grades MISMATCH, never throws", () => {
   const result = gradeDeterminate("PZL-0014", { items: [["Rice"]] }, { item: ["Rice"] })
   assert.equal(result.verdict, "MISMATCH")
