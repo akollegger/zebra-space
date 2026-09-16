@@ -67,19 +67,34 @@ function collectActualTokens(value: unknown, aliases: AliasTable, into: Set<stri
 }
 
 /**
+ * Case/separator-insensitive comparison key derived from a sanitized identifier. Bridges the
+ * spelling conventions a model is free to choose when it authors a MiniZinc identifier directly
+ * (PascalCase-merged, underscore-separated, ALL-CAPS, digit-prefixed, ...) rather than having
+ * `compile.ts` derive it mechanically from an extracted string — found live 2026-09-16 in
+ * `formalize-mzn` (17/42 `SOLVE_UNIQUE`+`MISMATCH` cases re-checked by hand, all 17 were the
+ * puzzle's actual correct answer under a different spelling convention than the answer key's own
+ * literal string). This is still an EXACT comparison, not fuzzy matching: it only folds different
+ * renderings of the same sanitized identifier together, never merges two different values.
+ */
+function comparisonKey(sanitized: string): string {
+  return sanitized.toLowerCase().replace(/_/g, "")
+}
+
+/**
  * Normalizes one token for comparison: integer passthrough, then the compiler's own
- * `sanitizeIdentifier` (imported, not duplicated), then the alias table. Returns the
- * normalized token plus whether an alias was applied (logged, never silent).
+ * `sanitizeIdentifier` (imported, not duplicated), folded to a case/separator-insensitive
+ * comparison key, then the alias table. Returns the normalized token plus whether an alias was
+ * applied (logged, never silent).
  */
 export function normalizeToken(token: string, aliases: AliasTable): { readonly normalized: string; readonly aliasApplied: boolean } {
   if (/^-?\d+$/.test(token)) return { normalized: token, aliasApplied: false }
-  const sanitized = sanitizeIdentifier(token)
+  const key = comparisonKey(sanitizeIdentifier(token))
   for (const [canonical, variants] of Object.entries(aliases)) {
-    if (sanitized === sanitizeIdentifier(canonical) || variants.some((v) => sanitizeIdentifier(v) === sanitized)) {
-      return { normalized: sanitizeIdentifier(canonical), aliasApplied: true }
+    if (key === comparisonKey(sanitizeIdentifier(canonical)) || variants.some((v) => comparisonKey(sanitizeIdentifier(v)) === key)) {
+      return { normalized: comparisonKey(sanitizeIdentifier(canonical)), aliasApplied: true }
     }
   }
-  return { normalized: sanitized, aliasApplied: false }
+  return { normalized: key, aliasApplied: false }
 }
 
 function normalizeAll(tokens: readonly string[], aliases: AliasTable): { readonly normalized: readonly string[]; readonly aliasesApplied: number } {
@@ -285,13 +300,11 @@ export function gradeSubset(
   const actualTokens = new Set<string>()
   let aliasesApplied = 0
   for (const value of Object.values(actual)) aliasesApplied += collectActualTokens(value, aliases, actualTokens)
-  const missing = expectedItems
-    .map((item) => {
-      const result = normalizeToken(item, aliases)
-      if (result.aliasApplied) aliasesApplied += 1
-      return result.normalized
-    })
-    .filter((item) => !actualTokens.has(item))
+  const missing = expectedItems.filter((item) => {
+    const result = normalizeToken(item, aliases)
+    if (result.aliasApplied) aliasesApplied += 1
+    return !actualTokens.has(result.normalized)
+  })
   return missing.length === 0
     ? { verdict: "MATCH", detail: "all expected items present", aliasesApplied }
     : { verdict: "MISMATCH", detail: `missing items: ${missing.join(", ")}`, aliasesApplied }
