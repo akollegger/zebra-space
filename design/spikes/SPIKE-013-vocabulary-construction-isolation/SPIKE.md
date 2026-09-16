@@ -210,6 +210,16 @@ tuning this threshold later, not a bug to silently fix by lowering it to fit one
 retry + incremental writes (see the standalone commit for detail), then the full `n=5×14×3`
 sweep completed cleanly: 210 puzzle-reps × 3 variants, $0.0623 total, 0 unrecovered errors.**
 
+**2026-09-16 — a 4th variant added: `post-hoc` transcription of an already-completed direct-solve
+trace (ADR-008), motivated directly by this session's own "is solving in prose a means to an end,
+or a requirement to produce constraints as a side effect?" question. Unlike the first three
+variants, Stage 1 (solving) is NOT re-run — it's read straight from the already-collected,
+already-paid-for `eval/results/2026-09-15T14-59-37-368Z.json` (`gpt-4o-mini` direct-solve, chosen
+specifically because it has real MISMATCH cases to test against, unlike the frontier run's 13/14
+MATCH). Only Stage 2 (transcription) spends anything: n=3 reps × 14 puzzles, 42 calls, **$0.0084
+total**. See `lib/post-hoc-vocabulary.ts` for the schema/prompt and `run-post-hoc.ts` for the
+runner; scored with the exact same `score.ts`/`ground-truth.ts` as the other three variants.**
+
 ## 5. Findings
 
 Raw: `results/comparison-2026-09-15T13-45-00-734Z.json`. 14 puzzles × 5 reps × 3 variants (9 of
@@ -309,7 +319,58 @@ on an 8-word synthetic example) — what doesn't generalize is the naive cluster
 vocabulary sizes and semantic distances. This is an honest negative result about ONE specific
 mechanism, not evidence that embeddings can't help this stage at all.
 
-## 6. Conclusion
+### 5.7 A 4th variant — transcribing vocabulary from an already-solved trace beats every blind-guess variant, and partially confirms the decoupling hypothesis
+
+Raw: `results/post-hoc-2026-09-16T08-43-25-641Z.json`. Same 9-of-14 ground-truth scope, n=3 reps
+(reps here re-run the TRANSCRIPTION call against the identical fixed trace, so they measure
+transcription self-consistency, not solve-time randomness).
+
+| Variant | Structurally correct | Entity-axis size matches | Domain-slot coverage |
+|---|---|---|---|
+| `llm-only` (blind) | 0/45 | 7/45 (16%) | 28/80 (35%) |
+| `chunked-inventory` (blind) | 2/45 | 8/45 (18%) | 24/80 (30%) |
+| `embedded-group` (blind) | 1/45 | 11/45 (24%) | 6/80 (8%) |
+| **`post-hoc` (solve first, transcribe)** | **9/27 (33%)** | **16/27 (59%)** | **28/48 (58%)** |
+
+An order of magnitude better on structural correctness, and roughly 2-3x better on the two
+component measures — solving BEFORE constructing vocabulary, then transcribing the vocabulary an
+already-completed solve used, dramatically outperforms every variant that guesses vocabulary
+blind, at comparable or lower cost.
+
+**The decoupling hypothesis holds on at least one clean example.** PZL-0001's source solve was
+MISMATCH (correct 5-house setup in "Step 1," silent abandonment of rigor by "Step 6," wrong final
+answer — the exact trace examined earlier this session for failure-mode analysis). Its post-hoc
+vocabulary transcription scored `structurallyCorrect: true` on **all 3 reps** — the same 5
+entities, the same 5 correctly-named domains (`color`/`nationality`/`drink`/`cigar`/`pet`),
+regardless of the solve's later collapse. Vocabulary shape was fixed early and survived the
+failure that came later, exactly as hypothesized.
+
+**But the aggregate by source outcome is noisier than that one example suggests, and for a
+diagnosable reason**:
+
+| Source solve outcome | Structurally correct |
+|---|---|
+| MISMATCH (2 puzzles: PZL-0001, PZL-0012) | 4/6 (67%) |
+| MATCH (7 puzzles) | 5/21 (24%) |
+
+MISMATCH scoring *higher* than MATCH is not evidence that failed solves produce better
+vocabulary — it's a small sample (2 vs. 7 puzzles) dominated by PZL-0001's clean 3/3, and several
+MATCH puzzles failed transcription for a specific, recognizable reason: **PZL-0004 reproduces the
+exact entity-axis-vs-domain-values confusion SPIKE-012's `shape.ts` was built to prevent.** Its
+post-hoc transcription (all 3 reps) declared **9 entities** — one per suspect/weapon/room VALUE
+(`suspect_miss_scarlett`, `weapon_candlestick`, `room_kitchen`, …) — instead of the correct single
+scenario entity with three domains. `shape.ts` avoids this by construction: it forces a closed,
+per-group multiple-choice classification (entityAxis vs. domainValues) rather than asking the
+model to freely decide entity/domain structure from scratch. `post-hoc-vocabulary.ts` asks for
+that same free-form decision — the solved trace tells the model WHAT the answer is, but nothing
+in this prompt tells it HOW to classify structure, so the same free-construction risk that
+motivated `shape.ts`'s design in the first place reappears here, just against a different input.
+
+This is the clean next iteration this variant's first pass earns: keep Stage 1 (free solve) as
+is, but make Stage 2 a closed classification over candidate spans the solved trace already
+names — the same shape.ts-style multiple-choice move, applied to a solved trace instead of a
+blind vocabulary guess — rather than free-form entity/domain construction from an unconstrained
+prompt.
 
 **Isolating vocabulary construction confirms, more directly than any prior spike in this line,
 that it is itself the dominant source of the non-determinism SPIKE-004 first found** — not
@@ -338,7 +399,23 @@ underlying embedding signal is real (directly measured, not assumed) — the fai
 clustering ALGORITHM, not the representation, so this doesn't settle whether embeddings could
 help `group`'s job with a better mechanism.
 
+**A 4th variant, added after this spike's original conclusion, changes the recommended next
+step.** §5.7's `post-hoc` transcription (solve freely in prose first, ADR-008-style, then
+transcribe the vocabulary that solve already used) beats every blind-guess variant by roughly an
+order of magnitude on structural correctness (33% vs. 0-4%), and directly confirms — on at least
+one clean example (PZL-0001) — that vocabulary shape can survive a solve that later goes wrong,
+because it's committed to early. Its failures are not random noise: they reproduce the SAME
+entity-axis-vs-domain-values confusion `shape.ts` exists to prevent (§5.7's PZL-0004 case),
+because this variant's transcription step is still a free-form construction, just against a
+solved trace instead of a blind guess. That points at a cheap, targeted fix — give Stage 2 the
+same closed multiple-choice classification `shape.ts` already uses, rather than open-ended
+entity/domain construction — before pursuing the narrower fixes below, since `post-hoc` is now
+the strongest baseline this spike has measured.
+
 **Recommended next steps, in order**:
+0. Re-run `post-hoc` with a `shape.ts`-style closed classification for Stage 2 instead of free-
+   form entity/domain construction (§5.7) — the single highest-leverage next experiment, since
+   this variant already outperforms every other one before that fix.
 1. Fix referring-expression entity inflation (§5.2) directly in `group.ts`'s prompt — likely the
    single highest-leverage, most narrowly-scoped fix available: explicitly instruct that a
    compound mention combining a domain-value word with the entity axis's own generic noun (e.g.
