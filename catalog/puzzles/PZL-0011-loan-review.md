@@ -14,7 +14,7 @@ groundTruth:
   # income, debt) a real extraction may also declare are legitimate but not required, since
   # declaring given facts as domains vs. compile-time constants is itself an underdetermined
   # modeling choice this ground truth doesn't take a position on.
-  domains:
+  expectedDomains:
     - alternatives:
         - names: [outcome, decision]
           values: ["Denied", "Approved", "Counter-Offer"]

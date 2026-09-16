@@ -10,7 +10,7 @@ difficulty: unknown
 created: 2026-08-12
 groundTruth:
   entityAxisSize: 5
-  domains:
+  expectedDomains:
     - alternatives:
         - names: [order]
           values: [South, Pedestrian, East, North, West]

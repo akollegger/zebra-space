@@ -27,11 +27,17 @@ construction stage should produce (used to score SPIKE-013's `llm-only`/`chunked
 ```yaml
 groundTruth:
   entityAxisSize: 5    # size of the primary entity axis clues reference by identity
-  domains:
+  expectedDomains:
     - alternatives:                          # one or more mutually exclusive valid framings —
         - names: [color]                     # a domain matches if it fully matches ANY ONE
           values: [Yellow, Blue, Red, Ivory, Green]  # alternative's OWN (names, values) pair
 ```
+
+Named `expectedDomains`, not `domains` — `tests/catalog/catalog.test.ts` reads frontmatter with a
+deliberately naive flat line-scanner (this format is otherwise flat scalars only), so a nested
+key reusing the top-level `domains` count field's name silently overwrote it with an empty string
+(found live 2026-09-16, a real CI failure — the naive scanner has no concept of YAML nesting, it
+just maps every `key:` line it sees, last one wins).
 
 Scoring is coverage-only: every listed domain must be found, matching one whole `alternatives`
 entry — a produced vocabulary with *extra* domains beyond what's listed is never penalized

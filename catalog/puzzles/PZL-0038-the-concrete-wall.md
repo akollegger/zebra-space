@@ -17,7 +17,7 @@ groundTruth:
   # with the animal names or "animal" paired with 1-5, which would be a scrambled, invalid
   # vocabulary a naive flat name-list x value-set-list match would wrongly accept (found live
   # 2026-09-16, fixed by requiring each alternative to match as one atomic pair).
-  domains:
+  expectedDomains:
     - alternatives:
         - names: [pen]
           values: ["1", "2", "3", "4", "5"]

@@ -10,7 +10,7 @@ difficulty: unknown
 created: 2026-08-11
 groundTruth:
   entityAxisSize: 2  # player + opponent
-  domains:
+  expectedDomains:
     - alternatives:
         - names: [move]
           values: [Paper, Rock, Scissors]

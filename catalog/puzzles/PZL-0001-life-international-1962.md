@@ -10,7 +10,7 @@ difficulty: unknown
 created: 2026-08-11
 groundTruth:
   entityAxisSize: 5
-  domains:
+  expectedDomains:
     - alternatives:
         - names: [color]
           values: [Yellow, Blue, Red, Ivory, Green]

@@ -10,7 +10,7 @@ difficulty: unknown
 created: 2026-08-11
 groundTruth:
   entityAxisSize: 1  # one implicit "murder"/"scenario" entity
-  domains:
+  expectedDomains:
     - alternatives:
         - names: [suspect]
           values: [Miss Scarlett, Colonel Mustard, Professor Plum]

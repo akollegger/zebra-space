@@ -10,7 +10,7 @@ difficulty: unknown
 created: 2026-08-12
 groundTruth:
   entityAxisSize: 3  # the three drugs
-  domains:
+  expectedDomains:
     - alternatives:
         - names: [time]
           values: ["9am", "11am", "4pm"]

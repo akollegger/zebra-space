@@ -64,7 +64,13 @@ const PUZZLES_DIR = new URL("../../../../../catalog/puzzles/", import.meta.url)
 
 interface RawGroundTruth {
   readonly entityAxisSize: number
-  readonly domains: readonly { readonly alternatives: readonly DomainAlternative[] }[]
+  // Named `expectedDomains` in frontmatter, not `domains` — tests/catalog/catalog.test.ts reads
+  // frontmatter with a deliberately naive flat line-scanner (ADR-001's format is flat scalars),
+  // so a nested key reusing the top-level `domains` count field's name silently overwrote it with
+  // an empty string (found live 2026-09-16, CI failure on PR #31 for exactly this puzzle-catalog
+  // reason). `GroundTruthEntry.domains` (the parsed, in-memory shape) keeps its name — only the
+  // YAML key changed.
+  readonly expectedDomains: readonly { readonly alternatives: readonly DomainAlternative[] }[]
 }
 
 function loadGroundTruth(): ReadonlyMap<string, GroundTruthEntry> {
@@ -80,7 +86,7 @@ function loadGroundTruth(): ReadonlyMap<string, GroundTruthEntry> {
     map.set(frontmatter.id, {
       puzzleId: frontmatter.id,
       expectedEntityAxisSize: frontmatter.groundTruth.entityAxisSize,
-      domains: frontmatter.groundTruth.domains,
+      domains: frontmatter.groundTruth.expectedDomains,
     })
   }
   return map
