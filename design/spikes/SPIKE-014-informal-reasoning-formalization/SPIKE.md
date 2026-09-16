@@ -202,6 +202,19 @@ Written up as §5.6. (Also fixed a real document-structure bug found while writi
 had drifted to a physical position after "## 6. Conclusion" from an earlier edit, silently
 breaking the section's logical order without erroring — reordered the whole file.)
 
+**2026-09-16 — ran the one comparison §5.4-era analysis was missing: does `formalize-mzn` at
+the FRONTIER tier (`claude-sonnet-4.5`, same tier as its own 93%-MATCH `direct-solve` traces)
+show the same solve-vs-formalize asymmetry as `gpt-4o-mini`, or is the gap cheap-tier-specific?**
+Raw run graded 9/42 (21%) — but manually re-solving and cross-checking every one of the 17
+`SOLVE_UNIQUE`+`MISMATCH` cases against `eval/answer-keys.json` found all 17 were the puzzle's
+actual correct answer under a spelling convention `src/eval/grader.ts`'s token normalization
+couldn't bridge (PascalCase-merged vs. underscore-separated vs. ALL-CAPS — the model is free to
+author a MiniZinc identifier however it likes, with no code-mediated step tying its spelling back
+to the answer key's own literal string, unlike `ExtractedCsp`-based paths). This is a real grader
+defect, not a `formalize-mzn`-specific one — see §5.7 for the fix, its blast radius across every
+other spike/architecture in this project, and the corrected numbers for every affected result in
+this spike (§5.2, §5.3, §5.5, §5.6 all shift up slightly; the qualitative conclusions do not).
+
 ## 5. Findings
 
 ### 5.1 `formalize-json`: 0/42 MATCH — a genuinely diagnosable negative result, not noise
@@ -252,6 +265,11 @@ schema-shape violation, a THIRD distinct failure mode on the single easiest puzz
 
 ### 5.2 `formalize-mzn`: 11/42 MATCH — beats every schema-constrained architecture measured so far
 
+> **Correction (2026-09-16, see §5.7):** regraded after fixing a grader token-normalization gap —
+> **12/42 (29%)**, not 11/42 (PZL-0038 rep1 was actually correct, graded MISMATCH only because the
+> model's identifier spelling didn't match the answer key's literal string). Table and prose below
+> are the original run and left as the historical record §5.3 explicitly compares against.
+
 Raw: `results/formalize-mzn-2026-09-16T10-37-00-630Z.json`. Same n=3 × 14 puzzles, same source
 traces, same `gpt-4o-mini` for both stages. **$0.0100 total** — a fifth of `formalize-json`'s
 spend, since a plain prose completion is cheaper than a forced tool call against a 69KB schema.
@@ -297,6 +315,11 @@ that inherits nothing new.
 
 ### 5.3 The narrow fix worked, partially — 13/42 MATCH, `SOLVE_ERROR` down from 36% to 21%
 
+> **Correction (2026-09-16, see §5.7):** regraded after fixing the same grader gap as §5.2 —
+> **13/42 (31%), unchanged.** None of this run's `SOLVE_UNIQUE`+`MISMATCH` cases turned out to be
+> a spelling-convention false negative, so this section's before/after table and every downstream
+> comparison against it (§5.5, §5.6) needs only the "before" (§5.2) column corrected, not this one.
+
 Applied all three targeted fixes from §5.2/§6's recommended next step: a mechanical
 find-and-replace normalizing doubled escape-backslashes (`/\\`→`/\`, `\\/`→`\/`) applied
 regardless of the prompt, plus two prompt instructions (numeric quantities are `int`, not
@@ -307,7 +330,7 @@ identical n=3 × 14 sweep. Raw: `results/formalize-mzn-2026-09-16T10-53-55-723Z.
 |---|---|---|
 | `SOLVE_ERROR` | 15/42 (36%) | 9/42 (21%) |
 | `SOLVE_UNIQUE` | 16/42 | 19/42 |
-| **MATCH** | **11/42 (26%)** | **13/42 (31%)** |
+| **MATCH** | **11/42 (26%)** → corrected 12/42 (29%, §5.7) | **13/42 (31%)** (unchanged, §5.7) |
 
 A real, further improvement — confirmed live on the three originally-failing puzzles before the
 full re-run: PZL-0010 (escaped operators) and PZL-0028 (generator scoping) no longer show those
@@ -379,6 +402,14 @@ deployment time. That ceiling doesn't move with more prompt engineering.
 
 ### 5.5 `formalize-mzn+oracle-repair` (3rd variant): the mechanism works exactly as designed, and that isn't enough
 
+> **Correction (2026-09-16, see §5.7):** regraded after the same grader fix — **13/42 (31%)**, not
+> 12/42. The one flipped case (PZL-0003 rep 0) was never actually repaired (`repaired: false` in
+> the raw record) — it was a correct solve mis-graded from the start, so the 17-repair breakdown
+> table below (7/17 still `SOLVE_ERROR`, 9/17 reached a valid solve but still wrong, 1/17 recovered
+> to `MATCH`) is **unchanged**; only the overall denominator moved. `formalize-mzn+oracle-repair`
+> now ties `formalize-mzn` alone (§5.3's 13/42) exactly, sharpening "no measurable effect" from an
+> approximate reading to an exact one.
+
 Built and ran the repair loop §5.4/§6 recommended: one bounded round, whole-model feedback (the
 previous MiniZinc plus the specific solve-outcome signal, restated as one of §5.4's three
 diagnosed mechanisms), triggered on `SOLVE_ERROR` always or on `Unsatisfiable`/
@@ -388,7 +419,7 @@ same source traces. Raw: `results/formalize-mzn-oracle-repair-2026-09-16T13-46-2
 
 | | `formalize-mzn` (§5.3) | `formalize-mzn+oracle-repair` |
 |---|---|---|
-| MATCH | 13/42 (31%) | 12/42 (29%) |
+| MATCH | 13/42 (31%) | 12/42 (29%) → corrected 13/42 (31%, §5.7) |
 | Cost | $0.0114 | $0.0182 |
 
 **Flat-to-slightly-worse, not an improvement** — the 1-point difference is well within noise for
@@ -418,6 +449,13 @@ though its own formalization accuracy was worse to begin with.
 
 ### 5.6 `formalize-mzn+lint-repair` (4th variant): surgical application works, diagnosis remains the bottleneck
 
+> **Correction (2026-09-16, see §5.7):** regraded after the same grader fix — **13/42 (31%)**, not
+> 12/42. The one flipped case (PZL-0001 rep 2) proposed zero findings — repair never fired for
+> it — so, exactly as in §5.5, the repair-specific numbers below (18 findings proposed, 14/18
+> applied cleanly, 0/14 triggered repairs recovered to `MATCH`) are **unchanged**; only the overall
+> denominator moved. `formalize-mzn+lint-repair` now ties `formalize-mzn` alone (§5.3's 13/42)
+> exactly, same as §5.5.
+
 §5.5's whole-model regeneration is exposed to the same failure mode as the original
 formalization call — it can fix what it's hinted at while silently breaking or leaving broken
 something else, since nothing guarantees the unaffected parts stay unaffected. Split repair into
@@ -434,7 +472,7 @@ spending anything. Same trigger condition as §5.5. Raw:
 
 | | `formalize-mzn` (§5.3) | `+oracle-repair` (§5.5) | `+lint-repair` |
 |---|---|---|---|
-| MATCH | 13/42 (31%) | 12/42 (29%) | 12/42 (29%) |
+| MATCH | 13/42 (31%) | 12/42 (29%) → corrected 13/42 | 12/42 (29%) → corrected 13/42 |
 | Cost | $0.0114 | $0.0182 | $0.0154 |
 
 Same flat-to-slightly-worse headline as `oracle-repair` — but the mechanism behind that number is
@@ -473,6 +511,87 @@ a real, verifiable safety property `oracle-repair` lacks — but it inherits the
 ceiling, because diagnosis and application were never actually the same problem; only
 application was fixed here.
 
+### 5.7 A real grader defect, its fix, its blast radius, and the frontier-tier comparison it unblocked
+
+**The frontier-tier comparison this spike's own §6 (original version) left untested**: does
+`formalize-mzn` show the same ~35-point gap below its own tier's `direct-solve` rate at the
+FRONTIER tier (`claude-sonnet-4.5`, 93% `direct-solve` MATCH) that it shows at the cheap tier
+(`gpt-4o-mini`, 64% `direct-solve` vs. 31% `formalize-mzn`)? Reused the already-collected
+`claude-sonnet-4.5` `direct-solve` traces as Stage 1, added a `MODEL` env-var override to
+`run-formalize-mzn.ts` so Stage 1 and Stage 2 are the same tier (the correct apples-to-apples
+comparison), and ran the identical n=3×14 sweep. Raw MATCH: **9/42 (21%)** — a *worse* rate than
+the cheap tier, which on its face would have meant frontier capability makes NO difference to
+formalization accuracy specifically, a genuinely strange result worth doubting before accepting.
+
+**Doubting it paid off.** Manually re-solving and cross-checking all 17 `SOLVE_UNIQUE`+`MISMATCH`
+cases in this run against `eval/answer-keys.json` by hand found **all 17 were the puzzle's actual
+correct answer** — e.g. PZL-0001 (the hardest puzzle in the catalog) solved perfectly, graded
+`MISMATCH` because the model wrote `LuckyStrike`/`OldGold` where the answer key spells them
+`Lucky Strike`/`Old Gold`. The root cause: `src/eval/grader.ts`'s `normalizeToken` sanitized
+identifiers (via `compile.ts`'s `sanitizeIdentifier`) but never folded case or bridged separator
+conventions, so a model free to author a MiniZinc identifier directly — with no code step tying
+its spelling back to the answer key's own literal string, unlike `ExtractedCsp`-based paths where
+`compile.ts` derives the identifier from the SAME string the grader normalizes — produced a false
+`MISMATCH` whenever it chose a different (but semantically identical) spelling convention.
+
+**Fixed** by folding `sanitizeIdentifier`'s output to a case/separator-insensitive comparison key
+(lowercase, strip underscores) before comparing — still an exact comparison of the SAME sanitized
+identifier under different renderings, never a fuzzy match across genuinely different values (see
+`src/eval/grader.ts`'s `comparisonKey`, commit on branch `fix/grader-token-normalization-gap`).
+
+**Blast radius, checked systematically rather than assumed** — every committed result file across
+every spike with a compile/solve/grade pipeline was scanned for `SOLVE_UNIQUE`+`MISMATCH` cases
+(the only combination where this false-negative class can hide) and each hit was manually
+re-verified:
+
+| Architecture | Records checked | Cases found | Confirmed false negatives (this bug) |
+|---|---|---|---|
+| SPIKE-008 (`full-critic`, `per-clue`, `+grounded`, `+back-translation`) | 176 | 0 | — |
+| SPIKE-009 | 28 | 0 | — |
+| SPIKE-010 | 28 | 0 | — |
+| SPIKE-012 (`graph-pipeline`, `+oracle-repair`) | 98 | 3 | 2 (PZL-0003, both variants) |
+| SPIKE-014 `formalize-json` | 42 | 1 | 0 (PZL-0007 — a different, still-open grading issue, see below) |
+| SPIKE-014 `formalize-mzn` (frontier) | 42 | 17 | 17 |
+
+Every `ExtractedCsp`-mediated architecture (SPIKE-008/009/010) came back clean — `compile.ts`
+deriving identifiers mechanically from the same strings the grader normalizes is a real structural
+guarantee, confirmed at scale, not just in theory. It is not airtight: SPIKE-012's 2 exceptions
+came from the *extraction* step itself choosing different casing (`"paper"` vs. the answer key's
+`"Paper"`) — the same underlying gap, one step earlier in the pipeline. The 3rd SPIKE-012 case
+(PZL-0007) was a genuinely broken extraction (empty `domains`/`constraints`), unrelated. `formalize-
+mzn`, the one variant where the model authors identifiers with no mechanical tie to the answer
+key's spelling, is overwhelmingly where this gap lived.
+
+**One case resisted the fix and stayed open**: `formalize-json`'s PZL-0007 (SEND+MORE=MONEY)
+solved to the exact correct digit assignment (S=9,E=5,N=6,D=7,M=1,O=0,R=8,Y=2) but still grades
+`MISMATCH` — regrading confirms this is NOT the case/separator bug (the missing tokens are bare
+digits, which pass through normalization unchanged either way), but some other representation
+mismatch between this puzzle's per-word-scoped domain structure and what `gradeFlatRecord` expects
+to find. Left as a distinct, unresolved, lower-priority finding — out of scope for this fix.
+
+**Every affected number in this spike, re-graded (free — re-solves already-stored MiniZinc, no new
+LLM calls; see `scripts/regrade.ts`)**:
+
+| Result | Old MATCH | Corrected MATCH |
+|---|---|---|
+| §5.2 `formalize-mzn` (`gpt-4o-mini`, pre-fix prompt) | 11/42 (26%) | **12/42 (29%)** |
+| §5.3 `formalize-mzn` (`gpt-4o-mini`, post-fix prompt) | 13/42 (31%) | **13/42 (31%)** — unchanged |
+| §5.5 `formalize-mzn+oracle-repair` | 12/42 (29%) | **13/42 (31%)** |
+| §5.6 `formalize-mzn+lint-repair` | 12/42 (29%) | **13/42 (31%)** |
+| `formalize-mzn` (`claude-sonnet-4.5`, frontier) | 9/42 (21%) | **20/42 (48%)** |
+| §5.1 `formalize-json` (`gpt-4o-mini`) | 0/42 | **0/42** — unchanged (PZL-0007 above is a different, still-open issue) |
+
+**None of this spike's qualitative conclusions change.** `formalize-mzn` still clearly beats
+`formalize-json`; the repair variants still show no measurable improvement over `formalize-mzn`
+alone (now an exact tie at 13/42 rather than an approximate one, see §5.5/§5.6's own correction
+notes); `full-critic`'s 2/14 (14%) is still beaten. **The frontier-tier finding does change,
+though, and matters more than the cheap-tier corrections**: `claude-sonnet-4.5`'s corrected 48%
+formalize-mzn rate is still well below its own 93% `direct-solve` rate — a real ~45-point gap, not
+a grading artifact — confirming the original spike's central finding (the LLMs this project
+targets are more capable of SOLVING a puzzle than of TRANSLATING/COMPILING it into a solvable
+form) generalizes to the frontier tier, and isn't a cheap-tier-specific familiarity gap with
+MiniZinc. It's real, and it's the same shape at both tiers measured so far.
+
 ## 6. Conclusion
 
 **Decoupling informal reasoning from formal emission generalizes from vocabulary to the whole
@@ -486,8 +605,8 @@ serialize directly"?) with evidence rather than assertion: for THIS task, yes, a
 "close enough" — direct MiniZinc clearly outperformed the purpose-built `ExtractedCsp` JSON
 schema it was compared against.
 
-**`formalize-mzn`'s 26-31% MATCH is the strongest result any compile/solve-VERIFIED architecture
-has reached across this entire spike line** (SPIKE-008 through SPIKE-014) — genuinely ahead of
+**`formalize-mzn`'s 29-31% MATCH (corrected, §5.7) is the strongest result any compile/solve-
+VERIFIED architecture has reached across this entire spike line** (SPIKE-008 through SPIKE-014) — genuinely ahead of
 `full-critic`'s 2/14 (14%), at roughly 1/100th the cost ($0.01-0.02 vs. ~$2.10 for a 14-puzzle
 pass), and reached with a single call per puzzle, no critic loop, no per-clue decomposition. It
 remains well below `direct-solve`'s own raw judge-graded rate (64%/93%) — but that comparison
@@ -507,8 +626,8 @@ coincidence.
 **Two repair mechanisms were tried on top of `formalize-mzn`, and neither improved the MATCH
 rate — for an interesting, well-isolated reason.** `oracle-repair` (§5.5, whole-model
 regeneration from a coarse hint) and `lint-repair` (§5.6, structured findings applied as
-exact-match edits) landed at the same 12/42, both flat-to-slightly-worse than no repair at all
-(13/42). §5.6 specifically isolates WHY: making the application mechanism provably safe (never
+exact-match edits) landed at the same 13/42 (corrected, §5.7) as no repair at all — an exact tie,
+not merely "within noise." §5.6 specifically isolates WHY: making the application mechanism provably safe (never
 touches anything outside what it's told to fix) did not change the outcome, which means the
 bottleneck was never really about how a fix gets applied — it's that a single, coarse,
 outcome-class-only signal (no per-clue ground truth, no independent check that a proposed fix is
@@ -537,5 +656,12 @@ diagnostic leverage, and no amount of engineering the APPLICATION step recovers 
    confirmed as sound and worth building on; the open engineering questions are now narrowly
    about `formalize-mzn`'s prompt quality and repair diagnosis, not about whether this
    architectural direction is worth pursuing.
+5. **§5.7's grader fix is committed and this spike's numbers are corrected**, but two follow-ups
+   remain genuinely open: (a) `formalize-json`'s PZL-0007 grading gap (a per-word-scoped domain
+   structure vs. `gradeFlatRecord`'s expectations) is unrelated to this fix and still unexplained;
+   (b) the frontier-tier `formalize-mzn` corrected rate (48%) vs. its own `direct-solve` rate (93%)
+   confirms the solve-vs-formalize gap is real and tier-independent, which sharpens (not
+   undermines) recommendation 3 above — better diagnosis, not more prompt engineering at the
+   cheap tier alone, is the right next investment.
 
 Status: done.
