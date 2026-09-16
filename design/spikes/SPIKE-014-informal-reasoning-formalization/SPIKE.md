@@ -46,6 +46,18 @@ project's next architectural direction; if it collapses back toward the schema-c
 numbers (as SPIKE-013's `post-hoc-shaped` did for vocabulary alone), that's an equally important,
 concretely diagnosable negative result.
 
+**A second, genuinely open sub-question (raised 2026-09-16, before any code was written)**: what
+should Stage 2 formalize INTO? RFC-003 §7.1 has asked since this RFC's own origin whether the
+intermediate representation needs to be "close enough to a MiniZinc AST to serialize directly" —
+never actually measured, only asserted either way. `src/solver/solve.ts`'s `SolveRequest.model` is
+a raw MiniZinc string with no dependency on `compile.ts`/`ExtractedCsp`, and `src/eval/grader.ts`'s
+`gradeDeterminate` grades off the solved assignment record, equally representation-agnostic — so
+a direct-to-MiniZinc path is a fully independent, equally-verifiable alternative to
+`ExtractedCsp`, not a shortcut that skips verification. This spike tests BOTH as parallel
+variants (`formalize-json` via the existing `compile()`→`solve()`, `formalize-mzn` straight into
+`solve()`, same grader either way) rather than asserting an answer — the marginal build cost is
+one more Stage-2 prompt, not a second pipeline.
+
 ## 2. Method
 
 1. **Stage 1 (free solve)** — identical to `direct-solve` (ADR-008): puzzle prose, no schema, no
@@ -53,23 +65,38 @@ concretely diagnosable negative result.
    already-collected traces (`eval/results/2026-09-15T14-59-37-368Z.json` for `gpt-4o-mini`,
    `...15T15-02-32-354Z.json` for `claude-sonnet-4.5`) for the first pass at zero re-solve cost,
    the same bootstrap SPIKE-013's `post-hoc`/`post-hoc-shaped` used.
-2. **Stage 2 (formalize)** — a new forced-tool-call step, reusing SPIKE-012's per-clue tool-call
-   conventions and `src/extraction/types.ts`'s `ExtractedCsp` shape (entities, domains,
-   constraints), given the puzzle prose *and* the Stage-1 trace, asked to formalize the CSP that
-   solve already worked out — a transcription task analogous to `post-hoc-vocabulary.ts`, but
-   covering constraints too, not just entities/domains. Whether this is one call or decomposed
-   (e.g. vocabulary formalized first, then constraints per-clue against the now-known solution)
-   is an open implementation question this spike resolves empirically, not a decision made here.
-3. **Verify** — run the resulting `ExtractedCsp` through the existing, unmodified
-   `compile()`/`solve()` pipeline (`src/compiler/compile.ts`, `src/solver/solve.ts`) and grade
-   with the existing outcome taxonomy (ADR-007), the same grading every prior extraction
-   architecture in this line has been measured against — no new scoring code, so this compares
-   directly against `full-critic`'s and the per-clue variants' already-recorded numbers.
+2. **Stage 2 (formalize) — two representation variants, each single-call for the first pass**:
+   - **`formalize-json`**: a forced tool-call reusing SPIKE-012's per-clue tool-call conventions
+     and `src/extraction/types.ts`'s `ExtractedCsp` shape (entities, domains, constraints), given
+     the puzzle prose *and* the Stage-1 trace — a transcription task analogous to
+     `post-hoc-vocabulary.ts`, extended to cover constraints too, not just entities/domains.
+   - **`formalize-mzn`**: a prose completion (like `direct-solve`'s own `requestProseCompletion`,
+     since MiniZinc is plain text, not JSON) asked to write the complete MiniZinc model the
+     already-solved reasoning implies, given the same puzzle prose + Stage-1 trace.
+   - **Single call for both, not decomposed, for this first pass**: SPIKE-013's
+     `post-hoc-shaped` (§5.8) already tested "decompose, with the solved trace as context" for
+     vocabulary alone and it regressed almost back to blind-guess numbers — direct evidence
+     against decomposing by default here. Revisit only if single-call shows a specific,
+     diagnosable failure decomposition would plausibly fix (e.g. long puzzles losing attention,
+     late clues silently dropped) — and note the asymmetry if so: decomposition is a natural fit
+     for `formalize-json` (its schema already separates vocabulary from a constraints list), but
+     awkward for `formalize-mzn` (one coherent program, shared identifier scope) — an iterative
+     "append this clue's constraint" loop, or a hybrid (fixed vocabulary once, then one call per
+     clue emitting a raw MiniZinc constraint expression assembled by code) would be needed there.
+3. **Verify** — `formalize-json` runs through the existing, unmodified `compile()`/`solve()`
+   pipeline (`src/compiler/compile.ts`, `src/solver/solve.ts`); `formalize-mzn` skips `compile()`
+   entirely and goes straight into `solve()` (`SolveRequest.model` is a raw MiniZinc string with
+   no dependency on `ExtractedCsp`). Both grade with the SAME existing outcome taxonomy (ADR-007)
+   and `src/eval/grader.ts` (which grades off the solved assignment record, equally
+   representation-agnostic) — no new scoring code for either variant, so both compare directly
+   against `full-critic`'s and the per-clue variants' already-recorded numbers.
 4. **Compare** MATCH rate, cost, and failure modes against: `full-critic` (2/14, ~$2.10),
    the per-clue/graph-pipeline variants (0/14, $0.03-$0.12), and `direct-solve`'s own free-prose
    judge-graded rate (9/14 / 13/14) as the ceiling this architecture is trying to approach without
    losing the independent-verification property `direct-solve` itself lacks (its judge grades
-   prose directly; it has no compilable artifact at all).
+   prose directly; it has no compilable artifact at all). Also compare `formalize-json` against
+   `formalize-mzn` directly — this is this spike's own answer to RFC-003 §7.1, evidence instead
+   of assertion.
 5. **Diagnose failures concretely** — per this session's own failure-mode analysis (silent
    abandonment of rigor, faithfully-propagated misinterpretation, silent premise promotion) and
    SPIKE-013's finding that closed classification can regress when fed noisier input: inspect
@@ -78,15 +105,17 @@ concretely diagnosable negative result.
 
 ## 3. Time-box
 
-**One day (~8 hours)**: ~1h reuse/adapt Stage 1 (already-collected traces, zero new code beyond
-a loader); ~2-3h build Stage 2's formalization call(s) and get the `ExtractedCsp` shape right
-against `compile()`'s existing expectations; ~1h offline smoke tests (a hand-constructed
-already-known-good trace should compile and solve correctly, zero cost); ~1h live dry-run on 2-3
-puzzles + fixes; ~2h full sweep (n=3 x 14 puzzles x 1-2 tiers, cost-estimated before running,
-matching this session's own cost-then-go-ahead discipline) and write-up. Hard stop at the
-time-box regardless of completeness — if Stage 2's formalization call needs materially more
-prompt-engineering than this budget allows, that itself is a finding worth recording, not a
-reason to blow through the box.
+**One and a half days (~12 hours)**, given two Stage-2 variants instead of one: ~1h reuse/adapt
+Stage 1 (already-collected traces, zero new code beyond a loader); ~2h `formalize-json` (closest
+to already-proven `post-hoc-vocabulary.ts` machinery, extended to constraints); ~2h
+`formalize-mzn` (a new prose-completion path, no forced-schema precedent to build from, though
+`direct-solve`'s `requestProseCompletion` is a direct template); ~1.5h offline smoke tests for
+both (a hand-constructed already-known-good trace should compile-or-parse and solve correctly
+for each variant, zero cost); ~1.5h live dry-run on 2-3 puzzles per variant + fixes; ~3h full
+sweep (n=3 x 14 puzzles x 2 variants x 1-2 tiers, cost-estimated before running, matching this
+session's own cost-then-go-ahead discipline) and write-up. Hard stop at the time-box regardless
+of completeness — if either variant needs materially more prompt-engineering than this budget
+allows, that itself is a finding worth recording, not a reason to blow through the box.
 
 ## 4. Notes
 
