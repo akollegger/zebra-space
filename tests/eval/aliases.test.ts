@@ -29,6 +29,13 @@ test("stringsMatch: a domain-name-shaped alias table matches a qualifier/plural 
   const domainNameAliases = { move: ["game move", "player move"] }
   assert.equal(stringsMatch("game move", "move", domainNameAliases), true)
   assert.equal(stringsMatch("moves", "move", domainNameAliases), true) // plural fold, no alias needed
+  // The ACTUAL SPIKE-015 §5.2 motivating phrase combines the qualifier AND the plural together
+  // ("game moves") — found live in code review (second pass) that this combined case wasn't
+  // separately tested, and it exercises a real, distinct code path: the listed variant is
+  // "game move" (singular), so this only matches if comparisonKey's per-word lemmatization folds
+  // "game moves" to the same key as the listed variant's own fold, not merely if each half works
+  // in isolation.
+  assert.equal(stringsMatch("game moves", "move", domainNameAliases), true)
   assert.equal(stringsMatch("action", "move", domainNameAliases), false) // genuine synonym: correctly NOT matched
 })
 

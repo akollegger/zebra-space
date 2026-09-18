@@ -41,13 +41,15 @@ comparison, built independently at different times with no shared code or data:
 - Two independent fuzzy fallbacks, each built to cover a gap the mechanisms above left open, and
   each never persisting what it found: `design/spikes/SPIKE-013-vocabulary-construction-isolation/scripts/lib/semantic-match.ts`'s
   `embeddingSemanticMatch` (real sentence-embedding cosine similarity, threshold 0.6) and
-  `design/spikes/SPIKE-015-domain-substitution/scripts/lib/score-domain-match.ts`'s
-  `nameResembles` (substring containment in either direction), built in this project's current
-  session specifically because strict equality rejected "game move"/"game moves" against ground
-  truth's "move." That same spike's own findings recorded that substring containment does not
-  close a further gap it found immediately afterward — "action"/"game" against "move" share no
-  substring relationship at all — and proposed a hand-curated alias list as the fix, independently
-  arriving at the same pattern the alias table above already uses.
+  `SPIKE-015`'s `scripts/lib/score-domain-match.ts` `nameResembles` function (substring
+  containment in either direction), built in this project's current session specifically because
+  strict equality rejected "game move"/"game moves" against ground truth's "move." That file
+  lives on the `spike/015-domain-substitution` branch, not yet merged to `main` as of this ADR —
+  the path is not resolvable from this branch's own tree; cited here as design-time context, not
+  a claim this branch can verify. That same spike's own findings recorded that substring
+  containment does not close a further gap it found immediately afterward — "action"/"game"
+  against "move" share no substring relationship at all — and proposed a hand-curated alias list
+  as the fix, independently arriving at the same pattern the alias table above already uses.
 
 Two spikes, built in different sessions with no shared code, independently hit the same wall and
 independently reached for the same kind of fix. That convergence is the signal that this is one
@@ -105,9 +107,12 @@ The underlying DATA stays split by scope, because the two kinds of alias mean di
   `groundTruth` field — this decision changes how that data is CONSUMED (through the same
   `resolvesToAlias` function every other alias check uses), not where it lives.
 
-Every current and future consumer — the production grader, `SPIKE-013`'s vocabulary scoring,
-`SPIKE-015`'s domain-name scoring, and any later spike facing the same problem — calls into this
-one module instead of re-deriving comparison logic locally.
+Every consumer this decision actually migrates — the production grader, plus any later spike
+facing the same problem — calls into this one module instead of re-deriving comparison logic
+locally. `SPIKE-013`'s vocabulary scoring and `SPIKE-015`'s domain-name scoring are NOT migrated
+by this decision (see §4 Consequences and the resolved specification clarification in
+`specs/007-string-equivalence-matching/spec.md`) — they keep their own independent heuristics
+until a separate, deferred piece of follow-up work migrates them.
 
 ### 2.3 Fuzzy matching is a curation aid, never a live decision
 

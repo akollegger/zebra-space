@@ -1,6 +1,6 @@
 # Implementation Plan: Shared String-Equivalence Matching
 
-**Branch**: `007-string-equivalence-matching` | **Date**: 2026-09-18 | **Spec**: [spec.md](spec.md)
+**Branch**: `016-string-equivalence-matching` | **Date**: 2026-09-18 | **Spec**: [spec.md](spec.md)
 
 **Input**: Feature specification from `/specs/007-string-equivalence-matching/spec.md`
 

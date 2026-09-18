@@ -90,10 +90,19 @@ function collectActualTokens(value: unknown, aliases: AliasTable, into: Set<stri
  * proof: a lemmatizer can occasionally fold a proper noun that merely looks pluralizable (e.g.
  * "Chesterfields" -> "chesterfield"), but that only matters if a puzzle's OWN vocabulary has a
  * competing singular value to collide with, which none observed so far does.
+ *
+ * Lemmatizes PER UNDERSCORE-SEPARATED WORD, not the whole merged phrase — found live in code
+ * review (second pass): SPIKE-015's actual motivating case is a QUALIFIER plus a PLURAL together
+ * ("game moves" against a domain-name alias table entry whose variant is "game move"). Running
+ * the lemmatizer on the whole merged compound ("gamemoves") never folds, since a lemmatizer only
+ * accepts a stripped candidate that is itself a real dictionary word (`isNoun` in
+ * `wink-lemmatizer`'s own source) and "gamemove"/"gamemoves" are not real words. Lemmatizing each
+ * word before merging ("game"+"moves" -> "game"+"move" -> "gamemove") folds correctly and still
+ * converges with the single-word cases above (no `_` to split on, one word, same result).
  */
 function comparisonKey(sanitized: string): string {
-  const folded = sanitized.toLowerCase().replace(/_/g, "")
-  return lemmatize.noun(folded)
+  const words = sanitized.toLowerCase().split("_").filter((w) => w !== "")
+  return words.map((w) => lemmatize.noun(w)).join("")
 }
 
 /**
@@ -101,12 +110,24 @@ function comparisonKey(sanitized: string): string {
  * `sanitizeIdentifier` (imported, not duplicated), folded to a case/separator-insensitive
  * comparison key, then the alias table. Returns the normalized token plus whether an alias was
  * applied (logged, never silent).
+ *
+ * `aliasApplied` is only true when a listed VARIANT's own fold matched — never when the token's
+ * fold already equals the canonical's own fold. Found live in code review: the original code
+ * checked `key === comparisonKey(canonical)` too, so a token needing no alias at all (already
+ * spelled identically to the canonical, or converging via the deterministic fold alone — case,
+ * separator, or now pluralization) still reported `aliasApplied: true` whenever it happened to
+ * match some canonical's OWN key, corrupting the "how many tokens needed the curated table"
+ * audit count this flag exists to report. The pluralization fold widened this: any token whose
+ * plural fold matches a canonical entry's name (regardless of that entry's actual variants list)
+ * would false-positive. Checking only `variants` fixes this without changing `normalized` for any
+ * existing case — if `key === comparisonKey(canonical)`, the fallthrough return already yields
+ * the identical value via `key` itself.
  */
 export function normalizeToken(token: string, aliases: AliasTable): { readonly normalized: string; readonly aliasApplied: boolean } {
   if (/^-?\d+$/.test(token)) return { normalized: token, aliasApplied: false }
   const key = comparisonKey(sanitizeIdentifier(token))
   for (const [canonical, variants] of Object.entries(aliases)) {
-    if (key === comparisonKey(sanitizeIdentifier(canonical)) || variants.some((v) => comparisonKey(sanitizeIdentifier(v)) === key)) {
+    if (variants.some((v) => comparisonKey(sanitizeIdentifier(v)) === key)) {
       return { normalized: comparisonKey(sanitizeIdentifier(canonical)), aliasApplied: true }
     }
   }

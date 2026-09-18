@@ -2,6 +2,14 @@
 
 **Feature Branch**: `016-string-equivalence-matching`
 
+_(The git branch number (016) and this feature/spec directory number (007) are independent
+counters in this repo's speckit config — the branch-creation hook counts sequentially across
+every branch the `git` extension has created this session, including prior spike/ADR branches,
+while the feature directory counts only existing `specs/` directories. Both numbers are correct
+for what they each count; found live in code review — see `plan.md`'s own `**Branch**` field,
+corrected to match this one, since it previously read the feature-directory number instead of the
+actual git branch.)_
+
 **Created**: 2026-09-18
 
 **Status**: Draft

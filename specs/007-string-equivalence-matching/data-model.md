@@ -11,8 +11,13 @@ type AliasTable = Record<string, readonly string[]>  // canonical -> acceptable 
 - **Scope**: global for answer-value data (`eval/aliases.json`) — one shared table, loaded once
   via `loadAnswerValueAliases()` (new, `src/eval/aliases.ts`).
 - **Scope**: per-puzzle for domain-name data (`DomainAlternative.names`, unchanged, stays in each
-  puzzle's `catalog/puzzles/*.md` front-matter) — passed as an `AliasTable`-shaped value into
-  `stringsMatch`/`normalizeToken` by a consumer, never merged into the global table (FR-005).
+  puzzle's `catalog/puzzles/*.md` front-matter). `DomainAlternative.names` is a flat
+  `readonly string[]` (SPIKE-013's own shape), NOT already an `AliasTable` — a consumer builds a
+  minimal single-entry `AliasTable` from it before calling `stringsMatch`/`normalizeToken`, e.g.
+  `{ [names[0]]: names.slice(1) }` (first name as canonical, the rest as variants — any name in
+  the list is an acceptable match for any other, so the specific choice of which name is
+  "canonical" doesn't change the comparison result). This adapter step is a consumer's own
+  responsibility; it is never merged into the global answer-value table (FR-005).
 - **Invariant**: a canonical key's variants apply only within the table they're looked up
   against — an `AliasTable` built from one puzzle's `DomainAlternative.names` is never merged
   with `eval/aliases.json`'s global table.

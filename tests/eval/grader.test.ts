@@ -26,7 +26,10 @@ test("normalizeToken: integers pass through, identifiers sanitize+fold, aliases 
   assert.deepEqual(normalizeToken("true", {}), { normalized: "true", aliasApplied: false })
   const aliases = { "hardcover book set": ["book_set"] }
   assert.deepEqual(normalizeToken("book_set", aliases), { normalized: "hardcoverbookset", aliasApplied: true })
-  assert.deepEqual(normalizeToken("hardcover book set", aliases), { normalized: "hardcoverbookset", aliasApplied: true })
+  // Found live in code review: a token spelled EXACTLY as the canonical (just a case/separator
+  // rendering the deterministic fold alone already bridges) must NOT report aliasApplied: true —
+  // no curated variant was actually needed to reach this match, only the fold was.
+  assert.deepEqual(normalizeToken("hardcover book set", aliases), { normalized: "hardcoverbookset", aliasApplied: false })
   assert.deepEqual(normalizeToken("unrelated", aliases), { normalized: "unrelated", aliasApplied: false })
 })
 
@@ -72,6 +75,17 @@ test("normalizeToken: plain pluralization folds without a curated alias entry", 
   // merge: "news"/"new" and "lens"/"len" both silently collapsed together).
   assert.notEqual(normalizeToken("news", {}).normalized, normalizeToken("new", {}).normalized)
   assert.notEqual(normalizeToken("lens", {}).normalized, normalizeToken("len", {}).normalized)
+})
+
+// Found live in code review (second pass): the actual SPIKE-015 §5.2 motivating case combines a
+// QUALIFIER word and a PLURAL together ("game moves"), not just a bare plural. Lemmatizing the
+// whole merged compound ("gamemoves") never folds (wink-lemmatizer only accepts a stripped
+// candidate that is itself a real dictionary word, and "gamemove" is not one) — comparisonKey
+// must lemmatize each underscore-separated word BEFORE merging, so "game"+"moves" folds to
+// "game"+"move" first, THEN merges to "gamemove", matching "game move" / "game_move".
+test("normalizeToken: a qualifier plus a plural together folds per-word, not as one merged compound", () => {
+  assert.equal(normalizeToken("game moves", {}).normalized, normalizeToken("game move", {}).normalized)
+  assert.equal(normalizeToken("game_moves", {}).normalized, normalizeToken("game_move", {}).normalized)
 })
 
 test("gradeParallelArrays: identical grids match regardless of entity declaration order", () => {
@@ -177,18 +191,24 @@ test("gradeFlatRecord: single-key wrapped values ({e: value}) unwrap before comp
   assert.equal(wrapped.verdict, "MATCH")
 })
 
+// Expected side is spelled EXACTLY as the canonical ("hardcover book set") — the deterministic
+// fold alone bridges that, no curated variant needed, so it must NOT count. Actual side is
+// spelled as the listed variant ("book_set") — that's the one real alias resolution. Updated in
+// code review from an earlier version of this test that expected 2 (both sides counted, before
+// normalizeToken's canonical-self-match false-positive was fixed — see normalizeToken's own
+// docstring).
 test("aliasesApplied: row-keyed and subset paths count both sides, dispatch passes through", () => {
   const aliases = { "hardcover book set": ["book_set"] }
   const rowKeyed = gradeRowKeyedMapping({ "1": "hardcover book set" }, { "1": "book_set" }, aliases)
   assert.equal(rowKeyed.verdict, "MATCH")
-  assert.equal(rowKeyed.aliasesApplied, 2)
+  assert.equal(rowKeyed.aliasesApplied, 1)
   const subset = gradeSubset(["hardcover book set"], { item: ["book_set"] }, aliases)
   assert.equal(subset.verdict, "MATCH")
-  assert.equal(subset.aliasesApplied, 2)
+  assert.equal(subset.aliasesApplied, 1)
   const viaDispatchRow = gradeDeterminate("PZL-0006", { row_to_column: { "1": "hardcover book set" } }, { "1": "book_set" }, aliases)
-  assert.equal(viaDispatchRow.aliasesApplied, 2)
+  assert.equal(viaDispatchRow.aliasesApplied, 1)
   const viaDispatchSubset = gradeDeterminate("PZL-0014", { items: ["hardcover book set"] }, { item: ["book_set"] }, aliases)
-  assert.equal(viaDispatchSubset.aliasesApplied, 2)
+  assert.equal(viaDispatchSubset.aliasesApplied, 1)
 })
 
 test("gradeSubset: single-key wrapped values unwrap before comparing", () => {
@@ -199,7 +219,9 @@ test("gradeFlatRecord: paraphrase resolves through the alias table and is counte
   const aliases = { "hardcover book set": ["book_set"] }
   const result = gradeFlatRecord({ items: ["hardcover book set"] }, { item: ["book_set"] }, aliases)
   assert.equal(result.verdict, "MATCH")
-  assert.equal(result.aliasesApplied, 2)
+  // Only the "book_set" side is a real variant resolution; the canonical-spelled side needs no
+  // alias at all (see the test above for why this is 1, not 2).
+  assert.equal(result.aliasesApplied, 1)
 })
 
 test("gradeCop: optimum attained in any enumerated solution; otherwise FEASIBLE_ONLY; unsatisfiable is INFEASIBLE", () => {
