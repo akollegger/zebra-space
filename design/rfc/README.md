@@ -65,8 +65,8 @@ Use `/rfc-review` before moving a draft to `review`/`accepted`.
 
 | RFC | Title | Status | ADRs |
 |---|---|---|---|
-| [RFC-001](RFC-001-parameterizable-puzzle-generation.md) | Parameterizable Natural-Language Zebra Puzzle Generation | draft | ADR-001 |
+| [RFC-001](RFC-001-parameterizable-puzzle-generation.md) | Parameterizable Natural-Language Zebra Puzzle Generation | draft | ADR-001, ADR-011 |
 | [RFC-002](RFC-002-constraint-solver-selection.md) | Constraint Solver Selection | accepted | ADR-002, ADR-003, ADR-005 |
-| [RFC-003](RFC-003-natural-language-csp-extraction.md) | Natural-Language Puzzle to CSP Extraction | accepted | ADR-004, ADR-005, ADR-003, ADR-009, ADR-010 |
-| [RFC-004](RFC-004-computational-decision-making.md) | Computational Decision Making | accepted | ADR-007, ADR-008, ADR-009, ADR-010 |
+| [RFC-003](RFC-003-natural-language-csp-extraction.md) | Natural-Language Puzzle to CSP Extraction | accepted | ADR-004, ADR-005, ADR-003, ADR-009, ADR-010, ADR-011 |
+| [RFC-004](RFC-004-computational-decision-making.md) | Computational Decision Making | accepted | ADR-007, ADR-008, ADR-009, ADR-010, ADR-011 |
 | [RFC-005](RFC-005-progressive-puzzle-game-mechanics.md) | Progressive Puzzle Game Mechanics | draft | ADR-006 |

@@ -20,6 +20,9 @@ importers:
       effect:
         specifier: 4.0.0-rc.110
         version: 4.0.0-rc.110
+      wink-lemmatizer:
+        specifier: ^3.0.4
+        version: 3.0.4
       yaml:
         specifier: ^2.9.0
         version: 2.9.0
@@ -1090,6 +1093,15 @@ packages:
     engines: {node: '>= 8'}
     hasBin: true
 
+  wink-lemmatizer@3.0.4:
+    resolution: {integrity: sha512-EdLJfy1xLF2ze2cp9Z3qiEWjiq+V8ZVRWiWooCXTXR0AyPxY8ezm4E0puJ0yIj5szzED9tcXV2U7RboaGvboFw==}
+
+  wink-lexicon@2.2.0:
+    resolution: {integrity: sha512-QIuHS9r/HV6q3PCCz6pymg4gbsryW9wDk8CHdU+sDn0kJcHpECNDIcdY0Q/mZpqxtFLp9dzIw7pjcStLBbGZGg==}
+
+  wink-porter2-stemmer@2.0.1:
+    resolution: {integrity: sha512-0g+RkkqhRXFmSpJQStVXW5N/WsshWpJXsoDRW7DwVkGI2uDT6IBCoq3xdH5p6IHLaC6ygk7RWUsUx4alKxoagQ==}
+
   wordwrapjs@5.1.1:
     resolution: {integrity: sha512-0yweIbkINJodk27gX9LBGMzyQdBDan3s/dEAiwBOj+Mf0PPyWL6/rikalkv8EeD0E8jm4o5RXEOrFTP3NXbhJg==}
     engines: {node: '>=12.17'}
@@ -2085,6 +2097,15 @@ snapshots:
   which@2.0.2:
     dependencies:
       isexe: 2.0.0
+
+  wink-lemmatizer@3.0.4:
+    dependencies:
+      wink-lexicon: 2.2.0
+      wink-porter2-stemmer: 2.0.1
+
+  wink-lexicon@2.2.0: {}
+
+  wink-porter2-stemmer@2.0.1: {}
 
   wordwrapjs@5.1.1: {}
 
