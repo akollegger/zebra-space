@@ -64,10 +64,19 @@ SPIKE-015 rediscovered the same problem later, in a part of the codebase ADR-007
 
 ## 2. Decision
 
-### 2.1 Keep the deterministic fold as the first, free layer
+### 2.1 Keep the deterministic fold as the first, free layer — and close its one predictable gap
 
-`sanitizeIdentifier` and `comparisonKey` stay exactly as they are — global, computed, no data
-file, applied before any table lookup. Nothing here changes that.
+`sanitizeIdentifier` and `comparisonKey` stay exactly as they are for case, whitespace, and
+separator conventions — global, computed, no data file, applied before any table lookup.
+Together they already fold `"Hardcover Book Set"`, `"hardcover-book-set"`, and
+`"HardcoverBookSet"` to one identical key before anything else runs.
+
+Plain pluralization ("moves" vs. "move") is a distinct gap this fold does not close, and unlike
+genuine synonym variance (§2.3), it is mechanically predictable rather than open-ended — a
+trailing `s`/`es` strip is a general rule, not a per-value fact that needs curating. It belongs
+in the deterministic fold itself (a small stemming step inside `comparisonKey`, applied
+unconditionally, the same way case-folding already is), not in the alias table or the
+curation-assist path below.
 
 ### 2.2 One shared matching module, two separately-scoped alias tables
 
@@ -108,6 +117,17 @@ an offline tool that proposes candidate alias-table entries for a human to revie
 they extend ADR-007 §3's already-accepted reasoning (no silent promotion, every alias application
 logged and auditable) to every consumer of `resolvesToAlias`, not only the production grader.
 
+Levenshtein (edit) distance belongs in this same curation-assist bucket, as a second, cheaper
+signal alongside embeddings and LLM-judge checks — cheap because it needs no external API call,
+and more legible to a human reviewer than a cosine-similarity score (an edit-distance count is a
+concrete, checkable fact, not an opaque number). It is not promoted to a live match despite being
+deterministic: these are LLM-generated values, not human-typed ones, so the character-level typos
+edit distance is built to catch are a narrow slice of the actual variance seen (synonym choice,
+not fat-fingering); and puzzle domain values are frequently short words (3-8 characters) where a
+small edit distance often separates two genuinely different values (`Red`/`Bed`, `Rock`/`Sock`)
+rather than one value from its own misspelling — the same short-string risk that already argues
+against trusting embedding similarity live.
+
 ## 3. Alternatives Considered
 
 - **Leave each spike to solve this locally as it comes up.** Rejected: it already happened twice
@@ -123,6 +143,13 @@ logged and auditable) to every consumer of `resolvesToAlias`, not only the produ
   false matches, no audit trail, added cost and non-determinism) — this generalizes that
   precedent rather than reopening it, and both fuzzy fallbacks built independently since ADR-007
   landed reached the same conclusion once tested against real cases.
+- **Live Levenshtein-distance matching (e.g. accept any pair within edit distance 1-2) as an
+  authoritative layer, even though it is cheaper and more deterministic than embeddings.**
+  Rejected for the same reason as the embedding case, not a weaker one: puzzle domain values are
+  frequently short words where a small edit distance separates two genuinely different values
+  (`Red`/`Bed`) as often as it separates a value from a real near-miss of itself, and these
+  strings come from an LLM rather than a fallible human typist, so the character-level typo this
+  distance is built to catch is a narrow slice of the variance actually observed.
 - **A fully automatic self-growing table, with a fuzzy match writing directly into it without
   review.** Rejected: removes the audit trail ADR-007 explicitly values ("applying an alias is
   recorded... so no normalization is ever silent") and risks one bad automatic addition silently
@@ -139,8 +166,10 @@ logged and auditable) to every consumer of `resolvesToAlias`, not only the produ
 - No data migrates: `eval/aliases.json` keeps its current shape and content, and
   `DomainAlternative.names` keeps living in catalog front-matter — this decision changes the
   code path each is read through, not the data itself.
-- A curation-assist tool that turns an embedding or LLM-judge suggestion into a reviewable
-  proposed alias-table entry is a natural next step this decision motivates but does not build.
+- A curation-assist tool that turns an embedding, LLM-judge, or Levenshtein-distance suggestion
+  into a reviewable proposed alias-table entry is a natural next step this decision motivates but
+  does not build. A small pluralization stemming step inside `comparisonKey` (§2.1) is similarly
+  motivated but not built here.
 - `eval/aliases.json` staying at one real entry, and `DomainAlternative.names` covering only a
   handful of puzzles, means the practical benefit of this consolidation grows as more entries get
   curated over time — this decision fixes the fragmentation, not the current sparseness of either
