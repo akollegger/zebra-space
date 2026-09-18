@@ -86,3 +86,4 @@ into the RFC rather than copied verbatim.
 | [SPIKE-012](SPIKE-012-graph-shaped-per-clue-pipeline/SPIKE.md) | Graph-Shaped Per-Clue Pipeline (Inventory → Group → Shape → Template-Typed Clues → Oracle Repair) | done | RFC-003 |
 | [SPIKE-013](SPIKE-013-vocabulary-construction-isolation/SPIKE.md) | Isolating Vocabulary Construction — Self-Consistency, Correctness, and Two Library Candidates | done | RFC-003 |
 | [SPIKE-014](SPIKE-014-informal-reasoning-formalization/SPIKE.md) | Informal Reasoning, Then Formalize the Whole CSP | done | RFC-003 |
+| [SPIKE-015](SPIKE-015-domain-substitution/SPIKE.md) | Domain Substitution as a Cheaper, Verifiable Generation Task | planned | RFC-001 |
