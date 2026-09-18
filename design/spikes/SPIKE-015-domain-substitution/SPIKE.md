@@ -36,35 +36,55 @@ name, entity id, ...) rather than choose/copy an existing span is exactly where 
 breaks (typos, missed occurrences, accidental collisions). This spike's method (§2) is designed
 specifically to avoid that failure mode rather than repeat it.
 
+**Narrowed scope for this first pass**: rather than asking the model to substitute every domain
+in a puzzle at once, §2 scopes down to ONE domain per call, identified by the model from raw
+prose alone (no domain list handed to it) — isolating a single, more basic capability question
+(can it correctly and completely characterize one domain from prose?) before compounding it with
+whole-puzzle consistency across several domains at once. Multi-domain substitution, if this
+narrower version succeeds, is a natural follow-up variant (see §4 Notes).
+
 ## 2. Method
 
 **The mapping the model produces is prose-space only — it never sees or reasons about MiniZinc.**
 Given SPIKE-014's own central finding (LLMs formalize prose into MiniZinc far less reliably than
 they solve or manipulate prose directly), asking a model to author or edit a `.mzn` identifier as
 part of this task would reintroduce exactly the failure surface this spike exists to avoid.
-Instead, the `.mzn` side is updated by a separate, purely mechanical bridging step (§2 step 3)
+Instead, the `.mzn` side is updated by a separate, purely mechanical bridging step (§2 step 4)
 that reuses machinery this project already built and validated for a related problem — never a
 second LLM-authored translation.
 
-1. **Select seed puzzles with an already-known-correct MiniZinc model AND catalog front-matter**
-   — the three entries lifted into `catalog/mzn/` from SPIKE-014's `formalize-mzn` frontier-tier
-   `MATCH` results (PZL-0002, PZL-0003, PZL-0007; PZL-0004 is hand-translated, also eligible).
-   Each corresponding `catalog/puzzles/PZL-NNNN-*.md` entry's `groundTruth.expectedDomains`
-   front-matter already states every domain's name and complete value list structurally (e.g.
-   PZL-0002: `color: [Blue, Red, Green]`, `animal: [Dog, Cat, Zebra]`) — giving the model an
-   explicit, closed list to substitute FROM, rather than asking it to first (re-)discover domains
-   by reading prose, which is a separate and unnecessary source of error here.
-2. **Ask the model for a substitution MAPPING over that known domain list, not a free rewrite** —
-   a forced, structured output: one `{domain, oldValue, newValue}` entry per value already listed
-   in `expectedDomains` (e.g. `{domain: "color", oldValue: "Red", newValue: "Coffee"}`). The model
-   only ever reads and writes prose-space value strings — never a MiniZinc identifier, never the
-   `.mzn` file itself. Code performs every substitution; the model only chooses values. This is
-   the deliberate fix for the SPIKE-011/012 failure class named in §1 — the model chooses
-   *values*, code performs the *substitution*.
-3. **Apply the SAME mapping to two independent targets, by two DIFFERENT mechanical methods**:
+1. **Select seed puzzles with an already-known-correct MiniZinc model** — the three entries
+   lifted into `catalog/mzn/` from SPIKE-014's `formalize-mzn` frontier-tier `MATCH` results
+   (PZL-0002, PZL-0003, PZL-0007; PZL-0004 is hand-translated, also eligible). Each corresponding
+   `catalog/puzzles/PZL-NNNN-*.md` entry's `groundTruth.expectedDomains` front-matter also
+   already states every domain's name and complete value list — **but this is used ONLY for
+   scoring afterward (step 3), never given to the model.** Handing the model the answer's own
+   domain list would reduce the task to copying from a list it was already given, which tells us
+   nothing about whether it can find and characterize a domain from prose at all — the actual
+   capability in question.
+2. **Ask the model, given ONLY the raw puzzle prose, to identify ONE domain and remap it** — not
+   all domains at once. A forced, structured output: `{domain: string, currentValues: string[],
+   mapping: {oldValue, newValue}[]}` — the model names one domain it found in the prose, reports
+   the COMPLETE current value set it believes that domain has (its own extraction, not fed to
+   it), and proposes a same-arity, same-kind replacement for each value. Scoping to one domain
+   (rather than every domain in the puzzle at once) keeps this first variant narrow and isolates
+   a single capability: can the model correctly and completely characterize one domain from
+   prose alone? The model only ever reads and writes prose-space value strings — never a
+   MiniZinc identifier, never the `.mzn` file itself. This is the deliberate fix for the
+   SPIKE-011/012 failure class named in §1 — the model chooses *values*, code performs the
+   *substitution*.
+3. **Score the model's own domain identification against `expectedDomains` BEFORE applying
+   anything** — did it name a real domain the puzzle actually uses, and does its reported
+   `currentValues` match that domain's true, complete value set (order-insensitive)? A
+   mismatch here (missed value, invented value, wrong domain entirely) is itself the primary
+   finding this narrower variant is designed to surface, and should be recorded as a distinct
+   failure class from anything that happens in step 4 onward — a wrong domain characterization
+   makes the rest of the pipeline moot for that rep, not worth silently working around.
+4. **Apply the mapping to two independent targets, by two DIFFERENT mechanical methods** (only
+   for reps that passed step 3's check):
    - **Puzzle prose**: literal find-and-replace of each `oldValue` with its `newValue`. Safe
-     because `expectedDomains`' values are guaranteed to appear verbatim in the prose (that's
-     what the front-matter records).
+     because step 3 already confirmed these values appear in the prose (that's what
+     `currentValues` reported, verified against ground truth).
    - **The already-known-correct `.mzn` model's enum members**: NOT literal find-and-replace —
      a `.mzn`'s enum-member spelling can differ from the prose's own spelling of the same value
      (exactly the case/separator gap SPIKE-014 §5.7 found and fixed for the grader, e.g.
@@ -77,7 +97,7 @@ second LLM-authored translation.
    Solving the mechanically-substituted `.mzn` (via `src/solver/solve.ts`, already exists, no new
    code) yields the substituted puzzle's TRUE answer — at **zero additional LLM cost**, since
    nothing had to solve or formalize the new puzzle to get it.
-4. **Verify independently**: run `direct-solve` (already exists, ADR-008) and/or `direct-mzn`
+5. **Verify independently**: run `direct-solve` (already exists, ADR-008) and/or `direct-mzn`
    (SPIKE-014 §5.10, already exists) on the NEW, substituted prose — with NO knowledge of the
    mapping or the mechanically-derived answer — and grade its result against that mechanically-
    derived true answer using the existing grader (`src/eval/grader.ts`). Repeat n reps per seed
@@ -85,7 +105,7 @@ second LLM-authored translation.
    equally-determinate puzzle (mapping covers every value exactly once, no accidental collision,
    substituted prose remains grammatical and unambiguous) versus how often re-solving the result
    fails for reasons unrelated to substitution at all.
-5. **Cost/reliability comparison**: record cost per rep for the substitution call alone (expected
+6. **Cost/reliability comparison**: record cost per rep for the substitution call alone (expected
    cheap — a short structured mapping, not a full puzzle solve or formalization) against
    SPIKE-014's own recorded `direct-solve`/`formalize-mzn`/`direct-mzn` costs, to test the "easier
    and cheaper than formalizing" hypothesis directly rather than assume it.
