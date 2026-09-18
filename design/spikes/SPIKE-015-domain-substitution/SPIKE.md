@@ -525,6 +525,60 @@ evidence the model can never find PZL-0011's real domain — worth more reps bef
 firmer conclusion, but a legitimate, expected outcome of the harness working as designed
 (reporting a miss precisely, not obscuring it), not something to patch.
 
+### 5.8 Majority-vote critic (3 votes) — filters random judge noise, leaves systematic bias untouched, and surfaced a genuinely new real finding
+
+§5.5/§5.6 both found the critic's biggest reliability problem was same-input-different-verdict
+noise, not consistent bugs. Added `judgeSubstitutionMajority` (`judge-substitution.ts`): 3
+parallel calls to the same critic, strict majority verdict, issues taken only from the votes
+agreeing with that majority. `run-domain-substitution.ts` now calls this instead of the single-
+call `judgeSubstitution`.
+
+Ran the default `REPS=3` sweep across all 6 seeds ($0.0075 — roughly 3x the single-call cost, as
+expected). Raw: `results/domain-substitution-openai-gpt-4o-mini-2026-09-18T14-37-21-873Z.json`.
+
+**Confirmed fix for the specific noise case this was built for**: PZL-0002, previously showing
+1/3 or 2/3 flakiness across every prior run in this session, came back 3/3 `VERIFIED` this run —
+consistent with the noise being genuinely random rather than a property of that puzzle's own
+substituted text (which never changed).
+
+**Immediately surfaced a genuinely new, real finding — not noise, since all 3 votes agreed**:
+PZL-0001 rep 1 was flagged 3/3 for a real grammatical defect the mapping itself introduced, not
+a mechanical apply bug (`mznApplied: 5, mznSkipped: []` — substitution ran cleanly). The model
+proposed replacing "Norwegian" with "Swedish" — but "Norwegian" doubles as a NOUN in English
+("the Norwegian" = a person), while "Swedish" is adjective-only ("the Swedish" needs a following
+noun, e.g. "the Swedish person"). The mechanical substitution correctly replaced every
+occurrence, faithfully reproducing this pre-existing ungrammaticality in the model's own value
+choice. This is a content-quality risk in the mapping proposal itself, not in `apply-to-prose.ts`
+or `apply-to-mzn.ts` — the critic caught something no amount of mechanism-level fixing could,
+because the defect isn't in the mechanism.
+
+**Majority voting reduces RANDOM noise; it does not fix a SYSTEMATIC bias, and it does not stop
+the critic from occasionally reasoning incorrectly — both still show up, unchanged in kind from
+before**:
+- PZL-0003's real-world-rock-paper-scissors-lizard-spock bias (§5.6) recurred 2/3 votes this run
+  ("Lizard beats spock (original: Paper beats rock)" flagged as wrong) — a systematic prior in
+  the critic model about this specific name pair, which no number of repeated votes on the SAME
+  prompt will out-vote away, since every vote shares the same bias.
+- PZL-0038 showed a NEW kind of critic unreliability: the critic itself reasoned incorrectly.
+  Rep 1 asserted `"a lion" should be "an lion"` — backwards; "lion" starts with a consonant
+  SOUND, so "a lion" is the correct form, not the substituted text. Rep 3 listed every
+  substituted sentence next to its original as if the difference itself were the defect
+  (`"The frog is in pen 1. (original: The tortoise is in pen 1.)"`), never naming an actual
+  problem — confusing "this text changed" with "this text is wrong." Both are the critic being
+  simply incorrect in its own reasoning, a different failure shape from either verdict-flipping
+  noise or a consistent real-world-knowledge bias.
+
+**PZL-0011's domain-match miss is no longer an `n=1` curiosity — it replicated 3/3 with the
+identical reason.** The model consistently proposes `[680, 750]` (the two credit-score numbers)
+as its "domain" for this puzzle, not the actual named `outcome` domain, despite the system
+prompt explicitly ruling out numbers/quantities. This is now a replicated, not speculative,
+finding: this puzzle's SHAPE (a procedural decision with prominent numeric facts stated before
+its one real named-value domain appears, only implicitly, inside the rule text) appears to be
+a genuine, consistent weak point for domain identification with this model — worth a stronger
+prompt (e.g. a short few-shot example distinguishing a decision outcome from a given numeric
+fact) as a follow-up, not something majority voting on the CRITIC (a different call entirely)
+could ever address.
+
 ## 6. Conclusion
 
 **First pass confirms the core hypothesis is worth pursuing, and sharpens exactly what to fix

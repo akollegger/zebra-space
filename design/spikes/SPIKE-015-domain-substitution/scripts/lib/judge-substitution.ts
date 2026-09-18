@@ -58,7 +58,9 @@ function errorDetail(e: ProviderError | SchemaRejected | SchemaViolation): strin
 
 /** One critic call: judges whether a mechanical prose substitution is well-formed. Never solves
  * the puzzle — see substitution-judgment-schema.ts's header for why (ADR-007/RFC-003 §7.3's
- * well-posedness/solving distinction). */
+ * well-posedness/solving distinction). Noisy on its own (SPIKE.md §5.5/§5.6 found
+ * same-input-different-verdict cases) — prefer judgeSubstitutionMajority below for anything
+ * whose result gets reported as a finding. */
 export async function judgeSubstitution(
   model: string,
   originalProse: string,
@@ -81,4 +83,54 @@ export async function judgeSubstitution(
     ),
   )
   return attempt
+}
+
+export interface JudgeSubstitutionMajorityResult {
+  /** undefined only when every vote's call failed — see `error` in that case. */
+  readonly wellFormed: boolean | undefined
+  /** Issues from the votes that agree with the majority verdict, deduplicated. */
+  readonly issues: readonly string[]
+  /** Sum of every vote's cost, including failed calls (a failed call may still be billed). */
+  readonly costUsd: number
+  /** Every successful vote's own verdict, for transparency/debugging a disagreement. */
+  readonly votes: readonly { readonly wellFormed: boolean; readonly issues: readonly string[] }[]
+  readonly ok: boolean
+  readonly error?: string
+}
+
+/** Repeats judgeSubstitution `voteCount` times (in parallel — same cost either way) and takes a
+ * strict majority verdict, to filter out the single-call noise SPIKE.md §5.5/§5.6 found
+ * (byte-identical input scoring a different verdict from one call to the next). Defaults to 3
+ * votes — odd, so no tie is possible at the default. A failed call is excluded from voting but
+ * still counted in `costUsd`; if every call fails, `wellFormed` is undefined and `error` is set. */
+export async function judgeSubstitutionMajority(
+  model: string,
+  originalProse: string,
+  substitutedProse: string,
+  mapping: readonly { readonly oldValue: string; readonly newValue: string }[],
+  voteCount = 3,
+): Promise<JudgeSubstitutionMajorityResult> {
+  const results = await Promise.all(
+    Array.from({ length: voteCount }, () => judgeSubstitution(model, originalProse, substitutedProse, mapping)),
+  )
+  const costUsd = results.reduce((sum, r) => sum + (r.costUsd ?? 0), 0)
+  const successful = results.filter((r): r is JudgeSubstitutionResult & { judgment: SubstitutionJudgment } => r.ok && r.judgment !== undefined)
+
+  if (successful.length === 0) {
+    const errors = results.map((r) => r.error).filter((e): e is string => e !== undefined)
+    return { wellFormed: undefined, issues: [], costUsd, votes: [], ok: false, error: errors.join("; ") || "all judge calls failed" }
+  }
+
+  const trueVotes = successful.filter((r) => r.judgment.wellFormed).length
+  const wellFormed = trueVotes > successful.length / 2
+  const agreeing = successful.filter((r) => r.judgment.wellFormed === wellFormed)
+  const issues = [...new Set(agreeing.flatMap((r) => r.judgment.issues))]
+
+  return {
+    wellFormed,
+    issues,
+    costUsd,
+    votes: successful.map((r) => ({ wellFormed: r.judgment.wellFormed, issues: r.judgment.issues })),
+    ok: true,
+  }
 }

@@ -11,6 +11,10 @@
 // signal, and it was testing the wrong downstream capability (formalizing, not the well-
 // posedness of the substitution itself, per ADR-007/RFC-003 §7.3's established distinction).
 //
+// The critic call is a 3-vote majority (judgeSubstitutionMajority, per SPIKE.md §5.8) — §5.5/
+// §5.6 both found byte-identical input scoring a different single-call verdict, so one call's
+// wellFormed is judge noise as much as it is signal. 3x's the judge cost, not the mapping cost.
+//
 // Usage: node --env-file-if-exists=.env design/spikes/SPIKE-015-domain-substitution/scripts/run-domain-substitution.ts
 // REPS=<n> overrides the default of 3. MODEL=<model> overrides the default gpt-4o-mini.
 
@@ -25,7 +29,7 @@ import { requestDomainMapping } from "./lib/request-mapping.ts"
 import { scoreDomainMatch } from "./lib/score-domain-match.ts"
 import { applyMappingToProse } from "./lib/apply-to-prose.ts"
 import { applyMappingToMzn } from "./lib/apply-to-mzn.ts"
-import { judgeSubstitution } from "./lib/judge-substitution.ts"
+import { judgeSubstitutionMajority } from "./lib/judge-substitution.ts"
 import type { SolveResult, SolverError } from "../../../../src/solver/types.ts"
 
 const MODEL = process.env.MODEL ?? "openai/gpt-4o-mini"
@@ -91,6 +95,7 @@ interface RepOutcome {
   readonly mznSkipped?: readonly { readonly oldValue: string; readonly newValue: string; readonly reason: string }[]
   readonly wellFormed?: boolean
   readonly issues?: readonly string[]
+  readonly judgeVotes?: readonly { readonly wellFormed: boolean; readonly issues: readonly string[] }[]
   readonly substitutedProse?: string
 }
 
@@ -146,8 +151,8 @@ async function runOne(puzzleId: string, prose: string, seedMzn: string): Promise
     }
   }
 
-  const judged = await judgeSubstitution(MODEL, prose, substitutedProse, proposal.mapping)
-  if (!judged.ok || judged.judgment === undefined) {
+  const judged = await judgeSubstitutionMajority(MODEL, prose, substitutedProse, proposal.mapping)
+  if (!judged.ok || judged.wellFormed === undefined) {
     return {
       outcome: "JUDGE_CALL_FAILED",
       detail: judged.error ?? "unknown",
@@ -161,15 +166,16 @@ async function runOne(puzzleId: string, prose: string, seedMzn: string): Promise
   }
 
   return {
-    outcome: judged.judgment.wellFormed ? "VERIFIED" : "SUBSTITUTION_NOT_WELL_FORMED",
-    detail: judged.judgment.issues.join("; "),
+    outcome: judged.wellFormed ? "VERIFIED" : "SUBSTITUTION_NOT_WELL_FORMED",
+    detail: judged.issues.join("; "),
     mappingCostUsd: mapped.costUsd,
     judgeCostUsd: judged.costUsd,
     domainMatchReason: match.reason,
     mznApplied: applied,
     mznSkipped: skipped,
-    wellFormed: judged.judgment.wellFormed,
-    issues: judged.judgment.issues,
+    wellFormed: judged.wellFormed,
+    issues: judged.issues,
+    judgeVotes: judged.votes,
     substitutedProse,
   }
 }
