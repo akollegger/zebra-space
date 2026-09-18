@@ -134,6 +134,53 @@ one more Stage-2 prompt, not a second pipeline.
    this variant measures, and simpler than standing up a real patch/diff library for a spike.
    Still bounded to ONE lint-then-apply round per rep, for direct comparison against
    `oracle-repair`'s own one-round bound.
+8. **`formalize-mzn+selfcheck-repair` (5th variant, added 2026-09-16, in response to "any
+   hypothesis about how to close the [direct-solve vs. formalize-mzn] gap?")**: neither prior
+   repair variant can even ATTEMPT a repair on a `SOLVE_UNIQUE`+`MISMATCH` rep — both `oracle-
+   repair` and `lint-repair` trigger only on `SOLVE_ERROR`/`Unsatisfiable`/`MultiplySatisfiable`,
+   because there is no ground truth at deployment time to detect a syntactically-fine-but-wrong
+   unique solve. This variant adds a cheap substitute for ground truth that's already sitting in
+   the pipeline: Stage 1's own worked solution already states a candidate final answer. When
+   Stage 2 solves UNIQUELY on a determinate puzzle, one forced-tool-call asks whether the solved
+   assignment matches the conclusion Stage 1's own trace reached (no puzzle-specific ground truth
+   needed — just internal self-consistency); a disagreement feeds the SAME lint-repair mechanism
+   §5.6 already validated (structured findings, exact-match applied in code), reusing it
+   unchanged rather than inventing a new apply mechanism, since §5.6's own finding was that
+   application was never the bottleneck. Gated to determinate puzzles only, matching the existing
+   `isDeterminate` gate on the solve-outcome trigger — a COP/ambiguous/subjective/non-problem
+   puzzle has no single "correct" answer for Stage 1 to disagree WITH, so firing this check on
+   those classes would only repair perfectly fine models against a nonsense signal (found live
+   during this variant's own dry run — see §5.8). Still bounded to ONE round of repair per rep,
+   whichever trigger fired it.
+9. **`formalize-mzn+structured-prose` (6th variant, added 2026-09-16, testing a specific
+   hypothesis about WHY translation is harder than solving)**: `formalize-mzn`'s dominant
+   remaining failure modes (§5.3, §5.4) look like a completeness problem, not a reasoning
+   problem — solving lets the model track constraints implicitly and incrementally (apply a
+   clue, narrow the space, move on) without ever declaring a complete, closed constraint set;
+   `formalize-mzn` then asks for that complete, syntactically-exact set in the SAME pass it also
+   has to get MiniZinc's unfamiliar grammar right in. This variant splits Stage 2 into two
+   single-calls: **2a** restates the completed solve as an explicit, structured-but-natural-
+   language draft (entities, domains — explicitly flagged named-category vs. numeric — and
+   EVERY constraint as its own sentence, including ones the solution applied without ever
+   writing out, e.g. an implied global uniqueness constraint), in a format with no compiler to
+   reject it; **2b** transcribes ONLY that draft (not the original prose or raw trace) into
+   MiniZinc, reusing `formalize-mzn`'s own post-fix authoring rules verbatim. The named risk
+   going in: SPIKE-013 §5.8 (`post-hoc-shaped`) found that decomposing formalization — even with
+   the solved trace as context — regressed vocabulary construction almost back to blind-guess
+   numbers; this is a different shape of split (two single-calls, closer to parse→codegen than
+   per-clue tool calls) but the same failure mode was a real possibility, not assumed away.
+10. **`direct-mzn` and `direct-structured-prose` (7th/8th variants, added 2026-09-18, in
+    response to "have we tested skipping Stage 1 entirely, on the SAME two model tiers already
+    used in this spike?")**: every variant above is given the puzzle prose AND an
+    already-completed Stage-1 trace to transcribe FROM. Neither isolates whether that trace
+    actually matters — a model could formalize just as well (or badly) straight from the puzzle,
+    with no prior free-solve step at all. `direct-mzn` is `formalize-mzn`'s own authoring prompt
+    with the trace removed (one call, puzzle prose -> MiniZinc, no worked solution to lean on);
+    `direct-structured-prose` is the same removal applied to `+structured-prose`'s Stage 2a (one
+    call, puzzle prose -> structured-prose restatement, then Stage 2b unchanged). Run at BOTH
+    `gpt-4o-mini` and `claude-sonnet-4.5` — the same two tiers this spike already measured with
+    the trace present, not a new capability floor — for a clean with-trace/without-trace
+    comparison at each tier.
 
 ## 3. Time-box
 
@@ -214,6 +261,38 @@ to the answer key's own literal string, unlike `ExtractedCsp`-based paths). This
 defect, not a `formalize-mzn`-specific one — see §5.7 for the fix, its blast radius across every
 other spike/architecture in this project, and the corrected numbers for every affected result in
 this spike (§5.2, §5.3, §5.5, §5.6 all shift up slightly; the qualitative conclusions do not).
+
+**2026-09-16 — built `formalize-mzn+selfcheck-repair` (5th variant) in response to "any
+hypothesis about how to close the gap?"** First live dry run (2 puzzles, n=1 each) validated the
+mechanism runs end-to-end and behaves sensibly on two cases that turned out NOT to need repair
+(Stage 1 and Stage 2 genuinely agreed; the residual grading gap traced to a narrower, still-open
+digit-prefixed-identifier issue — e.g. `T9am` vs. the answer key's `9am` — distinct from §5.7's
+already-fixed case/separator gap). Full first sweep (n=3×14, ungated) regressed to **10/42**,
+WORSE than no repair at all — traced immediately to firing the self-check on COP/ambiguous/non-
+problem puzzles (PZL-0018/0022/0028), where there's no single "correct" answer for Stage 1 to
+disagree with, so it "corrected" perfectly fine models against a nonsense signal. Fixed by gating
+the self-check to determinate puzzles only (matching the existing gate on the solve-outcome
+trigger) and re-ran: **14/42**, beating every prior variant in this spike, with a clean,
+mechanistically-explained recovery: 3/3 self-check-triggered repairs recovered to `MATCH` (vs.
+0/14 for the old solve-outcome-triggered repairs, unchanged from §5.5/§5.6). Written up as §5.8.
+
+**2026-09-16 — built `formalize-mzn+structured-prose` (6th variant) in response to "why is
+translation harder than solving, and could a more-formal prose intermediate close the gap?"**
+Named the decomposition risk from SPIKE-013 §5.8 up front, then ran anyway since the shape of
+split differs. Live dry run (n=1, all 14 puzzles, $0.0083) confirmed the two-call mechanism runs
+end-to-end and already showed the same `enum`-for-numeric-values mistake `formalize-mzn` itself
+has: 3/14 MATCH. Full sweep (n=3×14, `gpt-4o-mini`, $0.0233): **8/42 (19%)** — worse than
+`formalize-mzn` alone's 13/42 (31%), with `SOLVE_ERROR` UP to 18/42 (43%) from 9/42 (21%). The
+decomposition-regression risk named going in is exactly what happened; written up as §5.9.
+
+**2026-09-18 — built `direct-mzn`/`direct-structured-prose` (7th/8th variants) to test whether
+the Stage-1 trace matters at all**, on the SAME two tiers already used (`gpt-4o-mini`,
+`claude-sonnet-4.5`), not a new weaker model. Live dry runs (n=1, $0.004-$0.24 depending on
+model/variant) confirmed both mechanisms run end-to-end before committing to full sweeps. Full
+n=3×14 sweeps: cheap tier cost $0.011 (`direct-mzn`) and $0.024 (`direct-structured-prose`);
+frontier tier cost far more than estimated going in ($0.31 and $0.73, against an initial
+estimate of $0.10-0.20 — confirmed with the user before spending, per this session's own
+cost-then-go-ahead discipline). Written up as §5.10.
 
 ## 5. Findings
 
@@ -592,6 +671,184 @@ targets are more capable of SOLVING a puzzle than of TRANSLATING/COMPILING it in
 form) generalizes to the frontier tier, and isn't a cheap-tier-specific familiarity gap with
 MiniZinc. It's real, and it's the same shape at both tiers measured so far.
 
+### 5.8 `formalize-mzn+selfcheck-repair` (5th variant): checking against Stage 1's own answer beats checking against the solve-outcome class alone
+
+§5.5/§5.6 both plateaued at the exact same 13/42, for the same diagnosed reason: neither repair
+variant could even ATTEMPT a fix on a `SOLVE_UNIQUE`+`MISMATCH` rep, since both trigger only on
+`SOLVE_ERROR`/`Unsatisfiable`/`MultiplySatisfiable` — there's no ground truth at deployment time
+to detect a syntactically-fine-but-wrong unique solve. This variant adds a substitute for ground
+truth that costs nothing extra to obtain: Stage 1's own worked solution already states a
+candidate final answer. One forced-tool-call, fired only when Stage 2 solves UNIQUELY on a
+determinate puzzle, asks whether the solved assignment matches Stage 1's own conclusion; a
+disagreement feeds the exact same lint-repair mechanism (§5.6) unchanged.
+
+**A first, ungated attempt regressed to 10/42 — worse than no repair at all.** The self-check
+fired on every `SOLVE_UNIQUE` rep regardless of puzzle type, including COP (PZL-0022), ambiguous
+(PZL-0028), and non-problem (PZL-0018) puzzles — classes with no single "correct" answer for
+Stage 1 to disagree WITH. On these, the check produced a nonsense signal (Stage 1's free-prose
+conclusion doesn't cleanly correspond to a determinate answer to compare against), triggering
+repair on models that were already fine and sometimes breaking them. Concretely: PZL-0022 (a COP
+puzzle) had reps that reached `OPTIMUM_ATTAINED` or a reasonable `FEASIBLE_ONLY` on their own,
+"repaired" into a worse state purely because the self-check had nothing sensible to compare
+against. **Fixed by gating the self-check to determinate puzzles only** — the same
+`isDeterminate` condition the solve-outcome trigger already used — found and fixed within the
+same pass, before spending anything further on a flawed mechanism.
+
+**The corrected, gated run: 14/42 (33%) — the best result in this spike, at $0.0151 (cheaper than
+either prior repair variant).**
+
+| | `formalize-mzn` (§5.3) | `+oracle-repair` (§5.5) | `+lint-repair` (§5.6) | `+selfcheck-repair` |
+|---|---|---|---|---|
+| MATCH | 13/42 (31%) | 13/42 (31%, corrected) | 13/42 (31%, corrected) | **14/42 (33%)** |
+| Cost | $0.0114 | $0.0182 | $0.0154 | $0.0151 |
+
+**The mechanistic contrast is the real finding, not the one-point headline gain.** Splitting this
+run's repairs by WHICH trigger fired them:
+
+| Trigger | Fired | Recovered to `MATCH` |
+|---|---|---|
+| Solve-outcome (`SOLVE_ERROR`/`Unsatisfiable`/`MultiplySatisfiable`) — same signal §5.5/§5.6 used | 14/42 | 0/14 (0%) |
+| Self-check discrepancy (new) | 3/42 | 3/3 (100%) |
+
+Every self-check-triggered repair in this sample recovered to `MATCH`; every solve-outcome-
+triggered repair in this sample did not — the identical pattern §5.5/§5.6 already found, now
+directly confirmed against a THIRD, better-diagnosed trigger rather than assumed. This is a small
+sample (3 successes) and shouldn't be over-read as "self-check repair always works" — but it
+directly confirms the hypothesis behind building this variant: **the bottleneck was never really
+about the repair-application mechanism (already fixed, §5.6) or even about having a signal at
+all (§5.5/§5.6 had one) — it's specifically that the solve-outcome-class signal is too coarse to
+diagnose a `SOLVE_UNIQUE`-but-wrong model, and a cheap, no-ground-truth-needed substitute (Stage
+1's own stated answer) is a genuinely better diagnostic for the one outcome class every prior
+repair variant was structurally blind to.**
+
+**What this doesn't fix**: self-check only ever fires 3-14/42 times (rare, since most `SOLVE_
+UNIQUE` reps already agree with Stage 1, correctly) and only helps when Stage 1's OWN reasoning
+was right to begin with — if Stage 1 itself got the puzzle wrong, a consistent-but-wrong pair
+raises no flag. It also doesn't touch §5.4's OTHER diagnosed failure class (silently dropping a
+stated constraint, incomplete relational coverage) when the resulting solve still happens to
+agree with Stage 1's own (also incomplete) conclusion. A meaningful, well-isolated improvement,
+not a solved problem.
+
+**Frontier-tier re-run (`claude-sonnet-4.5`, recommendation 6 acted on): 21/42 (50%), and an
+honestly different, less flattering story than the cheap tier.** Raw: `results/formalize-mzn-
+selfcheck-repair-2026-09-16T18-34-49-722Z.json`, **$0.5663**. Regraded against the current
+(already-fixed) grader with zero verdict changes — confirms this run isn't hiding any further
+case/separator-fold undercounting. But **the repair mechanism itself did NOTHING in this entire
+run**: self-check fired 27/42 times and found zero discrepancies (0/27); solve-failure repair
+fired only 2/42 times (both `FEASIBLE_ONLY` COP reps, neither recovered). Every rep's final
+verdict is exactly what a plain `formalize-mzn` call would have produced — the 21/42 vs. the
+corrected `formalize-mzn`-alone frontier baseline's 20/42 (§5.7) is a ±1 difference between two
+independently-sampled runs, not a demonstrated effect of this variant's repair logic. **At this
+tier, when Stage 2 solves uniquely, it (near-)always already agrees with Stage 1's own
+conclusion** — the self-check has nothing to catch, unlike the cheap tier where it caught 3/14
+and fixed all 3.
+
+Manually re-verifying (this session's now-standing practice of not taking a raw `SOLVE_UNIQUE`+
+`MISMATCH` count at face value) the 2 puzzles still graded `MISMATCH` here — PZL-0010 and
+PZL-0012, the SAME two puzzles §5.7's own re-verification of the un-repaired frontier baseline
+already flagged — found **both are actually correct solves**, hidden by two further grading gaps
+distinct from §5.7's already-fixed one: PZL-0012's model wrote `enum TIME = {T9, T11, T16}`, a
+digit-prefixed identifier convention (`T9` vs. the answer key's `9am`) the case/separator fix
+doesn't bridge; PZL-0010's model is genuinely correct (`order[South]=1`, then `Pedestrian <
+East < North < West` — exactly `South, Pedestrian, East, North, West`) but represents it as
+"each entity's rank," the inverse of the answer key's "each rank's entity," which the grader's
+array-alignment logic can't reconcile. Neither is something `checkSelfConsistency` could
+plausibly be expected to catch — it verifies Stage 1↔Stage 2 agreement, not answer-key
+correctness, and correctly reported "consistent" on both since Stage 1 and Stage 2 genuinely DO
+agree; the grader's remaining blind spot is a separate problem. Left open, not fixed here — two
+more named, narrow grading gaps for a future pass, same spirit as §5.7's PZL-0007 finding.
+
+### 5.9 `formalize-mzn+structured-prose` (6th variant): decomposition regressed, confirming SPIKE-013's warning in a new shape
+
+Raw: `results/formalize-mzn-structured-prose-2026-09-16T19-05-12-504Z.json`. n=3 × 14 puzzles,
+`gpt-4o-mini` for Stage 1 (already-collected trace), Stage 2a (structured-prose restatement), and
+Stage 2b (translate that restatement into MiniZinc). **$0.0233 total.**
+
+| | `formalize-mzn` (§5.3, single-call) | `+structured-prose` (two-call) |
+|---|---|---|
+| MATCH | 13/42 (31%) | **8/42 (19%)** |
+| `SOLVE_ERROR` | 9/42 (21%) | **18/42 (43%)** |
+| Cost | $0.0114 | $0.0233 |
+
+**Splitting formalization into "restate explicitly, then transcribe" made things worse, not
+better — the hypothesis this variant existed to test did not hold.** The specific mechanism
+this split was meant to fix (§5.4's silent completeness failures — a dropped `alldifferent`, a
+partially-transcribed relation) was not what got worse; instead, `SOLVE_ERROR` roughly doubled.
+Inspecting the raw MiniZinc: the SAME `enum`-for-numeric-values mistake `formalize-mzn` §5.2/§5.3
+already catalogued recurred just as often here (`enum CreditScore`, `enum TIME_SLOT = {9, 11,
+16}`, `enum TIME = {9am, ...}` — three separate puzzles this run alone), plus a NEW, more
+frequent failure not seen at this rate in `formalize-mzn` alone: `undefined identifier 'i'`/`'j'`
+generator-scope errors, on puzzles (PZL-0010, PZL-0028, PZL-0033, PZL-0038) where Stage 2b's
+nesting instruction is identical to `formalize-mzn`'s own. The plausible reason: Stage 2a's
+structured-prose restatement describes a compound ordering constraint in ENGLISH sentence form
+(e.g. "X's position is directly before Y's, which is somewhere before Z's"), which reads as a
+flat list of relations with no explicit nesting structure — Stage 2b then has to INVENT the
+correct `exists`-nesting from prose that never showed it one, a harder task than `formalize-mzn`
+transcribing directly from Stage 1's own trace, where the nesting (if present at all) came from
+the model's own prior reasoning about the SAME puzzle in the SAME call.
+
+**This is SPIKE-013 §5.8's warning, confirmed in a different shape of decomposition.**
+`post-hoc-shaped` decomposed formalization into per-clue tool calls; this variant decomposes into
+two single-calls (restate, then translate) — structurally closer to a compiler's parse→codegen
+split than to per-clue decomposition, and named as a materially different risk profile when this
+variant was scoped in (§2 point 9). It regressed anyway, for a related but distinct reason: not
+because per-clue isolation lost cross-clue context (this variant's Stage 2a explicitly restates
+the WHOLE problem in one pass), but because moving from "the model's own prior reasoning trace"
+to "a fresh natural-language restatement of that reasoning" discards exactly the structural
+information (how a compound relation was actually nested/ordered) that `formalize-mzn`'s direct
+trace-to-MiniZinc transcription could still lean on. **Two different decompositions, two different
+mechanisms, the same directional result: adding an intermediate stage between the completed solve
+and the target language does not reliably help, and can concretely hurt** by discarding structure
+the more direct path retains.
+
+### 5.10 `direct-mzn`/`direct-structured-prose` (7th/8th variants): the Stage-1 trace helps, but by less than this spike's own architecture assumed
+
+Raw: `results/direct-mzn-openai-gpt-4o-mini-2026-09-16T19-55-45-866Z.json`,
+`results/direct-structured-prose-openai-gpt-4o-mini-2026-09-16T19-58-20-613Z.json`,
+`results/direct-mzn-anthropic-claude-sonnet-4-5-2026-09-18T07-25-45-739Z.json`,
+`results/direct-structured-prose-anthropic-claude-sonnet-4-5-2026-09-18T07-29-47-586Z.json`. All
+n=3 × 14 puzzles.
+
+| Variant | Trace? | `gpt-4o-mini` MATCH | Cost | `claude-sonnet-4.5` MATCH | Cost |
+|---|---|---|---|---|---|
+| `formalize-mzn` | yes | 13/42 (31%) | $0.0114 | 20/42 (48%, corrected §5.7) | not separately billed this run |
+| `direct-mzn` | **no** | 11/42 (26%) | $0.0110 | **17/42 (40%)** | $0.3105 |
+| `+structured-prose` | yes | 8/42 (19%) | $0.0233 | not run | — |
+| `direct-structured-prose` | **no** | 7/42 (17%) | $0.0237 | **18/42 (43%)** | $0.7293 |
+
+**The trace helps, consistently, at both tiers — but the effect is a modest 5-8 points, not the
+dominant driver of the solve-vs-formalize gap.** Removing it entirely (`direct-mzn` vs.
+`formalize-mzn`) costs 5 points at cheap tier (31%→26%) and 8 points at frontier (48%→40%) — real
+and directionally consistent, but small next to the ~35-45 point gap between EITHER of these and
+`direct-solve`'s own judge-graded rate (64%/93%). This means most of this spike's central finding
+(formalizing is harder than solving) is NOT explained by "the model needs its own prior reasoning
+to lean on" — a model asked to formalize cold, with no prior solve at all, gets most of the way
+to the with-trace number. The harder-to-formalize-than-to-solve gap is mostly about something
+else: writing syntactically/semantically correct MiniZinc under real verification, not about
+whether a completed derivation is available to transcribe from.
+
+**A genuine reversal between tiers, worth flagging even at this sample size.** At cheap tier,
+`direct-mzn` (26%) clearly beat `direct-structured-prose` (17%) — consistent with §5.9's finding
+that the structured-prose intermediate costs accuracy. At frontier tier, that ordering flips:
+`direct-structured-prose` (43%) slightly edges out `direct-mzn` (40%). n=42 makes a single
+8-point swing inside plausible noise, but the CONSISTENT DIRECTION (the intermediate's relative
+cost shrinking, then reversing, as capability rises) is at least suggestive that whether an
+explicit semi-formal restatement helps or hurts may be capability-dependent — plausibly because a
+more capable model is better at preserving the derivation-order structure §5.9 found the cheap
+tier's restatement discarding, closer to the "should recover most of the loss" ablation proposed
+in this session's own hypothesis discussion, though not yet directly tested (that ablation would
+still need the trace present, which this variant deliberately removes).
+
+**A practical architecture point this surfaces, not just an accuracy one**: this spike's
+`formalize-mzn` reuses ALREADY-COLLECTED Stage-1 traces at zero marginal cost, so its own
+$0.01-0.02 (cheap tier) figures never had to account for Stage 1's own cost. A live system
+does — direct-solve's own generation cost is not free at deployment time. If Stage 1 only buys
+5-8 points of MATCH rate, a real deployment weighing "pay for a separate solve pass, then
+formalize" against "just formalize cold" is trading a real, nonzero Stage-1 cost for a modest
+accuracy gain, not a decisive one — a genuinely open cost/accuracy call this spike surfaces but
+does not resolve (it was never designed to price Stage 1's own generation cost, only to test
+whether reusing an already-paid-for trace helps).
+
 ## 6. Conclusion
 
 **Decoupling informal reasoning from formal emission generalizes from vocabulary to the whole
@@ -623,18 +880,25 @@ resemble a JSON-schema violation. Trading one schema's failure surface for a com
 different, and evidently more tractable, one is the actual mechanism behind this result, not a
 coincidence.
 
-**Two repair mechanisms were tried on top of `formalize-mzn`, and neither improved the MATCH
-rate — for an interesting, well-isolated reason.** `oracle-repair` (§5.5, whole-model
-regeneration from a coarse hint) and `lint-repair` (§5.6, structured findings applied as
-exact-match edits) landed at the same 13/42 (corrected, §5.7) as no repair at all — an exact tie,
-not merely "within noise." §5.6 specifically isolates WHY: making the application mechanism provably safe (never
-touches anything outside what it's told to fix) did not change the outcome, which means the
-bottleneck was never really about how a fix gets applied — it's that a single, coarse,
-outcome-class-only signal (no per-clue ground truth, no independent check that a proposed fix is
-complete) isn't enough to reliably diagnose what's actually wrong. `ExtractedCsp`'s per-clue
-tagging (SPIKE-012) is what makes ITS OWN repair loop able to localize a fix precisely; giving
-that up for `formalize-mzn`'s representation win (§5.1 vs. §5.2/§5.3) also gives up that
-diagnostic leverage, and no amount of engineering the APPLICATION step recovers it.
+**Three repair mechanisms were tried on top of `formalize-mzn`; the first two didn't improve the
+MATCH rate, and the third — the one built around a better SIGNAL, not a better applicator —
+did, modestly, for exactly the reason the first two predicted.** `oracle-repair` (§5.5,
+whole-model regeneration from a coarse hint) and `lint-repair` (§5.6, structured findings applied
+as exact-match edits) both landed at the same 13/42 (corrected, §5.7) as no repair at all — an
+exact tie, not merely "within noise." §5.6 specifically isolates WHY: making the application
+mechanism provably safe (never touches anything outside what it's told to fix) did not change the
+outcome, which means the bottleneck was never really about how a fix gets applied — it's that a
+single, coarse, outcome-class-only signal (no per-clue ground truth, no independent check that a
+proposed fix is complete) isn't enough to reliably diagnose what's actually wrong. `selfcheck-
+repair` (§5.8) tests that diagnosis directly by reusing `lint-repair`'s own, already-validated
+application mechanism unchanged and swapping in a better signal — comparing the solved assignment
+against Stage 1's own stated conclusion, no ground truth needed — and reached 14/42, with every
+self-check-triggered repair in the sample recovering to `MATCH` (3/3) against zero for the
+old solve-outcome-triggered repairs (0/14, unchanged from §5.5/§5.6). `ExtractedCsp`'s per-clue
+tagging (SPIKE-012) is what makes ITS OWN repair loop able to localize a fix precisely;
+`formalize-mzn` doesn't have that structure to give up (§5.1 vs. §5.2/§5.3), but §5.8 shows a
+cheap substitute — checking against Stage 1's own answer — recovers some of that same diagnostic
+leverage without it.
 
 **Recommended next steps**:
 1. `formalize-mzn`'s remaining `SOLVE_ERROR` causes (§5.3) are narrow and plausibly cheap to
@@ -645,13 +909,15 @@ diagnostic leverage, and no amount of engineering the APPLICATION step recovers 
    designing around — a silent, confidently-wrong unique result has no mechanical remedy and
    won't from prompting alone; any future work claiming higher confidence in this architecture
    should say explicitly which of the two failure classes its evidence actually rules out.
-3. A real fix for `formalize-mzn`'s repair ceiling (§5.5/§5.6) needs better DIAGNOSIS, not a
-   better patch-application mechanism — that half is already solved. Candidates worth trying
-   before assuming this ceiling is fixed: an independent second formalization pass to
-   cross-check against (closer to what `ExtractedCsp`'s per-clue structure gives SPIKE-012 for
-   free), or asking the model to verify its OWN model against each individual clue in turn
-   (closer to SPIKE-008's back-translation critic, previously found only partially effective for
-   this exact class of problem) before repair, not after.
+3. A real fix for `formalize-mzn`'s repair ceiling (§5.5/§5.6) needed better DIAGNOSIS, not a
+   better patch-application mechanism — §5.8 confirms this directly: checking the solved
+   assignment against Stage 1's own stated conclusion (free — no new ground truth, no extra
+   pipeline stage) moved MATCH from 13/42 to 14/42, with every self-check-triggered repair in
+   the sample recovering (3/3) against zero for the old outcome-class-only trigger (0/14).
+   Remaining candidates for further diagnostic leverage, not yet tried: asking the model to
+   verify its OWN model against each individual clue in turn (closer to SPIKE-008's
+   back-translation critic, previously found only partially effective for this exact class of
+   problem), or an independent second formalization pass to cross-check against.
 4. This spike's method (solve first, formalize the completed solve, verify via compile/solve) is
    confirmed as sound and worth building on; the open engineering questions are now narrowly
    about `formalize-mzn`'s prompt quality and repair diagnosis, not about whether this
@@ -663,5 +929,53 @@ diagnostic leverage, and no amount of engineering the APPLICATION step recovers 
    confirms the solve-vs-formalize gap is real and tier-independent, which sharpens (not
    undermines) recommendation 3 above — better diagnosis, not more prompt engineering at the
    cheap tier alone, is the right next investment.
+6. `selfcheck-repair` (§5.8) run at the frontier tier: 21/42 (50%), essentially flat against the
+   corrected `formalize-mzn`-alone baseline (20/42) — but honestly, not because the mechanism
+   failed to help; it never got the chance to. Self-check fired 27/42 times and found ZERO
+   discrepancies; at this tier, Stage 2 already agrees with Stage 1 almost every time it solves
+   uniquely, unlike the cheap tier (§5.8's own 3/14 catch rate). The frontier tier's remaining
+   gap (recommendation 5b) is NOT a Stage-1-vs-Stage-2 disagreement — it needs a different
+   diagnostic than this variant provides, not a bigger dose of the same one.
+7. Verifying recommendation 6 surfaced two MORE grading gaps, distinct from §5.7's already-fixed
+   one, both still open: a digit-prefixed-identifier convention (`T9` vs. the answer key's `9am`,
+   PZL-0012) and a rank-vs-name array inversion the grader's alignment logic can't reconcile
+   (PZL-0010, a genuinely correct solve represented as "each entity's rank" rather than "each
+   rank's entity"). Both were present in BOTH the un-repaired frontier baseline (§5.7) and this
+   variant's own frontier run — a pre-existing limitation this spike surfaced, not something
+   `selfcheck-repair` introduced. If fixed, the frontier tier's TRUE `formalize-mzn`-family rate
+   is closer to 23/42 (55%) than the reported 20-21/42 — still well below `direct-solve`'s 93%,
+   so this doesn't change recommendation 5b's conclusion, only its precision.
+8. **`structured-prose` (§5.9) tested and ruled out a specific closing-the-gap hypothesis: an
+   explicit natural-language intermediate between the completed solve and MiniZinc.** It
+   regressed MATCH from 13/42 to 8/42 and roughly doubled `SOLVE_ERROR` (9/42 → 18/42) — a
+   genuinely negative result, not noise, and mechanistically distinct from why
+   `post-hoc-shaped` regressed in SPIKE-013: here, restating a compound relation in prose form
+   discards the nesting structure `formalize-mzn`'s direct trace-to-MiniZinc transcription could
+   still lean on. Combined with recommendation 3's own finding (better diagnosis, not more
+   pipeline stages, is what moved `formalize-mzn`'s number), the pattern across this entire spike
+   is now consistent: single-call, direct transcription from the completed reasoning trace is the
+   strongest lever found so far; every attempt to add a stage BETWEEN that trace and the target
+   language — per-clue (SPIKE-013), structured-prose (§5.9) — has cost accuracy, not bought it.
+   Future work on closing the gap should treat "add an intermediate representation" as a
+   disconfirmed direction unless a future variant identifies a materially different reason to
+   expect otherwise, and instead keep pursuing recommendation 3's diagnostic-leverage candidates
+   (per-clue self-verification, an independent second formalization to cross-check against).
+9. **§5.10 found the Stage-1 trace itself is a smaller lever than this spike's whole architecture
+   assumed — 5-8 points of MATCH rate, not the dominant driver of the ~35-45 point solve-vs-
+   formalize gap — and adds a real nuance to recommendation 8's "intermediate representations are
+   disconfirmed" reading.** Without the trace, `direct-structured-prose` slightly BEAT
+   `direct-mzn` at the frontier tier (43% vs. 40%), the opposite ordering from the cheap tier and
+   from every WITH-trace comparison in this spike. That's a single, noise-sized reversal, not a
+   confirmed effect — but it means "adding an intermediate representation costs accuracy" should
+   be read as established specifically for RESTATING AN ALREADY-COMPLETED TRACE (where it
+   discards the trace's own derivation-order structure, §5.9's diagnosed mechanism), not as a
+   universal law independent of what's being restated FROM. A genuinely open next question this
+   spike surfaces but doesn't answer: does a structured-prose intermediate stop costing accuracy,
+   or start buying it, once the model doing the restating is capable enough to preserve
+   derivation structure on its own initiative? Also open, and arguably more consequential for a
+   real deployment: Stage 1's own generation cost was never priced in this spike (every
+   `formalize-mzn`-family number reuses already-collected, already-paid-for traces) — the
+   cost/accuracy case for paying for a separate solve pass at all, versus formalizing cold, is
+   unresolved.
 
 Status: done.

@@ -1,0 +1,464 @@
+[
+  {
+    "id": "PZL-0001",
+    "sourceOutcome": "MISMATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_UNSATISFIABLE",
+        "detail": "",
+        "verdict": "MISMATCH",
+        "gradeDetail": "expected unique solution, got Unsatisfiable",
+        "costUsd": 0.0009337500000000001,
+        "structuredProse": "### ENTITIES\n1. **Houses**: There are five houses numbered from 1 to 5.\n   - **Attributes**: \n     - Color\n     - Nationality\n     - Drink\n     - Cigar Brand\n     - Pet\n\n### DOMAINS\n1. **Color**: A set of named categories including Red, Blue, Green, Ivory, Yellow.\n2. **Nationality**: A set of named categories including Englishman, Spaniard, Ukrainian, Norwegian, Japanese.\n3. **Drink**: A set of named categories including Milk, Tea, Coffee, Orange Juice, Water.\n4. **Cigar Brand**: A set of named categories including Old Gold, Kools, Chesterfields, Lucky Strike, Parliaments.\n5. **Pet**: A set of named categories including Dog, Snails, Fox, Horse, Zebra.\n\n### CONSTRAINTS\n1. The Englishman lives in the red house.\n2. The Spaniard owns the dog.\n3. Coffee is drunk in the green house.\n4. The Ukrainian drinks tea.\n5. The green house is immediately to the right of the ivory house.\n6. The Old Gold smoker owns snails.\n7. Kools are smoked in the yellow house.\n8. Milk is drunk in the middle house (House 3).\n9. The Norwegian lives in the first house.\n10. The man who smokes Chesterfields lives in the house next to the man with the fox.\n11. Kools are smoked in the house next to the house where the horse is kept.\n12. The Lucky Strike smoker drinks orange juice.\n13. The Japanese smokes Parliaments.\n14. The Norwegian lives next to the blue house.\n15. Each nationality is assigned to exactly one house.\n16. Each color is assigned to exactly one house.\n17. Each drink is assigned to exactly one house.\n18. Each cigar brand is assigned to exactly one house.\n19. Each pet is assigned to exactly one house.",
+        "mzn": "include \"globals.mzn\";\n\nenum Color = { Red, Blue, Green, Ivory, Yellow };\nenum Nationality = { Englishman, Spaniard, Ukrainian, Norwegian, Japanese };\nenum Drink = { Milk, Tea, Coffee, OrangeJuice, Water };\nenum CigarBrand = { OldGold, Kools, Chesterfields, LuckyStrike, Parliaments };\nenum Pet = { Dog, Snails, Fox, Horse, Zebra };\n\narray[1..5] of var Color: houseColor;\narray[1..5] of var Nationality: houseNationality;\narray[1..5] of var Drink: houseDrink;\narray[1..5] of var CigarBrand: houseCigarBrand;\narray[1..5] of var Pet: housePet;\n\nconstraint houseNationality[1] = Norwegian;\nconstraint houseColor[1] = Blue /\\ houseNationality[2] = Englishman -> houseColor[2] = Red;\nconstraint housePet[2] = Dog;\nconstraint houseDrink[3] = Milk;\nconstraint houseDrink[2] = Tea;\nconstraint houseDrink[5] = Coffee;\nconstraint houseColor[5] = Green /\\ houseColor[4] = Ivory;\nconstraint housePet[1] = Snails /\\ houseCigarBrand[1] = OldGold;\nconstraint houseCigarBrand[4] = Kools;\nconstraint houseCigarBrand[3] = Chesterfields /\\ housePet[4] = Fox;\nconstraint houseCigarBrand[2] = LuckyStrike /\\ houseDrink[2] = OrangeJuice;\nconstraint houseCigarBrand[5] = Parliaments;\nconstraint houseColor[3] = Yellow /\\ housePet[5] = Horse;\n\nconstraint alldifferent(houseNationality);\nconstraint alldifferent(houseColor);\nconstraint alldifferent(houseDrink);\nconstraint alldifferent(houseCigarBrand);\nconstraint alldifferent(housePet);"
+      },
+      {
+        "outcome": "SOLVE_ERROR",
+        "detail": "ModelSyntaxError: Multiple syntax errors:\n/private/var/folders/t_/xcdyhzm5185g8bsc5klh4y6h0000gn/T/minizinc-XtqHtU/model.mzn:18.45:\nconstraint houseColor[houseNationality.index(Englishman)] == red;\n                    ",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.00090285,
+        "structuredProse": "**ENTITIES:**  \n1. **Houses**: There are five houses, numbered 1 to 5.  \n   - **Attributes**: \n     - Color\n     - Nationality\n     - Drink\n     - Cigar brand\n     - Pet\n\n**DOMAINS:**  \n1. **Color**: The possible colors for the houses are red, blue, green, ivory, and yellow. This is a set of NAMED categories.  \n2. **Nationality**: The possible nationalities are Englishman, Spaniard, Ukrainian, Norwegian, and Japanese. This is a set of NAMED categories.  \n3. **Drink**: The possible drinks are coffee, tea, milk, orange juice, and water. This is a set of NAMED categories.  \n4. **Cigar brand**: The possible cigar brands are Old Gold, Kools, Chesterfields, Lucky Strike, and Parliaments. This is a set of NAMED categories.  \n5. **Pet**: The possible pets are dog, snails, horse, fox, and zebra. This is a set of NAMED categories.\n\n**CONSTRAINTS:**  \n1. The Englishman lives in the red house.  \n2. The Spaniard owns the dog.  \n3. Coffee is drunk in the green house.  \n4. The Ukrainian drinks tea.  \n5. The green house is immediately to the right of the ivory house.  \n6. The Old Gold smoker owns snails.  \n7. Kools are smoked in the yellow house.  \n8. Milk is drunk in the middle house (House 3).  \n9. The Norwegian lives in the first house.  \n10. The man who smokes Chesterfields lives in the house next to the man with the fox.  \n11. Kools are smoked in the house next to the house where the horse is kept.  \n12. The Lucky Strike smoker drinks orange juice.  \n13. The Japanese smokes Parliaments.  \n14. The Norwegian lives next to the blue house.  \n15. Each house has a unique combination of color, nationality, drink, cigar brand, and pet (no two houses share the same attributes).  \n16. The green house cannot be House 1 (as it has a house to its left).  \n17. The ivory house cannot be House 5 (as it has a house to its right).",
+        "mzn": "include \"globals.mzn\";\n\nenum Color = {red, blue, green, ivory, yellow};\nenum Nationality = {Englishman, Spaniard, Ukrainian, Norwegian, Japanese};\nenum Drink = {coffee, tea, milk, orange_juice, water};\nenum CigarBrand = {Old_Gold, Kools, Chesterfields, Lucky_Strike, Parliaments};\nenum Pet = {dog, snails, horse, fox, zebra};\n\narray[1..5] of var Color: houseColor;\narray[1..5] of var Nationality: houseNationality;\narray[1..5] of var Drink: houseDrink;\narray[1..5] of var CigarBrand: houseCigarBrand;\narray[1..5] of var Pet: housePet;\n\nconstraint houseNationality[1] == Norwegian;\nconstraint houseDrink[3] == milk;\n\nconstraint houseColor[houseNationality.index(Englishman)] == red;\nconstraint housePet[houseNationality.index(Spaniard)] == dog;\nconstraint houseDrink[houseColor.index(green)] == coffee;\nconstraint houseNationality[houseNationality.index(Ukrainian)] == tea;\nconstraint houseColor[houseColor.index(green)] == houseColor[houseColor.index(ivory) + 1];\n\nconstraint houseCigarBrand[housePet.index(snails)] == Old_Gold;\nconstraint houseCigarBrand[houseColor.index(yellow)] == Kools;\n\nconstraint houseNationality.index(Norwegian) + 1 == houseColor.index(blue);\nconstraint abs(houseCigarBrand.index(Chesterfields) - housePet.index(fox) ) == 1;\nconstraint abs(houseCigarBrand.index(Kools) - housePet.index(horse)) == 1;\nconstraint houseCigarBrand[houseNationality.index(Japanese)] == Parliaments;\nconstraint houseCigarBrand[houseColor.index(green)] != houseColor.index(yellow);\nconstraint houseColor.index(ivory) != 5;\n\nconstraint alldifferent(houseColor);\nconstraint alldifferent(houseNationality);\nconstraint alldifferent(houseDrink);\nconstraint alldifferent(houseCigarBrand);\nconstraint alldifferent(housePet);"
+      },
+      {
+        "outcome": "SOLVE_ERROR",
+        "detail": "ModelSyntaxError: Error: type error: no function or predicate with name `find' found, did you mean `'in''?\n/private/var/folders/t_/xcdyhzm5185g8bsc5klh4y6h0000gn/T/minizinc-WdueBv/model.mzn:21.29-49\n",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.0009168,
+        "structuredProse": "**ENTITIES:**\nThere are five houses numbered 1 to 5. Each house has the following attributes: \n1. Color \n2. Nationality \n3. Drink \n4. Cigar Brand \n5. Pet\n\n**DOMAINS:**\n1. Color: The complete set of possible values is {Red, Blue, Green, Yellow, Ivory}. This is a set of NAMED categories.\n2. Nationality: The complete set of possible values is {Englishman, Spaniard, Ukrainian, Norwegian, Japanese}. This is a set of NAMED categories.\n3. Drink: The complete set of possible values is {Milk, Tea, Coffee, Orange Juice, Water}. This is a set of NAMED categories.\n4. Cigar Brand: The complete set of possible values is {Old Gold, Kools, Chesterfields, Lucky Strike, Parliaments}. This is a set of NAMED categories.\n5. Pet: The complete set of possible values is {Dog, Snails, Fox, Horse, Zebra}. This is a set of NAMED categories.\n\n**CONSTRAINTS:**\n1. The Englishman lives in the red house.\n2. The Spaniard owns the dog.\n3. Coffee is drunk in the green house.\n4. The Ukrainian drinks tea.\n5. The green house is immediately to the right of the ivory house.\n6. The Old Gold smoker owns snails.\n7. Kools are smoked in the yellow house.\n8. Milk is drunk in the middle house (house 3).\n9. The Norwegian lives in the first house.\n10. The man who smokes Chesterfields lives in the house next to the man with the fox.\n11. Kools are smoked in the house next to the house where the horse is kept.\n12. The Lucky Strike smoker drinks orange juice.\n13. The Japanese smokes Parliaments.\n14. The Norwegian lives next to the blue house.\n15. Each house has a unique combination of color, nationality, drink, cigar brand, and pet.",
+        "mzn": "include \"globals.mzn\";\n\nenum Color = {Red, Blue, Green, Yellow, Ivory};\nenum Nationality = {Englishman, Spaniard, Ukrainian, Norwegian, Japanese};\nenum Drink = {Milk, Tea, Coffee, OrangeJuice, Water};\nenum CigarBrand = {OldGold, Kools, Chesterfields, LuckyStrike, Parliaments};\nenum Pet = {Dog, Snails, Fox, Horse, Zebra};\n\narray[1..5] of var Color: houseColor;\narray[1..5] of var Nationality: houseNationality;\narray[1..5] of var Drink: houseDrink;\narray[1..5] of var CigarBrand: houseCigarBrand;\narray[1..5] of var Pet: housePet;\n\nconstraint houseNationality[1] = Norwegian;\n\nconstraint houseDrink[3] = Milk;\n\nconstraint forall(i in 1..5)(exists(j in 1..5)(houseColor[i] != houseColor[j] /\\ houseNationality[i] != houseNationality[j] /\\ houseDrink[i] != houseDrink[j] /\\ houseCigarBrand[i] != houseCigarBrand[j] /\\ housePet[i] != housePet[j]));\n\nconstraint houseNationality[find(houseColor, Red)] = Englishman;\nconstraint housePet[find(houseNationality, Spaniard)] = Dog;\nconstraint houseDrink[find(houseColor, Green)] = Coffee;\nconstraint houseNationality[find(houseNationality, Ukrainian)] = Tea;\nconstraint houseColor[find(houseColor, Green)] = houseColor[find(houseColor, Ivory) + 1];\nconstraint houseCigarBrand[find(houseCigarBrand, OldGold)] = housePet[find(housePet, Snails)];\nconstraint houseCigarBrand[find(houseCigarBrand, Kools)] = houseColor[find(houseColor, Yellow)];\nconstraint houseDrink[find(houseNationality, Ukrainian)] = Tea;\nconstraint houseCigarBrand[find(houseCigarBrand, LuckyStrike)] = houseDrink[find(houseDrink, OrangeJuice)];\nconstraint houseCigarBrand[find(houseNationality, Japanese)] = Parliaments;\nconstraint houseColor[find(houseNationality, Norwegian)] = houseColor[find(houseColor, Blue) - 1];\n\nconstraint forall(i in 1..5)(exists(j in 1..5)(houseCigarBrand[i] = Chesterfields -> (abs(i - j) = 1 /\\ housePet[j] = Fox)));\nconstraint forall(i in 1..5)(exists(j in 1..5)(houseCigarBrand[i] = Kools -> abs(i - j) = 1 /\\ housePet[j] = Horse));"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0002",
+    "sourceOutcome": "MATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "MATCH",
+        "gradeDetail": "all rows match under overlap alignment",
+        "costUsd": 0.0004449,
+        "structuredProse": "**ENTITIES:**  \n1. Houses: There are three houses, numbered 1, 2, and 3, from left to right.  \n   - Attributes: Color (Blue, Red, Green), Animal (Dog, Cat, Zebra).\n\n**DOMAINS:**  \n1. Color: The possible values are Blue, Red, and Green (named categories).  \n2. Animal: The possible values are Dog, Cat, and Zebra (named categories).  \n\n**CONSTRAINTS:**  \n1. The Cat lives in the Red House.  \n2. The Red House is the middle house (House 2).  \n3. The Blue House is directly to the left of the Red House (House 1 is Blue).  \n4. The Dog lives in the Blue House (House 1).  \n5. Each house has a unique color.  \n6. Each house is home to a unique animal.",
+        "mzn": "include \"globals.mzn\";\n\nenum COLOR = { Blue, Red, Green };\nenum ANIMAL = { Dog, Cat, Zebra };\n\narray[1..3] of var COLOR: houseColor;\narray[1..3] of var ANIMAL: houseAnimal;\n\n% Constraints\nconstraint houseAnimal[2] = Cat;\nconstraint houseColor[2] = Red;\nconstraint houseColor[1] = Blue;\nconstraint houseAnimal[1] = Dog;\n\nconstraint alldifferent(houseColor);\nconstraint alldifferent(houseAnimal);"
+      },
+      {
+        "outcome": "SOLVE_ERROR",
+        "detail": "ModelSyntaxError: /private/var/folders/t_/xcdyhzm5185g8bsc5klh4y6h0000gn/T/minizinc-rToYNA/model.mzn:3.15:\nenum HOUSE = {1, 2, 3};\n              ^\nError: syntax error, unexpected integer literal, expecting '}'\n",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.00046905,
+        "structuredProse": "**ENTITIES:**  \n1. Houses: numbered 1, 2, and 3.  \n   - Attributes: Color, Animal.  \n2. Colors: Blue, Red, Green.  \n3. Animals: Dog, Cat, Zebra.  \n\n**DOMAINS:**  \n1. For the attribute \"Color,\" the set of possible values is a closed set of NAMED categories: Blue, Red, Green.  \n2. For the attribute \"Animal,\" the set of possible values is a closed set of NAMED categories: Dog, Cat, Zebra.  \n\n**CONSTRAINTS:**  \n1. The Cat lives in the Red House.  \n2. The Red House is House 2 (the middle house).  \n3. The Blue House is directly to the left of the Red House (which is House 2).  \n4. The Dog lives in the Blue House.  \n5. Each house has a unique color.  \n6. Each house is home to a unique animal.",
+        "mzn": "include \"globals.mzn\";\n\nenum HOUSE = {1, 2, 3};\nenum COLOR = {Blue, Red, Green};\nenum ANIMAL = {Dog, Cat, Zebra};\n\narray[HOUSE] of var COLOR: houseColor;\narray[HOUSE] of var ANIMAL: houseAnimal;\n\nconstraint houseAnimal[1] == Cat /\\ houseColor[2] == Red /\\ \n          houseColor[2] == Red /\\ \n          houseColor[1] == Blue /\\ \n          houseAnimal[1] == Dog /\\ \n          alldifferent(houseColor) /\\ \n          alldifferent(houseAnimal);"
+      },
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "MATCH",
+        "gradeDetail": "all rows match under overlap alignment",
+        "costUsd": 0.0004263,
+        "structuredProse": "ENTITIES: \n1. Houses numbered 1 to 3.\n   - Attributes: Color, Animal\n2. Animals\n   - Attributes: Dog, Cat, Zebra\n3. Colors\n   - Attributes: Blue, Red, Green\n\nDOMAINS:\n1. For the Color attribute, the possible values are the named categories: Blue, Red, Green.\n2. For the Animal attribute, the possible values are the named categories: Dog, Cat, Zebra.\n\nCONSTRAINTS:\n1. The Cat lives in the Red House.\n2. The Red House is the middle house (House 2).\n3. The Blue House is directly to the left of the Red House.\n4. The Dog lives in the Blue House.\n5. Each house has a unique color.\n6. Each house is home to a unique animal.",
+        "mzn": "include \"globals.mzn\";\n\nenum COLORS = { Blue, Red, Green };\nenum ANIMALS = { Dog, Cat, Zebra };\n\narray[1..3] of var COLORS: color;\narray[1..3] of var ANIMALS: animal;\n\nconstraint animal[2] == Cat;\nconstraint color[2] == Red;\nconstraint color[1] == Blue;\nconstraint animal[1] == Dog;\nconstraint alldifferent(color);\nconstraint alldifferent(animal);"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0003",
+    "sourceOutcome": "MATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "MATCH",
+        "gradeDetail": "all expected tokens present",
+        "costUsd": 0.00036494999999999995,
+        "structuredProse": "ENTITIES: The single entity in this problem is \"Players,\" which includes two attributes: \"Your Choice\" and \"Opponent's Choice.\"\n\nDOMAINS: \n- The attribute \"Your Choice\" consists of a set of named categories: Paper, Rock, Scissors.\n- The attribute \"Opponent's Choice\" consists of a fixed set of named categories: Rock.\n\nCONSTRAINTS: \n1. Your opponent plays Rock.\n2. Paper beats Rock.\n3. Rock beats Scissors.\n4. Scissors beat Paper.\n5. You must choose one option from the set of Your Choice. \n6. Your choice must win against your opponent's choice to be successful.",
+        "mzn": "include \"globals.mzn\";\n\nenum Choice = { Paper, Rock, Scissors };\n\nvar Choice: yourChoice;\nvar Choice: opponentsChoice = Rock;\n\nconstraint\n    yourChoice != opponentsChoice /\\\n    (yourChoice == Paper /\\ opponentsChoice == Rock) \\/\n    (yourChoice == Scissors /\\ opponentsChoice == Paper) \\/\n    (yourChoice == Rock /\\ opponentsChoice == Scissors);"
+      },
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "MATCH",
+        "gradeDetail": "all expected tokens present",
+        "costUsd": 0.0003969,
+        "structuredProse": "**ENTITIES:**  \n1. The game of rock-paper-scissors.\n   - Attributes:\n     - Player's choice\n     - Opponent's choice\n\n**DOMAINS:**  \n1. Player's choice: A set of NAMED categories which are \"Rock\", \"Paper\", and \"Scissors\".\n2. Opponent's choice: A set of NAMED categories which are \"Rock\", \"Paper\", and \"Scissors\".\n\n**CONSTRAINTS:**  \n1. The opponent plays Rock.\n2. Paper beats Rock.\n3. Rock beats Scissors.\n4. Scissors beats Paper.\n5. Each choice (Rock, Paper, Scissors) can only be selected once by the player in the context of winning against their opponent’s choice.",
+        "mzn": "include \"globals.mzn\";\n\nenum Choice = { Rock, Paper, Scissors };\n\nvar Choice: playerChoice;\nvar Choice: opponentChoice;\n\nconstraint opponentChoice = Rock;\nconstraint (playerChoice = Paper) \\/ (playerChoice = Rock /\\ opponentChoice = Scissors) \\/ (playerChoice = Scissors /\\ opponentChoice = Paper);\nconstraint (playerChoice != Rock) \\/ (opponentChoice != Rock);\nconstraint (playerChoice != Paper) \\/ (opponentChoice != Paper);\nconstraint (playerChoice != Scissors) \\/ (opponentChoice != Scissors);"
+      },
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "MATCH",
+        "gradeDetail": "all expected tokens present",
+        "costUsd": 0.000432,
+        "structuredProse": "**ENTITIES:**  \n1. Players: The two distinct players in the game, referred to as \"You\" and \"Your Opponent\".  \n2. Choices: The possible choices each player can make, which are categorized as \"Paper\", \"Rock\", and \"Scissors\".  \n\n**DOMAINS:**  \n1. Players: This is a set of NAMED categories with two possible values: \"You\" and \"Your Opponent\".  \n2. Choices: This is a set of NAMED categories with three possible values: \"Paper\", \"Rock\", and \"Scissors\".  \n\n**CONSTRAINTS:**  \n1. Each player must choose one and only one option from the set of choices available.  \n2. Your Opponent has chosen Rock.  \n3. Paper beats Rock.  \n4. Rock beats Scissors.  \n5. Scissors beat Paper.  \n6. There must be a winning choice for You against Your Opponent's choice.",
+        "mzn": "include \"globals.mzn\";\n\nenum Player = { You, Your_Opponent };\nenum Choice = { Paper, Rock, Scissors };\n\narray[Player] of var Choice: playerChoices;\n\nconstraint playerChoices[Your_Opponent] = Rock;\n\nconstraint (playerChoices[You] = Paper /\\ playerChoices[Your_Opponent] = Rock) \\/\n           (playerChoices[You] = Rock /\\ playerChoices[Your_Opponent] = Scissors) \\/\n           (playerChoices[You] = Scissors /\\ playerChoices[Your_Opponent] = Paper);"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0004",
+    "sourceOutcome": "MATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "MATCH",
+        "gradeDetail": "all expected tokens present",
+        "costUsd": 0.00053055,
+        "structuredProse": "**ENTITIES:**\n- Suspects: This entity has three possible members: Miss Scarlett, Colonel Mustard, Professor Plum.\n- Weapons: This entity consists of three types: Candlestick, Revolver, Rope.\n- Rooms: This entity includes three locations: Kitchen, Library, Conservatory.\n\n**DOMAINS:**\n- For the Suspects attribute category, the complete set of possible values is the named categories: Miss Scarlett, Colonel Mustard, Professor Plum.\n- For the Weapons attribute category, the complete set of possible values is the named categories: Candlestick, Revolver, Rope.\n- For the Rooms attribute category, the complete set of possible values is the named categories: Kitchen, Library, Conservatory.\n\n**CONSTRAINTS:**\n1. The culprit is not Colonel Mustard.\n2. The culprit is not Miss Scarlett.\n3. The murder weapon was not the Revolver.\n4. The murder weapon was not the Rope.\n5. The murder did not take place in the Kitchen.\n6. The murder did not take place in the Library.\n7. Each suspect is unique as the culprit (no two suspects can be the culprit).\n8. Each weapon is unique to one murder (no two weapons can be involved in the same murder).\n9. Each room is unique to one murder (no two rooms can be involved in the same murder).",
+        "mzn": "include \"globals.mzn\";\n\nenum Suspects = {MissScarlett, ColonelMustard, ProfessorPlum};\nenum Weapons = {Candlestick, Revolver, Rope};\nenum Rooms = {Kitchen, Library, Conservatory};\n\nvar Suspects: culprit;\nvar Weapons: murderWeapon;\nvar Rooms: murderRoom;\n\nconstraint culprit != ColonelMustard;\nconstraint culprit != MissScarlett;\nconstraint murderWeapon != Revolver;\nconstraint murderWeapon != Rope;\nconstraint murderRoom != Kitchen;\nconstraint murderRoom != Library;\n\nconstraint alldifferent([culprit]);\nconstraint alldifferent([murderWeapon]);\nconstraint alldifferent([murderRoom]);"
+      },
+      {
+        "outcome": "SOLVE_UNSATISFIABLE",
+        "detail": "",
+        "verdict": "MISMATCH",
+        "gradeDetail": "expected unique solution, got Unsatisfiable",
+        "costUsd": 0.0005325,
+        "structuredProse": "**ENTITIES:**  \n1. Suspects: Miss Scarlett, Colonel Mustard, Professor Plum.  \n   Attributes: Name  \n   \n2. Weapons: Candlestick, Revolver, Rope.  \n   Attributes: Name  \n   \n3. Rooms: Kitchen, Library, Conservatory.  \n   Attributes: Name  \n\n**DOMAINS:**  \n1. Suspects: the complete set of possible values is a set of NAMED categories: {Miss Scarlett, Colonel Mustard, Professor Plum}.  \n2. Weapons: the complete set of possible values is a set of NAMED categories: {Candlestick, Revolver, Rope}.  \n3. Rooms: the complete set of possible values is a set of NAMED categories: {Kitchen, Library, Conservatory}.  \n\n**CONSTRAINTS:**  \n1. The culprit is not Colonel Mustard.  \n2. The culprit is not Miss Scarlett.  \n3. The murder weapon was not the Revolver.  \n4. The murder weapon was not the Rope.  \n5. The murder did not take place in the Kitchen.  \n6. The murder did not take place in the Library.  \n7. Each suspect is the culprit exactly once.  \n8. Each weapon is used exactly once.  \n9. Each room is the location of the murder exactly once.",
+        "mzn": "include \"globals.mzn\";\n\nenum Suspect = {Miss_Scarlett, Colonel_Mustard, Professor_Plum};\nenum Weapon = {Candlestick, Revolver, Rope};\nenum Room = {Kitchen, Library, Conservatory};\n\nvar Suspect: culprit;\nvar Weapon: murder_weapon;\nvar Room: murder_room;\n\nconstraint culprit != Colonel_Mustard;\nconstraint culprit != Miss_Scarlett;\nconstraint murder_weapon != Revolver;\nconstraint murder_weapon != Rope;\nconstraint murder_room != Kitchen;\nconstraint murder_room != Library;\n\nconstraint forall(s in Suspect)(s = culprit) /\\ (forall(w in Weapon)(w = murder_weapon) /\\ (forall(r in Room)(r = murder_room)));"
+      },
+      {
+        "outcome": "SOLVE_UNSATISFIABLE",
+        "detail": "",
+        "verdict": "MISMATCH",
+        "gradeDetail": "expected unique solution, got Unsatisfiable",
+        "costUsd": 0.00052545,
+        "structuredProse": "ENTITIES:  \n1. Suspects: Miss Scarlett, Colonel Mustard, Professor Plum.  \n   Attributes: Name  \n2. Weapons: Candlestick, Revolver, Rope.  \n   Attributes: Name  \n3. Rooms: Kitchen, Library, Conservatory.  \n   Attributes: Name  \n\nDOMAINS:  \n1. Name (Suspects): The complete set of possible values is {Miss Scarlett, Colonel Mustard, Professor Plum}.  \n2. Name (Weapons): The complete set of possible values is {Candlestick, Revolver, Rope}.  \n3. Name (Rooms): The complete set of possible values is {Kitchen, Library, Conservatory}.  \n\nCONSTRAINTS:  \n1. The culprit is not Colonel Mustard.  \n2. The culprit is not Miss Scarlett.  \n3. The murder weapon was not the Revolver.  \n4. The murder weapon was not the Rope.  \n5. The murder did not take place in the Kitchen.  \n6. The murder did not take place in the Library.  \n7. Each suspect is unique in that only one can be the culprit.  \n8. Each weapon is unique in that only one can be the murder weapon.  \n9. Each room is unique in that only one can be the location of the murder.",
+        "mzn": "include \"globals.mzn\";\n\nenum Suspect = {Miss_Scarlett, Colonel_Mustard, Professor_Plum};\nenum Weapon = {Candlestick, Revolver, Rope};\nenum Room = {Kitchen, Library, Conservatory};\n\nvar Suspect: culprit;\nvar Weapon: murder_weapon;\nvar Room: murder_room;\n\nconstraint culprit != Colonel_Mustard;\nconstraint culprit != Miss_Scarlett;\nconstraint murder_weapon != Revolver;\nconstraint murder_weapon != Rope;\nconstraint murder_room != Kitchen;\nconstraint murder_room != Library;\n\nconstraint forall(s in Suspect)(s != culprit);\nconstraint forall(w in Weapon)(w != murder_weapon);\nconstraint forall(r in Room)(r != murder_room);"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0007",
+    "sourceOutcome": "MATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "MATCH",
+        "gradeDetail": "all expected tokens present",
+        "costUsd": 0.00049695,
+        "structuredProse": "**ENTITIES:**\n1. Letters: The letters involved in the equation are S, E, N, D, M, O, R, Y.\n2. Attributes: Each letter represents a unique digit between 0 and 9.\n\n**DOMAINS:**\n1. The possible values for each letter (S, E, N, D, M, O, R, Y) are the digits from 0 to 9, inclusive. \n2. It is specified that S and M cannot be 0, meaning the valid values for those letters are limited to the digits 1 to 9.\n\n**CONSTRAINTS:**\n1. Each letter (S, E, N, D, M, O, R, Y) must represent a unique digit.\n2. The digit represented by S cannot be 0.\n3. The digit represented by M cannot be 0.\n4. The equation SEND + MORE = MONEY must hold true when the letters are replaced by their corresponding digits.\n5. There must be no leading zero in the numbers SEND and MORE, thus S and M must be greater than or equal to 1.",
+        "mzn": "include \"globals.mzn\";\n\nenum LETTER = {S, E, N, D, M, O, R, Y};\narray[LETTER] of var 0..9: digits;\n\n% Constraints\nconstraint alldifferent(digits);\n\nconstraint digits[S] >= 1;\nconstraint digits[M] >= 1;\n\nconstraint digits[S] * 1000 + digits[E] * 100 + digits[N] * 10 + digits[D] +\n          digits[M] * 1000 + digits[O] * 100 + digits[R] * 10 + digits[E] =\n          digits[M] * 10000 + digits[O] * 1000 + digits[N] * 100 + digits[E] * 10 + digits[Y];"
+      },
+      {
+        "outcome": "SOLVE_ERROR",
+        "detail": "ModelSyntaxError: Error: type error: type-inst must be par set but is `Letter'\n/private/var/folders/t_/xcdyhzm5185g8bsc5klh4y6h0000gn/T/minizinc-xzZilt/model.mzn:6.10\n",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.0006981,
+        "structuredProse": "**ENTITIES:**\n1. Letters representing digits: S, E, N, D, M, O, R, Y.\n   - Each letter represents a unique digit.\n\n**DOMAINS:**\n1. Each letter (S, E, N, D, M, O, R, Y) can take on any digit from 0 to 9. \n   - The set of possible values is: {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}.\n   - However, S and M must specifically be chosen from the range 1 to 9 because they are leading digits in the numbers SEND and MORE.\n   - For S and M, the possible values are limited to: {1, 2, 3, 4, 5, 6, 7, 8, 9}.\n\n**CONSTRAINTS:**\n1. Each letter (S, E, N, D, M, O, R, Y) must represent a different digit from 0 to 9.\n2. S cannot be 0 since SEND is a number that cannot start with a leading zero.\n3. M cannot be 0 since MORE is also a number that cannot start with a leading zero.\n4. The equation SEND + MORE = MONEY must hold true when the letters are replaced with their respective digits, computed as:\n   - SEND = 1000S + 100E + 10N + D\n   - MORE = 1000M + 100O + 10R + E\n   - MONEY = 10000M + 1000O + 100N + 10E + Y\n5. M must be the digit 1, as it is the only digit that allows the sum of SEND and MORE to stay less than 20,000 (since MONEY is a five-digit number).\n6. S + M must be at least 10 (because carry over is possible when summing in the thousands place).\n7. Once the values of S and M are determined, the remaining letters (E, N, D, O, R, Y) must be assigned unique digits such that they do not conflict with the already assigned digits.",
+        "mzn": "include \"globals.mzn\";\n\nenum Letter = {S, E, N, D, M, O, R, Y};\n\narray[Letter] of var 0..9: digits;\narray[S, M] of var 1..9: leadingDigits = [digits[S], digits[M]];\n\nconstraint alldifferent(digits);\n\nconstraint digits[S] != 0;\nconstraint digits[M] != 0;\n\nconstraint \n    (1000 * digits[S] + 100 * digits[E] + 10 * digits[N] + digits[D]) + \n    (1000 * digits[M] + 100 * digits[O] + 10 * digits[R] + digits[E]) = \n    (10000 * digits[M] + 1000 * digits[O] + 100 * digits[N] + 10 * digits[E] + digits[Y]);\n\nconstraint digits[M] == 1;\nconstraint digits[S] + digits[M] >= 10;"
+      },
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "MATCH",
+        "gradeDetail": "all expected tokens present",
+        "costUsd": 0.0005166,
+        "structuredProse": "**ENTITIES:**  \n- The entities involved in the puzzle are the letters S, E, N, D, M, O, R, and Y.  \n- Each letter represents a unique digit from the range of 0 to 9.  \n\n**DOMAINS:**  \n- The domain for each letter category is the set of digits from 0 to 9, which is a set of NAMED categories.  \n- Additionally, it is specified that the letters S and M must not be 0, hence they can only take digits from the range of 1 to 9.  \n\n**CONSTRAINTS:**  \n- Each letter (S, E, N, D, M, O, R, Y) must represent a different digit from 0 to 9.  \n- The digits assigned to the letters S and M cannot be 0.  \n- The equation SEND + MORE = MONEY must hold true.  \n- The leading digit of the number SEND (represented by S) and the leading digit of the number MORE (represented by M) cannot be 0.  \n- Therefore, S and M must be from the range 1 to 9.  \n- Each letter represents a unique digit; no two letters can represent the same digit.",
+        "mzn": "include \"globals.mzn\";\n\nenum LETTER = {S, E, N, D, M, O, R, Y};\n\narray[LETTER] of var 0..9: letters;\n\n% Constraints\nconstraint\n    letters[S] >= 1 /\\ letters[M] >= 1 /\\\n    alldifferent(letters) /\\\n    letters[S] * 1000 + letters[E] * 100 + letters[N] * 10 + letters[D] +\n    letters[M] * 1000 + letters[O] * 100 + letters[R] * 10 + letters[E] =\n    letters[M] * 10000 + letters[O] * 1000 + letters[N] * 100 + letters[E] * 10 + letters[Y];"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0010",
+    "sourceOutcome": "MATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_ERROR",
+        "detail": "ModelSyntaxError: Error: type error: undefined identifier `j'\n/private/var/folders/t_/xcdyhzm5185g8bsc5klh4y6h0000gn/T/minizinc-mkYYrs/model.mzn:31.103\n",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.000864,
+        "structuredProse": "**ENTITIES:**\n\n1. **Vehicles**:\n   - Each vehicle is from a specific direction: North, South, East, and West.\n   - Attributes: Direction (North, South, East, West).\n\n2. **Pedestrian**:\n   - The pedestrian is crossing at a specific crosswalk.\n   - Attributes: Location (Eastern crosswalk).\n\n**DOMAINS:**\n\n1. **Direction** (for vehicles):\n   - Possible Values: North, South, East, West (NAMED categories).\n\n2. **Location** (for the pedestrian):\n   - Possible Values: Eastern crosswalk (NAMED category).\n\n**CONSTRAINTS:**\n\n1. The pedestrian using the eastern crosswalk always goes before any car approaching from the East.\n2. Vehicles (and the pedestrian) go in the order they arrive at the intersection unless otherwise specified by right-of-way rules.\n3. If two vehicles arrive at the same moment, right-of-way rotates clockwise starting from North among tied vehicles.\n4. The pedestrian and the East car arrive at the same moment.\n5. The South car arrives before both the pedestrian and the East car.\n6. The North car and the West car arrive at the same moment, after both the pedestrian and the East car.\n7. The South car must go first based on its earlier arrival.\n8. The pedestrian must go before the East car due to the pedestrian’s priority.\n9. Among the North car and West car, the North car must go first, followed by the West car, since they arrive simultaneously after the pedestrian and East car.",
+        "mzn": "include \"globals.mzn\";\n\nenum Direction = { North, South, East, West };\nenum Location = { EasternCrosswalk };\n\narray[1..1] of var Location: pedestrianLocation;\narray[1..4] of var Direction: vehicleDirection;\n\n% Constraints\nconstraint pedestrianLocation[1] = EasternCrosswalk;\n\nconstraint forall(i in 1..4)(\n    vehicleDirection[i] in Direction\n);\n\n% The pedestrian using the eastern crosswalk always goes before any car approaching from the East\nconstraint (pedestrianLocation[1] = EasternCrosswalk) -> \n           (exists(i in 1..4)(vehicleDirection[i] = East)) /\\ \n           (forall(j in 1..4)(vehicleDirection[j] != East -> vehicleDirection[j] < pedestrianLocation[1]));\n\n% Vehicles (and the pedestrian) go in the order they arrive at the intersection unless otherwise specified by right-of-way rules\n% (This will be ensured by the following constraints)\n\n% The pedestrian and the East car arrive at the same moment\nconstraint (exists(i in 1..4)(vehicleDirection[i] = East)) -> \n           (pedestrianLocation[1] = EasternCrosswalk);\n\n% The South car arrives before both the pedestrian and the East car\nconstraint (exists(i in 1..4)(vehicleDirection[i] = South)) -> \n           (pedestrianLocation[1] < vehicleDirection[i]) /\\ \n           (exists(j in 1..4)(vehicleDirection[j] = East) -> pedestrianLocation[1] < vehicleDirection[j]);\n\n% The North car and the West car arrive at the same moment, after both the pedestrian and the East car\nconstraint (exists(i in 1..4)(vehicleDirection[i] = North)) /\\ \n           (exists(j in 1..4)(vehicleDirection[j] = West)) -> \n           (pedestrianLocation[1] < vehicleDirection[i]) /\\ \n           (exists(k in 1..4)(vehicleDirection[k] = East) -> pedestrianLocation[1] < vehicleDirection[k]);\n\n% The South car must go first based on its earlier arrival\nconstraint (exists(i in 1..4)(vehicleDirection[i] = South));\n\n% The pedestrian must go before the East car due to the pedestrian’s priority\nconstraint (pedestrianLocation[1] < (exists(i in 1..4)(vehicleDirection[i] = East)));\n\n% Among the North car and West car, the North car must go first, followed by the West car, since they arrive simultaneously after the pedestrian and East car\nconstraint (exists(i in 1..4)(vehicleDirection[i] = North)) /\\ \n           (exists(j in 1..4)(vehicleDirection[j] = West)) -> \n           (vehicleDirection[i] < vehicleDirection[j]);"
+      },
+      {
+        "outcome": "SOLVE_ERROR",
+        "detail": "ModelSyntaxError: Error: type error: identifier `Pedestrian' already defined\n/private/var/folders/t_/xcdyhzm5185g8bsc5klh4y6h0000gn/T/minizinc-qSII2V/model.mzn:4.21-30\n",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.0006468,
+        "structuredProse": "**ENTITIES:**\n1. **Cars**: There are four cars, identified by their directions — North Car, South Car, East Car, and West Car.\n2. **Pedestrian**: One pedestrian who is crossing at the eastern crosswalk.\n3. **Intersection**: A four-way stop intersection that has arms pointing North, South, East, and West.\n4. **Crosswalk**: A designated area for pedestrians to cross, located at the eastern approach.\n\n**DOMAINS:**\n1. **Cars**: The set of cars includes North Car, South Car, East Car, and West Car. This is a set of NAMED categories. \n2. **Pedestrian**: There is one Pedestrian who is using the crosswalk. This is a set of NAMED categories. \n3. **Arrival Times**: The arrival order of the entities can be categorized based on the relative order of their arrival at the intersection, which includes:\n   - Before South Car\n   - Same time as East Car\n   - After both pedestrian and East Car\n   This is expressed as a RELATIVE order rather than specific numeric values or times.\n\n**CONSTRAINTS:**\n1. The pedestrian using a crosswalk always goes before any car approaching from the direction that crosswalk crosses.\n2. Cars and the pedestrian go in the order they arrive at the intersection, unless specified otherwise.\n3. If two or more entities arrive at the same moment, the right-of-way rotates clockwise starting from North.\n4. The South car arrives before both the pedestrian and the East car.\n5. The pedestrian and the East car arrive at the intersection at the same moment.\n6. The North car and the West car arrive at the same moment, after both the pedestrian and the East car.",
+        "mzn": "include \"globals.mzn\";\n\nenum Cars = { NorthCar, SouthCar, EastCar, WestCar };\nenum Pedestrian = { Pedestrian };\nenum ArrivalOrder = { BeforeSouthCar, SameTimeAsEastCar, AfterPedestrianAndEastCar };\n\narray[Cars] of var ArrivalOrder: arrivalOrder;\n\nconstraint arrivalOrder[Pedestrian] == BeforeSouthCar;\n\nconstraint arrivalOrder[SouthCar] < arrivalOrder[Pedestrian];\nconstraint arrivalOrder[SouthCar] < arrivalOrder[EastCar];\n\nconstraint arrivalOrder[Pedestrian] == arrivalOrder[EastCar];\n\nconstraint arrivalOrder[NorthCar] == arrivalOrder[WestCar];\nconstraint arrivalOrder[NorthCar] > arrivalOrder[Pedestrian];\nconstraint arrivalOrder[NorthCar] > arrivalOrder[EastCar];"
+      },
+      {
+        "outcome": "SOLVE_UNSATISFIABLE",
+        "detail": "",
+        "verdict": "MISMATCH",
+        "gradeDetail": "expected unique solution, got Unsatisfiable",
+        "costUsd": 0.00060255,
+        "structuredProse": "**ENTITIES:**\n\n1. **Cars**\n   - Attributes: Direction (North, South, East, West)\n   \n2. **Pedestrian**\n   - Attributes: Position (Crossing at the Eastern crosswalk)\n\n**DOMAINS:**\n\n1. **Direction**: \n   - Possible values: North, South, East, West (NAMED categories)\n\n2. **Position**:\n   - Possible values: Crossing at the Eastern crosswalk (NAMED category)\n\n**CONSTRAINTS:**\n\n1. A pedestrian using a crosswalk always goes before a car approaching from the direction that crosswalk crosses (East).\n2. Cars (and the pedestrian) go in the order they arrive at the intersection.\n3. If two cars arrive at the same moment, the right-of-way rotates clockwise starting from North among the tied cars.\n4. The pedestrian and the East car arrive at the intersection simultaneously.\n5. The South car arrives before both the pedestrian and the East car.\n6. The North car and the West car arrive at the same moment, after both the pedestrian and the East car.\n7. Each entity (pedestrian and cars) can only go through the intersection once.",
+        "mzn": "include \"globals.mzn\";\n\nenum DIRECTION = {North, South, East, West};\nenum POSITION = {CrossingEast};\n\narray[1..3] of var DIRECTION: cars;\nvar POSITION: pedestrian;\n\n% Constraints\nconstraint pedestrian = CrossingEast;\n\nconstraint cars[2] = East /\\ cars[1] = South /\\ \n    (cars[3] = North \\/ cars[3] = West); % South car before East car, North and West arrive at the same time\n\nconstraint forall(i in 1..3)(\n    (cars[i] = East -> cars[i] = cars[1]) % East car arrives at the same time as pedestrian\n    /\\ (cars[i] = South -> cars[i] < cars[1]) % South before both pedestrian & East car\n    /\\ (cars[i] = North \\/ cars[i] = West -> cars[i] > cars[1]) % North and West after both pedestrian & East car\n) /\\\n    (cars[1] = North /\\ cars[2] = West -> (cars[1] < cars[2])) % Right-of-way rotation\n;\n\nconstraint alldifferent(cars);"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0011",
+    "sourceOutcome": "MATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_ERROR",
+        "detail": "ModelSyntaxError: Multiple syntax errors:\n/private/var/folders/t_/xcdyhzm5185g8bsc5klh4y6h0000gn/T/minizinc-nQQuRk/model.mzn:4.21-23:\nenum CreditScore = {680, 750};\n                    ^^^\nError: syntax error, unexpect",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.0007615499999999999,
+        "structuredProse": "**ENTITIES:**  \n1. **Individuals**: Priya and Sam  \n   - **Attributes**:  \n     - Credit Score  \n     - Monthly Income  \n     - Monthly Debt  \n\n**DOMAINS:**  \n1. **Credit Score**: A set of named categories including numerical values (e.g. 680 for Priya, 750 for Sam).  \n2. **Monthly Income**: A numerical value, specifically $9,000 for the couple.  \n3. **Monthly Debt**: A numerical value, specifically $3,200 for the couple.  \n4. **Requested Loan Amount**: A value that exceeds the policy limit (specific numerical amount not defined in the problem). \n\n**CONSTRAINTS:**  \n1. The couple's credit tier is determined by the lower of their two individual credit scores.  \n2. If the couple's credit tier is below 600, the loan is Denied.  \n3. The couple's debt-to-income (DTI) ratio is their combined monthly debt divided by their combined monthly income.  \n4. If the DTI ratio exceeds 43%, the loan is Denied.  \n5. If not denied by rules 1-2, and the requested loan amount is within policy limits for their combined income, the loan is Approved.  \n6. If not denied by rules 1-2, but the requested loan amount exceeds policy limits, they receive a Counter-Offer.  \n7. Priya's credit score is 680.  \n8. Sam's credit score is 750.  \n9. Their combined monthly income is $9,000.  \n10. Their combined monthly debt payments are $3,200.  \n11. The DTI ratio of the couple, calculated from their combined monthly debt and income, is approximately 35.56%.  \n12. The requested loan amount exceeds the policy limit for their combined income.  \n13. There is a global uniqueness constraint that the loan cannot be both approved and denied at the same time.  \n14. There is a global uniqueness constraint that the loan cannot be both approved and receive a counter-offer at the same time.",
+        "mzn": "include \"globals.mzn\";\n\nenum Individuals = {Priya, Sam};\nenum CreditScore = {680, 750};\nint: monthly_income = 9000;\nint: monthly_debt = 3200;\nvar int: requested_loan_amount;\n\nvar CreditScore: priya_credit_score = 680;\nvar CreditScore: sam_credit_score = 750;\n\nvar float: dti_ratio = (monthly_debt / monthly_income) * 100;\n\nvar bool: loan_denied = (min(priya_credit_score, sam_credit_score) < 600) \\/ (dti_ratio > 43);\nvar bool: loan_approved = not loan_denied /\\ (requested_loan_amount <= monthly_income * 0.43);\nvar bool: loan_counter_offer = not loan_denied /\\ (requested_loan_amount > monthly_income * 0.43);\n\nconstraint\n    loan_denied /\\ loan_approved <=>\n    (loan_denied = false /\\ loan_approved = true) \n    /\\ (loan_denied = true /\\ loan_approved = false)\n    /\\ (loan_counter_offer = false);\n    \nconstraint\n    loan_denied /\\ loan_counter_offer <=>\n    (loan_denied = false /\\ loan_counter_offer = true) \n    /\\ (loan_denied = true /\\ loan_counter_offer = false);"
+      },
+      {
+        "outcome": "SOLVE_ERROR",
+        "detail": "ModelSyntaxError: Error: type error: type-inst must be par set but is `int'\n/private/var/folders/t_/xcdyhzm5185g8bsc5klh4y6h0000gn/T/minizinc-CfTdEe/model.mzn:5.5-8\n",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.000723,
+        "structuredProse": "**ENTITIES:**\n1. Couple: The two individuals applying for the mortgage, Priya and Sam.\n   - Attributes: Credit score, Combined monthly income, Combined monthly debt payments, Requested loan amount.\n\n**DOMAINS:**\n1. Credit Score: This is a numeric value representing each individual's credit rating. The possible values are numeric scores which can range from 300 to 850. \n2. Combined Monthly Income: This is a numeric value representing their total income. The possible values are in US dollars, with the specific value given as $9,000.\n3. Combined Monthly Debt Payments: This is a numeric value representing their total monthly debt obligations. The specific value given is $3,200.\n4. Requested Loan Amount: This is a numeric value representing the amount of money they are applying to borrow; it is stated that this amount exceeds policy limits, but the exact value is unspecified.\n\n**CONSTRAINTS:**\n1. The couple's credit tier is determined by the lower of Priya's credit score and Sam's credit score.\n2. If the couple's credit tier is below 600, the loan is Denied.\n3. The couple's debt-to-income (DTI) ratio is calculated as their combined monthly debt divided by their combined monthly income.\n4. If the DTI ratio exceeds 43%, the loan is Denied.\n5. If the couple is not denied based on credit tier and DTI, and the requested amount is within policy limits for their combined income, the loan is Approved.\n6. If the couple is not denied based on credit tier and DTI, but the requested amount exceeds policy limits, they receive a Counter-Offer.\n7. Priya's credit score is 680, and Sam's credit score is 750, making the couple's credit tier 680.\n8. Their combined monthly income is $9,000, and their combined monthly debt payments are $3,200, resulting in a DTI ratio of approximately 35.56%.\n9. The requested loan amount exceeds the policy limit for their combined income.",
+        "mzn": "include \"globals.mzn\";\n\nenum Individual = {Priya, Sam};\narray[Individual] of var 300..850: creditScore = [680, 750];\nvar 9000: combinedMonthlyIncome = 9000;\nvar 3200: combinedMonthlyDebtPayments = 3200;\nvar int: requestedLoanAmount;\n\nvar int: creditTier = min(creditScore[Priya], creditScore[Sam]);\nvar float: dtiRatio = combinedMonthlyDebtPayments / combinedMonthlyIncome;\n\nconstraint (creditTier < 600) -> (requestedLoanAmount = 0);\nconstraint (dtiRatio > 0.43) -> (requestedLoanAmount = 0);\nconstraint (creditTier >= 600 /\\ dtiRatio <= 0.43) ->\n    (requestedLoanAmount <= combinedMonthlyIncome * 0.43) -> (requestedLoanAmount = 0);\nconstraint (creditTier >= 600 /\\ dtiRatio <= 0.43 /\\ requestedLoanAmount > combinedMonthlyIncome * 0.43) ->\n    (requestedLoanAmount > 0);"
+      },
+      {
+        "outcome": "SOLVE_ERROR",
+        "detail": "ModelSyntaxError: Multiple syntax errors:\n/private/var/folders/t_/xcdyhzm5185g8bsc5klh4y6h0000gn/T/minizinc-yWm8UH/model.mzn:3.21-23:\nenum CreditScore = {680, 750};\n                    ^^^\nError: syntax error, unexpect",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.0006528,
+        "structuredProse": "**ENTITIES:**\n\n1. Applicants: Priya and Sam\n   - Attributes:\n     - Credit Score\n     - Monthly Income\n     - Monthly Debt Payments\n     - Requested Loan Amount\n\n**DOMAINS:**\n\n1. Credit Score: A set of NAMED categories representing numerical values (e.g., 680, 750).\n2. Monthly Income: A NUMBER that represents their total monthly income, specifically $9,000.\n3. Monthly Debt Payments: A NUMBER that represents their total monthly debt payments, specifically $3,200.\n4. Requested Loan Amount: A NUMBER that represents the amount they are requesting, which is above the policy limit for their combined income.\n\n**CONSTRAINTS:**\n\n1. The couple's credit tier is determined by the lower of their two individual credit scores.\n2. If the credit tier is below 600, the loan is Denied.\n3. The debt-to-income (DTI) ratio is calculated by dividing their combined monthly debt by their combined monthly income.\n4. If the DTI ratio exceeds 43%, the loan is Denied.\n5. If the loan is not denied by the first two rules and the requested amount is within policy limits for their combined income, the loan is Approved.\n6. If the loan is not denied by the first two rules but the requested amount exceeds policy limits, they receive a Counter-Offer.\n7. Priya's credit score is 680.\n8. Sam's credit score is 750.\n9. Their combined monthly income is $9,000.\n10. Their combined monthly debt payments are $3,200.\n11. The requested loan amount exceeds policy limits based on their combined income.",
+        "mzn": "include \"globals.mzn\";\n\nenum CreditScore = {680, 750};\n\nvar CreditScore: priya_credit_score = 680;\nvar CreditScore: sam_credit_score = 750;\nint: combined_monthly_income = 9000;\nint: combined_monthly_debt_payments = 3200;\nvar int: requested_loan_amount;\n\nvar CreditScore: credit_tier = min(priya_credit_score, sam_credit_score);\nvar float: dti_ratio = combined_monthly_debt_payments / float(combined_monthly_income);\n\nconstraint (credit_tier < 600 -> requested_loan_amount == 0);\nconstraint (dti_ratio > 0.43 -> requested_loan_amount == 0);\nconstraint (requested_loan_amount > 0 -> requested_loan_amount <= combined_monthly_income * 0.4 -> requested_loan_amount > 0);\nconstraint (requested_loan_amount > combined_monthly_income * 0.4 -> requested_loan_amount > 0);"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0012",
+    "sourceOutcome": "MISMATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_ERROR",
+        "detail": "ModelSyntaxError: Multiple syntax errors:\n/private/var/folders/t_/xcdyhzm5185g8bsc5klh4y6h0000gn/T/minizinc-MBi65U/model.mzn:4.15:\nenum TIMES = {9, 11, 16}; % 9am, 11am, 4pm\n              ^\nError: syntax error, unexpec",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.0006786,
+        "structuredProse": "**ENTITIES:**  \n1. Medications: Drug A, Drug B, Drug C  \n   - Attributes: Time taken\n\n2. Time Slots: 9am, 11am, 4pm  \n   - Attributes: None (time points)\n\n3. Meals: Meal 1, Meal 2  \n   - Attributes: Time (8am, 1pm)\n\n**DOMAINS:**  \n1. For the attribute \"Time taken\" of medications, the possible values are a set of NAMED categories: 9am, 11am, 4pm.  \n2. For the attribute \"Time\" of meals, the possible values are also a set of NAMED categories: 8am, 1pm.\n\n**CONSTRAINTS:**  \n1. Drug B must be taken at least 4 hours after Drug A.  \n2. Drug C must be taken at least 2 hours away from any meal.  \n3. Drug C cannot be taken at 9am due to being only 1 hour after Meal 1 at 8am.  \n4. Drug C cannot be taken at 11am due to being only 2 hours after Meal 2 at 1pm.  \n5. Therefore, Drug C must be taken at 4pm.  \n6. Drug A and Drug B must be taken at the remaining times: 9am and 11am.  \n7. Drug A taken at 9am and Drug B taken at 11am violates Constraint #1 (4 hours later), as Drug B is taken before the 4-hour minimum after Drug A.  \n8. Drug A taken at 11am and Drug B taken at 9am is not logically valid as it breaks the requirement of Drug B being taken at least 4 hours after Drug A.  \n9. There is a contradiction since Drug A and Drug B cannot be scheduled to satisfy all constraints simultaneously while adhering to the available time slots.  \n10. Each medication must be taken at a different time within the available time slots.",
+        "mzn": "include \"globals.mzn\";\n\nenum MEDICATIONS = {DrugA, DrugB, DrugC};\nenum TIMES = {9, 11, 16}; % 9am, 11am, 4pm\nenum MEALS = {8, 13}; % 8am, 1pm\n\narray[MEDICATIONS] of var TIMES: medTimes;\n\nconstraint\n    medTimes[DrugB] >= medTimes[DrugA] + 4 /\\\n    forall(m in MEALS)(abs(medTimes[DrugC] - m) >= 2) /\\\n    (medTimes[DrugC] != 9 /\\ medTimes[DrugC] != 11) /\\\n    alldifferent(medTimes);\n\nsolve satisfy;"
+      },
+      {
+        "outcome": "SOLVE_ERROR",
+        "detail": "ModelSyntaxError: Multiple syntax errors:\n/private/var/folders/t_/xcdyhzm5185g8bsc5klh4y6h0000gn/T/minizinc-3nK5iz/model.mzn:3.19:\nenum TIME_SLOT = {9, 11, 16};\n                  ^\nError: syntax error, unexpected integ",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.0007002,
+        "structuredProse": "### ENTITIES:\n- The entities involved in this puzzle are three medications: \n  - Drug A\n  - Drug B\n  - Drug C\n- There is also a time component related to when these drugs are taken:\n  - Time slots for taking the medications: 9am, 11am, and 4pm.\n- Additionally, there are meals considered in this scenario:\n  - Meal times: 8am and 1pm.\n\n### DOMAINS:\n- For each medication (Drug A, Drug B, Drug C), the attribute category is the time at which it is taken. \n- The complete set of possible values for this attribute category is:\n  - 9am\n  - 11am\n  - 4pm\n- This is a set of NAMED categories (specific times).\n\n- For the meals, the attribute category is the time at which meals are consumed.\n- The complete set of possible values for this attribute category is:\n  - 8am\n  - 1pm\n- This is also a set of NAMED categories.\n\n### CONSTRAINTS:\n1. Drug B must be taken at least 4 hours after Drug A.\n2. Drug C must be taken at least 2 hours away from any meal.\n3. Drug C cannot be taken at 9am because it is only 1 hour after the meal at 8am.\n4. Drug C cannot be taken at 11am because it is only 2 hours after the meal at 1pm.\n5. Therefore, Drug C must be taken at 4pm. \n6. Given that Drug C is taken at 4pm, the only remaining time slots for Drug A and Drug B are 9am and 11am.\n7. Drug A cannot be taken at 11am because Drug B would consequently have to be taken at 9am, violating the requirement that Drug B be taken at least 4 hours after Drug A.\n8. Consequently, it is impossible to satisfy all constraints regarding the time slots for Drug A and Drug B within the given conditions.",
+        "mzn": "include \"globals.mzn\";\n\nenum TIME_SLOT = {9, 11, 16};\nenum MEAL_TIME = {8, 13};\n\narray[1..3] of var TIME_SLOT: drugTime;\n\nconstraint drugTime[2] >= drugTime[1] + 4 /\\\n          forall(i in 1..3)(if drugTime[i] == 16 then \n              forall(j in MEAL_TIME)(abs(drugTime[i] - j) >= 2) endif\n          endif) /\\\n          drugTime[3] != 9 /\\\n          drugTime[3] != 11 /\\\n          drugTime[3] == 16 /\\\n          forall(i in 1..2)(if drugTime[i] == 11 then \n              drugTime[3] >= drugTime[i] + 4 \n          endif);"
+      },
+      {
+        "outcome": "SOLVE_ERROR",
+        "detail": "ModelSyntaxError: Multiple syntax errors:\n/private/var/folders/t_/xcdyhzm5185g8bsc5klh4y6h0000gn/T/minizinc-X47yMw/model.mzn:4.14:\nenum TIME = {9am, 11am, 4pm};\n             ^\nError: syntax error, unexpected integer li",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.0006235500000000001,
+        "structuredProse": "**ENTITIES:**  \n1. Medications: Drug A, Drug B, Drug C  \n   - Attributes: Time taken  \n2. Time Slots: 9am, 11am, 4pm  \n   - Attributes: Available times  \n\n**DOMAINS:**  \n1. Time taken (for each medication): This is a set of NAMED categories: {9am, 11am, 4pm}.  \n2. Available times: This is a set of NAMED categories: {9am, 11am, 4pm}.  \n\n**CONSTRAINTS:**  \n1. Drug B must be taken at least 4 hours after Drug A.  \n2. Drug C must be taken at least 2 hours away from any meal.  \n3. Drug C cannot be taken at 9am because it is only 1 hour after the meal at 8am.  \n4. Drug C cannot be taken at 11am because it is only 2 hours after the meal at 1pm.  \n5. Therefore, Drug C must be taken at 4pm.  \n6. Drug A and Drug B must occupy the remaining time slots of 9am and 11am.  \n7. However, if Drug A is taken at 9am, Drug B cannot be taken until 1pm, violating the 4-hour requirement.  \n8. If Drug A is taken at 11am, it violates the requirement for Drug B to be taken at least 4 hours later.  \n9. Therefore, there is no valid assignment of times to each drug that satisfies all constraints.",
+        "mzn": "include \"globals.mzn\";\n\nenum DRUG = {DrugA, DrugB, DrugC};\nenum TIME = {9am, 11am, 4pm};\n\narray[DRUG] of var TIME: drugTime;\n\nconstraint drugTime[DrugC] != 9am /\\ \n          drugTime[DrugC] != 11am /\\\n          drugTime[DrugA] != drugTime[DrugB] /\\\n          (drugTime[DrugA] == 9am -> drugTime[DrugB] != 11am) /\\\n          (drugTime[DrugA] == 11am -> drugTime[DrugB] != 9am) /\\\n          drugTime[DrugB] >= drugTime[DrugA] + 4;\n\nconstraint drugTime[DrugC] == 4pm;\n\nsolve satisfy;"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0015",
+    "sourceOutcome": "DECLINED_CORRECTLY",
+    "reps": [
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "UNDECLINED",
+        "gradeDetail": "no decline path yet (failing condition: Demand)",
+        "costUsd": 0.00029385,
+        "structuredProse": "ENTITIES: There are no defined entities in the provided prose, as it does not include any specific variables or subjects relevant to a constraint satisfaction problem.\n\nDOMAINS: There are no defined domains, as the prose lacks the necessary components to outline possible values associated with any entities.\n\nCONSTRAINTS: There are no constraints established in the provided text, since it does not contain any rules, relationships, or restrictions that would typically define a constraint satisfaction problem.",
+        "mzn": "include \"globals.mzn\"; \n\n% No entities, domains, or constraints defined."
+      },
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "UNDECLINED",
+        "gradeDetail": "no decline path yet (failing condition: Demand)",
+        "costUsd": 0.00029685,
+        "structuredProse": "ENTITIES: \nThere are no specific entities mentioned in the provided text, which means there are no named items or attributes to assign categories to.\n\nDOMAINS: \nSince there are no entities defined, there are also no attribute categories or possible values to list, resulting in an absence of a defined domain.\n\nCONSTRAINTS: \nThe provided text does not specify any constraints since it lacks any identifiable variables or relationships between entities. Therefore, there are no constraints to outline.",
+        "mzn": "% No entities, domains, or constraints to define."
+      },
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "UNDECLINED",
+        "gradeDetail": "no decline path yet (failing condition: Demand)",
+        "costUsd": 0.0002586,
+        "structuredProse": "ENTITIES: There are no specific entities or attributes defined in the provided text.\n\nDOMAINS: There are no defined domains or possible values specified in the provided text.\n\nCONSTRAINTS: There are no constraints mentioned in the provided text.",
+        "mzn": "include \"globals.mzn\";"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0018",
+    "sourceOutcome": "DECLINED_CORRECTLY",
+    "reps": [
+      {
+        "outcome": "SOLVE_ERROR",
+        "detail": "ModelSyntaxError: /private/var/folders/t_/xcdyhzm5185g8bsc5klh4y6h0000gn/T/minizinc-DLKqQs/model.mzn:13.61:\nforall(i in 1..3)(exists(j in 1..3)(neighbor[i] = house[j]));\n                                                ",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.00039150000000000003,
+        "structuredProse": "ENTITIES: \n- There are three neighbors: Ana, Bo, and Cy. \n- There are three houses numbered 1, 2, and 3.\n\nDOMAINS: \n- The neighbors' names are a set of NAMED categories: {Ana, Bo, Cy}. \n- The houses are a set of NUMBER values: {1, 2, 3}.\n\nCONSTRAINTS: \n1. Ana lives in house 1.\n2. Bo does not live in house 2.\n3. Each neighbor lives in exactly one house.\n4. Each house is occupied by exactly one neighbor.",
+        "mzn": "include \"globals.mzn\";\n\nenum Neighbor = {Ana, Bo, Cy};\narray[1..3] of var Neighbor: neighbor;\n\narray[1..3] of var 1..3: house;\n\nconstraint neighbor[1] = Ana;\nconstraint neighbor[2] != Bo;\nconstraint alldifferent(neighbor);\nconstraint alldifferent(house);\n\nforall(i in 1..3)(exists(j in 1..3)(neighbor[i] = house[j]));"
+      },
+      {
+        "outcome": "SOLVE_ERROR",
+        "detail": "ModelSyntaxError: /private/var/folders/t_/xcdyhzm5185g8bsc5klh4y6h0000gn/T/minizinc-Wbx81P/model.mzn:3.22:\nenum HOUSE_NUMBER = {1, 2, 3};\n                     ^\nError: syntax error, unexpected integer literal, expectin",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.00044820000000000005,
+        "structuredProse": "**ENTITIES:**  \n1. Neighbors: Ana, Bo, Cy  \n   - Attributes: House Number  \n2. Houses: Numbered 1, 2, and 3  \n   - Attributes: Occupant  \n\n**DOMAINS:**  \n1. House Number: The set of possible values is {1, 2, 3}. This is a set of NAMED categories.  \n2. Occupant: The set of possible values consists of {Ana, Bo, Cy}. This is a set of NAMED categories.  \n\n**CONSTRAINTS:**  \n1. Ana lives in house 1.  \n2. Bo does not live in house 2.  \n3. Each house is occupied by exactly one neighbor.  \n4. Each neighbor occupies exactly one house.  \n5. Given that Ana lives in house 1, Bo can only live in house 3, which implies that Cy must live in house 2.",
+        "mzn": "include \"globals.mzn\";\n\nenum HOUSE_NUMBER = {1, 2, 3};\nenum OCCUPANT = {Ana, Bo, Cy};\n\narray[HOUSE_NUMBER] of var OCCUPANT: occupant;\n\nconstraint occupant[1] = Ana;\nconstraint occupant[2] != Bo;\nconstraint alldifferent(occupant);\n\nconstraint forall(i in HOUSE_NUMBER)(exists(j in HOUSE_NUMBER)(j != i /\\ occupant[i] != occupant[j]));\n\nconstraint occupant[3] = Bo -> occupant[2] = Cy;"
+      },
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "UNDECLINED",
+        "gradeDetail": "no decline path yet (failing condition: Relevance)",
+        "costUsd": 0.0004059,
+        "structuredProse": "### ENTITIES:\n1. **Neighbors**: The three neighbors are Ana, Bo, and Cy.\n2. **Houses**: There are three houses numbered 1, 2, and 3.\n3. **Attributes**:\n   - Each neighbor is assigned to one house.\n\n### DOMAINS:\n1. **Neighbors**: The set of neighbors is named: {Ana, Bo, Cy}.\n2. **Houses**: The set of houses is numbered: {1, 2, 3}.\n\n### CONSTRAINTS:\n1. Ana lives in house 1.\n2. Bo does not live in house 2.\n3. Each neighbor lives in exactly one house.\n4. Each house is occupied by exactly one neighbor.",
+        "mzn": "include \"globals.mzn\";\n\nenum NEIGHBORS = {Ana, Bo, Cy};\narray[NEIGHBORS] of var 1..3: houses;\n\nconstraint houses[Ana] = 1;\nconstraint houses[Bo] != 2;\nconstraint alldifferent(houses);\nconstraint forall(i in NEIGHBORS)(exists(j in NEIGHBORS)(houses[i] = houses[j]));"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0022",
+    "sourceOutcome": "MISMATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_MULTIPLY_SATISFIABLE",
+        "detail": "",
+        "verdict": "FEASIBLE_ONLY",
+        "gradeDetail": "optimum total_value=18 not in capped output",
+        "costUsd": 0.00066555,
+        "structuredProse": "**ENTITIES:**\n\n1. **Items**: Each item represents a specific product that can be packed into the shipping box.\n   - Attributes:\n     - Weight (in kilograms)\n     - Value (a numeric value representing how much the recipient would value the item)\n\n**DOMAINS:**\n\n1. **Weight**: The weight of each item can take on the following values:\n   - Bag of rice: 4 kg\n   - Hardcover book set: 3 kg\n   - Cast-iron skillet: 5 kg\n   - First-aid kit: 2 kg (must be included)\n   - Toolbox: 6 kg\n   This is a set of NAMED categories, each item has a fixed weight.\n\n2. **Value**: The value of each item can take on the following values:\n   - Bag of rice: 5\n   - Hardcover book set: 4\n   - Cast-iron skillet: 8\n   - First-aid kit: 6\n   - Toolbox: 7\n   This is a set of NAMED categories, each item has a fixed value.\n\n**CONSTRAINTS:**\n\n1. The total weight of the items chosen must not exceed 10 kg.\n2. The first-aid kit must be included in the selection of items.\n3. Each item can be included in the box only once (no item duplication).\n4. The combination of items selected must maximize the total value without exceeding the weight limit.\n5. The first-aid kit contributes a weight of 2 kg and a value of 6 to the total.",
+        "mzn": "include \"globals.mzn\";\n\nenum ITEM = { bag_of_rice, hardcover_book_set, cast_iron_skillet, first_aid_kit, toolbox };\n\narray[ITEM] of int: weight = [4, 3, 5, 2, 6];\narray[ITEM] of int: value = [5, 4, 8, 6, 7];\n\narray[ITEM] of var 0..1: include_item;\n\nconstraint include_item[first_aid_kit] == 1;\nconstraint sum(i in ITEM)(weight[i] * include_item[i]) <= 10;\nconstraint forall(i in ITEM)(include_item[i] <= 1);\n\nvar int: total_value = sum(i in ITEM)(value[i] * include_item[i]);"
+      },
+      {
+        "outcome": "SOLVE_MULTIPLY_SATISFIABLE",
+        "detail": "",
+        "verdict": "FEASIBLE_ONLY",
+        "gradeDetail": "optimum total_value=18 not in capped output",
+        "costUsd": 0.0005682,
+        "structuredProse": "**ENTITIES**: The entities in this puzzle include the items available for packing in the shipping box. The items are:\n- Bag of rice\n- Hardcover book set\n- Cast-iron skillet\n- First-aid kit\n- Toolbox\n\nThe attribute categories assigned to these items are:\n- Weight (measured in kilograms)\n- Value (a numerical value representing the recipient's appreciation for the item)\n\n**DOMAINS**: The complete set of possible values for each attribute category is as follows:\n- **Weight**: The possible weights for each item are 2 kg, 3 kg, 4 kg, 5 kg, and 6 kg. This is a set of NAMED categories representing the weight of each item.\n- **Value**: The possible values for each item are 4, 5, 6, 7, and 8. This is a set of NAMED categories representing the value assigned to each item.\n\n**CONSTRAINTS**:\n1. The total weight of all items packed into the box must not exceed 10 kg.\n2. The first-aid kit must be included in the packing.\n3. Each item can be included in the packing only once (no item is allowed to be duplicated).\n4. The combined weight of the first-aid kit and any selected additional items must not exceed the remaining weight allowance of 8 kg, after accounting for the 2 kg weight of the first-aid kit.",
+        "mzn": "include \"globals.mzn\";\n\nenum Item = { rice, bookset, skillet, first_aid_kit, toolbox };\narray[Item] of int: weights = [2, 3, 4, 5, 6];\narray[Item] of int: values = [4, 5, 6, 7, 8];\n\narray[Item] of var 0..1: packed; % 1 if item is packed, 0 otherwise\n\nconstraint sum(i in Item)(weights[i] * packed[i]) <= 10; % Total weight constraint\nconstraint packed[first_aid_kit] == 1; % First-aid kit must be included\nconstraint alldifferent([i | i in Item where packed[i] == 1]); % Each item packed only once\nconstraint sum(i in Item)(weights[i] * packed[i]) <= 8 + weights[first_aid_kit]; % Combined weight constraint"
+      },
+      {
+        "outcome": "SOLVE_ERROR",
+        "detail": "ModelSyntaxError: /private/var/folders/t_/xcdyhzm5185g8bsc5klh4y6h0000gn/T/minizinc-7IdkJw/model.mzn:3.31:\nenum ItemName = { \"Bag_of_rice\", \"Hardcover_book_set\", \"Cast-iron_skillet\", \"First_aid_kit\", \"Toolbox\" };\n     ",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.00055515,
+        "structuredProse": "ENTITIES:  \nThe primary entities in this puzzle are items available for packing in the shipping box. Each item has the following attributes:  \n- Item Name  \n- Weight  \n- Value  \n\nDOMAINS:  \n1. Item Name: The possible values are a set of NAMED categories which include: \"Bag of rice\", \"Hardcover book set\", \"Cast-iron skillet\", \"First-aid kit\", \"Toolbox\".  \n2. Weight: The possible values are a set of NUMBERS which include the weights: 2 kg, 3 kg, 4 kg, 5 kg, and 6 kg.  \n3. Value: The possible values are a set of NUMBERS which include the values: 4, 5, 6, 7, and 8.  \n\nCONSTRAINTS:  \n1. The total weight of items packed in the shipping box must not exceed 10 kg.  \n2. The first-aid kit must be included in the packed items.  \n3. Each item can only be selected once (no item duplication in the packing).  \n4. The total weight of the selected items must account for the weight of the first-aid kit when calculating the remaining weight capacity.  \n5. The combination of selected items must yield the highest possible total value.",
+        "mzn": "include \"globals.mzn\";\n\nenum ItemName = { \"Bag_of_rice\", \"Hardcover_book_set\", \"Cast-iron_skillet\", \"First_aid_kit\", \"Toolbox\" };\narray[ItemName] of int: weights = [2, 3, 4, 5, 6];\narray[ItemName] of int: values = [4, 5, 6, 7, 8];\n\narray[ItemName] of var 0..1: selected;\n\nconstraint sum(i in ItemName)(weights[i] * selected[i]) <= 10;\nconstraint selected[\"First_aid_kit\"] == 1;\nconstraint forall(i in ItemName)(selected[i] <= 1);\n\nvar int: total_weight = sum(i in ItemName)(weights[i] * selected[i]);\nconstraint total_weight - weights[\"First_aid_kit\"] <= 10;\n\nvar int: total_value = sum(i in ItemName)(values[i] * selected[i]);\nsolve maximize total_value;"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0028",
+    "sourceOutcome": "NO_MATCHING_READING",
+    "reps": [
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "NO_MATCHING_READING",
+        "gradeDetail": "pipeline outcome \"uniquely solvable\" matches no reading",
+        "costUsd": 0.0004029,
+        "structuredProse": "**ENTITIES:**  \n1. Houses: numbered 1 through 5, each assigned a color.\n   - Attributes: Color\n\n**DOMAINS:**  \n- Color: The possible values are Red, Blue, Green, Yellow, and White. This is a set of NAMED categories.\n\n**CONSTRAINTS:**  \n1. House 1 is Red.  \n2. House 4 is White.  \n3. The Green house is located to the right of the Blue house.  \n4. Each house must be painted a different color.",
+        "mzn": "include \"globals.mzn\";\n\nenum Color = { Red, Blue, Green, Yellow, White };\n\narray[1..5] of var Color: houseColor;\n\nconstraint houseColor[1] = Red;\nconstraint houseColor[4] = White;\nconstraint exists(i in 1..4)(houseColor[i] = Blue /\\ houseColor[i+1] = Green);\nconstraint alldifferent(houseColor);"
+      },
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "NO_MATCHING_READING",
+        "gradeDetail": "pipeline outcome \"uniquely solvable\" matches no reading",
+        "costUsd": 0.0003999,
+        "structuredProse": "**ENTITIES:**\n- Houses numbered 1 through 5\n  - Attributes: Color\n\n**DOMAINS:**\n- Color: Red, Blue, Green, Yellow, White (this is a set of NAMED categories)\n\n**CONSTRAINTS:**\n1. The red house is house 1.\n2. The white house is house 4.\n3. The green house is to the right of the blue house.\n4. Each house has a different color.\n5. No two houses share the same number.",
+        "mzn": "include \"globals.mzn\";\n\nenum Color = { Red, Blue, Green, Yellow, White };\narray[1..5] of var Color: houseColor;\n\nconstraint houseColor[1] = Red;\nconstraint houseColor[4] = White;\nconstraint exists(i in 1..4)(houseColor[i] = Blue /\\ houseColor[i+1] = Green);\nconstraint alldifferent(houseColor);"
+      },
+      {
+        "outcome": "SOLVE_ERROR",
+        "detail": "ModelSyntaxError: Error: type error: undefined identifier `i', did you mean `j'?\n/private/var/folders/t_/xcdyhzm5185g8bsc5klh4y6h0000gn/T/minizinc-mqsmGG/model.mzn:19.90\n",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.00056895,
+        "structuredProse": "**ENTITIES:**  \n- There are five houses numbered 1 through 5, arranged in a row from left to right.  \n- Each house has one attribute category: color. The possible colors are red, blue, green, yellow, and white.\n\n**DOMAINS:**  \n- The attribute category \"color\" has the following set of possible values: red, blue, green, yellow, and white. This is a set of NAMED categories.\n\n**CONSTRAINTS:**  \n1. The red house is house 1.  \n2. The white house is house 4.  \n3. The green house is to the right of the blue house.  \n4. Each house has a distinct color; no two houses share the same color.  \n5. House 3 must be the blue house or house 2 must be the blue house, based on the positioning of the green house relative to the blue house.  \n6. The green house must be either house 5 or house 3, depending on the color assigned to house 2.  \n7. The yellow house must be in one of the houses not explicitly assigned a color.",
+        "mzn": "include \"globals.mzn\";\n\nenum COLOR = {red, blue, green, yellow, white};\n\narray[1..5] of var COLOR: houseColor;\n\nconstraint houseColor[1] == red;\nconstraint houseColor[4] == white;\n\nconstraint exists(i in 1..4)(houseColor[i] == blue /\\ houseColor[i+1] == green);\n\nconstraint alldifferent(houseColor);\n\nconstraint (houseColor[3] == blue \\/ houseColor[2] == blue) /\\\n           (houseColor[2] == yellow -> (houseColor[5] == green \\/ houseColor[3] == green)) /\\\n           (houseColor[2] != yellow -> (houseColor[3] == green \\/ houseColor[5] == green));\n\nconstraint exists(i in 1..5)(houseColor[i] == yellow) /\\ \n           forall(j in 1..5)(if houseColor[j] != yellow then houseColor[j] != houseColor[i] endif);"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0033",
+    "sourceOutcome": "PREMISE_SILENTLY_PROMOTED",
+    "reps": [
+      {
+        "outcome": "SOLVE_MULTIPLY_SATISFIABLE",
+        "detail": "",
+        "verdict": "PREMISE_FREE_MATCH",
+        "gradeDetail": "premise-free outcome (multiply satisfiable) as expected",
+        "costUsd": 0.00057195,
+        "structuredProse": "**ENTITIES:**  \n1. Grocery Items:  \n   - Tub of ice cream  \n   - Can of beans  \n   - Bag of flour  \n   - Bunch of bananas  \n\n2. Compartments:  \n   - Compartment 1 (Freezer)  \n   - Compartment 2 (Unrefrigerated)  \n   - Compartment 3 (Unrefrigerated)  \n   - Compartment 4 (Unrefrigerated)  \n\n**DOMAINS:**  \n1. Grocery Items:  \n   - Named categories: Tub of ice cream, Can of beans, Bag of flour, Bunch of bananas.  \n\n2. Compartments:  \n   - Named categories: Compartment 1, Compartment 2, Compartment 3, Compartment 4.  \n\n**CONSTRAINTS:**  \n1. Each grocery item must occupy exactly one compartment.  \n2. Compartment 1 is a freezer and holds temperatures below freezing.  \n3. Compartments 2, 3, and 4 are unrefrigerated and hold temperatures above freezing.  \n4. The ice cream must be stored in a compartment that is not above freezing to avoid melting.  \n5. Therefore, the ice cream must be placed in Compartment 1, as it is the only compartment below freezing.  \n6. The can of beans, bag of flour, and bunch of bananas must be stored in one of the other compartments (2, 3, or 4).  \n7. No two grocery items can occupy the same compartment.",
+        "mzn": "include \"globals.mzn\";\n\nenum GroceryItem = { tub_of_ice_cream, can_of_beans, bag_of_flour, bunch_of_bananas };\nenum Compartment = { compartment_1, compartment_2, compartment_3, compartment_4 };\n\narray[GroceryItem] of var Compartment: item_location;\n\nconstraint\n    forall(item in GroceryItem)(exists(comp in Compartment)(item_location[item] == comp)) /\\\n    item_location[tub_of_ice_cream] == compartment_1 /\\\n    forall(item in {can_of_beans, bag_of_flour, bunch_of_bananas})(item_location[item] in {compartment_2, compartment_3, compartment_4}) /\\\n    alldifferent([item_location[item] | item in GroceryItem]);"
+      },
+      {
+        "outcome": "SOLVE_ERROR",
+        "detail": "ModelSyntaxError: Error: type error: undefined identifier `j', did you mean `i'?\n/private/var/folders/t_/xcdyhzm5185g8bsc5klh4y6h0000gn/T/minizinc-ybpOne/model.mzn:10.69\n",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.00059925,
+        "structuredProse": "**ENTITIES:**  \nThere are four grocery items:\n1. Tub of ice cream  \n2. Can of beans  \n3. Bag of flour  \n4. Bunch of bananas  \n\nThere are four compartments in the delivery van:\n1. Compartment 1 (freezer, held below freezing)  \n2. Compartment 2 (unrefrigerated, above freezing)  \n3. Compartment 3 (unrefrigerated, above freezing)  \n4. Compartment 4 (unrefrigerated, above freezing)  \n\n**DOMAINS:**  \nThe attribute categories for the grocery items are as follows:  \n- Grocery Item: The complete set of possible values is {Tub of ice cream, Can of beans, Bag of flour, Bunch of bananas}, which is a set of NAMED categories.  \n\nThe attribute categories for the compartments are as follows:  \n- Compartment Type: The complete set of possible values is {Freezer, Unrefrigerated}, which is a set of NAMED categories.  \n\n**CONSTRAINTS:**  \n1. Each compartment holds exactly one grocery item.  \n2. The ice cream must be stored in a compartment that is at or below freezing in order to prevent it from melting.  \n3. Compartment 1 is below freezing.  \n4. Compartments 2, 3, and 4 are above freezing.  \n5. Therefore, the ice cream must be stored in Compartment 1 because it is the only compartment that is below freezing.",
+        "mzn": "include \"globals.mzn\";\n\nenum GroceryItem = { Tub_of_ice_cream, Can_of_beans, Bag_of_flour, Bunch_of_bananas };\nenum CompartmentType = { Freezer, Unrefrigerated };\n\narray[1..4] of var GroceryItem: compartmentItems;\narray[1..4] of var CompartmentType: compartmentTypes;\n\nconstraint\n    forall(i in 1..4)(compartmentItems[i] != compartmentItems[j] /\\ j in 1..4);\n    \nconstraint compartmentTypes[1] == Freezer; \nconstraint compartmentTypes[2] == Unrefrigerated; \nconstraint compartmentTypes[3] == Unrefrigerated; \nconstraint compartmentTypes[4] == Unrefrigerated;\n\nconstraint compartmentItems[1] == Tub_of_ice_cream;  % Ice cream must be in Compartment 1\nconstraint compartmentItems[2] != Tub_of_ice_cream;\nconstraint compartmentItems[3] != Tub_of_ice_cream;\nconstraint compartmentItems[4] != Tub_of_ice_cream;"
+      },
+      {
+        "outcome": "SOLVE_MULTIPLY_SATISFIABLE",
+        "detail": "",
+        "verdict": "PREMISE_FREE_MATCH",
+        "gradeDetail": "premise-free outcome (multiply satisfiable) as expected",
+        "costUsd": 0.00057285,
+        "structuredProse": "**ENTITIES:** \n1. Grocery Items: \n   - Tub of ice cream \n   - Can of beans \n   - Bag of flour \n   - Bunch of bananas \n   \n2. Compartments: \n   - Compartment 1 (Freezer) \n   - Compartment 2 (Unrefrigerated) \n   - Compartment 3 (Unrefrigerated) \n   - Compartment 4 (Unrefrigerated) \n\n**DOMAINS:** \n1. Grocery Items: This is a set of NAMED categories consisting of: \n   - Tub of ice cream \n   - Can of beans \n   - Bag of flour \n   - Bunch of bananas \n\n2. Compartments: This is a set of NAMED categories consisting of: \n   - Compartment 1 (Freezer) \n   - Compartment 2 (Unrefrigerated) \n   - Compartment 3 (Unrefrigerated) \n   - Compartment 4 (Unrefrigerated) \n\n**CONSTRAINTS:** \n1. Each grocery item must be placed in exactly one of the four compartments. \n2. Compartment 1 is a freezer and holds items below freezing. \n3. Compartments 2, 3, and 4 are unrefrigerated and hold items above freezing. \n4. The tub of ice cream must be placed in a compartment that is not above freezing, as it will melt in such conditions. \n5. Since Compartment 1 is the only compartment that is below freezing, it must hold the tub of ice cream. \n6. No two grocery items can occupy the same compartment.",
+        "mzn": "include \"globals.mzn\";\n\nenum GroceryItems = {tub_of_ice_cream, can_of_beans, bag_of_flour, bunch_of_bananas};\nenum Compartments = {compartment_1, compartment_2, compartment_3, compartment_4};\n\narray[GroceryItems] of var Compartments: item_placement;\n\nconstraint forall(i in GroceryItems)(\n    item_placement[i] in Compartments\n);\n\nconstraint item_placement[tub_of_ice_cream] == compartment_1;\n\nconstraint forall(i in GroceryItems, j in GroceryItems where i != j)(\n    item_placement[i] != item_placement[j]\n);"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0038",
+    "sourceOutcome": "MATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_UNSATISFIABLE",
+        "detail": "",
+        "verdict": "MISMATCH",
+        "gradeDetail": "expected unique solution, got Unsatisfiable",
+        "costUsd": 0.000483,
+        "structuredProse": "ENTITIES: The entities in this puzzle are five animals and five holding pens. The five animals are a wolf, a rabbit, a goat, a parrot, and a tortoise. The attributes assigned to the animals include their positions in the holding pens, which are numbered 1 to 5.\n\nDOMAINS: \n- The attribute category for each animal is their position. The complete set of possible values for this attribute is numbers 1, 2, 3, 4, and 5. This is a set of NUMBER values.\n\nCONSTRAINTS:\n1. The tortoise is in pen 1.\n2. The parrot is in pen 2.\n3. The goat is in pen 3.\n4. The rabbit is in a lower-numbered pen than the wolf.\n5. The wolf preys on the rabbit.\n6. Each animal must occupy exactly one pen.\n7. No two animals can be in the same pen.",
+        "mzn": "include \"globals.mzn\";\n\nenum Animal = {wolf, rabbit, goat, parrot, tortoise};\narray[Animal] of var 1..5: positions;\n\nconstraint positions[tortoise] == 1;\nconstraint positions[parrot] == 2;\nconstraint positions[goat] == 3;\nconstraint positions[rabbit] < positions[wolf];\nconstraint forall(i in Animal)(positions[i] != positions[wolf] /\\ positions[i] != positions[rabbit]);\nconstraint alldifferent(positions);"
+      },
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "MISMATCH",
+        "gradeDetail": "missing tokens: tortoise, parrot, goat, rabbit, wolf",
+        "costUsd": 0.0005016,
+        "structuredProse": "**ENTITIES:**\n1. Animals: The entities involved in the puzzle are a wolf, a rabbit, a goat, a parrot, and a tortoise. \n   - Attributes: Each animal has a position assigned to one of the five holding pens.\n\n2. Holding Pens: There are five holding pens, numbered 1 to 5.\n   - Attributes: Each pen can hold exactly one animal.\n\n**DOMAINS:**\n1. Animal Positions: Each animal can occupy one of the following positions (pens):\n   - Pen 1\n   - Pen 2\n   - Pen 3\n   - Pen 4\n   - Pen 5\n\n**CONSTRAINTS:**\n1. The tortoise is in pen 1.\n2. The parrot is in pen 2.\n3. The goat is in pen 3.\n4. The rabbit is in a lower-numbered pen than the wolf.\n5. The wolf preys on the rabbit.\n6. Each pen holds exactly one animal.\n7. No two animals can occupy the same pen.",
+        "mzn": "include \"globals.mzn\";\n\nenum Animal = {wolf, rabbit, goat, parrot, tortoise};\narray[Animal] of var 1..5: positions;\n\nconstraint positions[tortoise] == 1;\nconstraint positions[parrot] == 2;\nconstraint positions[goat] == 3;\nconstraint forall(i in 1..4)(positions[rabbit] < positions[wolf]);\nconstraint forall(i in Animal)(forall(j in Animal where i != j)(positions[i] != positions[j]));"
+      },
+      {
+        "outcome": "SOLVE_ERROR",
+        "detail": "ModelSyntaxError: Error: type error: undefined identifier `j'\n/private/var/folders/t_/xcdyhzm5185g8bsc5klh4y6h0000gn/T/minizinc-Ep5siK/model.mzn:12.17\n",
+        "verdict": "N/A",
+        "gradeDetail": "",
+        "costUsd": 0.0005214,
+        "structuredProse": "**ENTITIES:**  \n1. **Animals**: The fixed set of animals consists of five entities: wolf, rabbit, goat, parrot, and tortoise.  \n2. **Pens**: There are five holding pens, uniquely numbered from 1 to 5.\n\n**DOMAINS:**  \n1. **Animal Names**: The complete set of possible values includes the named categories: wolf, rabbit, goat, parrot, tortoise.  \n2. **Pen Numbers**: The complete set of possible values includes the numeric range: 1, 2, 3, 4, 5.\n\n**CONSTRAINTS:**  \n1. The tortoise is in pen 1.  \n2. The parrot is in pen 2.  \n3. The goat is in pen 3.  \n4. The rabbit is in a lower-numbered pen than the wolf.  \n5. The wolf preys on the rabbit.  \n6. Each animal is in exactly one pen.  \n7. No two animals share the same pen.",
+        "mzn": "include \"globals.mzn\";\n\nenum Animals = {wolf, rabbit, goat, parrot, tortoise};\narray[1..5] of var Animals: animalInPen;\n\nconstraint animalInPen[1] = tortoise;\nconstraint animalInPen[2] = parrot;\nconstraint animalInPen[3] = goat;\n\nconstraint exists(i in 1..5)(animalInPen[i] = rabbit) /\\ \n           exists(j in 1..5)(animalInPen[j] = wolf) /\\ \n           (i < j);\n\nconstraint forall(k in 1..5)(forall(l in (k+1)..5)(animalInPen[k] != animalInPen[l]));"
+      }
+    ]
+  }
+]

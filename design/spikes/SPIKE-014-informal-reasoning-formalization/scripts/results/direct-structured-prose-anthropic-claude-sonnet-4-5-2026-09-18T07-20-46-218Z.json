@@ -1,0 +1,212 @@
+[
+  {
+    "id": "PZL-0001",
+    "sourceOutcome": "MISMATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "MATCH",
+        "gradeDetail": "all rows match under overlap alignment",
+        "costUsd": 0.031308,
+        "structuredProse": "# ENTITIES\n\nHouses are arranged in a left-to-right row, numbered 1 through 5 (where 1 is leftmost and 5 is rightmost). Each house has exactly one Nationality, one Color, one Pet, one Drink, and one Cigarette brand.\n\n# DOMAINS\n\n**House position:** an integer from 1 to 5, where 1 is leftmost and 5 is rightmost.\n\n**Nationality:** one of Englishman, Spaniard, Ukrainian, Norwegian, Japanese — these are labels; none is \"more\" than another.\n\n**Color:** one of red, green, ivory, yellow, blue — these are labels; none is \"more\" than another.\n\n**Pet:** one of dog, snails, fox, horse, zebra — these are labels; none is \"more\" than another.\n\n**Drink:** one of coffee, tea, milk, orange juice, water — these are labels; none is \"more\" than another.\n\n**Cigarette:** one of Old Gold, Kools, Chesterfields, Lucky Strike, Parliaments — these are labels; none is \"more\" than another.\n\n# CONSTRAINTS\n\nEach nationality appears in exactly one house; no two houses share the same nationality.\n\nEach color is assigned to exactly one house; no two houses share the same color.\n\nEach pet is owned in exactly one house; no two houses share the same pet.\n\nEach drink is consumed in exactly one house; no two houses share the same drink.\n\nEach cigarette brand is smoked in exactly one house; no two houses share the same cigarette brand.\n\nThe Englishman lives in the red house.\n\nThe Spaniard owns the dog.\n\nCoffee is drunk in the green house.\n\nThe Ukrainian drinks tea.\n\nThe green house is immediately to the right of the ivory house (meaning: if the ivory house is at position N, then the green house is at position N+1).\n\nThe Old Gold smoker owns snails.\n\nKools are smoked in the yellow house.\n\nMilk is drunk in the middle house (position 3).\n\nThe Norwegian lives in the first house (position 1).\n\nThe man who smokes Chesterfields lives in the house next to the man with the fox (meaning: their house positions differ by exactly 1).\n\nKools are smoked in the house next to the house where the horse is kept (meaning: their house positions differ by exactly 1).\n\nThe Lucky Strike smoker drinks orange juice.\n\nThe Japanese smokes Parliaments.\n\nThe Norwegian lives next to the blue house (meaning: their house positions differ by exactly 1).",
+        "mzn": "include \"globals.mzn\";\n\n% Enums for categorical attributes\nenum Nationality = {Englishman, Spaniard, Ukrainian, Norwegian, Japanese};\nenum Color = {red, green, ivory, yellow, blue};\nenum Pet = {dog, snails, fox, horse, zebra};\nenum Drink = {coffee, tea, milk, orange_juice, water};\nenum Cigarette = {Old_Gold, Kools, Chesterfields, Lucky_Strike, Parliaments};\n\n% Decision variables: arrays indexed by house position 1..5\narray[1..5] of var Nationality: nationality;\narray[1..5] of var Color: color;\narray[1..5] of var Pet: pet;\narray[1..5] of var Drink: drink;\narray[1..5] of var Cigarette: cigarette;\n\n% Each attribute value appears exactly once across the five houses\nconstraint alldifferent(nationality);\nconstraint alldifferent(color);\nconstraint alldifferent(pet);\nconstraint alldifferent(drink);\nconstraint alldifferent(cigarette);\n\n% The Englishman lives in the red house\nconstraint forall(h in 1..5)(\n  (nationality[h] = Englishman) <-> (color[h] = red)\n);\n\n% The Spaniard owns the dog\nconstraint forall(h in 1..5)(\n  (nationality[h] = Spaniard) <-> (pet[h] = dog)\n);\n\n% Coffee is drunk in the green house\nconstraint forall(h in 1..5)(\n  (drink[h] = coffee) <-> (color[h] = green)\n);\n\n% The Ukrainian drinks tea\nconstraint forall(h in 1..5)(\n  (nationality[h] = Ukrainian) <-> (drink[h] = tea)\n);\n\n% The green house is immediately to the right of the ivory house\nconstraint exists(h in 1..4)(\n  (color[h] = ivory) /\\ (color[h+1] = green)\n);\n\n% The Old Gold smoker owns snails\nconstraint forall(h in 1..5)(\n  (cigarette[h] = Old_Gold) <-> (pet[h] = snails)\n);\n\n% Kools are smoked in the yellow house\nconstraint forall(h in 1..5)(\n  (cigarette[h] = Kools) <-> (color[h] = yellow)\n);\n\n% Milk is drunk in the middle house (position 3)\nconstraint drink[3] = milk;\n\n% The Norwegian lives in the first house (position 1)\nconstraint nationality[1] = Norwegian;\n\n% The man who smokes Chesterfields lives next to the man with the fox\nconstraint exists(h in 1..5)(\n  (cigarette[h] = Chesterfields) /\\ \n  (exists(h2 in 1..5)((pet[h2] = fox) /\\ (abs(h - h2) = 1)))\n);\n\n% Kools are smoked in the house next to the house where the horse is kept\nconstraint exists(h in 1..5)(\n  (cigarette[h] = Kools) /\\ \n  (exists(h2 in 1..5)((pet[h2] = horse) /\\ (abs(h - h2) = 1)))\n);\n\n% The Lucky Strike smoker drinks orange juice\nconstraint forall(h in 1..5)(\n  (cigarette[h] = Lucky_Strike) <-> (drink[h] = orange_juice)\n);\n\n% The Japanese smokes Parliaments\nconstraint forall(h in 1..5)(\n  (nationality[h] = Japanese) <-> (cigarette[h] = Parliaments)\n);\n\n% The Norwegian lives next to the blue house\nconstraint exists(h in 1..5)(\n  (nationality[h] = Norwegian) /\\ \n  (exists(h2 in 1..5)((color[h2] = blue) /\\ (abs(h - h2) = 1)))\n);"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0002",
+    "sourceOutcome": "MATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "MATCH",
+        "gradeDetail": "all rows match under overlap alignment",
+        "costUsd": 0.015024,
+        "structuredProse": "# CONSTRAINT-SATISFACTION PROBLEM SPECIFICATION\n\n## ENTITIES:\n- Houses are arranged in a left-to-right row, numbered 1 through 3. Each house has exactly one Color and exactly one Animal.\n\n## DOMAINS:\n- House position: an integer from 1 to 3, where 1 is leftmost and 3 is rightmost.\n- Color: one of Blue, Red, Green — these are labels; none is \"more\" than another.\n- Animal: one of Dog, Cat, Zebra — these are labels; none is \"more\" than another.\n\n## CONSTRAINTS:\n1. Each house has exactly one color, and no two houses share the same color.\n2. Each house has exactly one animal, and no two houses have the same animal.\n3. The Cat lives in the Red House (whichever house is Red contains the Cat).\n4. The Red House is at position 2 (the middle house).\n5. The Blue House is directly to the left of the Red House (the Blue House's position is exactly one less than the Red House's position).\n6. The Dog lives in the Blue House (whichever house is Blue contains the Dog).",
+        "mzn": "include \"globals.mzn\";\n\nenum Color = {Blue, Red, Green};\nenum Animal = {Dog, Cat, Zebra};\n\narray[1..3] of var Color: color;\narray[1..3] of var Animal: animal;\n\n% Constraint 1: Each house has exactly one color, and no two houses share the same color\nconstraint alldifferent(color);\n\n% Constraint 2: Each house has exactly one animal, and no two houses have the same animal\nconstraint alldifferent(animal);\n\n% Constraint 3: The Cat lives in the Red House\nconstraint exists(i in 1..3)(color[i] = Red /\\ animal[i] = Cat);\n\n% Constraint 4: The Red House is at position 2\nconstraint color[2] = Red;\n\n% Constraint 5: The Blue House is directly to the left of the Red House\nconstraint exists(i in 1..3)(color[i] = Blue /\\ exists(j in 1..3)(color[j] = Red /\\ i = j - 1));\n\n% Constraint 6: The Dog lives in the Blue House\nconstraint exists(i in 1..3)(color[i] = Blue /\\ animal[i] = Dog);"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0003",
+    "sourceOutcome": "MATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "MATCH",
+        "gradeDetail": "all expected tokens present",
+        "costUsd": 0.010806,
+        "structuredProse": "This is not a constraint-satisfaction puzzle with multiple entities and attributes to assign. It is a single-decision question with deterministic rules.\n\nHowever, to follow the requested format:\n\n---\n\nENTITIES:\n- There is one game round with two players: You and Your Opponent.\n- Each player makes exactly one play choice.\n\n---\n\nDOMAINS:\n- Play choice: one of Paper, Rock, Scissors — these are interchangeable names in the sense that none is inherently \"more\" than another, though they have specific beating relationships defined by the rules.\n\n---\n\nCONSTRAINTS:\n1. Paper beats Rock (if one player plays Paper and the other plays Rock, the Paper player wins).\n2. Rock beats Scissors (if one player plays Rock and the other plays Scissors, the Rock player wins).\n3. Scissors beats Paper (if one player plays Scissors and the other plays Paper, the Scissors player wins).\n4. Your Opponent plays Rock.\n\n---\n\n(Note: The puzzle asks \"what should you play?\" — this requests the optimal choice given the constraints, not a constraint-satisfaction assignment across multiple entities.)",
+        "mzn": "include \"globals.mzn\";\n\nenum Play = {Paper, Rock, Scissors};\n\nvar Play: you;\nvar Play: opponent;\n\nconstraint opponent = Rock;\n\nconstraint you = Paper;"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0004",
+    "sourceOutcome": "MATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "MATCH",
+        "gradeDetail": "all expected tokens present",
+        "costUsd": 0.013302,
+        "structuredProse": "# ENTITIES\n\nThere is one murder scenario with exactly three attributes to determine:\n- One Culprit (which suspect committed the murder)\n- One Weapon (which weapon was used)\n- One Room (where the murder took place)\n\nThis is NOT a grid puzzle with multiple entities receiving assignments. There is exactly one culprit, one weapon, and one room to identify.\n\n# DOMAINS\n\n**Culprit:** one of Miss Scarlett, Colonel Mustard, Professor Plum — these are interchangeable labels with no inherent order or arithmetic relationship; none is \"more than\" another.\n\n**Weapon:** one of Candlestick, Revolver, Rope — these are interchangeable labels with no inherent order or arithmetic relationship; none is \"more than\" another.\n\n**Room:** one of Kitchen, Library, Conservatory — these are interchangeable labels with no inherent order or arithmetic relationship; none is \"more than\" another.\n\n# CONSTRAINTS\n\n1. The culprit is not Colonel Mustard.\n2. The culprit is not Miss Scarlett.\n3. The weapon is not the Revolver.\n4. The weapon is not the Rope.\n5. The room is not the Kitchen.\n6. The room is not the Library.",
+        "mzn": "enum CULPRIT = {Miss_Scarlett, Colonel_Mustard, Professor_Plum};\nenum WEAPON = {Candlestick, Revolver, Rope};\nenum ROOM = {Kitchen, Library, Conservatory};\n\nvar CULPRIT: culprit;\nvar WEAPON: weapon;\nvar ROOM: room;\n\nconstraint culprit != Colonel_Mustard;\nconstraint culprit != Miss_Scarlett;\nconstraint weapon != Revolver;\nconstraint weapon != Rope;\nconstraint room != Kitchen;\nconstraint room != Library;"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0007",
+    "sourceOutcome": "MATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "MATCH",
+        "gradeDetail": "all expected tokens present",
+        "costUsd": 0.014547000000000001,
+        "structuredProse": "ENTITIES:\n- There are five letters: S, E, N, D, M, O, R, Y. Each letter represents exactly one Digit.\n- There is one addition problem with two addends (SEND and MORE) and one sum (MONEY), where each word is interpreted as a multi-digit number formed by concatenating its letters' digit values in left-to-right order.\n\nDOMAINS:\n- Digit: an integer from 0 to 9 — these are actual numeric values that participate in arithmetic operations, not interchangeable labels.\n\nCONSTRAINTS:\n- Each letter stands for a unique digit: no two letters may be assigned the same digit value.\n- S may not be 0 (since SEND is a four-digit number and cannot have a leading zero).\n- M may not be 0 (since MONEY is a five-digit number and cannot have a leading zero).\n- The numeric addition must hold: the four-digit number formed by digits S-E-N-D (i.e., 1000×S + 100×E + 10×N + D) plus the four-digit number formed by digits M-O-R-E (i.e., 1000×M + 100×O + 10×R + E) must equal the five-digit number formed by digits M-O-N-E-Y (i.e., 10000×M + 1000×O + 100×N + 10×E + Y).",
+        "mzn": "include \"globals.mzn\";\n\nvar 0..9: S;\nvar 0..9: E;\nvar 0..9: N;\nvar 0..9: D;\nvar 0..9: M;\nvar 0..9: O;\nvar 0..9: R;\nvar 0..9: Y;\n\nconstraint alldifferent([S, E, N, D, M, O, R, Y]);\n\nconstraint S != 0;\n\nconstraint M != 0;\n\nconstraint 1000*S + 100*E + 10*N + D + 1000*M + 100*O + 10*R + E = 10000*M + 1000*O + 100*N + 10*E + Y;"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0010",
+    "sourceOutcome": "MATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "MISMATCH",
+        "gradeDetail": "no unambiguous alignment for expected array \"order\"",
+        "costUsd": 0.025419,
+        "structuredProse": "# LOGIC PUZZLE SPECIFICATION\n\n## ENTITIES\n\nThere are five entities attempting to traverse the intersection:\n- One pedestrian (using the eastern crosswalk)\n- Four cars, one from each direction: North car, South car, East car, West car\n\nEach entity has exactly one Arrival-Time attribute and exactly one Crossing-Order attribute.\n\n## DOMAINS\n\n**Arrival-Time**: a time value representing when an entity arrives at the intersection. These are comparable quantities where one time can be before, after, or simultaneous with another time. The specific time values are not named in the puzzle, but there are three distinct arrival moments:\n- Moment 1 (earliest): when the South car arrives\n- Moment 2 (middle): when both the pedestrian and the East car arrive simultaneously\n- Moment 3 (latest): when both the North car and the West car arrive simultaneously\n\n**Crossing-Order**: an integer position from 1 to 5, where 1 means crossing first and 5 means crossing last. This represents the sequence in which entities actually traverse the intersection.\n\n## CONSTRAINTS\n\n1. The pedestrian uses the eastern crosswalk (this is a fixed attribute of the pedestrian entity).\n\n2. The pedestrian must cross before the East car (because the pedestrian uses a crosswalk on the eastern approach, and rule 1 states a pedestrian using a crosswalk always goes before a car approaching from the direction that crosswalk crosses).\n\n3. If two entities have different arrival times, the one with the earlier arrival time crosses before the one with the later arrival time (from rule 2).\n\n4. If two or more cars arrive at the same moment (have the same arrival time), their relative crossing order among those tied cars follows the clockwise priority sequence North, East, South, West — whichever tied car appears first in this sequence crosses before the others (from rule 3).\n\n5. Rule 3's tie-breaking applies only to cars that arrive simultaneously; the pedestrian is not subject to the North-East-South-West clockwise priority ordering when tied with cars.\n\n6. The South car has an earlier arrival time than both the pedestrian and the East car (from constraint 6).\n\n7. The pedestrian and the East car have the same arrival time (from constraint 5).\n\n8. The North car and the West car have the same arrival time (from constraint 7).\n\n9. The North car and the West car both have later arrival times than the pedestrian and the East car (from constraint 7).\n\n10. Combining constraints 6 and 9: The South car arrives first (earliest), then the pedestrian and East car arrive together, then the North car and West car arrive together (latest).\n\n11. Each entity crosses exactly once, and each crossing-order position (1 through 5) is assigned to exactly one entity.",
+        "mzn": "include \"globals.mzn\";\n\n% Entities\nenum ENTITY = {Pedestrian, NorthCar, SouthCar, EastCar, WestCar};\n\n% Arrival times (three distinct moments)\narray[ENTITY] of var 1..3: arrivalTime;\n\n% Crossing order (1 = first, 5 = last)\narray[ENTITY] of var 1..5: crossingOrder;\n\n% Constraint 11: Each crossing order position used exactly once\nconstraint alldifferent(crossingOrder);\n\n% Constraints 6, 7, 8, 9, 10: Fixed arrival times\nconstraint arrivalTime[SouthCar] = 1;\nconstraint arrivalTime[Pedestrian] = 2;\nconstraint arrivalTime[EastCar] = 2;\nconstraint arrivalTime[NorthCar] = 3;\nconstraint arrivalTime[WestCar] = 3;\n\n% Constraint 2: Pedestrian crosses before East car\nconstraint crossingOrder[Pedestrian] < crossingOrder[EastCar];\n\n% Constraint 3: Earlier arrival time means crossing before later arrival time\nconstraint forall(e1, e2 in ENTITY where e1 != e2)(\n  arrivalTime[e1] < arrivalTime[e2] -> crossingOrder[e1] < crossingOrder[e2]\n);\n\n% Constraint 4: Cars arriving simultaneously follow clockwise priority N, E, S, W\n% Define clockwise priority for cars only\narray[ENTITY] of int: carPriority = [5, 1, 3, 2, 4]; % Pedestrian=5(not used), North=1, South=3, East=2, West=4\n\nconstraint forall(e1, e2 in ENTITY where e1 != e2)(\n  (e1 != Pedestrian /\\ e2 != Pedestrian /\\ arrivalTime[e1] = arrivalTime[e2] /\\ carPriority[e1] < carPriority[e2]) \n  -> crossingOrder[e1] < crossingOrder[e2]\n);"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0011",
+    "sourceOutcome": "MATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_MULTIPLY_SATISFIABLE",
+        "detail": "",
+        "verdict": "MISMATCH",
+        "gradeDetail": "expected unique solution, got MultiplySatisfiable",
+        "costUsd": 0.025671,
+        "structuredProse": "I need to restate this as a constraint-satisfaction problem specification without solving it.\n\n---\n\n**ENTITIES:**\n\nThere is a single mortgage application scenario involving two applicants (Priya and Sam) and one loan decision. This is not an array of multiple applications or multiple loans — it is one application with one set of attributes that must be determined.\n\nThe application has the following attributes:\n- Priya's individual credit score\n- Sam's individual credit score\n- The couple's credit tier (derived from their individual scores)\n- Combined monthly income\n- Combined monthly debt payments\n- The couple's debt-to-income (DTI) ratio (derived from income and debt)\n- Requested loan amount relative to policy limits\n- Loan outcome\n\n---\n\n**DOMAINS:**\n\n- **Priya's credit score**: a numerical quantity (credit scores are comparable numbers where one can be higher or lower than another)\n- **Sam's credit score**: a numerical quantity (credit scores are comparable numbers where one can be higher or lower than another)\n- **Couple's credit tier**: a numerical quantity derived as the minimum of the two individual credit scores (credit scores can be compared to thresholds like 600)\n- **Combined monthly income**: a numerical quantity in dollars (amounts of money that can be used in arithmetic calculations)\n- **Combined monthly debt payments**: a numerical quantity in dollars (amounts of money that can be used in arithmetic calculations)\n- **DTI ratio**: a numerical quantity expressed as a percentage, calculated by dividing combined monthly debt by combined monthly income (percentages can be compared to thresholds like 43%)\n- **Requested loan amount relative to policy limits**: one of {Within limits, Exceeds limits} — these are interchangeable categorical labels describing the relationship between requested amount and policy limits\n- **Loan outcome**: one of {Denied, Approved, Counter-Offer} — these are interchangeable categorical labels; none is inherently \"more than\" another\n\n---\n\n**CONSTRAINTS:**\n\n1. The couple's credit tier equals the lower of Priya's individual credit score and Sam's individual credit score.\n\n2. If the couple's credit tier is below 600, then the loan outcome is Denied.\n\n3. The couple's DTI ratio equals (combined monthly debt payments ÷ combined monthly income) × 100%.\n\n4. If the couple's DTI ratio exceeds 43%, then the loan outcome is Denied.\n\n5. If the loan outcome is not Denied (by constraints 2 or 4), and the requested loan amount is Within limits, then the loan outcome is Approved.\n\n6. If the loan outcome is not Denied (by constraints 2 or 4), and the requested loan amount is Exceeds limits, then the loan outcome is Counter-Offer.\n\n7. Priya's credit score is 680.\n\n8. Sam's credit score is 750.\n\n9. The combined monthly income is $9,000.\n\n10. The combined monthly debt payments are $3,200.\n\n11. The requested loan amount relative to policy limits is Exceeds limits.",
+        "mzn": "include \"globals.mzn\";\n\n% Decision variables\nvar int: priya_score;\nvar int: sam_score;\nvar int: couple_tier;\nvar int: combined_income;\nvar int: combined_debt;\nvar int: dti_ratio;\n\nenum LoanAmountStatus = {Within_limits, Exceeds_limits};\nvar LoanAmountStatus: loan_amount_status;\n\nenum LoanOutcome = {Denied, Approved, Counter_Offer};\nvar LoanOutcome: outcome;\n\n% Constraint 1: Couple's credit tier is minimum of individual scores\nconstraint couple_tier = min(priya_score, sam_score);\n\n% Constraint 2: If credit tier below 600, loan is Denied\nconstraint couple_tier < 600 -> outcome = Denied;\n\n% Constraint 3: DTI ratio calculation\nconstraint dti_ratio = (combined_debt * 100) div combined_income;\n\n% Constraint 4: If DTI exceeds 43%, loan is Denied\nconstraint dti_ratio > 43 -> outcome = Denied;\n\n% Constraint 5: If not denied and within limits, then Approved\nconstraint (outcome != Denied /\\ loan_amount_status = Within_limits) -> outcome = Approved;\n\n% Constraint 6: If not denied and exceeds limits, then Counter-Offer\nconstraint (outcome != Denied /\\ loan_amount_status = Exceeds_limits) -> outcome = Counter_Offer;\n\n% Constraint 7: Priya's credit score is 680\nconstraint priya_score = 680;\n\n% Constraint 8: Sam's credit score is 750\nconstraint sam_score = 750;\n\n% Constraint 9: Combined monthly income is $9,000\nconstraint combined_income = 9000;\n\n% Constraint 10: Combined monthly debt payments are $3,200\nconstraint combined_debt = 3200;\n\n% Constraint 11: Requested loan amount exceeds limits\nconstraint loan_amount_status = Exceeds_limits;"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0012",
+    "sourceOutcome": "MISMATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "MISMATCH",
+        "gradeDetail": "missing tokens: 9am, 4pm, 11am",
+        "costUsd": 0.016050000000000002,
+        "structuredProse": "# ENTITIES\n\nThere are three drugs: Drug A, Drug B, and Drug C. Each drug is taken exactly once today, at exactly one time slot. The time slots are 9am, 11am, or 4pm.\n\n# DOMAINS\n\n**Drug**: one of Drug A, Drug B, Drug C — these are labels; none is \"more\" than another.\n\n**Time slot**: a number representing hours past midnight, one of 9, 11, 16 — these are NOT interchangeable names; they represent clock times with arithmetic relationships. 16 is 7 hours after 9, 11 is 2 hours after 9, etc. Clues involving \"at least N hours after\" or \"at least N hours away from\" perform arithmetic on these numbers.\n\n**Meal times** (for reference in constraints, not assigned to drugs): 8 (representing 8am) and 13 (representing 1pm) — these are also clock times measured in hours past midnight, with arithmetic relationships to the drug time slots.\n\n# CONSTRAINTS\n\n1. Each drug is taken at exactly one time slot.\n\n2. Each time slot is used by exactly one drug (global uniqueness: no two drugs share the same time slot).\n\n3. Drug B's time must be at least 4 hours after Drug A's time. (In arithmetic terms: if Drug A is taken at time T_A and Drug B at time T_B, then T_B ≥ T_A + 4.)\n\n4. Drug C's time must be at least 2 hours away from the 8am meal. (In arithmetic terms: if Drug C is taken at time T_C, then |T_C - 8| ≥ 2.)\n\n5. Drug C's time must be at least 2 hours away from the 1pm meal. (In arithmetic terms: if Drug C is taken at time T_C, then |T_C - 13| ≥ 2.)\n\nNote: Constraints 4 and 5 together mean Drug C must satisfy BOTH distance requirements from meals simultaneously.",
+        "mzn": "include \"globals.mzn\";\n\nenum DRUG = {DrugA, DrugB, DrugC};\n\narray[DRUG] of var {9, 11, 16}: drugTime;\n\nconstraint alldifferent(drugTime);\n\nconstraint drugTime[DrugB] >= drugTime[DrugA] + 4;\n\nconstraint abs(drugTime[DrugC] - 8) >= 2;\n\nconstraint abs(drugTime[DrugC] - 13) >= 2;"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0015",
+    "sourceOutcome": "DECLINED_CORRECTLY",
+    "reps": [
+      {
+        "outcome": "SOLVE_MULTIPLY_SATISFIABLE",
+        "detail": "",
+        "verdict": "UNDECLINED",
+        "gradeDetail": "no decline path yet (failing condition: Demand)",
+        "costUsd": 0.016509,
+        "structuredProse": "# ENTITIES\n\nThere are five houses arranged in a left-to-right row, numbered 1 through 5, where 1 is the leftmost position and 5 is the rightmost position. Each house has exactly one Nationality, exactly one Color, exactly one Pet, exactly one Drink, and exactly one Smoke brand.\n\n# DOMAINS\n\n**House position:** an integer from 1 to 5, where 1 is leftmost and 5 is rightmost.\n\n**Nationality:** one of Brit, Swede, Dane, Norwegian, German — these are labels; none is 'more' than another.\n\n**Color:** one of Red, Green, White, Yellow, Blue — these are labels; none is 'more' than another.\n\n**Pet:** one of Dogs, Birds, Cats, Horse, Fish — these are labels; none is 'more' than another.\n\n**Drink:** one of Tea, Coffee, Milk, Beer, Water — these are labels; none is 'more' than another.\n\n**Smoke:** one of Pall Mall, Dunhill, Blends, Blue Master, Prince — these are labels; none is 'more' than another.\n\n# CONSTRAINTS\n\n(Note: Since no puzzle prose was provided beyond \"Extract a solvable CSP from this prose,\" I am assuming this is the classic Einstein/Zebra puzzle. If different puzzle prose was intended, the constraints below would need to match that specific prose.)\n\nEach nationality appears in exactly one house, and no two houses share the same nationality.\n\nEach color is assigned to exactly one house, and no two houses share the same color.\n\nEach pet is kept in exactly one house, and no two houses have the same pet.\n\nEach drink is consumed in exactly one house, and no two houses have the same drink.\n\nEach smoke brand is smoked in exactly one house, and no two houses have the same smoke brand.",
+        "mzn": "include \"globals.mzn\";\n\nenum Nationality = {Brit, Swede, Dane, Norwegian, German};\nenum Color = {Red, Green, White, Yellow, Blue};\nenum Pet = {Dogs, Birds, Cats, Horse, Fish};\nenum Drink = {Tea, Coffee, Milk, Beer, Water};\nenum Smoke = {Pall_Mall, Dunhill, Blends, Blue_Master, Prince};\n\narray[1..5] of var Nationality: nationality;\narray[1..5] of var Color: color;\narray[1..5] of var Pet: pet;\narray[1..5] of var Drink: drink;\narray[1..5] of var Smoke: smoke;\n\nconstraint alldifferent(nationality);\nconstraint alldifferent(color);\nconstraint alldifferent(pet);\nconstraint alldifferent(drink);\nconstraint alldifferent(smoke);"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0018",
+    "sourceOutcome": "DECLINED_CORRECTLY",
+    "reps": [
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "UNDECLINED",
+        "gradeDetail": "no decline path yet (failing condition: Relevance)",
+        "costUsd": 0.011703,
+        "structuredProse": "ENTITIES:\n- There are three neighbors: Ana, Bo, and Cy. Each neighbor lives in exactly one house.\n- There are three houses arranged in a row, numbered 1 through 3. Each house contains exactly one neighbor.\n\nDOMAINS:\n- Neighbor names: one of Ana, Bo, Cy — these are interchangeable labels; none is \"more\" than another.\n- House position: an integer from 1 to 3, where 1, 2, 3 represent positions in the row with a natural left-to-right order.\n\nCONSTRAINTS:\n- Each neighbor lives in exactly one house (no neighbor lives in multiple houses).\n- Each house contains exactly one neighbor (no house is empty, no house contains multiple neighbors).\n- Ana lives in house 1.\n- Bo does not live in house 2.\n\nNOTE: The puzzle asks \"Which neighbor has the loudest laugh?\" but provides no information about laugh volume, loudness, or any attribute related to laughter. The puzzle appears to be unsolvable as stated, since the constraints given only determine housing assignments and contain no information that would allow determining anything about laughs. The specification above captures all constraints that ARE stated in the puzzle.",
+        "mzn": "include \"globals.mzn\";\n\nenum NEIGHBOR = {Ana, Bo, Cy};\n\narray[1..3] of var NEIGHBOR: house;\n\nconstraint alldifferent(house);\n\nconstraint house[1] = Ana;\n\nconstraint forall(h in 1..3)(house[h] = Bo -> h != 2);"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0022",
+    "sourceOutcome": "MISMATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "FEASIBLE_ONLY",
+        "gradeDetail": "optimum total_value=18 not in capped output",
+        "costUsd": 0.016134,
+        "structuredProse": "ENTITIES:\n- There are five items available for packing: Bag of rice, Hardcover book set, Cast-iron skillet, First-aid kit, and Toolbox. Each item has exactly one Weight (a quantity in kg) and exactly one Value (a numeric rating). Each item has exactly one Inclusion status (whether it is packed in the box or not).\n\nDOMAINS:\n- Item name: one of \"Bag of rice\", \"Hardcover book set\", \"Cast-iron skillet\", \"First-aid kit\", \"Toolbox\" — these are labels identifying distinct items; none is inherently \"more\" than another.\n- Weight: a quantity in kilograms. Bag of rice has weight 4, Hardcover book set has weight 3, Cast-iron skillet has weight 5, First-aid kit has weight 2, Toolbox has weight 6 — these are numeric quantities that can be added and compared, not interchangeable labels.\n- Value: a numeric rating. Bag of rice has value 5, Hardcover book set has value 4, Cast-iron skillet has value 8, First-aid kit has value 6, Toolbox has value 7 — these are numeric quantities that can be added and compared, not interchangeable labels.\n- Inclusion status: one of \"packed\" or \"not packed\" for each item — a binary choice indicating whether the item is included in the box.\n\nCONSTRAINTS:\n- The sum of weights of all items with Inclusion status \"packed\" must not exceed 10 kg.\n- The First-aid kit must have Inclusion status \"packed\".\n- The objective is to maximize the sum of values of all items with Inclusion status \"packed\" while satisfying all other constraints.",
+        "mzn": "include \"globals.mzn\";\n\nenum ITEM = {BagOfRice, HardcoverBookSet, CastIronSkillet, FirstAidKit, Toolbox};\nenum STATUS = {packed, not_packed};\n\narray[ITEM] of int: weight = [4, 3, 5, 2, 6];\narray[ITEM] of int: value = [5, 4, 8, 6, 7];\n\narray[ITEM] of var STATUS: inclusion;\n\nconstraint sum(i in ITEM)(if inclusion[i] == packed then weight[i] else 0 endif) <= 10;\n\nconstraint inclusion[FirstAidKit] == packed;\n\nvar int: total_value = sum(i in ITEM)(if inclusion[i] == packed then value[i] else 0 endif);\n\nsolve maximize total_value;"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0028",
+    "sourceOutcome": "NO_MATCHING_READING",
+    "reps": [
+      {
+        "outcome": "SOLVE_MULTIPLY_SATISFIABLE",
+        "detail": "",
+        "verdict": "READING_MATCHED",
+        "gradeDetail": "outcome matches a \"multiply satisfiable\" reading",
+        "costUsd": 0.011118,
+        "structuredProse": "# ENTITIES\n\nHouses are arranged in a left-to-right row, numbered 1 through 5. Each house has exactly one Color.\n\n# DOMAINS\n\n- House position: an integer from 1 to 5, where 1 is leftmost and 5 is rightmost.\n- Color: one of Red, Blue, Green, Yellow, White — these are labels; none is \"more\" than another.\n\n# CONSTRAINTS\n\n1. Each house has exactly one color.\n2. Each color is assigned to exactly one house (no two houses share a color, and every color appears exactly once).\n3. The red house is at position 1.\n4. The white house is at position 4.\n5. The green house is at a position to the right of (i.e., at a higher-numbered position than) the blue house.",
+        "mzn": "include \"globals.mzn\";\n\nenum Color = {Red, Blue, Green, Yellow, White};\n\narray[1..5] of var Color: color;\n\nconstraint alldifferent(color);\n\nconstraint color[1] = Red;\n\nconstraint color[4] = White;\n\nconstraint exists(i in 1..5)(color[i] = Blue) /\\\n           exists(j in 1..5)(color[j] = Green /\\ \n           exists(i in 1..5)(color[i] = Blue /\\ j > i));"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0033",
+    "sourceOutcome": "PREMISE_SILENTLY_PROMOTED",
+    "reps": [
+      {
+        "outcome": "SOLVE_MULTIPLY_SATISFIABLE",
+        "detail": "",
+        "verdict": "PREMISE_FREE_MATCH",
+        "gradeDetail": "premise-free outcome (multiply satisfiable) as expected",
+        "costUsd": 0.01554,
+        "structuredProse": "ENTITIES:\n- There are four compartments in a delivery van, numbered 1 through 4. Each compartment holds exactly one grocery item.\n- There are four grocery items: a tub of ice cream, a can of beans, a bag of flour, and a bunch of bananas. Each item is assigned to exactly one compartment.\n\nDOMAINS:\n- Compartment position: an integer from 1 to 4, representing the four distinct compartments.\n- Grocery item: one of ice cream, beans, flour, bananas — these are labels; none is \"more\" than another.\n- Temperature condition: each compartment has one of two states: \"below freezing\" or \"above freezing\" — these are labels describing distinct environmental conditions.\n\nCONSTRAINTS:\n- Each compartment holds exactly one grocery item.\n- Each grocery item is in exactly one compartment.\n- Compartment 1 has temperature condition \"below freezing\".\n- Compartment 2 has temperature condition \"above freezing\".\n- Compartment 3 has temperature condition \"above freezing\".\n- Compartment 4 has temperature condition \"above freezing\".\n- The ice cream melts if it is in a compartment with temperature condition \"above freezing\".\n- The ice cream must not melt (implied constraint that the ice cream must remain in a non-melted state).",
+        "mzn": "include \"globals.mzn\";\n\n% Enums for categorical values\nenum ITEM = {ice_cream, beans, flour, bananas};\nenum TEMP = {below_freezing, above_freezing};\n\n% Compartments are numbered 1..4\nset of int: COMPARTMENT = 1..4;\n\n% Decision variables\narray[COMPARTMENT] of var ITEM: item_in_compartment;\n\n% Fixed temperature conditions for each compartment\narray[COMPARTMENT] of TEMP: temp_condition = [below_freezing, above_freezing, above_freezing, above_freezing];\n\n% Constraint: Each compartment holds exactly one grocery item\n% Constraint: Each grocery item is in exactly one compartment\nconstraint alldifferent(item_in_compartment);\n\n% Constraint: Ice cream must not melt\n% Ice cream melts if in a compartment with temperature \"above freezing\"\n% Therefore, ice cream must be in a compartment with temperature \"below freezing\"\nconstraint forall(c in COMPARTMENT)(\n  item_in_compartment[c] = ice_cream -> temp_condition[c] = below_freezing\n);\n\nsolve satisfy;"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0038",
+    "sourceOutcome": "MATCH",
+    "reps": [
+      {
+        "outcome": "SOLVE_UNIQUE",
+        "detail": "",
+        "verdict": "MATCH",
+        "gradeDetail": "all expected tokens present",
+        "costUsd": 0.014616,
+        "structuredProse": "# ENTITIES\n\nAnimals are arranged in a left-to-right row of holding pens, numbered 1 through 5. Each pen contains exactly one Animal. There are five animals total: wolf, rabbit, goat, parrot, and tortoise.\n\n# DOMAINS\n\n**Pen position:** an integer from 1 to 5, where 1 is leftmost and 5 is rightmost. This is an ordered quantity where one position can be \"lower-numbered than\" or \"higher-numbered than\" another.\n\n**Animal:** one of wolf, rabbit, goat, parrot, tortoise — these are labels with no inherent order or arithmetic relationship between them.\n\n# CONSTRAINTS\n\n1. The tortoise is in pen 1.\n\n2. The parrot is in pen 2.\n\n3. The goat is in pen 3.\n\n4. The rabbit is in a lower-numbered pen than the wolf (equivalently: the rabbit's pen position is less than the wolf's pen position).\n\n5. The wolf preys on the rabbit. (Note: This constraint is stated in the puzzle but may be informational context rather than an additional placement constraint, given that the puzzle explicitly states \"no animal in any pen can see, smell, hear, or reach any animal in another\" — suggesting the physical isolation renders the predation relationship irrelevant to placement. However, I list it here as stated in the puzzle.)\n\n6. Each animal is assigned to exactly one pen (global uniqueness: no animal appears in multiple pens).\n\n7. Each pen contains exactly one animal (global uniqueness: no two animals share the same pen).",
+        "mzn": "include \"globals.mzn\";\n\nenum ANIMAL = {wolf, rabbit, goat, parrot, tortoise};\n\narray[1..5] of var ANIMAL: pen;\n\nconstraint pen[1] = tortoise;\nconstraint pen[2] = parrot;\nconstraint pen[3] = goat;\n\nconstraint exists(i in 1..5)(pen[i] = rabbit) /\\ \n           exists(j in 1..5)(pen[j] = wolf /\\ \n           exists(k in 1..5)(pen[k] = rabbit /\\ k < j));\n\nconstraint alldifferent(pen);"
+      }
+    ]
+  }
+]
