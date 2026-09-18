@@ -1,16 +1,19 @@
 // SPIKE-008 spike-local helper: load the sample puzzles' prose and answer-key entries, and
 // split a puzzle's prose into individually-addressable "clues" for the per-clue harness.
 //
-// Deliberately duplicated from scripts/eval-extraction.ts's loadAnswerKeys/loadAliases rather
-// than importing (those helpers aren't exported, and this is throwaway spike code per the
-// spike-create skill's own convention) — kept intentionally small.
+// loadAnswerKeys is deliberately duplicated from scripts/eval-extraction.ts's own (unexported)
+// version rather than imported — this is throwaway spike code per the spike-create skill's own
+// convention, kept intentionally small. loadAliases is NOT duplicated here — ADR-011 §2.2/§4
+// consolidated the alias loader into src/eval/aliases.ts's exported loadAnswerValueAliases,
+// re-exported below under its prior name so nothing importing `loadAliases` from this file needs
+// to change.
 
 import { readFile } from "node:fs/promises"
+import { loadAnswerValueAliases } from "../../../../../src/eval/aliases.ts"
 
 const REPO_ROOT = new URL("../../../../../", import.meta.url)
 const PUZZLES_DIR = new URL("catalog/puzzles/", REPO_ROOT)
 const ANSWER_KEYS_PATH = new URL("eval/answer-keys.json", REPO_ROOT)
-const ALIASES_PATH = new URL("eval/aliases.json", REPO_ROOT)
 
 export interface AnswerKeyEntry {
   readonly title: string
@@ -29,10 +32,7 @@ export async function loadAnswerKeys(): Promise<Record<string, AnswerKeyEntry>> 
   return entries as Record<string, AnswerKeyEntry>
 }
 
-export async function loadAliases(): Promise<Record<string, readonly string[]>> {
-  const raw = JSON.parse(await readFile(ALIASES_PATH, "utf8")) as { aliases?: Record<string, readonly string[]> }
-  return raw.aliases ?? {}
-}
+export const loadAliases = loadAnswerValueAliases
 
 export async function loadPuzzleProse(puzzleId: string): Promise<{ readonly file: string; readonly prose: string }> {
   const files = await import("node:fs/promises").then((fs) => fs.readdir(PUZZLES_DIR))

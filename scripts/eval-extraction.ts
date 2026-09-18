@@ -43,6 +43,7 @@ import { existsSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { Effect } from "effect"
 import { sanitizeIdentifier } from "../src/compiler/compile.ts"
+import { loadAnswerValueAliases } from "../src/eval/aliases.ts"
 import {
   gradeAmbiguous,
   gradeCop,
@@ -192,11 +193,6 @@ async function loadAnswerKeys(): Promise<Record<string, AnswerKeyEntry>> {
   const raw = JSON.parse(await readFile(ANSWER_KEYS_PATH, "utf8")) as Record<string, unknown>
   const { $comment: _ignored, ...entries } = raw
   return entries as Record<string, AnswerKeyEntry>
-}
-
-async function loadAliases(): Promise<AliasTable> {
-  const raw = JSON.parse(await readFile(ALIASES_PATH, "utf8")) as { aliases?: AliasTable }
-  return raw.aliases ?? {}
 }
 
 interface ModelRegistryEntry {
@@ -915,7 +911,7 @@ async function main(): Promise<void> {
     process.exit(1)
   }
   const answerKeys = await loadAnswerKeys()
-  const aliases = await loadAliases()
+  const aliases = await loadAnswerValueAliases()
   const registry = await loadModelRegistry()
   const puzzles = await listPuzzleFiles(args.puzzleIds)
   if (puzzles.length === 0) {

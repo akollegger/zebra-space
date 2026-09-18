@@ -47,6 +47,33 @@ test("gradeFlatRecord: a model-authored identifier in a different case/separator
   assert.equal(result.verdict, "MATCH")
 })
 
+// SPIKE-015 §5.2: a domain-name comparison rejected "game move"/"game moves" against ground
+// truth's "move" purely for plain pluralization — a gap distinct from synonym variance, and
+// mechanically predictable (folding a plural to its singular), unlike an open-ended alias.
+// Folded into comparisonKey itself (ADR-011 §2.1) rather than requiring a curated alias entry
+// per pair, via wink-lemmatizer's dictionary/rule-based noun lemmatizer (not a hand-rolled
+// suffix strip — see comparisonKey's own docstring for why a first attempt at this using a bare
+// trailing-"s" regex was replaced before merge).
+test("normalizeToken: plain pluralization folds without a curated alias entry", () => {
+  assert.equal(normalizeToken("moves", {}).normalized, normalizeToken("move", {}).normalized)
+  assert.equal(normalizeToken("animals", {}).normalized, normalizeToken("animal", {}).normalized)
+  // The common "-es" sibilant plural must ALSO fold — the exact case a bare trailing-"s" strip
+  // missed (found live in code review before merge).
+  assert.equal(normalizeToken("buses", {}).normalized, normalizeToken("bus", {}).normalized)
+  assert.equal(normalizeToken("boxes", {}).normalized, normalizeToken("box", {}).normalized)
+  // Short words ending in "s" must NOT fold — stripping would collide unrelated words
+  // ("bus" -> "bu", "gas" -> "ga") rather than recovering a real singular/plural pair.
+  assert.notEqual(normalizeToken("bus", {}).normalized, "bu")
+  assert.notEqual(normalizeToken("gas", {}).normalized, "ga")
+  // A doubled trailing "s" (e.g. "class") must not lose one s either.
+  assert.equal(normalizeToken("class", {}).normalized, "class")
+  // Two DIFFERENT real words must never collide just because one is "the other plus s" — the
+  // false-positive a bare trailing-"s" strip introduced (found live in code review before
+  // merge: "news"/"new" and "lens"/"len" both silently collapsed together).
+  assert.notEqual(normalizeToken("news", {}).normalized, normalizeToken("new", {}).normalized)
+  assert.notEqual(normalizeToken("lens", {}).normalized, normalizeToken("len", {}).normalized)
+})
+
 test("gradeParallelArrays: identical grids match regardless of entity declaration order", () => {
   const expected = { color: ["Red", "Blue"], pet: ["Dog", "Cat"] }
   const reordered = { pet: ["Dog", "Cat"], color: ["Red", "Blue"] }

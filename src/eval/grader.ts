@@ -1,3 +1,4 @@
+import lemmatize from "wink-lemmatizer"
 import { sanitizeIdentifier } from "../compiler/compile.ts"
 import type { Assignment, SolveResult } from "../solver/types.ts"
 
@@ -75,9 +76,24 @@ function collectActualTokens(value: unknown, aliases: AliasTable, into: Set<stri
  * puzzle's actual correct answer under a different spelling convention than the answer key's own
  * literal string). This is still an EXACT comparison, not fuzzy matching: it only folds different
  * renderings of the same sanitized identifier together, never merges two different values.
+ *
+ * Also folds plain pluralization (ADR-011 §2.1 — found live in SPIKE-015 §5.2: a domain-name
+ * comparison rejected "moves" against "move" purely for this) via `wink-lemmatizer`'s dictionary/
+ * rule-based noun lemmatizer, not a hand-rolled suffix strip. A first attempt using a bare
+ * trailing-"s" regex (stripping one "s" when the stem was >=3 chars and not "ss") shipped and was
+ * caught by code review before merge: it folded unrelated real words together whenever one was
+ * "the other plus a trailing s" ("news"/"new", "lens"/"len" both collapsed to "new"/"len"), and
+ * it missed the common "-es" sibilant plural entirely ("buses"/"bus" stayed distinct). Both are
+ * exactly the failure modes a real lemmatizer (dictionary-aware, not suffix-blind) is built to
+ * avoid — verified directly: `lemmatize.noun("news")` returns `"news"` (unchanged, no collision)
+ * and `lemmatize.noun("buses")` returns `"bus"` (folds correctly). Still an approximation, not a
+ * proof: a lemmatizer can occasionally fold a proper noun that merely looks pluralizable (e.g.
+ * "Chesterfields" -> "chesterfield"), but that only matters if a puzzle's OWN vocabulary has a
+ * competing singular value to collide with, which none observed so far does.
  */
 function comparisonKey(sanitized: string): string {
-  return sanitized.toLowerCase().replace(/_/g, "")
+  const folded = sanitized.toLowerCase().replace(/_/g, "")
+  return lemmatize.noun(folded)
 }
 
 /**

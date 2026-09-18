@@ -4,7 +4,7 @@ title: String-Equivalence Matching for Grading and Ground-Truth Scoring
 status: proposed
 rfcs: [RFC-001, RFC-003, RFC-004]
 created: 2026-09-18
-specs: []
+specs: [specs/007-string-equivalence-matching]
 ---
 
 # ADR-011: String-Equivalence Matching for Grading and Ground-Truth Scoring

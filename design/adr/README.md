@@ -71,4 +71,4 @@ Use `/adr-review` before moving a draft to `accepted`.
 | [ADR-008](ADR-008-direct-solve-baseline.md) | Direct-Solve Baseline with LLM Judge | accepted | RFC-004 | |
 | [ADR-009](ADR-009-staged-extraction.md) | Staged Extraction (Vocabulary then Constraints) | accepted | RFC-004, RFC-003 | |
 | [ADR-010](ADR-010-actual-llm-cost-accounting.md) | Actual LLM Cost Accounting for the Eval Harness | accepted | RFC-004, RFC-003 | specs/006-cost-accounting |
-| [ADR-011](ADR-011-shared-string-equivalence-matching.md) | String-Equivalence Matching for Grading and Ground-Truth Scoring | proposed | RFC-001, RFC-003, RFC-004 | |
+| [ADR-011](ADR-011-shared-string-equivalence-matching.md) | String-Equivalence Matching for Grading and Ground-Truth Scoring | proposed | RFC-001, RFC-003, RFC-004 | specs/007-string-equivalence-matching |
