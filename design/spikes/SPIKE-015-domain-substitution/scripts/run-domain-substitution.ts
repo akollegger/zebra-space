@@ -33,7 +33,15 @@ const REPS = Number(process.env.REPS ?? 3)
 
 // PZL-0007 deliberately excluded — no enum declarations at all (see SPIKE.md §2 step 1 / the
 // smoke test's testApplyMappingToMznNoEnums), not a valid seed for this variant.
-const SEED_PUZZLE_IDS = ["PZL-0002", "PZL-0003"]
+//
+// PZL-0001 (5 enum domains, the classic zebra puzzle), PZL-0004 (3 independent enum domains,
+// no arrays — direct elimination, not a house grid), PZL-0011 (a single decision variable
+// determined by reified if/then rules, no alldifferent at all), and PZL-0038 (single domain,
+// with one clue deliberately unencoded as a defeated premise) added per SPIKE.md §5.7 to widen
+// the seed set beyond two structurally similar house-grid puzzles — each hand-translated and
+// independently re-verified (fresh solve() call, matched against eval/answer-keys.json) before
+// being added to catalog/mzn/, not merely assumed correct.
+const SEED_PUZZLE_IDS = ["PZL-0001", "PZL-0002", "PZL-0003", "PZL-0004", "PZL-0011", "PZL-0038"]
 
 const MZN_DIR = new URL("../../../../catalog/mzn/", import.meta.url)
 

@@ -463,6 +463,68 @@ call is noisy — not a reason to distrust the well-formedness CONCEPT, but a re
 use of this critic's numbers should account for judge noise (e.g. majority-vote across repeated
 judge calls) before treating a single `wellFormed: false` as ground truth.
 
+### 5.7 Widened the seed set from 2 to 6 puzzles — surfaced two new failure categories, neither a mechanism bug
+
+§5.1–§5.6 exercised only PZL-0002 and PZL-0003, both structurally similar (a small house/array
+grid with one or two named domains). Added four more seeds, each hand-translated to `.mzn` and
+independently re-verified (fresh `solve()` call against `eval/answer-keys.json`, not merely
+assumed correct, per this project's own standing discipline):
+
+- **PZL-0001** — the classic Life International 1962 zebra puzzle itself: 5 `enum` domains,
+  `alldifferent` per domain, same-house clues as bidirectional `forall`, adjacency clues via a
+  `next_to` predicate. Solves uniquely; assignment matches `eval/answer-keys.json` exactly.
+- **PZL-0004** — already had a hand-translated `.mzn` from earlier work (unrelated to this
+  spike); registered as a seed rather than re-authored. 3 independent enum domains, no arrays —
+  direct elimination via `!=` only, not a house grid.
+- **PZL-0011** — a genuinely different puzzle SHAPE: a single decision variable determined by
+  reified if/then policy rules over given facts (credit score, DTI, loan amount), no
+  `alldifferent` at all. Solves uniquely; matches the answer key's `CounterOffer`.
+- **PZL-0038** — single domain (`animal`), with clue 5 ("the wolf preys on the rabbit")
+  deliberately left unencoded — the puzzle's own answer-key notes name it a defeated premise
+  (concrete walls make predator/prey proximity irrelevant), not an omission. Solves uniquely;
+  matches the answer key.
+
+Added catalog/mzn/README.md index rows for all three newly-authored files (PZL-0001, PZL-0011,
+PZL-0038), registered all four in `SEED_PUZZLE_IDS`, and ran `REPS=1` across all 6 seeds as a
+smoke check before any larger sweep. Raw: `results/domain-substitution-openai-gpt-4o-mini-2026-09-18T14-23-27-141Z.json`,
+**$0.0013**.
+
+| Puzzle | Outcome |
+|---|---|
+| PZL-0001 | `VERIFIED`, `wellFormed=true` |
+| PZL-0002 | `VERIFIED`, `wellFormed=true` |
+| PZL-0003 | `SUBSTITUTION_NOT_WELL_FORMED` (the known lizard/spock critic noise, §5.6) |
+| PZL-0004 | `MZN_APPLY_TOTAL_FAILURE` |
+| PZL-0011 | `DOMAIN_MATCH_FAILED` |
+| PZL-0038 | `VERIFIED`, `wellFormed=true` |
+
+**PZL-0001 and PZL-0038 worked end-to-end on the very first live rep** — real evidence the
+mechanism generalizes past the original two seeds, not just evidence it works on the puzzles it
+was built against.
+
+**PZL-0004's failure is a THIRD, distinct failure category — a naming-convention mismatch, not
+a mechanism bug.** The domain matched perfectly (`"domain name and complete value set both
+match"`, proposing exactly `Miss Scarlett`/`Colonel Mustard`/`Professor Plum`), but
+`applyMappingToMzn` skipped every entry with `"not found among declared enum members"`:
+`PZL-0004-whodunit.mzn`'s enum members are surname-only (`Scarlett`, `Mustard`, `Plum`), which do
+not fold-match the prose's full-name convention (`sanitizeIdentifier("Miss Scarlett")` folds to
+`"missscarlett"`, never `"scarlett"`). This is NOT something to fix by editing that `.mzn`:
+`tests/solver/catalog-examples.test.ts` and `tests/cli/cli.test.ts` are pinned to the surname-only
+convention (`assert.deepEqual(result.assignment.culprit, { e: "Plum" })`), and that file predates
+this spike and serves other, unrelated tests. PZL-0004 stays registered as a seed — its domain-
+matching and mechanical-solve steps are exercised correctly — but any substitution rep against it
+will hit this same `MZN_APPLY_TOTAL_FAILURE` until a future seed `.mzn` is authored (or this one
+is deliberately forked) with a fold-matchable naming convention.
+
+**PZL-0011's failure is a genuine model-competency miss, not a harness defect.** The model
+proposed `currentValues: [680, 750]` — the two credit-score NUMBERS from the prose — as its
+"domain," directly violating its own system prompt's instruction not to pick a number/quantity.
+`scoreDomainMatch` correctly rejected this (`missing [Denied, Approved, Counter-Offer]; invented
+[680, 750]`) rather than silently accepting a wrong pick. This is one `n=1` data point, not
+evidence the model can never find PZL-0011's real domain — worth more reps before drawing a
+firmer conclusion, but a legitimate, expected outcome of the harness working as designed
+(reporting a miss precisely, not obscuring it), not something to patch.
+
 ## 6. Conclusion
 
 **First pass confirms the core hypothesis is worth pursuing, and sharpens exactly what to fix
