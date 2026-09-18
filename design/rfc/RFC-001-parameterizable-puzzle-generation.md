@@ -3,7 +3,7 @@ id: RFC-001
 title: Parameterizable Natural-Language Zebra Puzzle Generation
 status: draft
 created: 2026-08-11
-adrs: [ADR-001]
+adrs: [ADR-001, ADR-011]
 ---
 
 # RFC-001: Parameterizable Natural-Language Zebra Puzzle Generation
@@ -187,6 +187,8 @@ entry (7.4) need to record *which* kind of test it was?
 ## 8. ADRs
 
 - ADR-001: Puzzle Catalog Format and Seeding
+- [ADR-011](../adr/ADR-011-shared-string-equivalence-matching.md) — String-Equivalence Matching
+  for Grading and Ground-Truth Scoring
 
 ## 9. Appendix: Strategy Evaluations
 

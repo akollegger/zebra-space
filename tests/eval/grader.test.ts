@@ -1,5 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
+import { readFile } from "node:fs/promises"
 import {
   COP_OPTIMA,
   alignArraysByOverlap,
@@ -26,7 +27,10 @@ test("normalizeToken: integers pass through, identifiers sanitize+fold, aliases 
   assert.deepEqual(normalizeToken("true", {}), { normalized: "true", aliasApplied: false })
   const aliases = { "hardcover book set": ["book_set"] }
   assert.deepEqual(normalizeToken("book_set", aliases), { normalized: "hardcoverbookset", aliasApplied: true })
-  assert.deepEqual(normalizeToken("hardcover book set", aliases), { normalized: "hardcoverbookset", aliasApplied: true })
+  // Found live in code review: a token spelled EXACTLY as the canonical (just a case/separator
+  // rendering the deterministic fold alone already bridges) must NOT report aliasApplied: true —
+  // no curated variant was actually needed to reach this match, only the fold was.
+  assert.deepEqual(normalizeToken("hardcover book set", aliases), { normalized: "hardcoverbookset", aliasApplied: false })
   assert.deepEqual(normalizeToken("unrelated", aliases), { normalized: "unrelated", aliasApplied: false })
 })
 
@@ -45,6 +49,44 @@ test("normalizeToken: case and separator-style variants of the same value conver
 test("gradeFlatRecord: a model-authored identifier in a different case/separator convention still matches", () => {
   const result = gradeFlatRecord({ suspect: "Professor Plum" }, { suspect: "PROFESSOR_PLUM" })
   assert.equal(result.verdict, "MATCH")
+})
+
+// SPIKE-015 §5.2: a domain-name comparison rejected "game move"/"game moves" against ground
+// truth's "move" purely for plain pluralization — a gap distinct from synonym variance, and
+// mechanically predictable (folding a plural to its singular), unlike an open-ended alias.
+// Folded into comparisonKey itself (ADR-011 §2.1) rather than requiring a curated alias entry
+// per pair, via wink-lemmatizer's dictionary/rule-based noun lemmatizer (not a hand-rolled
+// suffix strip — see comparisonKey's own docstring for why a first attempt at this using a bare
+// trailing-"s" regex was replaced before merge).
+test("normalizeToken: plain pluralization folds without a curated alias entry", () => {
+  assert.equal(normalizeToken("moves", {}).normalized, normalizeToken("move", {}).normalized)
+  assert.equal(normalizeToken("animals", {}).normalized, normalizeToken("animal", {}).normalized)
+  // The common "-es" sibilant plural must ALSO fold — the exact case a bare trailing-"s" strip
+  // missed (found live in code review before merge).
+  assert.equal(normalizeToken("buses", {}).normalized, normalizeToken("bus", {}).normalized)
+  assert.equal(normalizeToken("boxes", {}).normalized, normalizeToken("box", {}).normalized)
+  // Short words ending in "s" must NOT fold — stripping would collide unrelated words
+  // ("bus" -> "bu", "gas" -> "ga") rather than recovering a real singular/plural pair.
+  assert.notEqual(normalizeToken("bus", {}).normalized, "bu")
+  assert.notEqual(normalizeToken("gas", {}).normalized, "ga")
+  // A doubled trailing "s" (e.g. "class") must not lose one s either.
+  assert.equal(normalizeToken("class", {}).normalized, "class")
+  // Two DIFFERENT real words must never collide just because one is "the other plus s" — the
+  // false-positive a bare trailing-"s" strip introduced (found live in code review before
+  // merge: "news"/"new" and "lens"/"len" both silently collapsed together).
+  assert.notEqual(normalizeToken("news", {}).normalized, normalizeToken("new", {}).normalized)
+  assert.notEqual(normalizeToken("lens", {}).normalized, normalizeToken("len", {}).normalized)
+})
+
+// Found live in code review (second pass): the actual SPIKE-015 §5.2 motivating case combines a
+// QUALIFIER word and a PLURAL together ("game moves"), not just a bare plural. Lemmatizing the
+// whole merged compound ("gamemoves") never folds (wink-lemmatizer only accepts a stripped
+// candidate that is itself a real dictionary word, and "gamemove" is not one) — comparisonKey
+// must lemmatize each underscore-separated word BEFORE merging, so "game"+"moves" folds to
+// "game"+"move" first, THEN merges to "gamemove", matching "game move" / "game_move".
+test("normalizeToken: a qualifier plus a plural together folds per-word, not as one merged compound", () => {
+  assert.equal(normalizeToken("game moves", {}).normalized, normalizeToken("game move", {}).normalized)
+  assert.equal(normalizeToken("game_moves", {}).normalized, normalizeToken("game_move", {}).normalized)
 })
 
 test("gradeParallelArrays: identical grids match regardless of entity declaration order", () => {
@@ -150,18 +192,24 @@ test("gradeFlatRecord: single-key wrapped values ({e: value}) unwrap before comp
   assert.equal(wrapped.verdict, "MATCH")
 })
 
+// Expected side is spelled EXACTLY as the canonical ("hardcover book set") — the deterministic
+// fold alone bridges that, no curated variant needed, so it must NOT count. Actual side is
+// spelled as the listed variant ("book_set") — that's the one real alias resolution. Updated in
+// code review from an earlier version of this test that expected 2 (both sides counted, before
+// normalizeToken's canonical-self-match false-positive was fixed — see normalizeToken's own
+// docstring).
 test("aliasesApplied: row-keyed and subset paths count both sides, dispatch passes through", () => {
   const aliases = { "hardcover book set": ["book_set"] }
   const rowKeyed = gradeRowKeyedMapping({ "1": "hardcover book set" }, { "1": "book_set" }, aliases)
   assert.equal(rowKeyed.verdict, "MATCH")
-  assert.equal(rowKeyed.aliasesApplied, 2)
+  assert.equal(rowKeyed.aliasesApplied, 1)
   const subset = gradeSubset(["hardcover book set"], { item: ["book_set"] }, aliases)
   assert.equal(subset.verdict, "MATCH")
-  assert.equal(subset.aliasesApplied, 2)
+  assert.equal(subset.aliasesApplied, 1)
   const viaDispatchRow = gradeDeterminate("PZL-0006", { row_to_column: { "1": "hardcover book set" } }, { "1": "book_set" }, aliases)
-  assert.equal(viaDispatchRow.aliasesApplied, 2)
+  assert.equal(viaDispatchRow.aliasesApplied, 1)
   const viaDispatchSubset = gradeDeterminate("PZL-0014", { items: ["hardcover book set"] }, { item: ["book_set"] }, aliases)
-  assert.equal(viaDispatchSubset.aliasesApplied, 2)
+  assert.equal(viaDispatchSubset.aliasesApplied, 1)
 })
 
 test("gradeSubset: single-key wrapped values unwrap before comparing", () => {
@@ -172,7 +220,9 @@ test("gradeFlatRecord: paraphrase resolves through the alias table and is counte
   const aliases = { "hardcover book set": ["book_set"] }
   const result = gradeFlatRecord({ items: ["hardcover book set"] }, { item: ["book_set"] }, aliases)
   assert.equal(result.verdict, "MATCH")
-  assert.equal(result.aliasesApplied, 2)
+  // Only the "book_set" side is a real variant resolution; the canonical-spelled side needs no
+  // alias at all (see the test above for why this is 1, not 2).
+  assert.equal(result.aliasesApplied, 1)
 })
 
 test("gradeCop: optimum attained in any enumerated solution; otherwise FEASIBLE_ONLY; unsatisfiable is INFEASIBLE", () => {
@@ -239,4 +289,45 @@ test("verdict accounting: passes count, FEASIBLE_ONLY and UNDECLINED are exclude
     assert.equal(isPassingVerdict(verdict), false, verdict)
     assert.equal(isExcludedVerdict(verdict), false, verdict)
   }
+})
+
+// FR-003/comparisonKey's own docstring claim "never merges two different values" is an
+// assertion about the current catalog, not a proof about the fold in general — a lemmatizer can
+// fold a proper noun that merely looks pluralizable (e.g. "Chesterfields" -> "chesterfield")
+// even though it isn't really a plural. Found in code review: an assertion alone doesn't answer
+// "how would we know if this ever became false" — this test turns it into a real, running
+// check against every value this project's actual grading data contains, not a claim taken on
+// faith. If two DISTINCT recorded answer-key values ever fold to the same comparisonKey, this
+// fails loudly instead of silently producing a false MATCH at grading time.
+test("comparisonKey: no two distinct values across the real answer-key catalog collide", async () => {
+  const raw = JSON.parse(await readFile(new URL("../../eval/answer-keys.json", import.meta.url), "utf8")) as Record<string, unknown>
+  const { $comment: _ignored, ...entries } = raw
+
+  // A "distinct value" here means distinct even after basic case/whitespace normalization —
+  // "Dog" and "dog" are the SAME value, and comparisonKey folding them together is the fold
+  // working correctly, not a collision. Only flag values that differ by more than case/
+  // whitespace (a real semantic difference) yet still collapse to the same comparisonKey.
+  function basicNormalize(value: string): string {
+    return value.toLowerCase().replace(/\s+/g, "")
+  }
+
+  const byKey = new Map<string, Map<string, string>>()
+  function collect(value: unknown): void {
+    if (Array.isArray(value)) {
+      for (const item of value) collect(item)
+    } else if (value !== null && typeof value === "object") {
+      for (const v of Object.values(value as Record<string, unknown>)) collect(v)
+    } else if (typeof value === "string" && !/^-?\d+$/.test(value)) {
+      const key = normalizeToken(value, {}).normalized
+      const distinctValues = byKey.get(key) ?? new Map<string, string>()
+      distinctValues.set(basicNormalize(value), value)
+      byKey.set(key, distinctValues)
+    }
+  }
+  for (const entry of Object.values(entries)) {
+    collect((entry as { answer?: unknown }).answer)
+  }
+
+  const collisions: readonly string[][] = [...byKey.values()].filter((v) => v.size > 1).map((v) => [...v.values()])
+  assert.deepEqual(collisions, [], `distinct answer-key values collided under comparisonKey: ${JSON.stringify(collisions)}`)
 })

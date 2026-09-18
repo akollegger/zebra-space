@@ -3,7 +3,7 @@ id: RFC-003
 title: Natural-Language Puzzle to CSP Extraction
 status: accepted
 created: 2026-08-18
-adrs: [ADR-004, ADR-005, ADR-003, ADR-009, ADR-010]
+adrs: [ADR-004, ADR-005, ADR-003, ADR-009, ADR-010, ADR-011]
 ---
 
 # RFC-003: Natural-Language Puzzle to CSP Extraction
@@ -227,6 +227,8 @@ its own boundary case before an ADR commits to a representation?
   Constraints)
 - [ADR-010](../adr/ADR-010-actual-llm-cost-accounting.md) — Actual LLM Cost Accounting for the
   Eval Harness
+- [ADR-011](../adr/ADR-011-shared-string-equivalence-matching.md) — String-Equivalence Matching
+  for Grading and Ground-Truth Scoring
 
 ## 9. Appendix: Extraction Strategy Evaluation
 
