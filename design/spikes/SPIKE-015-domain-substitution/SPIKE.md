@@ -321,6 +321,48 @@ substrings ("game move(s)" containing "move") now requires the explicit one-line
 mechanism is designed around, and the codebase gained one fewer independent string-comparison
 implementation (ADR-011's own stated goal) at the cost of that one line of curation.
 
+### 5.4 Dropped name-matching as a scoring gate entirely — the real fix, not another curation round
+
+§5.3's curation fix (adding "game move" to PZL-0003's `names`) closed 2 of 3 lost reps but left
+one genuine-synonym rep ("game" alone) still `DOMAIN_MATCH_FAILED`, and more curation would only
+ever close the specific synonyms someone thought to list in advance. Stepping back: neither
+`apply-to-prose.ts` (literal value replace) nor `apply-to-mzn.ts` (fold-matched enum rewrite by
+VALUE spelling) ever reads the model's proposed domain NAME at all — both operate purely on the
+proposed `currentValues`/`mapping`. Requiring the name to also resemble ground truth was
+therefore scoring an artifact of how the model chose to describe its selection in one sentence,
+not a property the downstream mechanism depends on. `scoreDomainMatch` now scores matched/not-
+matched on value-set equality alone (already the reliable, primary signal per §5.1); the
+proposed name is still reported in `reason` for human legibility, but a name that doesn't
+resemble ground truth's own name is now informational only and never fails a rep.
+
+Re-ran the identical n=3 × 2-puzzle sweep. Raw:
+`results/domain-substitution-openai-gpt-4o-mini-2026-09-18T13-41-27-532Z.json`, **$0.0020**.
+
+| Puzzle | Outcome | This run | §5.3 (curated, name still gated) |
+|---|---|---|---|
+| PZL-0002 | reaches verification (past domain-matching) | 3/3 | 3/3 |
+| PZL-0003 | reaches verification (past domain-matching) | 3/3 | 2/3 |
+| Both | `DOMAIN_MATCH_FAILED` | 0/6 | 1/6 |
+
+**Every rep across both seed puzzles now clears domain-matching** — the one remaining
+`DOMAIN_MATCH_FAILED` rep from §5.3 (the model named the domain "game" alone, a genuine synonym
+no curation had anticipated) now matches on value-set alone, exactly as intended: its
+`currentValues` was correct, so it should never have been thrown away over wording. This closes
+the second gap §5.2/§5.3 both identified and said curation alone could not close — not by adding
+more curated synonyms, but by recognizing the check didn't need to exist.
+
+**The reps that still fail this run fail for reasons entirely unrelated to domain-name or value-
+set identification** — all in `direct-mzn`'s own re-formalization of the substituted prose, the
+same known-imperfect-verifier territory §5.1/§5.3 already catalogued: PZL-0002 rep 2 hit a
+`ModelSyntaxError` (an invented enum member `Zebr`, a typo/truncation in the verifier's own
+generated model); PZL-0003 reps 1 and 3 came back `Unsatisfiable`/`MultiplySatisfiable`
+(under/over-constrained re-formalizations); rep 2 scored `MISMATCH` on unexpected tokens
+`water, fire` — the verifier appears to have formalized a different rock-paper-scissors-style
+variant than the seed's actual 3-value domain, distinct from §5.3's rep-3 `lizard, spock`
+instance but the same underlying phenomenon (the verifier occasionally drifts to a related but
+different value set when re-formalizing from prose alone, independent of anything this scoring
+change touches).
+
 ## 6. Conclusion
 
 **First pass confirms the core hypothesis is worth pursuing, and sharpens exactly what to fix
@@ -334,16 +376,15 @@ a rep (PZL-0003) that may have been substantively correct purely because of a na
 
 **Recommended next steps** (candidates for the next variant, per §4's own "several variations
 expected" framing):
-1. **Done, per §5.3**, superseding §5.2's own interim substring heuristic. `scoreDomainMatch`
-   now uses `src/eval/aliases.ts`'s `stringsMatch` (ADR-011's shared string-equivalence
-   matcher) — value-sets are still checked before short-circuiting on name (§5.2's fix, kept),
-   but name matching goes through the shared deterministic fold plus `DomainAlternative.names`
-   treated as a curated alias table, rather than a local substring-containment heuristic.
-   Morphological variance (plain pluralization) folds automatically; a qualifier word needs one
-   line of curation (done for PZL-0003's "game move", confirmed live to close 2/3 of the
-   previously-lost reps). Genuine synonym variance ("action"/"game" vs. "move") remains
-   uncaught, exactly as §5.2 predicted a curated alias list alone would not close it — that gap
-   is unchanged by this migration, not a regression from it.
+1. **Done, per §5.4**, superseding both §5.2's substring heuristic and §5.3's curated-alias-
+   table migration. Value-set equality (via `src/eval/aliases.ts`'s `stringsMatch`, ADR-011's
+   shared string-equivalence matcher) is now the SOLE scoring gate — domain-name matching was
+   dropped entirely, since neither `apply-to-prose.ts` nor `apply-to-mzn.ts` ever reads the
+   proposed name. This closes both the morphological-variance gap (§5.1) and the genuine-
+   synonym-variance gap (§5.2/§5.3 both hit this and neither closed it by curation alone) in one
+   change, confirmed live: every rep across both seed puzzles now clears domain-matching (0/6
+   `DOMAIN_MATCH_FAILED`, down from 1/6 even after §5.3's curation). The proposed name is still
+   reported for human legibility, just never used to accept or reject a rep.
 2. Run a larger sample across more seed puzzles once more `catalog/mzn/` entries exist with enum
    domains (currently only PZL-0002 qualifies; PZL-0003's own enum-based `Move` domain is
    eligible in principle but blocked entirely by finding 1 above).

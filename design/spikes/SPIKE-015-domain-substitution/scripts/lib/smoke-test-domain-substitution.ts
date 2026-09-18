@@ -100,15 +100,16 @@ async function testScoreDomainMatch() {
 
   const wrongDomain: DomainMappingProposal = { domain: "size", currentValues: ["Small", "Large"], mapping: [] }
   const wrongDomainResult = scoreDomainMatch(wrongDomain, groundTruth)
-  check("wrong domain name: not matched", wrongDomainResult.matched === false)
-  check("wrong domain name: reason says so", wrongDomainResult.reason.includes("no expected domain"), wrongDomainResult.reason)
+  check("wrong domain values: not matched", wrongDomainResult.matched === false)
+  check("wrong domain values: reason names the closest candidate", wrongDomainResult.reason.includes("closest expected domain"), wrongDomainResult.reason)
 
-  // Found live 2026-09-18 (PZL-0003): a plain pluralization should not sink an otherwise-correct
-  // value set. Migrated to the shared fold (ADR-011): plain pluralization matches "for free"
-  // (comparisonKey's fold), the same as it would for `stringsMatch` anywhere else in the
-  // codebase.
-  const nearMissName: DomainMappingProposal = {
-    domain: "colors",
+  // Name-matching is dropped as a scoring GATE (2026-09-18, per user decision — see this file's
+  // header): neither a plain pluralization ("colors"), nor a qualifier word ("game color"), nor
+  // a completely unrelated/wrong name ("shade") should sink an otherwise-correct value set,
+  // because the downstream mechanism (apply-to-prose.ts/apply-to-mzn.ts) never reads the domain
+  // name at all. All three now match on value-set alone; only the `reason` text differs to note
+  // whether the name happened to resemble ground truth's own name.
+  const correctValues = {
     currentValues: ["Blue", "Red", "Green"],
     mapping: [
       { oldValue: "Blue", newValue: "Purple" },
@@ -116,31 +117,21 @@ async function testScoreDomainMatch() {
       { oldValue: "Green", newValue: "Olive" },
     ],
   }
-  check("plural near-miss name with correct values: matched", scoreDomainMatch(nearMissName, groundTruth).matched === true)
+  const pluralName: DomainMappingProposal = { domain: "colors", ...correctValues }
+  check("plural name with correct values: matched", scoreDomainMatch(pluralName, groundTruth).matched === true)
 
-  // A qualifier word ("game color") is a DIFFERENT gap than plain pluralization: it is not
-  // covered by the deterministic fold alone (ADR-011 §2.1 only folds case/whitespace/plural),
-  // so — unlike under the old ad-hoc substring-containment heuristic this file used to have —
-  // it no longer auto-matches. It matches only once curated as an explicit variant in this
-  // domain's own `names` list, exactly like any other domain-name alias (ADR-011 §2.2).
-  const qualifierWithoutCuration: DomainMappingProposal = { ...nearMissName, domain: "game color" }
-  const qualifierUncuratedResult = scoreDomainMatch(qualifierWithoutCuration, groundTruth)
-  check("uncurated qualifier name with correct values: not matched", qualifierUncuratedResult.matched === false, qualifierUncuratedResult.reason)
+  const qualifierName: DomainMappingProposal = { domain: "game color", ...correctValues }
+  const qualifierResult = scoreDomainMatch(qualifierName, groundTruth)
+  check("qualifier name with correct values: matched", qualifierResult.matched === true)
+  check("qualifier name with correct values: reason notes the name mismatch as informational", qualifierResult.reason.includes("informational only"), qualifierResult.reason)
 
-  const curatedGroundTruth = {
-    ...groundTruth,
-    domains: groundTruth.domains.map((domain) => ({
-      alternatives: domain.alternatives.map((alt) => (alt.names.includes("color") ? { ...alt, names: [...alt.names, "game color"] } : alt)),
-    })),
-  }
-  check("curated qualifier variant with correct values: matched", scoreDomainMatch(qualifierWithoutCuration, curatedGroundTruth).matched === true)
+  const unrelatedName: DomainMappingProposal = { domain: "shade", ...correctValues }
+  const unrelatedNameResult = scoreDomainMatch(unrelatedName, groundTruth)
+  check("unrelated name with correct values: matched", unrelatedNameResult.matched === true)
+  check("unrelated name with correct values: reason notes the name mismatch as informational", unrelatedNameResult.reason.includes("informational only"), unrelatedNameResult.reason)
 
-  // Values exactly match a real domain, but the proposed name doesn't resemble it at all — a
-  // distinct, informative near-miss, never silently folded into "nothing matched at all".
-  const valuesMatchUnrelatedName: DomainMappingProposal = { domain: "shade", currentValues: ["Blue", "Red", "Green"], mapping: [] }
-  const unrelatedNameResult = scoreDomainMatch(valuesMatchUnrelatedName, groundTruth)
-  check("values match but name unrelated: not matched", unrelatedNameResult.matched === false)
-  check("values match but name unrelated: reason is distinct", unrelatedNameResult.reason.includes("currentValues exactly match"), unrelatedNameResult.reason)
+  const exactNameResult = scoreDomainMatch(exact, groundTruth)
+  check("exact name with correct values: reason doesn't say informational (no mismatch to note)", !exactNameResult.reason.includes("informational"), exactNameResult.reason)
 }
 
 async function testGradeAgainstMechanicalTruth(seeded: { substitutedMzn: string; trueAssignment: Assignment } | undefined) {
