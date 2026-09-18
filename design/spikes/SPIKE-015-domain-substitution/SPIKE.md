@@ -38,21 +38,42 @@ specifically to avoid that failure mode rather than repeat it.
 
 ## 2. Method
 
-1. **Select seed puzzles with an already-known-correct MiniZinc model** — reuse
-   SPIKE-014's own `formalize-mzn` `MATCH` results (e.g. PZL-0002, PZL-0004, PZL-0007's
-   `results/*.json` records) rather than authoring anything new. Having a verified `.mzn` for the
-   ORIGINAL puzzle is what makes near-free ground truth possible for the SUBSTITUTED puzzle (see
-   step 3).
-2. **Ask the model for a substitution MAPPING, not a free rewrite** — a forced, structured
-   output: one `{domain, oldValue, newValue}` entry per domain value actually used in the puzzle
-   (e.g. `{domain: "color", oldValue: "Red", newValue: "Coffee"}`), covering every value in every
-   domain the puzzle uses. The model never retypes puzzle prose directly; code applies the
-   mapping. This is the deliberate fix for the SPIKE-011/012 failure class named in §1 — the
-   model chooses *values*, code performs the *substitution*.
-3. **Apply the SAME mapping mechanically, in code, to two independent targets**:
-   - The puzzle prose (find-and-replace every occurrence of each `oldValue` with its `newValue`).
-   - The already-known-correct `.mzn` model's enum members (same find-and-replace, on the
-     `enum ... = { ... };` declarations only).
+**The mapping the model produces is prose-space only — it never sees or reasons about MiniZinc.**
+Given SPIKE-014's own central finding (LLMs formalize prose into MiniZinc far less reliably than
+they solve or manipulate prose directly), asking a model to author or edit a `.mzn` identifier as
+part of this task would reintroduce exactly the failure surface this spike exists to avoid.
+Instead, the `.mzn` side is updated by a separate, purely mechanical bridging step (§2 step 3)
+that reuses machinery this project already built and validated for a related problem — never a
+second LLM-authored translation.
+
+1. **Select seed puzzles with an already-known-correct MiniZinc model AND catalog front-matter**
+   — the three entries lifted into `catalog/mzn/` from SPIKE-014's `formalize-mzn` frontier-tier
+   `MATCH` results (PZL-0002, PZL-0003, PZL-0007; PZL-0004 is hand-translated, also eligible).
+   Each corresponding `catalog/puzzles/PZL-NNNN-*.md` entry's `groundTruth.expectedDomains`
+   front-matter already states every domain's name and complete value list structurally (e.g.
+   PZL-0002: `color: [Blue, Red, Green]`, `animal: [Dog, Cat, Zebra]`) — giving the model an
+   explicit, closed list to substitute FROM, rather than asking it to first (re-)discover domains
+   by reading prose, which is a separate and unnecessary source of error here.
+2. **Ask the model for a substitution MAPPING over that known domain list, not a free rewrite** —
+   a forced, structured output: one `{domain, oldValue, newValue}` entry per value already listed
+   in `expectedDomains` (e.g. `{domain: "color", oldValue: "Red", newValue: "Coffee"}`). The model
+   only ever reads and writes prose-space value strings — never a MiniZinc identifier, never the
+   `.mzn` file itself. Code performs every substitution; the model only chooses values. This is
+   the deliberate fix for the SPIKE-011/012 failure class named in §1 — the model chooses
+   *values*, code performs the *substitution*.
+3. **Apply the SAME mapping to two independent targets, by two DIFFERENT mechanical methods**:
+   - **Puzzle prose**: literal find-and-replace of each `oldValue` with its `newValue`. Safe
+     because `expectedDomains`' values are guaranteed to appear verbatim in the prose (that's
+     what the front-matter records).
+   - **The already-known-correct `.mzn` model's enum members**: NOT literal find-and-replace —
+     a `.mzn`'s enum-member spelling can differ from the prose's own spelling of the same value
+     (exactly the case/separator gap SPIKE-014 §5.7 found and fixed for the grader, e.g.
+     `LuckyStrike` vs. the prose's `Lucky Strike`). Instead, reuse §5.7's own fold-matching logic
+     (`sanitizeIdentifier` + a case/separator-insensitive comparison key, already implemented in
+     `src/eval/grader.ts`) to find which enum member corresponds to each mapping entry, then
+     rewrite that member. A mapping entry whose fold-matched identifier isn't found exactly once
+     in the `.mzn` is skipped and recorded, never guessed — the same discipline SPIKE-014's
+     `lint-repair` (§5.6) already established for an analogous exact-match-or-skip step.
    Solving the mechanically-substituted `.mzn` (via `src/solver/solve.ts`, already exists, no new
    code) yields the substituted puzzle's TRUE answer — at **zero additional LLM cost**, since
    nothing had to solve or formalize the new puzzle to get it.
