@@ -57,8 +57,9 @@ constraint (whatever eventually produces a suggestion, it must never itself beco
 
 ## Validation rules carried over from requirements
 
-- FR-002/FR-008: `comparisonKey` folds case, whitespace/separator, and trailing `s`/`es` before
-  any alias lookup runs — order matters, and this order is not configurable per call site.
+- FR-002/FR-008: `comparisonKey` folds case, whitespace/separator, and per-word pluralization via
+  a dictionary-aware lemmatizer before any alias lookup runs — order matters, and this order is
+  not configurable per call site.
 - FR-003: alias lookup is exact once folded — no partial/fuzzy matching inside `normalizeToken`
   or `stringsMatch`.
 - FR-009: every existing `grader.ts` caller's behavior is a regression-tested invariant, not a
