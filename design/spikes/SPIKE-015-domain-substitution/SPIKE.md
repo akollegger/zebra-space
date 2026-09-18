@@ -210,6 +210,57 @@ once the name itself doesn't match any alternative — a rep whose values might 
 completely correct is currently indistinguishable from one that named a domain that doesn't
 exist in the puzzle at all).
 
+### 5.2 Relaxed name matching fixed the observed morphological near-misses, but exposed a distinct, deeper limit: true synonym variance
+
+Implemented recommendation 1 from §6 (below, written before this fix): `scoreDomainMatch` now
+checks VALUE-SET matches first, independent of name, and accepts a name match via substring
+containment (either direction) rather than strict equality — so "game move"/"game moves" against
+ground truth's "move" now matches, and a value-exact-match with an unrelated name is reported as
+its own distinct, informative near-miss rather than silently indistinguishable from "nothing
+matched at all" (both changes validated against real solver output in the smoke test, per this
+project's own discipline, before any live call — see the new `near-miss name`/`values match but
+name unrelated` smoke-test cases).
+
+Re-ran the identical n=3 × 2-puzzle sweep. Raw:
+`results/domain-substitution-openai-gpt-4o-mini-2026-09-18T10-13-27-460Z.json`, **$0.0014**.
+
+| Puzzle | Outcome | This run | Previous run (§5.1) |
+|---|---|---|---|
+| PZL-0002 | `VERIFIED` (substitution mechanism itself) | 3/3 | 3/3 |
+| PZL-0002 | ...verifier `MATCH` | 2/3 | 1/3 |
+| PZL-0003 | `DOMAIN_MATCH_FAILED` | 3/3 | 3/3 |
+
+**PZL-0002 is unchanged in the property that matters (substitution mechanism 3/3), with the
+verifier's own MATCH count moving 1/3→2/3 — a difference well within noise for two independently-
+sampled n=3 runs, not evidence the fix affected PZL-0002 at all** (it targets domain-name
+matching, and PZL-0002's own name has always matched exactly). One new distinct verifier failure
+shape appeared this run — rep 2's `MISMATCH` ("row mismatch: [cat|orange; dog|yellow; zebra|purple]
+!= [cat|purple; dog|yellow; zebra|orange]") is a genuinely WRONG unique answer, not a syntax
+error or under-constraint — direct-mzn's own formalization swapped which color went with which
+animal. Consistent with SPIKE-014 §5.4's finding that `direct-mzn` can silently land on a
+different, wrong, but still-unique answer; not a new problem this spike introduces.
+
+**PZL-0003 is UNCHANGED (3/3 `DOMAIN_MATCH_FAILED`) — but for a genuinely different reason than
+before, which is itself the real finding here.** This run's three reps named the domain "action"
+(twice) and "game" (once) — neither resembles "move" by substring in either direction, unlike the
+previous run's "game move"/"game moves" (where "move" IS a substring of both). The fix's own
+reasoning message shows this clearly: `currentValues exactly match a real domain (name(s):
+move), but proposed domain name "action" doesn't resemble it` — confirming (not merely assuming)
+that the model's `currentValues` WAS correct (`[Rock, Paper, Scissors]`, matched exactly) in all
+3 reps this run too; only the name varies.
+
+**This sharpens the diagnosis precisely: there are two distinct kinds of name variance, and
+substring containment only closes one of them.** Morphological variance (a qualifier word,
+plain pluralization — "game move," "moves") is now handled. Genuine SYNONYM variance (a
+different word for the same concept — "action," "game" for what the puzzle prose itself calls a
+player's "move") is not, and cannot be, by a purely mechanical string-containment rule — "action"
+and "move" share no substring relationship at all despite being reasonable descriptions of the
+same domain in this context. Closing this second gap needs either a small hand-curated alias
+list per ground-truth alternative (the `catalog/README.md` alias-table convention §6
+recommendation 1 already named), or accepting that some fraction of otherwise-correct reps will
+always be undercounted by a purely mechanical name check — a real, now precisely-characterized
+limit, not an unexamined one.
+
 ## 6. Conclusion
 
 **First pass confirms the core hypothesis is worth pursuing, and sharpens exactly what to fix
@@ -223,11 +274,12 @@ a rep (PZL-0003) that may have been substantively correct purely because of a na
 
 **Recommended next steps** (candidates for the next variant, per §4's own "several variations
 expected" framing):
-1. Relax `scoreDomainMatch`'s name-matching rule (e.g. substring/token-overlap tolerance, or a
-   short list of acceptable synonyms per ground-truth alternative, mirroring `catalog/README.md`'s
-   own existing alias-table convention already used elsewhere in this project's grading) — and,
-   critically, stop short-circuiting on a name mismatch before checking `currentValues`, so a
-   near-miss name with a fully correct value set is distinguishable from a genuinely wrong domain.
+1. **Partially done, per §5.2.** Substring-based name tolerance plus checking value-sets before
+   short-circuiting on name is implemented and confirmed to fix the morphological near-miss class
+   observed in §5.1. §5.2 also found this doesn't (and structurally cannot) close a SECOND,
+   distinct gap — genuine synonym variance ("action"/"game" vs. "move", sharing no substring) —
+   which would need a small hand-curated alias list per ground-truth alternative, mirroring
+   `catalog/README.md`'s own existing alias-table convention, to close fully.
 2. Run a larger sample across more seed puzzles once more `catalog/mzn/` entries exist with enum
    domains (currently only PZL-0002 qualifies; PZL-0003's own enum-based `Move` domain is
    eligible in principle but blocked entirely by finding 1 above).

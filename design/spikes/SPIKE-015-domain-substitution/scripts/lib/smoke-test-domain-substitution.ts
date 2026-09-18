@@ -102,6 +102,29 @@ async function testScoreDomainMatch() {
   const wrongDomainResult = scoreDomainMatch(wrongDomain, groundTruth)
   check("wrong domain name: not matched", wrongDomainResult.matched === false)
   check("wrong domain name: reason says so", wrongDomainResult.reason.includes("no expected domain"), wrongDomainResult.reason)
+
+  // Found live 2026-09-18 (PZL-0003): a qualifier word / plain pluralization should not sink an
+  // otherwise-correct value set. Relaxed matching accepts "game color"/"colors" against "color".
+  const nearMissName: DomainMappingProposal = {
+    domain: "game color",
+    currentValues: ["Blue", "Red", "Green"],
+    mapping: [
+      { oldValue: "Blue", newValue: "Purple" },
+      { oldValue: "Red", newValue: "Crimson" },
+      { oldValue: "Green", newValue: "Olive" },
+    ],
+  }
+  check("near-miss name with correct values: matched", scoreDomainMatch(nearMissName, groundTruth).matched === true)
+
+  const pluralNearMissName: DomainMappingProposal = { ...nearMissName, domain: "colors" }
+  check("plural near-miss name with correct values: matched", scoreDomainMatch(pluralNearMissName, groundTruth).matched === true)
+
+  // Values exactly match a real domain, but the proposed name doesn't resemble it at all — a
+  // distinct, informative near-miss, never silently folded into "nothing matched at all".
+  const valuesMatchUnrelatedName: DomainMappingProposal = { domain: "shade", currentValues: ["Blue", "Red", "Green"], mapping: [] }
+  const unrelatedNameResult = scoreDomainMatch(valuesMatchUnrelatedName, groundTruth)
+  check("values match but name unrelated: not matched", unrelatedNameResult.matched === false)
+  check("values match but name unrelated: reason is distinct", unrelatedNameResult.reason.includes("currentValues exactly match"), unrelatedNameResult.reason)
 }
 
 async function testGradeAgainstMechanicalTruth(seeded: { substitutedMzn: string; trueAssignment: Assignment } | undefined) {

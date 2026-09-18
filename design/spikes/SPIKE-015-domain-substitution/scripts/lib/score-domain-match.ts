@@ -20,6 +20,21 @@ function normalize(value: string): string {
   return value.trim().toLowerCase()
 }
 
+/** Relaxed name match — exact, or either string containing the other (case/whitespace
+ * normalized). Found live 2026-09-18 (PZL-0003): the model named the domain "game move"/"game
+ * moves" where ground truth calls it "move" — a qualifier word and plain pluralization a human
+ * grader would accept instantly, which strict equality rejected outright, discarding a rep whose
+ * currentValues may well have been entirely correct. Substring containment covers both real
+ * cases ("move" is a substring of both "game move" and "game moves") without requiring a full
+ * synonym table. */
+function nameResembles(proposedName: string, acceptableNames: readonly string[]): boolean {
+  const proposed = normalize(proposedName)
+  return acceptableNames.some((n) => {
+    const accepted = normalize(n)
+    return proposed === accepted || proposed.includes(accepted) || accepted.includes(proposed)
+  })
+}
+
 function sameSet(a: readonly string[], b: readonly string[]): boolean {
   const normA = new Set(a.map(normalize))
   const normB = new Set(b.map(normalize))
@@ -38,28 +53,46 @@ function inventedIn(expected: readonly string[], actual: readonly string[]): rea
   return actual.filter((v) => !normExpected.has(normalize(v)))
 }
 
-/** Scores a proposal's own domain name + currentValues against ground truth, per SPIKE-015
- * §2 step 3's comparison rule: name match first, then exact value-set equality (order-
- * insensitive, case/whitespace-normalized) against that same alternative — never a name from
- * one alternative crossed with another's values. */
+/** Scores a proposal's own domain name + currentValues against ground truth. Checks VALUE-SET
+ * matches first, independent of name, so a near-miss name never hides a fully correct value-set
+ * finding (found live 2026-09-18: the old name-first order short-circuited before ever looking
+ * at currentValues, making a near-miss name indistinguishable from a genuinely wrong domain). A
+ * value-matching alternative whose name also (approximately) resembles the proposal is a full
+ * match; a value-matching alternative whose name does NOT resemble it is reported as its own
+ * distinct, informative near-miss rather than silently treated the same as "nothing matched at
+ * all". Only when NO alternative's values match anything does this fall back to a name-based
+ * diagnosis, for a concrete missing/invented-values reason. */
 export function scoreDomainMatch(proposal: DomainMappingProposal, groundTruth: GroundTruthEntry): DomainMatchResult {
+  const valueMatches: DomainAlternative[] = []
+  for (const domain of groundTruth.domains) {
+    for (const alt of domain.alternatives) {
+      if (sameSet(alt.values, proposal.currentValues)) valueMatches.push(alt)
+    }
+  }
+
+  for (const alt of valueMatches) {
+    if (nameResembles(proposal.domain, alt.names)) {
+      return { matched: true, reason: "domain name (approximately) and complete value set both match", matchedAlternative: alt }
+    }
+  }
+
+  if (valueMatches.length > 0) {
+    const acceptableNames = valueMatches.flatMap((alt) => alt.names).join(", ")
+    return {
+      matched: false,
+      reason: `currentValues exactly match a real domain (name(s): ${acceptableNames}), but proposed domain name "${proposal.domain}" doesn't resemble it`,
+    }
+  }
+
   const nameCandidates: DomainAlternative[] = []
   for (const domain of groundTruth.domains) {
     for (const alt of domain.alternatives) {
-      if (alt.names.some((n) => normalize(n) === normalize(proposal.domain))) {
-        nameCandidates.push(alt)
-      }
+      if (nameResembles(proposal.domain, alt.names)) nameCandidates.push(alt)
     }
   }
 
   if (nameCandidates.length === 0) {
-    return { matched: false, reason: `no expected domain has the name "${proposal.domain}"` }
-  }
-
-  for (const alt of nameCandidates) {
-    if (sameSet(alt.values, proposal.currentValues)) {
-      return { matched: true, reason: "domain name and complete value set both match", matchedAlternative: alt }
-    }
+    return { matched: false, reason: `no expected domain resembles the name "${proposal.domain}"` }
   }
 
   // Report against the first name-matching candidate for a concrete, actionable diff.
@@ -71,6 +104,6 @@ export function scoreDomainMatch(proposal: DomainMappingProposal, groundTruth: G
   if (invented.length > 0) parts.push(`invented [${invented.join(", ")}]`)
   return {
     matched: false,
-    reason: `domain name "${proposal.domain}" matched but currentValues differs: ${parts.join("; ")}`,
+    reason: `domain name "${proposal.domain}" resembles an expected domain but currentValues differs: ${parts.join("; ")}`,
   }
 }
