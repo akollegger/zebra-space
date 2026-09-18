@@ -22,8 +22,12 @@ fuzzy-fallback call sites are explicitly out of scope for this feature.
 
 **Language/Version**: TypeScript (tsgo preview, `typescript@^7.0.2`), Node 24, run directly (no build step)
 
-**Primary Dependencies**: None new — reuses `src/compiler/compile.ts`'s `sanitizeIdentifier` and
-`src/eval/grader.ts`'s existing `comparisonKey`/`normalizeToken`/`AliasTable`
+**Primary Dependencies**: `wink-lemmatizer` (new runtime dependency, added after this plan was
+first written) — a dictionary/rule-based noun lemmatizer used by `comparisonKey`'s pluralization
+fold; chosen over a hand-rolled trailing-`s`/`es` regex (which shipped, then was caught by review
+folding unrelated words like "news"/"new" together) and over a full NLP library (heavier than this
+narrow need). Otherwise reuses `src/compiler/compile.ts`'s `sanitizeIdentifier` and
+`src/eval/grader.ts`'s existing `normalizeToken`/`AliasTable`
 
 **Storage**: `eval/aliases.json` (existing file, unchanged shape/content — read through one
 consolidated loader instead of two duplicated ones)

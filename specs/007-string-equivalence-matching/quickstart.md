@@ -19,10 +19,11 @@ after the pluralization fold is added to `comparisonKey`.
 Add (or, once implemented, run) a case in `tests/eval/grader.test.ts`:
 
 ```ts
-assert.equal(comparisonKey(sanitizeIdentifier("moves")), comparisonKey(sanitizeIdentifier("move")))
+assert.equal(normalizeToken("moves", {}).normalized, normalizeToken("move", {}).normalized)
 ```
 
-Expected: equal — no alias-table entry required for this pair.
+Expected: equal — no alias-table entry required for this pair. (`comparisonKey` itself is a
+private, non-exported helper inside `grader.ts`; every consumer goes through `normalizeToken`.)
 
 ## Validate the loader consolidation (SC-002)
 
@@ -60,5 +61,7 @@ adopts them, not that every historical file is gone.)
 pnpm test
 ```
 
-Expected: 200+/201 passing (1 skipped without `OPENROUTER_API_KEY`, unchanged from before this
-feature) — no test outside `tests/eval/` should need to change.
+Expected: 209/210 passing (1 skipped without `OPENROUTER_API_KEY`) — no test outside `tests/eval/`
+should need to change. (This count includes this feature's own new tests: the per-word
+lemmatization case, the `aliasApplied` re-export case, and the catalog-wide collision-detection
+test — re-run `pnpm test` for the current total if it drifts further.)

@@ -1,5 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
+import { readFile } from "node:fs/promises"
 import {
   COP_OPTIMA,
   alignArraysByOverlap,
@@ -288,4 +289,45 @@ test("verdict accounting: passes count, FEASIBLE_ONLY and UNDECLINED are exclude
     assert.equal(isPassingVerdict(verdict), false, verdict)
     assert.equal(isExcludedVerdict(verdict), false, verdict)
   }
+})
+
+// FR-003/comparisonKey's own docstring claim "never merges two different values" is an
+// assertion about the current catalog, not a proof about the fold in general — a lemmatizer can
+// fold a proper noun that merely looks pluralizable (e.g. "Chesterfields" -> "chesterfield")
+// even though it isn't really a plural. Found in code review: an assertion alone doesn't answer
+// "how would we know if this ever became false" — this test turns it into a real, running
+// check against every value this project's actual grading data contains, not a claim taken on
+// faith. If two DISTINCT recorded answer-key values ever fold to the same comparisonKey, this
+// fails loudly instead of silently producing a false MATCH at grading time.
+test("comparisonKey: no two distinct values across the real answer-key catalog collide", async () => {
+  const raw = JSON.parse(await readFile(new URL("../../eval/answer-keys.json", import.meta.url), "utf8")) as Record<string, unknown>
+  const { $comment: _ignored, ...entries } = raw
+
+  // A "distinct value" here means distinct even after basic case/whitespace normalization —
+  // "Dog" and "dog" are the SAME value, and comparisonKey folding them together is the fold
+  // working correctly, not a collision. Only flag values that differ by more than case/
+  // whitespace (a real semantic difference) yet still collapse to the same comparisonKey.
+  function basicNormalize(value: string): string {
+    return value.toLowerCase().replace(/\s+/g, "")
+  }
+
+  const byKey = new Map<string, Map<string, string>>()
+  function collect(value: unknown): void {
+    if (Array.isArray(value)) {
+      for (const item of value) collect(item)
+    } else if (value !== null && typeof value === "object") {
+      for (const v of Object.values(value as Record<string, unknown>)) collect(v)
+    } else if (typeof value === "string" && !/^-?\d+$/.test(value)) {
+      const key = normalizeToken(value, {}).normalized
+      const distinctValues = byKey.get(key) ?? new Map<string, string>()
+      distinctValues.set(basicNormalize(value), value)
+      byKey.set(key, distinctValues)
+    }
+  }
+  for (const entry of Object.values(entries)) {
+    collect((entry as { answer?: unknown }).answer)
+  }
+
+  const collisions: readonly string[][] = [...byKey.values()].filter((v) => v.size > 1).map((v) => [...v.values()])
+  assert.deepEqual(collisions, [], `distinct answer-key values collided under comparisonKey: ${JSON.stringify(collisions)}`)
 })

@@ -89,7 +89,10 @@ function collectActualTokens(value: unknown, aliases: AliasTable, into: Set<stri
  * and `lemmatize.noun("buses")` returns `"bus"` (folds correctly). Still an approximation, not a
  * proof: a lemmatizer can occasionally fold a proper noun that merely looks pluralizable (e.g.
  * "Chesterfields" -> "chesterfield"), but that only matters if a puzzle's OWN vocabulary has a
- * competing singular value to collide with, which none observed so far does.
+ * competing singular value to collide with, which none observed so far does — not an assertion
+ * taken on faith: `tests/eval/grader.test.ts`'s own "no two distinct values across the real
+ * answer-key catalog collide" test scans every value in `eval/answer-keys.json` and fails loudly
+ * if this ever stops being true, rather than silently producing a false MATCH at grading time.
  *
  * Lemmatizes PER UNDERSCORE-SEPARATED WORD, not the whole merged phrase — found live in code
  * review (second pass): SPIKE-015's actual motivating case is a QUALIFIER plus a PLURAL together

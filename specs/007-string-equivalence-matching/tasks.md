@@ -48,9 +48,14 @@ plan.md's Project Structure.
   `comparisonKey` (exercised through the exported `normalizeToken`, since `comparisonKey` itself
   is private) — `normalizeToken("moves", {}).normalized === normalizeToken("move", {}).normalized`.
   — confirmed failing (`'moves' !== 'move'`) before implementing T003.
-- [X] T003 Implement the pluralization fold (a single trailing `s` strip, guarded against `ss`
-  and a stem shorter than 3 characters) inside `comparisonKey` in `src/eval/grader.ts`, making
-  T002 pass. (depends on T002) — 25/25 passing.
+- [X] T003 Implement the pluralization fold inside `comparisonKey` in `src/eval/grader.ts`, making
+  T002 pass. (depends on T002) — 25/25 passing. Delivered as a per-word `wink-lemmatizer`-based
+  fold (split on `_`, lemmatize each word, rejoin), not the originally-sketched trailing-`s`
+  regex: a hand-rolled regex was tried first, shipped, and was caught by code review for folding
+  unrelated words together (`"news"`/`"new"`) and missing the `-es` sibilant plural
+  (`"buses"`/`"bus"`); the dictionary-aware lemmatizer avoids both, and per-word splitting (rather
+  than lemmatizing the whole merged phrase) is what makes a qualifier-plus-plural case like "game
+  moves" fold against "game move".
 - [X] T004 [P] Add failing tests to new file `tests/eval/aliases.test.ts`: `loadAnswerValueAliases()`
   reads `eval/aliases.json` and returns its existing `"hardcover book set"` entry;
   `stringsMatch("Hardcover Book Set", "book_set", {"hardcover book set": ["book_set"]})` is

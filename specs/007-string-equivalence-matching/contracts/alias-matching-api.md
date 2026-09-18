@@ -8,17 +8,18 @@ exported function surface future consumers (any grading or scoring script) call 
 ```ts
 export type AliasTable = Record<string, readonly string[]>
 
-export function comparisonKey(sanitized: string): string
-// Folds case, underscore-separator, and (new) trailing s/es pluralization.
-// Guarantee: comparisonKey(x) === comparisonKey(y) implies x and y are the same value under
-// case/whitespace/separator/pluralization variance alone — never under synonym variance.
-
 export function normalizeToken(
   token: string,
   aliases: AliasTable,
 ): { readonly normalized: string; readonly aliasApplied: boolean }
-// Unchanged signature and behavior for every existing caller (FR-009) — gains the pluralization
-// fold as part of comparisonKey, and nothing else changes for a caller passing {} as aliases.
+// Unchanged signature for every existing caller (FR-009). `normalized` now folds case,
+// underscore-separator, and (new) per-word pluralization via a dictionary-aware lemmatizer —
+// never under synonym variance. `aliasApplied` is true only when a listed alias-table VARIANT's
+// own fold matched the token, never when the token's fold merely equals the canonical's own fold.
+//
+// The per-word fold itself (comparisonKey) is a private, non-exported implementation detail of
+// grader.ts — every consumer goes through normalizeToken (or stringsMatch below), never through
+// comparisonKey directly.
 ```
 
 ## `src/eval/aliases.ts` (new)

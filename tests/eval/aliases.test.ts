@@ -1,6 +1,15 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { loadAnswerValueAliases, stringsMatch } from "../../src/eval/aliases.ts"
+import { loadAnswerValueAliases, normalizeToken, stringsMatch } from "../../src/eval/aliases.ts"
+
+// FR-007: a consumer using stringsMatch alone cannot observe whether a match came from the
+// deterministic fold or from a curated alias variant — normalizeToken is re-exported so that
+// audit trail stays available to anyone importing from this module, not just grader.ts.
+test("normalizeToken (re-exported): alias application stays observable, not just the boolean outcome", () => {
+  const aliases = { "hardcover book set": ["book_set"] }
+  assert.deepEqual(normalizeToken("book_set", aliases), { normalized: "hardcoverbookset", aliasApplied: true })
+  assert.deepEqual(normalizeToken("hardcover book set", aliases), { normalized: "hardcoverbookset", aliasApplied: false })
+})
 
 // ADR-011 §2.2: the ONE loader for eval/aliases.json, replacing the two duplicated loadAliases()
 // bodies (scripts/eval-extraction.ts, SPIKE-008's puzzles.ts).

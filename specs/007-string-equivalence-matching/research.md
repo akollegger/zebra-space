@@ -53,21 +53,33 @@ their own current heuristics unchanged, per spec.md's resolved clarification (op
 **Rationale**: Already settled during `/speckit-specify`; recorded here so planning doesn't
 silently expand scope back to the original ADR sketch's fuller "every consumer migrates" framing.
 
-## Decision 4: Pluralization fold as one deterministic rule inside `comparisonKey`
+## Decision 4: Pluralization fold as a per-word dictionary lemmatization inside `comparisonKey`
 
-**Decision**: `comparisonKey` gains a trailing `s`/`es` strip, applied unconditionally after the
-existing lowercase/underscore-strip step, before the alias-table lookup runs. Example:
-`comparisonKey("moves")` and `comparisonKey("move")` both yield `"move"`.
+**Decision**: `comparisonKey` splits its input on `_`, runs each word through `wink-lemmatizer`'s
+`lemmatize.noun`, and rejoins — applied after the existing lowercase/underscore-split step, before
+the alias-table lookup runs. Example: `comparisonKey("moves")` and `comparisonKey("move")` both
+yield `"move"`; `comparisonKey("game_moves")` and `comparisonKey("game_move")` both yield
+`"gamemove"` (per-word lemmatization, not lemmatizing the merged compound, is what makes the
+qualifier-plus-plural case fold — SPIKE-015 §5.2's actual motivating phrase).
 
-**Rationale**: FR-008 requires this to need no curated entry per singular/plural pair — a fixed
-suffix rule is the deterministic, zero-data way to satisfy that, consistent with how case and
-separator folding already work in the same function.
+**Rationale**: FR-008 requires this to need no curated entry per singular/plural pair. A first
+attempt used a hand-rolled trailing-`s` regex (stripping one `s` when the stem was >=3 chars and
+not `ss`); it shipped and was caught by code review before merge, because it folded unrelated real
+words whenever one was "the other plus a trailing s" (`"news"`/`"new"`, `"lens"`/`"len"` both
+collapsed) and missed the `-es` sibilant plural entirely (`"buses"`/`"bus"` stayed distinct). A
+dictionary-aware lemmatizer avoids both failure modes because it only accepts a stripped candidate
+that is itself a real dictionary word, rather than blindly matching a suffix.
 
-**Alternatives considered**: A general stemming library — rejected as disproportionate; the only
-observed case (SPIKE-015 §5.2's "moves"/"move") is a plain plural, and a general stemmer risks
-folding together words that are not actually the same concept (a risk this feature's whole point
-is to avoid introducing). A curated per-value plural entry in the alias table — rejected: FR-008
+**Alternatives considered**: The trailing-`s`/`es` regex above — rejected per the review finding.
+A full general-purpose NLP library (e.g. `wink-nlp` with its POS-tagging model) — rejected as
+heavier than this narrow need; `wink-lemmatizer` is a lighter, purpose-built dictionary lemmatizer
+with no model to load. A curated per-value plural entry in the alias table — rejected: FR-008
 explicitly asks for this NOT to need curation, since it's a general rule, not a per-value fact.
+Known residual risk, accepted: a dictionary lemmatizer can still fold a proper noun that merely
+looks pluralizable (e.g. "Chesterfields" -> "chesterfield"), which only matters if a puzzle's own
+vocabulary has a competing singular value to collide with — `tests/eval/grader.test.ts`'s
+collision-detection test scans the real answer-key catalog for exactly this, rather than assuming
+it away.
 
 ## Decision 5: No `effect` wrapping for this code
 

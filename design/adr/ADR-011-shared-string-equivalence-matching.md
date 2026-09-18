@@ -74,26 +74,47 @@ Together they already fold `"Hardcover Book Set"`, `"hardcover-book-set"`, and
 `"HardcoverBookSet"` to one identical key before anything else runs.
 
 Plain pluralization ("moves" vs. "move") is a distinct gap this fold does not close, and unlike
-genuine synonym variance (§2.3), it is mechanically predictable rather than open-ended — a
-trailing `s`/`es` strip is a general rule, not a per-value fact that needs curating. It belongs
-in the deterministic fold itself (a small stemming step inside `comparisonKey`, applied
-unconditionally, the same way case-folding already is), not in the alias table or the
-curation-assist path below.
+genuine synonym variance (§2.3), it is mechanically predictable rather than open-ended — folding a
+plural to its singular is a general rule, not a per-value fact that needs curating. It belongs in
+the deterministic fold itself, applied unconditionally the same way case-folding already is, not
+in the alias table or the curation-assist path below.
+
+Built as a real, dictionary/rule-based lemmatizer (`wink-lemmatizer`'s `lemmatize.noun`), not a
+hand-rolled suffix-strip regex. A first implementation attempt used a bare trailing-`s` regex
+(strip one `s` when the stem was ≥3 characters and not `ss`) and was caught by code review before
+merge: it collapsed unrelated real words together whenever one was "the other plus a trailing s"
+(`"news"`/`"new"`, `"lens"`/`"len"`), and it missed the common `-es` sibilant plural entirely
+(`"buses"`/`"bus"` stayed distinct) — both exactly the failure modes a dictionary-aware lemmatizer
+avoids, verified directly against the real library before adopting it (see
+`specs/007-string-equivalence-matching/research.md` Decision 4). The known residual risk: a
+lemmatizer can still fold a proper noun that merely *looks* pluralizable but isn't (e.g.
+`"Chesterfields"` → `"chesterfield"`, a real catalog brand name). Accepted because it only matters
+if a puzzle's own vocabulary has a competing singular value to collide with, which none observed
+so far does — not a proof of safety, an evidenced absence of harm.
 
 ### 2.2 One shared matching module, two separately-scoped alias tables
 
-A single module (e.g. `src/eval/alias-match.ts`) exports the comparison logic every consumer
-needs, generalized to accept any alias table rather than hardcoding `eval/aliases.json`:
+`src/eval/grader.ts`'s existing `normalizeToken`/`comparisonKey`/`AliasTable` already are the
+generic shared primitive this decision calls for — they take any `AliasTable` as a parameter
+rather than hardcoding `eval/aliases.json`, and are already tested. They stay exactly where they
+are; the implementation does not relocate or duplicate them (see
+`specs/007-string-equivalence-matching/research.md` Decision 1 for why introducing a second,
+parallel comparison function was rejected once this was confirmed).
+
+A new module, `src/eval/aliases.ts`, exports the ONE loader for `eval/aliases.json` — replacing
+the two duplicated `loadAliases()` bodies — plus a convenience wrapper for callers who only need
+a boolean rather than `normalizeToken`'s richer `{normalized, aliasApplied}` shape:
 
 ```ts
-export type AliasTable = Record<string, readonly string[]>
-export function resolvesToAlias(candidate: string, canonical: string, aliases: AliasTable): boolean
+export async function loadAnswerValueAliases(): Promise<AliasTable>
+export function stringsMatch(a: string, b: string, aliases: AliasTable = {}): boolean
 ```
 
-`resolvesToAlias` composes the existing fold (§2.1) with an exact lookup against whichever table
-it's given — the same mechanism `normalizeToken` already implements, extracted so it stops being
-specific to the production grader's own alias file. The module also exports the ONE loader for
-`eval/aliases.json`, replacing the two duplicated `loadAliases()` bodies.
+`stringsMatch` composes the existing fold (§2.1) with an exact lookup against whichever table
+it's given, by calling `normalizeToken` on both sides and comparing the results — no new
+comparison logic, only a convenience call shape. A caller needing the audit-trail metadata
+(FR-007) calls `normalizeToken` directly (re-exported from `src/eval/aliases.ts` for
+convenience) rather than `stringsMatch`, which intentionally discards it.
 
 The underlying DATA stays split by scope, because the two kinds of alias mean different things:
 
@@ -159,12 +180,24 @@ against trusting embedding similarity live.
   review.** Rejected: removes the audit trail ADR-007 explicitly values ("applying an alias is
   recorded... so no normalization is ever silent") and risks one bad automatic addition silently
   corrupting grading for every future puzzle sharing that token.
+- **A hand-rolled trailing-`s`/`es` suffix-strip regex for the pluralization fold (§2.1).**
+  Tried first, shipped, and rejected by code review before merge: verified live to collapse
+  unrelated real words together (`"news"`/`"new"`, `"lens"`/`"len"`) and to miss the common
+  `-es` sibilant plural entirely (`"buses"`/`"bus"`). A dictionary-aware lemmatizer avoids both
+  failure modes by construction (it only accepts a fold that is itself a real word) rather than
+  by tuning more regex exceptions.
+- **A full general-purpose NLP library (e.g. `wink-nlp` with its POS-tagging model) for the
+  pluralization fold.** Rejected as heavier than the problem needs: POS tagging is built for
+  running text in sentence context, not the bare, isolated, often-invented-proper-noun tokens
+  this project's grading actually normalizes, and it would add a multi-megabyte model dependency
+  to a currently dependency-light module for a benefit `wink-lemmatizer`'s standalone,
+  no-model, single-word lemmatizer already provides.
 
 ## 4. Consequences
 
 - `SPIKE-015`'s `nameResembles` and `SPIKE-013`'s `embeddingSemanticMatch` are superseded as the
-  live matching path once `resolvesToAlias` exists — replacing their call sites is follow-up
-  implementation work, not something this decision performs by itself.
+  live matching path once `stringsMatch`/`normalizeToken` exist — replacing their call sites is
+  follow-up implementation work, not something this decision performs by itself.
 - The two duplicated `loadAliases()` bodies (`scripts/eval-extraction.ts`,
   `design/spikes/SPIKE-008-per-clue-tool-call-decomposition/scripts/lib/puzzles.ts`) collapse to
   one shared loader; both call sites need updating.
@@ -173,8 +206,9 @@ against trusting embedding similarity live.
   code path each is read through, not the data itself.
 - A curation-assist tool that turns an embedding, LLM-judge, or Levenshtein-distance suggestion
   into a reviewable proposed alias-table entry is a natural next step this decision motivates but
-  does not build. A small pluralization stemming step inside `comparisonKey` (§2.1) is similarly
-  motivated but not built here.
+  does not build. The pluralization fold itself (§2.1) IS built, via `wink-lemmatizer` — a new
+  runtime dependency this decision's implementation adds, with the known residual risk §2.1
+  documents.
 - `eval/aliases.json` staying at one real entry, and `DomainAlternative.names` covering only a
   handful of puzzles, means the practical benefit of this consolidation grows as more entries get
   curated over time — this decision fixes the fragmentation, not the current sparseness of either
@@ -183,5 +217,4 @@ against trusting embedding similarity live.
 ## 5. Related
 
 - RFCs: RFC-001, RFC-003, RFC-004
-- Specs: _(populated automatically by the speckit ADR-link hook once `/speckit-specify`
-  references this ADR)_
+- Specs: [specs/007-string-equivalence-matching](../../specs/007-string-equivalence-matching/spec.md)
