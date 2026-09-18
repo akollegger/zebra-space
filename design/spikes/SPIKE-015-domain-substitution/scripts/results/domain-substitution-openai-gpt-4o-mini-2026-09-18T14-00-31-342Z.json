@@ -1,0 +1,99 @@
+[
+  {
+    "id": "PZL-0002",
+    "reps": [
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.0001167,
+        "judgeCostUsd": 0.00009525,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "substitutedProse": "Three houses stand in a row, numbered 1 to 3 from left to right. Each has a unique color —\nYellow, Purple, or Orange — and is home to a unique animal — Dog, Cat, or Zebra.\n\n1. The Cat lives in the Purple House.\n2. The Purple House is the middle house.\n3. The Yellow House is directly to the left of the Purple House.\n4. The Dog lives in the Yellow House.\n\nWhere does the Zebra live?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.0001167,
+        "judgeCostUsd": 0.00009525,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "substitutedProse": "Three houses stand in a row, numbered 1 to 3 from left to right. Each has a unique color —\nYellow, Purple, or Orange — and is home to a unique animal — Dog, Cat, or Zebra.\n\n1. The Cat lives in the Purple House.\n2. The Purple House is the middle house.\n3. The Yellow House is directly to the left of the Purple House.\n4. The Dog lives in the Yellow House.\n\nWhere does the Zebra live?"
+      },
+      {
+        "outcome": "SUBSTITUTION_NOT_WELL_FORMED",
+        "detail": "The Dog lives in the Yellow House.",
+        "mappingCostUsd": 0.0001167,
+        "judgeCostUsd": 0.00010065,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": false,
+        "issues": [
+          "The Dog lives in the Yellow House."
+        ],
+        "substitutedProse": "Three houses stand in a row, numbered 1 to 3 from left to right. Each has a unique color —\nYellow, Purple, or Orange — and is home to a unique animal — Dog, Cat, or Zebra.\n\n1. The Cat lives in the Purple House.\n2. The Purple House is the middle house.\n3. The Yellow House is directly to the left of the Purple House.\n4. The Dog lives in the Yellow House.\n\nWhere does the Zebra live?"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0003",
+    "reps": [
+      {
+        "outcome": "SUBSTITUTION_NOT_WELL_FORMED",
+        "detail": "\"Paper beats fire.\"; \"Rock beats air.\"; \"Scissors beats water.\"; The values 'paper', 'rock', and 'scissors' should have been replaced with 'water', 'fire', and 'air', respectively, throughout the substituted prose. The substitutions were not applied consistently.",
+        "mappingCostUsd": 0.00010965,
+        "judgeCostUsd": 0.00011475,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": false,
+        "issues": [
+          "\"Paper beats fire.\"",
+          "\"Rock beats air.\"",
+          "\"Scissors beats water.\"",
+          "The values 'paper', 'rock', and 'scissors' should have been replaced with 'water', 'fire', and 'air', respectively, throughout the substituted prose. The substitutions were not applied consistently."
+        ],
+        "substitutedProse": "You're playing water-fire-air.\n\n1. Paper beats fire.\n2. Rock beats air.\n3. Scissors beats water.\n4. Your opponent plays fire.\n\nWhat should you play?"
+      },
+      {
+        "outcome": "SUBSTITUTION_NOT_WELL_FORMED",
+        "detail": "1. Paper beats fire.; 2. Rock beats air.; 3. Scissors beats water.",
+        "mappingCostUsd": 0.00010965,
+        "judgeCostUsd": 0.00008955,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": false,
+        "issues": [
+          "1. Paper beats fire.",
+          "2. Rock beats air.",
+          "3. Scissors beats water."
+        ],
+        "substitutedProse": "You're playing water-fire-air.\n\n1. Paper beats fire.\n2. Rock beats air.\n3. Scissors beats water.\n4. Your opponent plays fire.\n\nWhat should you play?"
+      },
+      {
+        "outcome": "SUBSTITUTION_NOT_WELL_FORMED",
+        "detail": "1. Paper beats spock.; 2. Rock beats water.; 3. Scissors beats lizard.",
+        "mappingCostUsd": 0.00011085,
+        "judgeCostUsd": 0.0000918,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": false,
+        "issues": [
+          "1. Paper beats spock.",
+          "2. Rock beats water.",
+          "3. Scissors beats lizard."
+        ],
+        "substitutedProse": "You're playing lizard-spock-water.\n\n1. Paper beats spock.\n2. Rock beats water.\n3. Scissors beats lizard.\n4. Your opponent plays spock.\n\nWhat should you play?"
+      }
+    ]
+  }
+]

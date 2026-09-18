@@ -363,6 +363,59 @@ instance but the same underlying phenomenon (the verifier occasionally drifts to
 different value set when re-formalizing from prose alone, independent of anything this scoring
 change touches).
 
+### 5.5 Replaced the direct-mzn verifier with a well-formedness critic — and it immediately caught a real substitution bug
+
+`direct-mzn` re-formalization was itself pure noise for this spike (§5.1–§5.4's every non-
+domain-matching failure — `ModelSyntaxError`, `Unsatisfiable`, `MultiplySatisfiable`, invented
+extra tokens like `lizard, spock`/`water, fire` — came from SPIKE-014's already-known ~26-48%
+verifier ceiling, not from anything domain substitution did), and it tested the wrong downstream
+capability (formalizing, not the well-posedness of the substitution itself — ADR-007/RFC-003
+§7.3's own established distinction between the two). Replaced with `judge-substitution.ts`: a
+critic call given the ORIGINAL prose, the SUBSTITUTED prose, AND the mapping, asked only whether
+the substitution is well-formed (grammar/agreement, no leftover fragments, same logical
+structure) — never asked to solve anything. Uniqueness of the substituted `.mzn` stays a free,
+deterministic check (unaffected by this change); only the LLM-based verification step changed.
+
+Re-ran the identical n=3 × 2-puzzle sweep. Raw:
+`results/domain-substitution-openai-gpt-4o-mini-2026-09-18T14-00-31-342Z.json`, **$0.0013**.
+
+| Puzzle | wellFormed=true | wellFormed=false |
+|---|---|---|
+| PZL-0002 | 2/3 | 1/3 |
+| PZL-0003 | 0/3 | 3/3 |
+
+**PZL-0003's 3/3 `wellFormed=false` is a real, confirmed bug the critic caught on its first
+run — not critic noise.** `apply-to-prose.ts`'s literal `split().join()` replace is
+case-SENSITIVE. The seed puzzle's intro sentence uses lowercase values ("paper-rock-scissors"),
+but its numbered rules use the SAME words capitalized as sentence-initial subjects ("**Paper**
+beats rock.", "**Rock** beats scissors."). When the model reports `currentValues` matching the
+intro's lowercase casing, `applyMappingToProse` only replaces the lowercase occurrences
+(inside "beats X") and silently leaves every capitalized sentence-initial occurrence
+unsubstituted — confirmed directly in the written record: rep 1's substituted prose reads
+"**Paper** beats fire. **Rock** beats air. **Scissors** beats water." — the object of each
+sentence changed, the capitalized SUBJECT did not, and the critic named exactly this
+("the values 'paper', 'rock', and 'scissors' should have been replaced... throughout"). This
+contradicts `apply-to-prose.ts`'s own header comment ("Safe unconditionally") — it is only safe
+when every occurrence of a reported value shares one casing, which this seed puzzle's real prose
+does not. **This is precisely the value the recommendation to give the critic the mapping (not
+just the before/after prose) was for**: with the mapping in hand, the critic could name which
+specific values were inconsistently applied, not just that something looked off.
+
+**PZL-0002's 1/3 `wellFormed=false` is critic noise, not a code bug.** Rep 3's substituted
+prose is byte-identical to reps 1 and 2 (both `wellFormed=true`) — same mapping, same output —
+yet the critic flagged "The Dog lives in the Yellow House." as an issue with no apparent
+grammatical defect. Same-input-different-verdict is exactly the LLM non-determinism this project
+has already catalogued as a real, expected risk of any single LLM-judge call (SPIKE-004's
+finding, cited in RFC-003 §7.3) — worth knowing about this critic specifically, not a reason to
+distrust the PZL-0003 finding above (which is corroborated by inspecting the actual substituted
+text directly, not solely by the critic's say-so).
+
+**Follow-up, not yet done**: `apply-to-prose.ts` needs a case-tolerant replace (e.g. matching
+every case variant of `oldValue` that actually appears in the prose, preserving each match's own
+casing) before this bug stops recurring on any seed puzzle whose rules capitalize a
+sentence-initial domain value. Flagged here rather than fixed, since it's a substitution-mechanism
+fix distinct from this section's own scope (replacing the verifier).
+
 ## 6. Conclusion
 
 **First pass confirms the core hypothesis is worth pursuing, and sharpens exactly what to fix
