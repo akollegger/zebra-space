@@ -1,7 +1,7 @@
 ---
 id: SPIKE-015
 title: Domain Substitution as a Cheaper, Verifiable Generation Task
-status: planned
+status: in-progress
 rfcs: [RFC-001]
 created: 2026-09-18
 ---
@@ -144,10 +144,100 @@ spike itself IS a new spike, not a SPIKE-014 variant, because it answers a genui
 RFC's open question — RFC-001 §9.2/§7.5, not RFC-003's formalization-representation question —
 not because a new idea always warrants one.)
 
+**2026-09-18 — built and ran the core mechanism (§2), full harness at
+`design/spikes/SPIKE-015-domain-substitution/scripts/`.** A real bug was found and fixed before
+any live call: `src/eval/grader.ts`'s `gradeDeterminate` (parallel-array branch) unwraps the
+solver's `{e: "Blue"}` enum-wrapping only on the *actual* side, never on `expected` — passing a
+raw mechanically-derived `Assignment` straight in as `expected` would have spuriously graded
+every rep `MISMATCH`. Fixed in `lib/grade-against-truth.ts` by deep-unwrapping the truth
+assignment first (duplicating `grader.ts`'s own private `unwrapSingleKeyRecord`), and validated
+against real solver output (not just reasoning) in the offline smoke test before any live call.
+Offline smoke test (zero cost) passed on the first try. Live dry run (n=1, both seeds, $0.0005)
+confirmed the mechanism end-to-end on real model output. Full sweep (n=3, PZL-0002 + PZL-0003,
+`gpt-4o-mini`, $0.0015) written up as §5.1.
+
 ## 5. Findings
 
-_(to be filled in once the spike runs)_
+### 5.1 First sweep: the substitution mechanism itself is reliable; naming strictness and the verifier's own known limits are the actual bottlenecks
+
+Raw: `results/domain-substitution-openai-gpt-4o-mini-2026-09-18T10-06-09-192Z.json`. n=3 reps ×
+2 seed puzzles (PZL-0002, PZL-0003; PZL-0007 excluded per §2 step 1), `gpt-4o-mini` for both the
+mapping call and the `direct-mzn` verifier. **$0.0015 total.**
+
+| Puzzle | Outcome | Count |
+|---|---|---|
+| PZL-0002 | `VERIFIED` (domain matched, mapping applied, substituted `.mzn` solved uniquely, verifier ran) | 3/3 |
+| PZL-0002 | ...of which verifier `MATCH` | 1/3 |
+| PZL-0002 | ...of which verifier `NOT_UNIQUE` | 1/3 |
+| PZL-0002 | ...of which verifier `VERIFIER_SOLVE_ERROR` | 1/3 |
+| PZL-0003 | `DOMAIN_MATCH_FAILED` (step 3 short-circuit, never reached substitution) | 3/3 |
+
+**The domain-substitution mechanism itself (steps 1-4) worked perfectly every time it was
+reached**: all 3 PZL-0002 reps show `domainMatchReason: "domain name and complete value set
+both match"` and `mznApplied: 3, mznSkipped: []` — the model correctly identified "color" from
+raw prose alone, reported its exact 3-value set, proposed a same-arity remapping, and the
+mechanical apply-to-prose/apply-to-mzn steps both succeeded cleanly every time (e.g. rep 2's
+substituted prose: "Yellow, Purple, or Orange" cleanly replacing "Blue, Red, Green" throughout,
+including every constraint reference). This is a real, positive signal for RFC-001 §9.2's open
+question about catalog-modification reliability — at least for a puzzle whose domain is a small,
+clearly-delineated closed set of colors, the identify-and-remap step itself is NOT the
+bottleneck.
+
+**Where PZL-0002 reps failed, the failure came from the ALREADY-KNOWN-IMPERFECT verifier, not
+from substitution.** Reps 1 and 3 both got through domain-matching and mechanical substitution
+cleanly (mechanically-derived truth solved `UniquelySolvable` in all 3 reps — substitution never
+broke solvability), but `direct-mzn`'s own independent re-formalization of the substituted prose
+either under-constrained it (rep 1: `MultiplySatisfiable`, — missing a clue, the exact failure
+class SPIKE-014 §5.4 already catalogued) or invented a nonexistent MiniZinc builtin (rep 3:
+`` no function or predicate with name `indexof' found ``, the exact class SPIKE-014 §5.3
+catalogued). **This is the correct outcome for this design, not a flaw in it**: the mechanically-
+derived truth (via the seed's already-verified `.mzn`, mapped mechanically) is what makes the
+rep gradable AT ALL; the verifier's own known ~26-48% MATCH ceiling (SPIKE-014 §5.2/§5.3, §5.7)
+is a property of `direct-mzn` itself, orthogonal to whether the puzzle it's given was hand-
+authored or domain-substituted. 1/3 MATCH here is consistent with, not below, that known ceiling
+at this sample size.
+
+**PZL-0003 never got past domain identification, for a distinct and highly actionable reason**:
+in all 3 reps the model named the domain "game move" or "game moves" — ground truth's own
+front-matter names it `move` (singular, no qualifier). `scoreDomainMatch`'s comparison rule
+(§2 step 3) does exact case/whitespace-normalized string matching on domain NAMES with zero
+tolerance for a reasonable synonym or qualifier — "game move" is clearly the same concept a
+human grader would accept, but the harness's current rule rejects it outright. **This is a
+real, narrow, fixable gap in the SCORING rule, not evidence the model failed to understand the
+puzzle** — its own `currentValues` for "game move" would very plausibly have been the correct
+`[Rock, Paper, Scissors]` set (unrecorded, since scoring short-circuits before checking values
+once the name itself doesn't match any alternative — a rep whose values might have been
+completely correct is currently indistinguishable from one that named a domain that doesn't
+exist in the puzzle at all).
 
 ## 6. Conclusion
 
-_(to be filled in once the spike runs)_
+**First pass confirms the core hypothesis is worth pursuing, and sharpens exactly what to fix
+next.** Domain identification-and-substitution, when the model's chosen name happens to match
+ground truth's own name, is reliable (3/3) and cheap (~$0.0001/call, two orders of magnitude
+below a full formalization call) — a genuinely different reliability profile from SPIKE-014's
+formalize-mzn, consistent with the "bijective relabeling is easier than deduction" hypothesis
+that motivated this spike (§1). The dominant blocker in this first sample isn't the substitution
+task itself — it's `scoreDomainMatch`'s current all-or-nothing name matching, which threw away
+a rep (PZL-0003) that may have been substantively correct purely because of a naming variant.
+
+**Recommended next steps** (candidates for the next variant, per §4's own "several variations
+expected" framing):
+1. Relax `scoreDomainMatch`'s name-matching rule (e.g. substring/token-overlap tolerance, or a
+   short list of acceptable synonyms per ground-truth alternative, mirroring `catalog/README.md`'s
+   own existing alias-table convention already used elsewhere in this project's grading) — and,
+   critically, stop short-circuiting on a name mismatch before checking `currentValues`, so a
+   near-miss name with a fully correct value set is distinguishable from a genuinely wrong domain.
+2. Run a larger sample across more seed puzzles once more `catalog/mzn/` entries exist with enum
+   domains (currently only PZL-0002 qualifies; PZL-0003's own enum-based `Move` domain is
+   eligible in principle but blocked entirely by finding 1 above).
+3. The verifier's own ceiling (SPIKE-014's ~26-48% `direct-mzn` MATCH rate) is a known, separate
+   problem this spike doesn't need to re-solve — but it does mean this harness's own headline
+   "verified MATCH rate" number will always be upper-bounded by that ceiling regardless of how
+   reliable substitution itself becomes, worth stating explicitly whenever this spike's numbers
+   are cited elsewhere (e.g. back into RFC-001).
+4. The variants named in §4's Notes (multi-domain substitution at once; substitution without an
+   already-known-correct `.mzn`; repeated-sampling noise/signal separation) remain open, per the
+   user's own expectation of several variations — not yet attempted.
+
+Status: in-progress.
