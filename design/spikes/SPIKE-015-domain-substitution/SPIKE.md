@@ -261,6 +261,66 @@ recommendation 1 already named), or accepting that some fraction of otherwise-co
 always be undercounted by a purely mechanical name check — a real, now precisely-characterized
 limit, not an unexamined one.
 
+### 5.3 Migrated to the shared string-equivalence matcher (ADR-011); the ad-hoc substring heuristic is gone, and the real gap needed curation, not more heuristic
+
+§5.2's own recommendation 1 ("a small hand-curated alias list per ground-truth alternative,
+mirroring `catalog/README.md`'s own existing alias-table convention") became [ADR-011](../../adr/ADR-011-shared-string-equivalence-matching.md)'s
+actual decision, built and merged in a separate branch (`016-string-equivalence-matching`, PR #35).
+`scoreDomainMatch`'s own `nameResembles`/`sameSet`/`missingFrom`/`inventedIn` — the local
+case/whitespace-only `normalize` plus substring-containment heuristic §5.1/§5.2 built and
+iterated on — are replaced with `src/eval/aliases.ts`'s `stringsMatch`, treating
+`DomainAlternative.names` (already a curated list of acceptable names per domain) as exactly the
+per-puzzle domain-name `AliasTable` ADR-011 §2.2 designed for. This is a straight consequence of
+this project's own duplication-avoidance discipline, not new design work here.
+
+Re-ran the identical n=3 × 2-puzzle sweep. Raw:
+`results/domain-substitution-openai-gpt-4o-mini-2026-09-18T13-24-52-126Z.json` (before curating
+PZL-0003's ground truth), then
+`results/domain-substitution-openai-gpt-4o-mini-2026-09-18T13-26-54-252Z.json` (after), **$0.0014
++ $0.0018**.
+
+| Puzzle | Outcome | Before curation | After curating "game move" | §5.2 (substring heuristic) |
+|---|---|---|---|---|
+| PZL-0002 | `VERIFIED` (substitution mechanism) | 3/3 | 3/3 | 3/3 |
+| PZL-0002 | ...verifier `MATCH` | 2/3 | 3/3 | 2/3 |
+| PZL-0003 | `DOMAIN_MATCH_FAILED` | 3/3 | 1/3 | 3/3 |
+
+**The shared matcher, used with zero curation, is stricter than the old substring heuristic — by
+design, not by regression.** All 3 PZL-0003 reps this run named the domain "game moves" (the
+exact combined qualifier-plus-plural phrase ADR-011 §2.1 specifically fixed in
+`comparisonKey` itself). But `comparisonKey`'s deterministic fold only closes morphological
+variance (case, whitespace, plain pluralization) — a QUALIFIER word ("game") is not part of that
+fold, by ADR-011's own explicit design (§2.1: "not a per-value fact that needs curating" applies
+to pluralization specifically, not to arbitrary qualifiers). So "game moves" no longer
+auto-matches "move" the way the old substring heuristic accepted it — confirmed directly against
+the real model output above (`(currentValues exactly match a real domain (name(s): move), but
+proposed domain name "game moves" doesn't resemble it)`), not merely predicted from reading the
+code.
+
+**Curating `catalog/puzzles/PZL-0003-rock-paper-scissors.md`'s `names: [move]` to
+`names: [move, game move]` — the exact mechanism ADR-011 §2.2 designed for this case — closed
+the gap for 2 of 3 reps.** Once curated, "game move" is a listed variant, so `comparisonKey`'s
+existing pluralization fold makes "game moves" match it "for free" (no separate curation needed
+per plural form). The one rep still `DOMAIN_MATCH_FAILED` after curation named the domain
+"game" — genuine synonym variance, not morphological, the exact SECOND gap §5.2 already
+identified and explicitly said a curated alias list would not close by itself (curating "game
+move" doesn't help "game" alone resemble "move" any more than "action" did in §5.2's own second
+run) . This is the correct, expected boundary of what curation fixes, not a new finding.
+
+**One PZL-0003 rep that passed domain-matching failed verification for an unrelated reason worth
+flagging separately**: rep 3's `direct-mzn` verifier scored `MISMATCH` reporting missing tokens
+`lizard, spock` — the verifier appears to have formalized "Rock-Paper-Scissors-Lizard-Spock"
+rather than the seed's actual 3-value domain, a `direct-mzn` formalization drift unrelated to
+domain-name matching or this migration (SPIKE-014's own known verifier-limitation territory, not
+re-litigated here).
+
+**Net effect of this migration**: no case that the old substring heuristic correctly accepted
+now regresses (PZL-0002 unaffected; morphological variance still folds, now via the shared
+mechanism instead of a local one), one case it accepted only by accident of overlapping
+substrings ("game move(s)" containing "move") now requires the explicit one-line curation the
+mechanism is designed around, and the codebase gained one fewer independent string-comparison
+implementation (ADR-011's own stated goal) at the cost of that one line of curation.
+
 ## 6. Conclusion
 
 **First pass confirms the core hypothesis is worth pursuing, and sharpens exactly what to fix
@@ -274,12 +334,16 @@ a rep (PZL-0003) that may have been substantively correct purely because of a na
 
 **Recommended next steps** (candidates for the next variant, per §4's own "several variations
 expected" framing):
-1. **Partially done, per §5.2.** Substring-based name tolerance plus checking value-sets before
-   short-circuiting on name is implemented and confirmed to fix the morphological near-miss class
-   observed in §5.1. §5.2 also found this doesn't (and structurally cannot) close a SECOND,
-   distinct gap — genuine synonym variance ("action"/"game" vs. "move", sharing no substring) —
-   which would need a small hand-curated alias list per ground-truth alternative, mirroring
-   `catalog/README.md`'s own existing alias-table convention, to close fully.
+1. **Done, per §5.3**, superseding §5.2's own interim substring heuristic. `scoreDomainMatch`
+   now uses `src/eval/aliases.ts`'s `stringsMatch` (ADR-011's shared string-equivalence
+   matcher) — value-sets are still checked before short-circuiting on name (§5.2's fix, kept),
+   but name matching goes through the shared deterministic fold plus `DomainAlternative.names`
+   treated as a curated alias table, rather than a local substring-containment heuristic.
+   Morphological variance (plain pluralization) folds automatically; a qualifier word needs one
+   line of curation (done for PZL-0003's "game move", confirmed live to close 2/3 of the
+   previously-lost reps). Genuine synonym variance ("action"/"game" vs. "move") remains
+   uncaught, exactly as §5.2 predicted a curated alias list alone would not close it — that gap
+   is unchanged by this migration, not a regression from it.
 2. Run a larger sample across more seed puzzles once more `catalog/mzn/` entries exist with enum
    domains (currently only PZL-0002 qualifies; PZL-0003's own enum-based `Move` domain is
    eligible in principle but blocked entirely by finding 1 above).

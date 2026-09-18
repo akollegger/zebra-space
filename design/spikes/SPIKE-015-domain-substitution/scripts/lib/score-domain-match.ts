@@ -1,11 +1,27 @@
 // SPIKE-015 §2 step 3: scores the model's own domain identification against the puzzle's
 // catalog front-matter (groundTruthFor, from SPIKE-013) BEFORE anything downstream runs — the
 // primary finding this variant is designed to surface. This is a prose-space name/value-string
-// comparison (case/whitespace only) — a DIFFERENT concern from step 4's identifier-spelling fold
-// (sanitizeIdentifier + comparisonKey), which matches against a .mzn's enum-member spelling, not
-// prose-value spelling. Do not conflate the two normalizations.
+// comparison — a DIFFERENT concern from step 4's identifier-spelling fold (sanitizeIdentifier +
+// comparisonKey applied to a .mzn's enum-member spelling), but both now go through the SAME
+// shared fold (ADR-011, `src/eval/aliases.ts`'s `stringsMatch`) rather than two independent
+// normalizations, so a spelling variant accepted in one place is accepted the same way in the
+// other. Do not reintroduce a local case/whitespace-only heuristic here.
+//
+// Migrated 2026-09-18 (ADR-011 §4's deferred follow-up, spec.md's resolved clarification option
+// A): this file's own `nameResembles` substring-containment heuristic — built specifically
+// because strict equality rejected "game move"/"game moves" against ground truth's "move" — is
+// exactly the domain-name-alias case ADR-011 §2.2 designed `AliasTable`/`stringsMatch` for.
+// `DomainAlternative.names` (SPIKE-013's own shape) already IS a curated list of acceptable
+// names for one domain — the per-puzzle domain-name alias table ADR-011 §2.2 describes, per
+// `specs/007-string-equivalence-matching/data-model.md`'s documented adapter
+// (`{ [names[0]]: names.slice(1) }`). Using `stringsMatch` picks up the deterministic
+// case/whitespace/pluralization fold (so "game move"/"game moves" now match "move" via the fold
+// itself, not a substring heuristic) plus any curated variant in `names`, and drops substring
+// containment entirely — a genuine synonym like "action" vs. "move" correctly still doesn't
+// match, since substring containment never covered that gap either (SPIKE.md §5.2).
 
 import type { DomainAlternative, GroundTruthEntry } from "../../../SPIKE-013-vocabulary-construction-isolation/scripts/lib/ground-truth.ts"
+import { stringsMatch } from "../../../../../src/eval/aliases.ts"
 import type { DomainMappingProposal } from "./mapping-schema.ts"
 
 export interface DomainMatchResult {
@@ -16,41 +32,32 @@ export interface DomainMatchResult {
   readonly matchedAlternative?: DomainAlternative
 }
 
-function normalize(value: string): string {
-  return value.trim().toLowerCase()
-}
-
-/** Relaxed name match — exact, or either string containing the other (case/whitespace
- * normalized). Found live 2026-09-18 (PZL-0003): the model named the domain "game move"/"game
- * moves" where ground truth calls it "move" — a qualifier word and plain pluralization a human
- * grader would accept instantly, which strict equality rejected outright, discarding a rep whose
- * currentValues may well have been entirely correct. Substring containment covers both real
- * cases ("move" is a substring of both "game move" and "game moves") without requiring a full
- * synonym table. */
+/** True iff `proposedName` matches any of a domain's own curated acceptable names, via the
+ * shared fold (ADR-011) — case/whitespace/pluralization variance for free, plus any additional
+ * variant `names` itself lists, never substring containment or an unlisted synonym. */
 function nameResembles(proposedName: string, acceptableNames: readonly string[]): boolean {
-  const proposed = normalize(proposedName)
-  return acceptableNames.some((n) => {
-    const accepted = normalize(n)
-    return proposed === accepted || proposed.includes(accepted) || accepted.includes(proposed)
-  })
+  if (acceptableNames.length === 0) return false
+  const [canonical, ...variants] = acceptableNames as [string, ...string[]]
+  return stringsMatch(proposedName, canonical, { [canonical]: variants })
 }
 
 function sameSet(a: readonly string[], b: readonly string[]): boolean {
-  const normA = new Set(a.map(normalize))
-  const normB = new Set(b.map(normalize))
-  if (normA.size !== normB.size) return false
-  for (const v of normA) if (!normB.has(v)) return false
+  if (a.length !== b.length) return false
+  const remaining = [...b]
+  for (const value of a) {
+    const i = remaining.findIndex((v) => stringsMatch(value, v))
+    if (i === -1) return false
+    remaining.splice(i, 1)
+  }
   return true
 }
 
 function missingFrom(expected: readonly string[], actual: readonly string[]): readonly string[] {
-  const normActual = new Set(actual.map(normalize))
-  return expected.filter((v) => !normActual.has(normalize(v)))
+  return expected.filter((v) => !actual.some((a) => stringsMatch(v, a)))
 }
 
 function inventedIn(expected: readonly string[], actual: readonly string[]): readonly string[] {
-  const normExpected = new Set(expected.map(normalize))
-  return actual.filter((v) => !normExpected.has(normalize(v)))
+  return actual.filter((v) => !expected.some((e) => stringsMatch(v, e)))
 }
 
 /** Scores a proposal's own domain name + currentValues against ground truth. Checks VALUE-SET

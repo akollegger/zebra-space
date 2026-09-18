@@ -103,10 +103,12 @@ async function testScoreDomainMatch() {
   check("wrong domain name: not matched", wrongDomainResult.matched === false)
   check("wrong domain name: reason says so", wrongDomainResult.reason.includes("no expected domain"), wrongDomainResult.reason)
 
-  // Found live 2026-09-18 (PZL-0003): a qualifier word / plain pluralization should not sink an
-  // otherwise-correct value set. Relaxed matching accepts "game color"/"colors" against "color".
+  // Found live 2026-09-18 (PZL-0003): a plain pluralization should not sink an otherwise-correct
+  // value set. Migrated to the shared fold (ADR-011): plain pluralization matches "for free"
+  // (comparisonKey's fold), the same as it would for `stringsMatch` anywhere else in the
+  // codebase.
   const nearMissName: DomainMappingProposal = {
-    domain: "game color",
+    domain: "colors",
     currentValues: ["Blue", "Red", "Green"],
     mapping: [
       { oldValue: "Blue", newValue: "Purple" },
@@ -114,10 +116,24 @@ async function testScoreDomainMatch() {
       { oldValue: "Green", newValue: "Olive" },
     ],
   }
-  check("near-miss name with correct values: matched", scoreDomainMatch(nearMissName, groundTruth).matched === true)
+  check("plural near-miss name with correct values: matched", scoreDomainMatch(nearMissName, groundTruth).matched === true)
 
-  const pluralNearMissName: DomainMappingProposal = { ...nearMissName, domain: "colors" }
-  check("plural near-miss name with correct values: matched", scoreDomainMatch(pluralNearMissName, groundTruth).matched === true)
+  // A qualifier word ("game color") is a DIFFERENT gap than plain pluralization: it is not
+  // covered by the deterministic fold alone (ADR-011 §2.1 only folds case/whitespace/plural),
+  // so — unlike under the old ad-hoc substring-containment heuristic this file used to have —
+  // it no longer auto-matches. It matches only once curated as an explicit variant in this
+  // domain's own `names` list, exactly like any other domain-name alias (ADR-011 §2.2).
+  const qualifierWithoutCuration: DomainMappingProposal = { ...nearMissName, domain: "game color" }
+  const qualifierUncuratedResult = scoreDomainMatch(qualifierWithoutCuration, groundTruth)
+  check("uncurated qualifier name with correct values: not matched", qualifierUncuratedResult.matched === false, qualifierUncuratedResult.reason)
+
+  const curatedGroundTruth = {
+    ...groundTruth,
+    domains: groundTruth.domains.map((domain) => ({
+      alternatives: domain.alternatives.map((alt) => (alt.names.includes("color") ? { ...alt, names: [...alt.names, "game color"] } : alt)),
+    })),
+  }
+  check("curated qualifier variant with correct values: matched", scoreDomainMatch(qualifierWithoutCuration, curatedGroundTruth).matched === true)
 
   // Values exactly match a real domain, but the proposed name doesn't resemble it at all — a
   // distinct, informative near-miss, never silently folded into "nothing matched at all".
