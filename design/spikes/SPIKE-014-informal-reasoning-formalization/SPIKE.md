@@ -152,6 +152,35 @@ one more Stage-2 prompt, not a second pipeline.
    those classes would only repair perfectly fine models against a nonsense signal (found live
    during this variant's own dry run — see §5.8). Still bounded to ONE round of repair per rep,
    whichever trigger fired it.
+9. **`formalize-mzn+structured-prose` (6th variant, added 2026-09-16, testing a specific
+   hypothesis about WHY translation is harder than solving)**: `formalize-mzn`'s dominant
+   remaining failure modes (§5.3, §5.4) look like a completeness problem, not a reasoning
+   problem — solving lets the model track constraints implicitly and incrementally (apply a
+   clue, narrow the space, move on) without ever declaring a complete, closed constraint set;
+   `formalize-mzn` then asks for that complete, syntactically-exact set in the SAME pass it also
+   has to get MiniZinc's unfamiliar grammar right in. This variant splits Stage 2 into two
+   single-calls: **2a** restates the completed solve as an explicit, structured-but-natural-
+   language draft (entities, domains — explicitly flagged named-category vs. numeric — and
+   EVERY constraint as its own sentence, including ones the solution applied without ever
+   writing out, e.g. an implied global uniqueness constraint), in a format with no compiler to
+   reject it; **2b** transcribes ONLY that draft (not the original prose or raw trace) into
+   MiniZinc, reusing `formalize-mzn`'s own post-fix authoring rules verbatim. The named risk
+   going in: SPIKE-013 §5.8 (`post-hoc-shaped`) found that decomposing formalization — even with
+   the solved trace as context — regressed vocabulary construction almost back to blind-guess
+   numbers; this is a different shape of split (two single-calls, closer to parse→codegen than
+   per-clue tool calls) but the same failure mode was a real possibility, not assumed away.
+10. **`direct-mzn` and `direct-structured-prose` (7th/8th variants, added 2026-09-18, in
+    response to "have we tested skipping Stage 1 entirely, on the SAME two model tiers already
+    used in this spike?")**: every variant above is given the puzzle prose AND an
+    already-completed Stage-1 trace to transcribe FROM. Neither isolates whether that trace
+    actually matters — a model could formalize just as well (or badly) straight from the puzzle,
+    with no prior free-solve step at all. `direct-mzn` is `formalize-mzn`'s own authoring prompt
+    with the trace removed (one call, puzzle prose -> MiniZinc, no worked solution to lean on);
+    `direct-structured-prose` is the same removal applied to `+structured-prose`'s Stage 2a (one
+    call, puzzle prose -> structured-prose restatement, then Stage 2b unchanged). Run at BOTH
+    `gpt-4o-mini` and `claude-sonnet-4.5` — the same two tiers this spike already measured with
+    the trace present, not a new capability floor — for a clean with-trace/without-trace
+    comparison at each tier.
 
 ## 3. Time-box
 
@@ -246,6 +275,24 @@ the self-check to determinate puzzles only (matching the existing gate on the so
 trigger) and re-ran: **14/42**, beating every prior variant in this spike, with a clean,
 mechanistically-explained recovery: 3/3 self-check-triggered repairs recovered to `MATCH` (vs.
 0/14 for the old solve-outcome-triggered repairs, unchanged from §5.5/§5.6). Written up as §5.8.
+
+**2026-09-16 — built `formalize-mzn+structured-prose` (6th variant) in response to "why is
+translation harder than solving, and could a more-formal prose intermediate close the gap?"**
+Named the decomposition risk from SPIKE-013 §5.8 up front, then ran anyway since the shape of
+split differs. Live dry run (n=1, all 14 puzzles, $0.0083) confirmed the two-call mechanism runs
+end-to-end and already showed the same `enum`-for-numeric-values mistake `formalize-mzn` itself
+has: 3/14 MATCH. Full sweep (n=3×14, `gpt-4o-mini`, $0.0233): **8/42 (19%)** — worse than
+`formalize-mzn` alone's 13/42 (31%), with `SOLVE_ERROR` UP to 18/42 (43%) from 9/42 (21%). The
+decomposition-regression risk named going in is exactly what happened; written up as §5.9.
+
+**2026-09-18 — built `direct-mzn`/`direct-structured-prose` (7th/8th variants) to test whether
+the Stage-1 trace matters at all**, on the SAME two tiers already used (`gpt-4o-mini`,
+`claude-sonnet-4.5`), not a new weaker model. Live dry runs (n=1, $0.004-$0.24 depending on
+model/variant) confirmed both mechanisms run end-to-end before committing to full sweeps. Full
+n=3×14 sweeps: cheap tier cost $0.011 (`direct-mzn`) and $0.024 (`direct-structured-prose`);
+frontier tier cost far more than estimated going in ($0.31 and $0.73, against an initial
+estimate of $0.10-0.20 — confirmed with the user before spending, per this session's own
+cost-then-go-ahead discipline). Written up as §5.10.
 
 ## 5. Findings
 
@@ -711,6 +758,97 @@ correctness, and correctly reported "consistent" on both since Stage 1 and Stage
 agree; the grader's remaining blind spot is a separate problem. Left open, not fixed here — two
 more named, narrow grading gaps for a future pass, same spirit as §5.7's PZL-0007 finding.
 
+### 5.9 `formalize-mzn+structured-prose` (6th variant): decomposition regressed, confirming SPIKE-013's warning in a new shape
+
+Raw: `results/formalize-mzn-structured-prose-2026-09-16T19-05-12-504Z.json`. n=3 × 14 puzzles,
+`gpt-4o-mini` for Stage 1 (already-collected trace), Stage 2a (structured-prose restatement), and
+Stage 2b (translate that restatement into MiniZinc). **$0.0233 total.**
+
+| | `formalize-mzn` (§5.3, single-call) | `+structured-prose` (two-call) |
+|---|---|---|
+| MATCH | 13/42 (31%) | **8/42 (19%)** |
+| `SOLVE_ERROR` | 9/42 (21%) | **18/42 (43%)** |
+| Cost | $0.0114 | $0.0233 |
+
+**Splitting formalization into "restate explicitly, then transcribe" made things worse, not
+better — the hypothesis this variant existed to test did not hold.** The specific mechanism
+this split was meant to fix (§5.4's silent completeness failures — a dropped `alldifferent`, a
+partially-transcribed relation) was not what got worse; instead, `SOLVE_ERROR` roughly doubled.
+Inspecting the raw MiniZinc: the SAME `enum`-for-numeric-values mistake `formalize-mzn` §5.2/§5.3
+already catalogued recurred just as often here (`enum CreditScore`, `enum TIME_SLOT = {9, 11,
+16}`, `enum TIME = {9am, ...}` — three separate puzzles this run alone), plus a NEW, more
+frequent failure not seen at this rate in `formalize-mzn` alone: `undefined identifier 'i'`/`'j'`
+generator-scope errors, on puzzles (PZL-0010, PZL-0028, PZL-0033, PZL-0038) where Stage 2b's
+nesting instruction is identical to `formalize-mzn`'s own. The plausible reason: Stage 2a's
+structured-prose restatement describes a compound ordering constraint in ENGLISH sentence form
+(e.g. "X's position is directly before Y's, which is somewhere before Z's"), which reads as a
+flat list of relations with no explicit nesting structure — Stage 2b then has to INVENT the
+correct `exists`-nesting from prose that never showed it one, a harder task than `formalize-mzn`
+transcribing directly from Stage 1's own trace, where the nesting (if present at all) came from
+the model's own prior reasoning about the SAME puzzle in the SAME call.
+
+**This is SPIKE-013 §5.8's warning, confirmed in a different shape of decomposition.**
+`post-hoc-shaped` decomposed formalization into per-clue tool calls; this variant decomposes into
+two single-calls (restate, then translate) — structurally closer to a compiler's parse→codegen
+split than to per-clue decomposition, and named as a materially different risk profile when this
+variant was scoped in (§2 point 9). It regressed anyway, for a related but distinct reason: not
+because per-clue isolation lost cross-clue context (this variant's Stage 2a explicitly restates
+the WHOLE problem in one pass), but because moving from "the model's own prior reasoning trace"
+to "a fresh natural-language restatement of that reasoning" discards exactly the structural
+information (how a compound relation was actually nested/ordered) that `formalize-mzn`'s direct
+trace-to-MiniZinc transcription could still lean on. **Two different decompositions, two different
+mechanisms, the same directional result: adding an intermediate stage between the completed solve
+and the target language does not reliably help, and can concretely hurt** by discarding structure
+the more direct path retains.
+
+### 5.10 `direct-mzn`/`direct-structured-prose` (7th/8th variants): the Stage-1 trace helps, but by less than this spike's own architecture assumed
+
+Raw: `results/direct-mzn-openai-gpt-4o-mini-2026-09-16T19-55-45-866Z.json`,
+`results/direct-structured-prose-openai-gpt-4o-mini-2026-09-16T19-58-20-613Z.json`,
+`results/direct-mzn-anthropic-claude-sonnet-4-5-2026-09-18T07-25-45-739Z.json`,
+`results/direct-structured-prose-anthropic-claude-sonnet-4-5-2026-09-18T07-29-47-586Z.json`. All
+n=3 × 14 puzzles.
+
+| Variant | Trace? | `gpt-4o-mini` MATCH | Cost | `claude-sonnet-4.5` MATCH | Cost |
+|---|---|---|---|---|---|
+| `formalize-mzn` | yes | 13/42 (31%) | $0.0114 | 20/42 (48%, corrected §5.7) | not separately billed this run |
+| `direct-mzn` | **no** | 11/42 (26%) | $0.0110 | **17/42 (40%)** | $0.3105 |
+| `+structured-prose` | yes | 8/42 (19%) | $0.0233 | not run | — |
+| `direct-structured-prose` | **no** | 7/42 (17%) | $0.0237 | **18/42 (43%)** | $0.7293 |
+
+**The trace helps, consistently, at both tiers — but the effect is a modest 5-8 points, not the
+dominant driver of the solve-vs-formalize gap.** Removing it entirely (`direct-mzn` vs.
+`formalize-mzn`) costs 5 points at cheap tier (31%→26%) and 8 points at frontier (48%→40%) — real
+and directionally consistent, but small next to the ~35-45 point gap between EITHER of these and
+`direct-solve`'s own judge-graded rate (64%/93%). This means most of this spike's central finding
+(formalizing is harder than solving) is NOT explained by "the model needs its own prior reasoning
+to lean on" — a model asked to formalize cold, with no prior solve at all, gets most of the way
+to the with-trace number. The harder-to-formalize-than-to-solve gap is mostly about something
+else: writing syntactically/semantically correct MiniZinc under real verification, not about
+whether a completed derivation is available to transcribe from.
+
+**A genuine reversal between tiers, worth flagging even at this sample size.** At cheap tier,
+`direct-mzn` (26%) clearly beat `direct-structured-prose` (17%) — consistent with §5.9's finding
+that the structured-prose intermediate costs accuracy. At frontier tier, that ordering flips:
+`direct-structured-prose` (43%) slightly edges out `direct-mzn` (40%). n=42 makes a single
+8-point swing inside plausible noise, but the CONSISTENT DIRECTION (the intermediate's relative
+cost shrinking, then reversing, as capability rises) is at least suggestive that whether an
+explicit semi-formal restatement helps or hurts may be capability-dependent — plausibly because a
+more capable model is better at preserving the derivation-order structure §5.9 found the cheap
+tier's restatement discarding, closer to the "should recover most of the loss" ablation proposed
+in this session's own hypothesis discussion, though not yet directly tested (that ablation would
+still need the trace present, which this variant deliberately removes).
+
+**A practical architecture point this surfaces, not just an accuracy one**: this spike's
+`formalize-mzn` reuses ALREADY-COLLECTED Stage-1 traces at zero marginal cost, so its own
+$0.01-0.02 (cheap tier) figures never had to account for Stage 1's own cost. A live system
+does — direct-solve's own generation cost is not free at deployment time. If Stage 1 only buys
+5-8 points of MATCH rate, a real deployment weighing "pay for a separate solve pass, then
+formalize" against "just formalize cold" is trading a real, nonzero Stage-1 cost for a modest
+accuracy gain, not a decisive one — a genuinely open cost/accuracy call this spike surfaces but
+does not resolve (it was never designed to price Stage 1's own generation cost, only to test
+whether reusing an already-paid-for trace helps).
+
 ## 6. Conclusion
 
 **Decoupling informal reasoning from formal emission generalizes from vocabulary to the whole
@@ -807,5 +945,37 @@ leverage without it.
    `selfcheck-repair` introduced. If fixed, the frontier tier's TRUE `formalize-mzn`-family rate
    is closer to 23/42 (55%) than the reported 20-21/42 — still well below `direct-solve`'s 93%,
    so this doesn't change recommendation 5b's conclusion, only its precision.
+8. **`structured-prose` (§5.9) tested and ruled out a specific closing-the-gap hypothesis: an
+   explicit natural-language intermediate between the completed solve and MiniZinc.** It
+   regressed MATCH from 13/42 to 8/42 and roughly doubled `SOLVE_ERROR` (9/42 → 18/42) — a
+   genuinely negative result, not noise, and mechanistically distinct from why
+   `post-hoc-shaped` regressed in SPIKE-013: here, restating a compound relation in prose form
+   discards the nesting structure `formalize-mzn`'s direct trace-to-MiniZinc transcription could
+   still lean on. Combined with recommendation 3's own finding (better diagnosis, not more
+   pipeline stages, is what moved `formalize-mzn`'s number), the pattern across this entire spike
+   is now consistent: single-call, direct transcription from the completed reasoning trace is the
+   strongest lever found so far; every attempt to add a stage BETWEEN that trace and the target
+   language — per-clue (SPIKE-013), structured-prose (§5.9) — has cost accuracy, not bought it.
+   Future work on closing the gap should treat "add an intermediate representation" as a
+   disconfirmed direction unless a future variant identifies a materially different reason to
+   expect otherwise, and instead keep pursuing recommendation 3's diagnostic-leverage candidates
+   (per-clue self-verification, an independent second formalization to cross-check against).
+9. **§5.10 found the Stage-1 trace itself is a smaller lever than this spike's whole architecture
+   assumed — 5-8 points of MATCH rate, not the dominant driver of the ~35-45 point solve-vs-
+   formalize gap — and adds a real nuance to recommendation 8's "intermediate representations are
+   disconfirmed" reading.** Without the trace, `direct-structured-prose` slightly BEAT
+   `direct-mzn` at the frontier tier (43% vs. 40%), the opposite ordering from the cheap tier and
+   from every WITH-trace comparison in this spike. That's a single, noise-sized reversal, not a
+   confirmed effect — but it means "adding an intermediate representation costs accuracy" should
+   be read as established specifically for RESTATING AN ALREADY-COMPLETED TRACE (where it
+   discards the trace's own derivation-order structure, §5.9's diagnosed mechanism), not as a
+   universal law independent of what's being restated FROM. A genuinely open next question this
+   spike surfaces but doesn't answer: does a structured-prose intermediate stop costing accuracy,
+   or start buying it, once the model doing the restating is capable enough to preserve
+   derivation structure on its own initiative? Also open, and arguably more consequential for a
+   real deployment: Stage 1's own generation cost was never priced in this spike (every
+   `formalize-mzn`-family number reuses already-collected, already-paid-for traces) — the
+   cost/accuracy case for paying for a separate solve pass at all, versus formalizing cold, is
+   unresolved.
 
 Status: done.
