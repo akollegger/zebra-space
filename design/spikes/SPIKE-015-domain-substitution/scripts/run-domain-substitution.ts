@@ -15,8 +15,17 @@
 // §5.6 both found byte-identical input scoring a different single-call verdict, so one call's
 // wellFormed is judge noise as much as it is signal. 3x's the judge cost, not the mapping cost.
 //
+// The critic runs on its OWN model (JUDGE_MODEL), separate from the mapper (MODEL) — per
+// SPIKE.md §5.9: using the same model for both meant the critic shared the mapper's own biases
+// (e.g. gpt-4o-mini's rock-paper-scissors-lizard-spock prior, §5.6), which no amount of
+// same-model majority voting can out-vote. Defaults to `z-ai/glm-5.3-flash` — a full generation
+// newer than gpt-4o-mini on Artificial Analysis's AA-Omniscience Non-Hallucination Rate
+// (72.4% vs. gpt-4o-mini's own untested-but-comparable-generation ~5-7% peers), cheaper per
+// token, and a different model family entirely.
+//
 // Usage: node --env-file-if-exists=.env design/spikes/SPIKE-015-domain-substitution/scripts/run-domain-substitution.ts
-// REPS=<n> overrides the default of 3. MODEL=<model> overrides the default gpt-4o-mini.
+// REPS=<n> overrides the default of 3. MODEL=<model> overrides the mapper's default gpt-4o-mini.
+// JUDGE_MODEL=<model> overrides the critic's default z-ai/glm-5.3-flash.
 
 import { readFileSync, readdirSync } from "node:fs"
 import { fileURLToPath } from "node:url"
@@ -33,6 +42,7 @@ import { judgeSubstitutionMajority } from "./lib/judge-substitution.ts"
 import type { SolveResult, SolverError } from "../../../../src/solver/types.ts"
 
 const MODEL = process.env.MODEL ?? "openai/gpt-4o-mini"
+const JUDGE_MODEL = process.env.JUDGE_MODEL ?? "z-ai/glm-5.3-flash"
 const REPS = Number(process.env.REPS ?? 3)
 
 // PZL-0007 deliberately excluded — no enum declarations at all (see SPIKE.md §2 step 1 / the
@@ -151,7 +161,7 @@ async function runOne(puzzleId: string, prose: string, seedMzn: string): Promise
     }
   }
 
-  const judged = await judgeSubstitutionMajority(MODEL, prose, substitutedProse, proposal.mapping)
+  const judged = await judgeSubstitutionMajority(JUDGE_MODEL, prose, substitutedProse, proposal.mapping)
   if (!judged.ok || judged.wellFormed === undefined) {
     return {
       outcome: "JUDGE_CALL_FAILED",
@@ -184,7 +194,8 @@ async function main(): Promise<void> {
   const outDir = new URL("results/", import.meta.url)
   await mkdir(outDir, { recursive: true })
   const modelTag = MODEL.replace(/[^a-zA-Z0-9]+/g, "-")
-  const outPath = new URL(`domain-substitution-${modelTag}-${new Date().toISOString().replace(/[:.]/g, "-")}.json`, outDir)
+  const judgeModelTag = JUDGE_MODEL.replace(/[^a-zA-Z0-9]+/g, "-")
+  const outPath = new URL(`domain-substitution-${modelTag}-judge-${judgeModelTag}-${new Date().toISOString().replace(/[:.]/g, "-")}.json`, outDir)
 
   const records: unknown[] = []
   let grandTotalCost = 0

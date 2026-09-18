@@ -579,6 +579,60 @@ prompt (e.g. a short few-shot example distinguishing a decision outcome from a g
 fact) as a follow-up, not something majority voting on the CRITIC (a different call entirely)
 could ever address.
 
+### 5.9 An independent critic model (GLM-5.3-Flash) — fixes the systematic bias majority-voting couldn't, and diagnoses more precisely
+
+§5.8 found majority voting fixes random judge noise but can't fix a bias the critic model shares
+with itself across every vote (PZL-0003's recurring rock-paper-scissors-lizard-spock prior).
+Since the mapper and critic were both `gpt-4o-mini`, switched the critic to its own model
+(`JUDGE_MODEL`, default `z-ai/glm-5.3-flash`) — a full generation newer on Artificial Analysis's
+AA-Omniscience Non-Hallucination Rate (72.4% vs. the ~5-7% the GLM-4.x generation and
+gpt-4o-mini's era both score), cheaper per token, and a different model family entirely, so it
+shares none of gpt-4o-mini's specific priors. Sanity-checked as a structured-completion provider
+with one hand-built call before spending anything on the full sweep.
+
+Ran the default `REPS=3` sweep across all 6 seeds ($0.0157 — about double §5.8's $0.0075, mostly
+GLM's longer, more detailed completions). Raw:
+`results/domain-substitution-openai-gpt-4o-mini-judge-z-ai-glm-5-3-flash-2026-09-18T14-57-15-340Z.json`.
+
+**The systematic bias is gone**: PZL-0002 and PZL-0003 both came back 3/3 `VERIFIED` — PZL-0003
+in particular never once repeated the lizard/spock complaint that recurred under every prior
+gpt-4o-mini-judges-itself run (§5.6, §5.8). A different model family, as predicted, doesn't share
+gpt-4o-mini's specific prior about that one pop-culture name pair.
+
+**The critique quality itself is visibly sharper, not just differently-biased.** PZL-0001's
+demonym-noun-vs-adjective defect (§5.8's "Norwegian"→"Swedish" finding) recurred across two
+fresh reps with two *different* nationality substitutions ("Swedish", "Polish"), and each
+explanation independently and correctly named the exact grammatical mechanism (a nationality
+ADJECTIVE, e.g. "Swedish"/"Polish", cannot stand in for a nationality NOUN, e.g.
+"Swede"/"Pole", as the subject of a singular verb) — precise, linguistically accurate, and
+consistent across issues within a single response. Compare this to gpt-4o-mini's own critique of
+a materially similar case in §5.8: correct in substance but far less precisely explained.
+
+**It also fixed the specific kind of critic error §5.6 found — the critic being simply
+wrong — by being right this time, on a near-identical case.** §5.6's gpt-4o-mini critic
+asserted `"a lion" should be "an lion"` — backwards, since "lion" starts with a consonant sound.
+This run, GLM-5.3-Flash caught the mirror-image REAL defect in PZL-0038 correctly: substituting
+`tortoise` (consonant-initial) with `iguana` (vowel-initial) left the preceding article
+un-adjusted (`"a lion, a hare, a sheep, a canary, and a iguana"`), and the critic named exactly
+which word needed to become "an" and why, while explicitly confirming every value replacement
+and relationship was otherwise applied correctly — the precise, actionable, correctly-reasoned
+critique this mechanism was designed to produce.
+
+**This surfaces a genuine, unaddressed gap in `apply-to-prose.ts`, not a critic problem**: the
+mechanical replace preserves a matched value's own CASING (§5.5's fix) but has no notion of the
+surrounding article's a/an agreement, so any mapping that substitutes a consonant-initial value
+with a vowel-initial one (or vice versa) will produce this exact defect deterministically, every
+time. Flagged here as a follow-up (a small a/an-repair pass keyed off the replacement value's
+own initial sound), not fixed in this pass — this section's own scope was the critic model swap.
+
+**PZL-0011's domain-identification miss is now confirmed non-deterministic, not a hard
+failure**: rep 1 this run reached `VERIFIED` (the mapper — unaffected by the critic-model
+change — correctly proposed `outcome`/`[Denied, Approved, Counter-Offer]`), while reps 2-3
+repeated the `[680, 750]` miss from §5.7/§5.8. Revises §5.8's "replicated 3/3" framing: across 9
+total reps of PZL-0011 now run in this session (3 in §5.7, 3 in §5.8, 3 here), the split is 1
+hit / 8 misses — still a real, consistent weak point for this puzzle shape, but not an absolute
+one.
+
 ## 6. Conclusion
 
 **First pass confirms the core hypothesis is worth pursuing, and sharpens exactly what to fix
