@@ -17,10 +17,19 @@ function systemPrompt(): string {
     "",
     "Judge ONLY well-formedness: every old value fully replaced (no leftover fragment of an old",
     "value anywhere), correct grammar and agreement around each replaced value (e.g. \"a\" vs",
-    "\"an\", singular/plural), and the same clues and logical structure as the original — only",
-    "the domain's value NAMES should differ. Do NOT attempt to solve the puzzle, and do not",
-    "judge whether the new values are a \"better\" or \"more interesting\" choice — only whether",
-    "the substitution itself was applied cleanly.",
+    "\"an\", singular/plural), and that each RELATIONSHIP in the substituted prose (e.g. an \"X",
+    "beats Y\" clue) still connects the SAME positions in the value list as the corresponding",
+    "relationship did in the original prose — only the value NAMES should differ, not which",
+    "value plays which role in which clue.",
+    "",
+    "Do NOT judge a relationship by any real-world or common-sense meaning of the new value",
+    "names (e.g. real-world rock-paper-scissors-lizard-spock rules, or any other domain",
+    "knowledge about what the new words normally mean) — the puzzle's own clues are the ONLY",
+    "source of truth for what beats what, is left of what, etc.; a substituted relationship is",
+    "correct whenever it mirrors the original's relationship structure, however arbitrary it may",
+    "seem. Do NOT attempt to solve the puzzle, and do not judge whether the new values are a",
+    "\"better\" or \"more interesting\" choice — only whether the substitution itself was applied",
+    "cleanly and consistently.",
   ].join("\n")
 }
 

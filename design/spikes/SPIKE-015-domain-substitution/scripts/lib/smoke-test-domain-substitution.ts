@@ -30,6 +30,31 @@ async function testApplyMappingToProse() {
   const result = applyMappingToProse(prose, [{ oldValue: "Blue", newValue: "Purple" }])
   check("no 'Blue' remains", !result.includes("Blue"), result)
   check("both occurrences became 'Purple'", result.split("Purple").length - 1 === 2, result)
+
+  // Found live 2026-09-18 (SPIKE.md §5.5): the seed's own reported casing can differ from a
+  // capitalized sentence-initial occurrence of the same value elsewhere in the prose
+  // (PZL-0003's "paper-rock-scissors" intro vs. "Paper beats rock." rules) — must match
+  // case-insensitively and preserve each match's own casing on the replacement.
+  const mixedCaseProse = "You're playing paper-rock-scissors.\n1. Paper beats rock.\n2. ROCK beats scissors."
+  const mixedCaseResult = applyMappingToProse(mixedCaseProse, [
+    { oldValue: "paper", newValue: "water" },
+    { oldValue: "rock", newValue: "fire" },
+    { oldValue: "scissors", newValue: "air" },
+  ])
+  check("lowercase intro occurrence replaced", mixedCaseResult.includes("water-fire-air"), mixedCaseResult)
+  check("capitalized sentence-initial occurrence replaced with matching capitalization", mixedCaseResult.includes("Water beats fire."), mixedCaseResult)
+  check("all-caps occurrence replaced with matching all-caps", mixedCaseResult.includes("FIRE beats air."), mixedCaseResult)
+  check("no old values remain in any casing", !/paper|rock|scissors/i.test(mixedCaseResult), mixedCaseResult)
+
+  // Regression found live 2026-09-18, same debugging session: matching case-insensitively
+  // WITHOUT word boundaries makes a short oldValue match inside an unrelated word — "Red"
+  // case-insensitively matches the "red" inside "numbeRed" ("...numbered 1 to 3..."),
+  // corrupting it to "numbeOrange". Word boundaries (\b) fix this without reintroducing the
+  // case-sensitivity bug above.
+  const wordBoundaryProse = "Three houses stand in a row, numbered 1 to 3. The Red House is first."
+  const wordBoundaryResult = applyMappingToProse(wordBoundaryProse, [{ oldValue: "Red", newValue: "Orange" }])
+  check("unrelated word containing the old value as a substring is untouched", wordBoundaryResult.includes("numbered 1 to 3"), wordBoundaryResult)
+  check("the real standalone occurrence is still replaced", wordBoundaryResult.includes("The Orange House is first."), wordBoundaryResult)
 }
 
 async function testApplyMappingToMznAndSolve() {

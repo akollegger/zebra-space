@@ -416,6 +416,53 @@ casing) before this bug stops recurring on any seed puzzle whose rules capitaliz
 sentence-initial domain value. Flagged here rather than fixed, since it's a substitution-mechanism
 fix distinct from this section's own scope (replacing the verifier).
 
+### 5.6 Fixed apply-to-prose.ts's case-sensitivity bug — and immediately found the fix itself was incomplete, live
+
+§5.5's case-sensitivity fix (case-insensitive `RegExp`, matched-casing-preserving replacement)
+was applied, smoke-tested, and re-run live. First re-run: **0/6 well-formed**, worse than before
+the fix. Two DISTINCT new problems, both confirmed by inspecting the actual substituted text
+rather than trusting the critic's verdict alone:
+
+1. **A real regression this fix introduced**: matching case-insensitively without word
+   boundaries makes a short old value match INSIDE an unrelated word — `"Red"` matched the
+   `"red"` inside `"numbeRed"` (`"...numbered 1 to 3..."`), corrupting it to `"numbeOrange"`.
+   The original case-SENSITIVE version never hit this (capitalized `"Red"` never matched
+   lowercase `"red"` inside `"numbered"`), so relaxing case-sensitivity reintroduced a different
+   failure mode. Fixed by adding `\b...\b` word boundaries to the same regex.
+2. **A critic-prompt scope gap, not a mechanism bug**: PZL-0003's substitutions were now
+   mechanically complete and internally consistent (`"Lizard beats spock. Spock beats water.
+   Water beats lizard."` mirrors the original's own cyclic beats-relationship exactly), but the
+   critic rejected them anyway, reasoning from REAL-WORLD rock-paper-scissors-lizard-spock rules
+   ("lizard does not beat spock") rather than the puzzle's own self-consistent, arbitrary
+   relationships — exactly the kind of judgment the system prompt was supposed to rule out
+   ("do not judge whether the new values are a 'better' choice") but hadn't explicitly named.
+   Fixed by adding an explicit instruction: judge relationship correspondence structurally
+   (does clue N connect the same POSITIONS as before), never against real-world/common-sense
+   meaning of the new names.
+
+Re-ran again after both fixes. Raw: `results/domain-substitution-openai-gpt-4o-mini-2026-09-18T14-13-26-626Z.json`,
+**$0.0013**. Well-formed: 3/6, up from 0/6.
+
+**Both code-level bugs are confirmed fixed** — no `"numbeRed"`-style corruption in any rep this
+run, and every substituted prose is fully and consistently replaced. **The remaining 3/6
+failures are critic noise, not code defects**, confirmed by direct inspection: PZL-0002 reps 1
+and 3 are byte-identical to rep 2 (which passed) yet flagged with the identical nonsensical
+complaint ("The Dog lives in the Yellow House.") seen in §5.5's own noise case — same-input-
+different-verdict, the known LLM non-determinism this project already catalogued (SPIKE-004).
+PZL-0003 rep 2's "Lizard beats spock" is structurally identical to two PASSING reps (a
+self-consistent 3-cycle, same shape as the original) — the critic model still leaned on its own
+strong prior about that specific pop-culture name pair despite the explicit instruction not to,
+an instruction-following limit for this particular trigger rather than a prompt design flaw
+that generalizes (every other relationship in every other rep judged correctly).
+
+**Net assessment**: the mechanical substitution pipeline (mapping -> apply-to-prose ->
+apply-to-mzn) is now confirmed correct across both real bugs found this session; the critic's
+own false-positive rate on well-formed input (~half this small sample) is a property of using a
+single cheap LLM-judge call, consistent with this project's standing expectation that one judge
+call is noisy — not a reason to distrust the well-formedness CONCEPT, but a reason any future
+use of this critic's numbers should account for judge noise (e.g. majority-vote across repeated
+judge calls) before treating a single `wellFormed: false` as ground truth.
+
 ## 6. Conclusion
 
 **First pass confirms the core hypothesis is worth pursuing, and sharpens exactly what to fix
