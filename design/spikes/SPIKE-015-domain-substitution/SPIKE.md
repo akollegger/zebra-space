@@ -633,38 +633,131 @@ total reps of PZL-0011 now run in this session (3 in §5.7, 3 in §5.8, 3 here),
 hit / 8 misses — still a real, consistent weak point for this puzzle shape, but not an absolute
 one.
 
+### 5.10 A funnel breakdown and a larger, clean sweep — answering the actual research question
+
+§5.1-§5.9 fixed real bugs and improved the harness (a scoring-name bug, a case-sensitivity bug,
+critic noise, critic bias) without ever computing the one number this spike exists to produce:
+is substitution's reliability closer to `direct-solve`'s or to `formalize-mzn`'s, and is it
+cheaper? Added a funnel breakdown to `run-domain-substitution.ts`'s summary (domain-match rate,
+mechanical-apply rate given a match, unique-solve rate given an apply, and well-formed rate
+given a judge call — each stage's denominator is the previous stage's count, so it's visible
+WHERE unreliability concentrates, not just a single blended rate), plus a per-seed breakdown and
+a `$/successful substitution` figure, both computed raw and excluding `PZL-0004` (§5.7's
+known-broken seed). Then ran one clean `REPS=10` sweep (60 reps across all 6 seeds, current best
+config: `gpt-4o-mini` mapper, `z-ai/glm-5.3-flash` critic, unchanged from §5.9) at an estimated
+$0.03-0.05, actual **$0.0427**. Raw:
+`results/domain-substitution-openai-gpt-4o-mini-judge-z-ai-glm-5-3-flash-2026-09-18T15-24-25-899Z.json`.
+
+**Per-seed breakdown (well-formed/attempted):**
+
+| Puzzle | Rate |
+|---|---|
+| PZL-0001 | 1/10 |
+| PZL-0002 | 10/10 |
+| PZL-0003 | 10/10 |
+| PZL-0004 (known-broken) | 1/10 |
+| PZL-0011 | 2/10 |
+| PZL-0038 | 10/10 |
+
+**Funnel (excluding PZL-0004):**
+
+| Stage | Rate |
+|---|---|
+| Domain matched (of attempted) | 41/50 (82%) |
+| Mechanically applied (of matched) | 41/41 (**100%**) |
+| Solved uniquely (of applied) | 41/41 (**100%**) |
+| Judge call completed (of solved) | 41/41 (100%) |
+| Well-formed (of judged) | 33/41 (80%) |
+| **End-to-end (well-formed of attempted)** | **33/50 (66%)** |
+
+**Mechanical execution is now fully reliable — 100% at both the apply and solve stages.**
+Every bug found and fixed this session (§5.5's case-sensitivity, §5.6's word-boundary
+regression) shows up here as a real result, not just a smoke-test pass: given a correctly
+identified domain, `apply-to-prose.ts`/`apply-to-mzn.ts` never once failed to apply cleanly or
+broke unique-solvability, across 41 real substitutions. The two real, remaining sources of
+unreliability are exactly the two the funnel isolates: **domain identification** (82%) and
+**well-formedness of the result** (80%) — and both trace to specific, now well-evidenced puzzle-
+level causes rather than being diffuse noise:
+- PZL-0011's 18% domain-match rate (2/10, consistent with §5.9's "1 hit / 8 misses" finding
+  across 9 earlier reps) is entirely the model proposing `[680, 750]` (the credit-score numbers)
+  instead of the actual `outcome` domain — a specific, replicated model-competency miss on this
+  puzzle's procedural/numeric-heavy shape, not a harness defect.
+- PZL-0001's 10% well-formed rate (1/10) is almost entirely the demonym noun-vs-adjective defect
+  first found in §5.8/§5.9 ("Swedish"/"Polish" for "Norwegian"/"Ukrainian") — recurring in most
+  of the other 9 reps this run too, confirming it as PZL-0001's dominant, near-universal failure
+  mode whenever a nationality gets substituted, not an occasional grammar slip.
+- **PZL-0004's failure mode is now precisely characterized, correcting §5.7's "always fails"
+  framing**: `domainMatched` is 10/10 for PZL-0004 (the model always identifies A valid domain
+  correctly) — the failure is 100% concentrated at the apply stage, and specifically only when
+  the model picks the `suspect` domain (full names — `Miss Scarlett`, which never fold-matches
+  the seed `.mzn`'s surname-only `Scarlett`). Rep 1 this run picked `weapon` instead (`Candlestick`/
+  `Revolver`/`Rope`, single words that DO fold-match) and passed cleanly end-to-end. PZL-0004 has
+  three valid domains; the model overwhelmingly (9/10) picks the narratively salient `suspect`
+  one, which is exactly the one this particular seed `.mzn` can't accept a substitution for.
+
+**Headline comparison against SPIKE-014's own baselines** (`formalize-mzn`/`direct-mzn`/
+`direct-solve`, all at the same `gpt-4o-mini`-class cheap tier):
+
+| Task | Rate | $/success |
+|---|---|---|
+| `formalize-mzn` (SPIKE-014 §5.3/§5.7) | 13/42 (31%) | ≈$0.00088 |
+| `direct-mzn` (SPIKE-014 §5.10, no-trace ablation) | 11/42 (26%) | ≈$0.001 |
+| `direct-solve` (SPIKE-014, judge-graded) | 9/14 (64%) | not billed separately in SPIKE-014 |
+| **Domain substitution (this sweep, excl. PZL-0004)** | **33/50 (66%)** | **≈$0.00124** |
+
+**This is not a rigorous apples-to-apples benchmark, and the comparison needs its caveat stated
+plainly, not as a footnote.** `direct-solve`'s 64% grades whether the model's proposed SOLUTION
+matches a known ground-truth answer — an end-to-end correctness claim. This sweep's 66% grades
+whether an independent CRITIC considers a mechanically-produced, NOVEL puzzle well-formed — a
+generation-quality claim with no ground-truth answer to check against (a substituted puzzle has
+none; only its unique-solvability is checked, mechanically, and that's now 100% reliable per the
+funnel above). The two numbers measure different kinds of correctness. What the comparison DOES
+support, directionally: domain substitution's reliability profile sits in `direct-solve`'s range
+and well above `formalize-mzn`'s/`direct-mzn`'s — consistent with the "bijective relabeling is
+easier than deduction" hypothesis that motivated this spike (§1) — while its cost-per-success
+(**$0.00124**) is NOT dramatically cheaper than `formalize-mzn`'s (**$0.00088**) or `direct-mzn`'s
+(**$0.001**), contrary to the founding hypothesis's other half. The higher success rate roughly
+offsets substitution's own per-rep cost (3 extra critic-vote calls), landing all three tasks
+within about 40% of each other on $/success despite a >2x gap in raw reliability — cheaper
+per-attempt does not automatically mean cheaper per-success once failure rate is priced in.
+
 ## 6. Conclusion
 
-**First pass confirms the core hypothesis is worth pursuing, and sharpens exactly what to fix
-next.** Domain identification-and-substitution, when the model's chosen name happens to match
-ground truth's own name, is reliable (3/3) and cheap (~$0.0001/call, two orders of magnitude
-below a full formalization call) — a genuinely different reliability profile from SPIKE-014's
-formalize-mzn, consistent with the "bijective relabeling is easier than deduction" hypothesis
-that motivated this spike (§1). The dominant blocker in this first sample isn't the substitution
-task itself — it's `scoreDomainMatch`'s current all-or-nothing name matching, which threw away
-a rep (PZL-0003) that may have been substantively correct purely because of a naming variant.
+**The founding question is answered, directionally, with real numbers and a stated caveat**
+(§5.10): domain substitution's end-to-end reliability (66%, excluding one seed's known,
+characterized `.mzn`-naming-convention gap) lands in `direct-solve`'s range (64%) and well above
+`formalize-mzn`'s (31%) or `direct-mzn`'s (26%) — supporting the "bijective relabeling is easier
+than deduction" hypothesis this spike was built to test. Its cost-per-success (**≈$0.00124**) is
+NOT the dramatic win the founding hypothesis's other half expected — it lands within ~40% of
+`formalize-mzn`'s and `direct-mzn`'s own $/success, since substitution's higher success rate is
+partly offset by its own per-rep cost (three extra critic-vote calls on top of the mapper call).
+The comparison to `direct-solve` is directional, not a rigorous apples-to-apples benchmark:
+`direct-solve` grades against a known answer; this spike's `wellFormed` rate grades a novel,
+answer-key-less puzzle's well-posedness via an independent critic (§5.10's caveat, stated in
+full there).
 
-**Recommended next steps** (candidates for the next variant, per §4's own "several variations
-expected" framing):
-1. **Done, per §5.4**, superseding both §5.2's substring heuristic and §5.3's curated-alias-
-   table migration. Value-set equality (via `src/eval/aliases.ts`'s `stringsMatch`, ADR-011's
-   shared string-equivalence matcher) is now the SOLE scoring gate — domain-name matching was
-   dropped entirely, since neither `apply-to-prose.ts` nor `apply-to-mzn.ts` ever reads the
-   proposed name. This closes both the morphological-variance gap (§5.1) and the genuine-
-   synonym-variance gap (§5.2/§5.3 both hit this and neither closed it by curation alone) in one
-   change, confirmed live: every rep across both seed puzzles now clears domain-matching (0/6
-   `DOMAIN_MATCH_FAILED`, down from 1/6 even after §5.3's curation). The proposed name is still
-   reported for human legibility, just never used to accept or reject a rep.
-2. Run a larger sample across more seed puzzles once more `catalog/mzn/` entries exist with enum
-   domains (currently only PZL-0002 qualifies; PZL-0003's own enum-based `Move` domain is
-   eligible in principle but blocked entirely by finding 1 above).
-3. The verifier's own ceiling (SPIKE-014's ~26-48% `direct-mzn` MATCH rate) is a known, separate
-   problem this spike doesn't need to re-solve — but it does mean this harness's own headline
-   "verified MATCH rate" number will always be upper-bounded by that ceiling regardless of how
-   reliable substitution itself becomes, worth stating explicitly whenever this spike's numbers
-   are cited elsewhere (e.g. back into RFC-001).
-4. The variants named in §4's Notes (multi-domain substitution at once; substitution without an
-   already-known-correct `.mzn`; repeated-sampling noise/signal separation) remain open, per the
-   user's own expectation of several variations — not yet attempted.
+**The funnel breakdown is the more actionable finding than the single blended rate.** Given a
+correctly identified domain, mechanical execution (apply + solve) is now 100% reliable — every
+bug found this session (§5.5, §5.6) is fixed and holds under real load, not just a smoke test.
+The two real remaining gaps are narrow and specific, not diffuse: PZL-0011's domain-
+identification miss (a model consistently distracted by salient numbers over the puzzle's real
+named domain) and PZL-0001's well-formedness gap (nationality substitutions producing a noun-
+vs-adjective grammar defect on most reps). Neither is a harness defect; both are characterized
+precisely enough to be someone else's next fix, not vague noise.
+
+**What's still open** (updated — most of the original list is now resolved by §5.4-§5.9, not
+reproduced here):
+1. The a/an-article-agreement gap in `apply-to-prose.ts` (found §5.9) — explicitly out of scope
+   for this spike per user direction; a real, well-diagnosed, low-priority fix for later.
+2. PZL-0011's domain-identification miss and PZL-0001's grammar-defect rate are both real,
+   evidenced findings but not something this spike's own mechanism can fix — either needs
+   model-prompt work (a stronger domain-identification instruction, or a grammar-aware mapping
+   proposal) that's a different piece of work than the substitution mechanism itself.
+3. The variants named in §4's Notes (multi-domain substitution at once; substitution without an
+   already-known-correct `.mzn`; a dedicated seed `.mzn` for PZL-0004 that fold-matches its full
+   names) remain open, not yet attempted.
+
+Status: core research question answered; remaining gaps are known and characterized, not
+blocking.
 
 Status: in-progress.

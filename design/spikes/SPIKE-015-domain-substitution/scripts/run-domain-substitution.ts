@@ -57,6 +57,12 @@ const REPS = Number(process.env.REPS ?? 3)
 // being added to catalog/mzn/, not merely assumed correct.
 const SEED_PUZZLE_IDS = ["PZL-0001", "PZL-0002", "PZL-0003", "PZL-0004", "PZL-0011", "PZL-0038"]
 
+// PZL-0004 fails every rep (MZN_APPLY_TOTAL_FAILURE, confirmed 0/6 across two independent
+// sweeps) for a puzzle-file reason, not a model-capability one — see SPIKE.md §5.7. Used only
+// to compute an adjusted (excluding-known-broken-seeds) rate/cost alongside the raw one; the
+// puzzle stays in SEED_PUZZLE_IDS and every rep against it still runs and is logged normally.
+const KNOWN_BROKEN_SEED_IDS = ["PZL-0004"]
+
 const MZN_DIR = new URL("../../../../catalog/mzn/", import.meta.url)
 
 function readSeedMzn(puzzleId: string): string {
@@ -190,6 +196,61 @@ async function runOne(puzzleId: string, prose: string, seedMzn: string): Promise
   }
 }
 
+// SPIKE.md §5.10: a funnel over the outcome taxonomy, so it's visible WHERE unreliability
+// concentrates (domain identification vs. mechanical apply vs. well-posedness) rather than
+// only a single blended end-to-end rate. Each stage's denominator is the PREVIOUS stage's
+// count. SUBSTITUTED_MZN_SOLVE_ERROR and SUBSTITUTED_MZN_NOT_UNIQUE are deliberately collapsed
+// into one "solvedUniquely" stage — the sample size here is too thin to split them meaningfully
+// (both mean "the mechanical apply produced a broken model," just via different solver
+// outcomes). JUDGE_CALL_FAILED reps are excluded from `wellFormed`'s own denominator as
+// indeterminate — never folded into "not well-formed," which would conflate an infra failure
+// with a real negative verdict.
+interface Funnel {
+  readonly noGroundTruth: number
+  readonly attempted: number
+  readonly domainMatched: number
+  readonly mznApplied: number
+  readonly solvedUniquely: number
+  readonly judged: number
+  readonly wellFormed: number
+}
+
+function computeFunnel(reps: readonly RepOutcome[]): Funnel {
+  const noGroundTruth = reps.filter((r) => r.outcome === "NO_GROUND_TRUTH")
+  const attempted = reps.filter((r) => r.outcome !== "NO_GROUND_TRUTH")
+  const domainMatched = attempted.filter((r) => r.outcome !== "MAPPING_CALL_FAILED" && r.outcome !== "DOMAIN_MATCH_FAILED")
+  const mznApplied = domainMatched.filter((r) => r.outcome !== "MZN_APPLY_TOTAL_FAILURE")
+  const solvedUniquely = mznApplied.filter((r) => r.outcome !== "SUBSTITUTED_MZN_SOLVE_ERROR" && r.outcome !== "SUBSTITUTED_MZN_NOT_UNIQUE")
+  const judged = solvedUniquely.filter((r) => r.outcome !== "JUDGE_CALL_FAILED")
+  const wellFormed = judged.filter((r) => r.outcome === "VERIFIED")
+
+  return {
+    noGroundTruth: noGroundTruth.length,
+    attempted: attempted.length,
+    domainMatched: domainMatched.length,
+    mznApplied: mznApplied.length,
+    solvedUniquely: solvedUniquely.length,
+    judged: judged.length,
+    wellFormed: wellFormed.length,
+  }
+}
+
+function pct(n: number, d: number): string {
+  return d === 0 ? "n/a" : `${((n / d) * 100).toFixed(0)}%`
+}
+
+function printFunnel(label: string, f: Funnel): void {
+  console.log(`\n${label}`)
+  if (f.noGroundTruth > 0) console.log(`  (excluded ${f.noGroundTruth} NO_GROUND_TRUTH rep(s), unreachable by design)`)
+  console.log(`  attempted: ${f.attempted}`)
+  console.log(`  domain matched (of attempted): ${f.domainMatched}/${f.attempted} (${pct(f.domainMatched, f.attempted)})`)
+  console.log(`  mzn applied (of matched): ${f.mznApplied}/${f.domainMatched} (${pct(f.mznApplied, f.domainMatched)})`)
+  console.log(`  solved uniquely (of applied): ${f.solvedUniquely}/${f.mznApplied} (${pct(f.solvedUniquely, f.mznApplied)})`)
+  console.log(`  judge call completed (of solved): ${f.judged}/${f.solvedUniquely} (${pct(f.judged, f.solvedUniquely)})`)
+  console.log(`  well-formed (of judged): ${f.wellFormed}/${f.judged} (${pct(f.wellFormed, f.judged)})`)
+  console.log(`  end-to-end (well-formed of attempted): ${f.wellFormed}/${f.attempted} (${pct(f.wellFormed, f.attempted)})`)
+}
+
 async function main(): Promise<void> {
   const outDir = new URL("results/", import.meta.url)
   await mkdir(outDir, { recursive: true })
@@ -197,8 +258,9 @@ async function main(): Promise<void> {
   const judgeModelTag = JUDGE_MODEL.replace(/[^a-zA-Z0-9]+/g, "-")
   const outPath = new URL(`domain-substitution-${modelTag}-judge-${judgeModelTag}-${new Date().toISOString().replace(/[:.]/g, "-")}.json`, outDir)
 
-  const records: unknown[] = []
+  const records: { readonly id: string; readonly reps: readonly RepOutcome[] }[] = []
   let grandTotalCost = 0
+  let adjustedTotalCost = 0
 
   for (const puzzleId of SEED_PUZZLE_IDS) {
     console.log(`\n=== ${puzzleId} ===`)
@@ -211,6 +273,7 @@ async function main(): Promise<void> {
       reps.push(result)
       const cost = (result.mappingCostUsd ?? 0) + (result.judgeCostUsd ?? 0)
       grandTotalCost += cost
+      if (!KNOWN_BROKEN_SEED_IDS.includes(puzzleId)) adjustedTotalCost += cost
       console.log(`  [${rep + 1}/${REPS}]: ${result.outcome} wellFormed=${result.wellFormed ?? "N/A"} cost=${cost.toFixed(5)}${result.detail ? ` (${result.detail.slice(0, 150)})` : ""}`)
     }
 
@@ -218,22 +281,34 @@ async function main(): Promise<void> {
     await writeFile(outPath, JSON.stringify(records, null, 2))
   }
 
+  const allReps = records.flatMap((r) => r.reps)
+  const adjustedReps = records.filter((r) => !KNOWN_BROKEN_SEED_IDS.includes(r.id)).flatMap((r) => r.reps)
+
   const tally = new Map<string, number>()
-  let wellFormedCount = 0
-  let totalReps = 0
-  for (const r of records as { reps: readonly RepOutcome[] }[]) {
-    for (const rep of r.reps) {
-      totalReps += 1
-      tally.set(rep.outcome, (tally.get(rep.outcome) ?? 0) + 1)
-      if (rep.wellFormed === true) wellFormedCount += 1
-    }
-  }
+  for (const rep of allReps) tally.set(rep.outcome, (tally.get(rep.outcome) ?? 0) + 1)
 
   console.log(`\nWrote ${records.length} records to ${outPath.pathname}`)
-  console.log(`\nWell-formed substitutions: ${wellFormedCount}/${totalReps}`)
-  console.log("\nOutcome tally:")
-  for (const [outcome, count] of tally) console.log(`  ${outcome}: ${count}/${totalReps}`)
+
+  console.log("\nPer-seed breakdown (well-formed/attempted):")
+  for (const r of records) {
+    const wellFormed = r.reps.filter((rep) => rep.outcome === "VERIFIED").length
+    const knownBroken = KNOWN_BROKEN_SEED_IDS.includes(r.id) ? " (known-broken seed — SPIKE.md §5.7)" : ""
+    console.log(`  ${r.id}: ${wellFormed}/${r.reps.length}${knownBroken}`)
+  }
+
+  console.log("\nOutcome tally (raw, all seeds):")
+  for (const [outcome, count] of tally) console.log(`  ${outcome}: ${count}/${allReps.length}`)
+
+  printFunnel("Funnel (raw, all seeds):", computeFunnel(allReps))
+  printFunnel(`Funnel (excluding known-broken seeds: ${KNOWN_BROKEN_SEED_IDS.join(", ")}):`, computeFunnel(adjustedReps))
+
+  const rawWellFormed = allReps.filter((r) => r.outcome === "VERIFIED").length
+  const adjustedWellFormed = adjustedReps.filter((r) => r.outcome === "VERIFIED").length
+  const costPerSuccess = (cost: number, count: number) => (count === 0 ? "n/a" : `$${(cost / count).toFixed(5)}`)
+
   console.log(`\nTotal spend this run: $${grandTotalCost.toFixed(4)}`)
+  console.log(`  $/successful substitution (raw): ${costPerSuccess(grandTotalCost, rawWellFormed)}`)
+  console.log(`  $/successful substitution (excluding known-broken seeds): ${costPerSuccess(adjustedTotalCost, adjustedWellFormed)}`)
 }
 
 main().catch((error) => {
