@@ -90,7 +90,8 @@ avoids, verified directly against the real library before adopting it (see
 lemmatizer can still fold a proper noun that merely *looks* pluralizable but isn't (e.g.
 `"Chesterfields"` → `"chesterfield"`, a real catalog brand name). Accepted because it only matters
 if a puzzle's own vocabulary has a competing singular value to collide with, which none observed
-so far does — not a proof of safety, an evidenced absence of harm.
+so far does; `tests/eval/grader.test.ts`'s collision-detection test checks this against the real
+answer-key catalog rather than assuming it away.
 
 ### 2.2 One shared matching module, two separately-scoped alias tables
 
@@ -126,7 +127,7 @@ The underlying DATA stays split by scope, because the two kinds of alias mean di
   legitimate in one puzzle's context leak into an unrelated puzzle's. They stay in each puzzle's
   own catalog front-matter, already the established location per `catalog/README.md`'s
   `groundTruth` field — this decision changes how that data is CONSUMED (through the same
-  `resolvesToAlias` function every other alias check uses), not where it lives.
+  `stringsMatch`/`normalizeToken` functions every other alias check uses), not where it lives.
 
 Every consumer this decision actually migrates — the production grader, plus any later spike
 facing the same problem — calls into this one module instead of re-deriving comparison logic
@@ -141,7 +142,8 @@ until a separate, deferred piece of follow-up work migrates them.
 with — stop being called inline as part of a live grading or scoring decision. Retained only as
 an offline tool that proposes candidate alias-table entries for a human to review and commit,
 they extend ADR-007 §3's already-accepted reasoning (no silent promotion, every alias application
-logged and auditable) to every consumer of `resolvesToAlias`, not only the production grader.
+logged and auditable) to every consumer of `stringsMatch`/`normalizeToken`, not only the production
+grader.
 
 Levenshtein (edit) distance belongs in this same curation-assist bucket, as a second, cheaper
 signal alongside embeddings and LLM-judge checks — cheap because it needs no external API call,
@@ -198,6 +200,10 @@ against trusting embedding similarity live.
 - `SPIKE-015`'s `nameResembles` and `SPIKE-013`'s `embeddingSemanticMatch` are superseded as the
   live matching path once `stringsMatch`/`normalizeToken` exist — replacing their call sites is
   follow-up implementation work, not something this decision performs by itself.
+- RFC-001's own consumers (`SPIKE-013`'s vocabulary scoring, `SPIKE-015`'s domain-name scoring)
+  are not migrated by this decision — RFC-001 is served only in the sense that this ADR fixes the
+  target shape (§2.2's two-table split) their eventual migration will land into, not by any code
+  change to their current call sites.
 - The two duplicated `loadAliases()` bodies (`scripts/eval-extraction.ts`,
   `design/spikes/SPIKE-008-per-clue-tool-call-decomposition/scripts/lib/puzzles.ts`) collapse to
   one shared loader; both call sites need updating.
