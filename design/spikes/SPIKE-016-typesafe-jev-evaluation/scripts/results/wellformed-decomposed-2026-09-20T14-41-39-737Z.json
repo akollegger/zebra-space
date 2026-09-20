@@ -1,0 +1,990 @@
+{
+  "summary": {
+    "total": 89,
+    "scored": 89,
+    "errors": 0,
+    "agreementRate": 0.7078651685393258,
+    "totalLatencyMs": 26209.266334999997
+  },
+  "results": [
+    {
+      "puzzleId": "PZL-0002",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.92,
+        "grammaticallyCorrect": 0.97,
+        "sameLogicalStructure": 0.98,
+        "latencyMs": 1063.0204469999999
+      }
+    },
+    {
+      "puzzleId": "PZL-0002",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.9,
+        "grammaticallyCorrect": 0.97,
+        "sameLogicalStructure": 0.97,
+        "latencyMs": 648.1498880000001
+      }
+    },
+    {
+      "puzzleId": "PZL-0002",
+      "majorityWellFormed": false,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.93,
+        "grammaticallyCorrect": 0.97,
+        "sameLogicalStructure": 0.98,
+        "latencyMs": 304.50158199999987
+      }
+    },
+    {
+      "puzzleId": "PZL-0003",
+      "majorityWellFormed": false,
+      "jev": {
+        "wellFormed": false,
+        "noLeftoverOldValue": 0.21,
+        "grammaticallyCorrect": 0.88,
+        "sameLogicalStructure": 0.24,
+        "latencyMs": 383.550432
+      }
+    },
+    {
+      "puzzleId": "PZL-0003",
+      "majorityWellFormed": false,
+      "jev": {
+        "wellFormed": false,
+        "noLeftoverOldValue": 0.23,
+        "grammaticallyCorrect": 0.84,
+        "sameLogicalStructure": 0.26,
+        "latencyMs": 361.936518
+      }
+    },
+    {
+      "puzzleId": "PZL-0003",
+      "majorityWellFormed": false,
+      "jev": {
+        "wellFormed": false,
+        "noLeftoverOldValue": 0.24,
+        "grammaticallyCorrect": 0.88,
+        "sameLogicalStructure": 0.18,
+        "latencyMs": 234.25487199999998
+      }
+    },
+    {
+      "puzzleId": "PZL-0002",
+      "majorityWellFormed": false,
+      "jev": {
+        "wellFormed": false,
+        "noLeftoverOldValue": 0.51,
+        "grammaticallyCorrect": 0.48,
+        "sameLogicalStructure": 0.91,
+        "latencyMs": 291.01521
+      }
+    },
+    {
+      "puzzleId": "PZL-0002",
+      "majorityWellFormed": false,
+      "jev": {
+        "wellFormed": false,
+        "noLeftoverOldValue": 0.41,
+        "grammaticallyCorrect": 0.5,
+        "sameLogicalStructure": 0.88,
+        "latencyMs": 268.0109130000001
+      }
+    },
+    {
+      "puzzleId": "PZL-0002",
+      "majorityWellFormed": false,
+      "jev": {
+        "wellFormed": false,
+        "noLeftoverOldValue": 0.47,
+        "grammaticallyCorrect": 0.53,
+        "sameLogicalStructure": 0.86,
+        "latencyMs": 263.6966539999994
+      }
+    },
+    {
+      "puzzleId": "PZL-0003",
+      "majorityWellFormed": false,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.78,
+        "grammaticallyCorrect": 0.9,
+        "sameLogicalStructure": 0.63,
+        "latencyMs": 374.2813420000002
+      }
+    },
+    {
+      "puzzleId": "PZL-0003",
+      "majorityWellFormed": false,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.77,
+        "grammaticallyCorrect": 0.91,
+        "sameLogicalStructure": 0.65,
+        "latencyMs": 224.47849700000006
+      }
+    },
+    {
+      "puzzleId": "PZL-0003",
+      "majorityWellFormed": false,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.79,
+        "grammaticallyCorrect": 0.92,
+        "sameLogicalStructure": 0.71,
+        "latencyMs": 330.53734899999927
+      }
+    },
+    {
+      "puzzleId": "PZL-0002",
+      "majorityWellFormed": false,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.93,
+        "grammaticallyCorrect": 0.97,
+        "sameLogicalStructure": 0.97,
+        "latencyMs": 245.12373099999968
+      }
+    },
+    {
+      "puzzleId": "PZL-0002",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.91,
+        "grammaticallyCorrect": 0.97,
+        "sameLogicalStructure": 0.97,
+        "latencyMs": 384.99124699999993
+      }
+    },
+    {
+      "puzzleId": "PZL-0002",
+      "majorityWellFormed": false,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.92,
+        "grammaticallyCorrect": 0.97,
+        "sameLogicalStructure": 0.97,
+        "latencyMs": 320.99867600000016
+      }
+    },
+    {
+      "puzzleId": "PZL-0003",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.82,
+        "grammaticallyCorrect": 0.93,
+        "sameLogicalStructure": 0.76,
+        "latencyMs": 251.69268900000043
+      }
+    },
+    {
+      "puzzleId": "PZL-0003",
+      "majorityWellFormed": false,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.78,
+        "grammaticallyCorrect": 0.91,
+        "sameLogicalStructure": 0.68,
+        "latencyMs": 345.70368599999983
+      }
+    },
+    {
+      "puzzleId": "PZL-0003",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.82,
+        "grammaticallyCorrect": 0.92,
+        "sameLogicalStructure": 0.83,
+        "latencyMs": 271.8692029999993
+      }
+    },
+    {
+      "puzzleId": "PZL-0001",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.87,
+        "grammaticallyCorrect": 0.94,
+        "sameLogicalStructure": 0.91,
+        "latencyMs": 386.0618979999999
+      }
+    },
+    {
+      "puzzleId": "PZL-0002",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.92,
+        "grammaticallyCorrect": 0.97,
+        "sameLogicalStructure": 0.97,
+        "latencyMs": 247.58353200000056
+      }
+    },
+    {
+      "puzzleId": "PZL-0003",
+      "majorityWellFormed": false,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.79,
+        "grammaticallyCorrect": 0.91,
+        "sameLogicalStructure": 0.65,
+        "latencyMs": 268.89453799999956
+      }
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.9,
+        "grammaticallyCorrect": 0.85,
+        "sameLogicalStructure": 0.98,
+        "latencyMs": 307.02233700000033
+      }
+    },
+    {
+      "puzzleId": "PZL-0001",
+      "majorityWellFormed": false,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.88,
+        "grammaticallyCorrect": 0.93,
+        "sameLogicalStructure": 0.93,
+        "latencyMs": 234.2070590000003
+      }
+    },
+    {
+      "puzzleId": "PZL-0001",
+      "majorityWellFormed": false,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.85,
+        "grammaticallyCorrect": 0.94,
+        "sameLogicalStructure": 0.9,
+        "latencyMs": 378.2995009999995
+      }
+    },
+    {
+      "puzzleId": "PZL-0001",
+      "majorityWellFormed": false,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.88,
+        "grammaticallyCorrect": 0.93,
+        "sameLogicalStructure": 0.91,
+        "latencyMs": 282.7828300000001
+      }
+    },
+    {
+      "puzzleId": "PZL-0002",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.92,
+        "grammaticallyCorrect": 0.97,
+        "sameLogicalStructure": 0.98,
+        "latencyMs": 243.5568629999998
+      }
+    },
+    {
+      "puzzleId": "PZL-0002",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.92,
+        "grammaticallyCorrect": 0.97,
+        "sameLogicalStructure": 0.97,
+        "latencyMs": 349.01888399999916
+      }
+    },
+    {
+      "puzzleId": "PZL-0002",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.94,
+        "grammaticallyCorrect": 0.97,
+        "sameLogicalStructure": 0.97,
+        "latencyMs": 212.10763100000077
+      }
+    },
+    {
+      "puzzleId": "PZL-0003",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.85,
+        "grammaticallyCorrect": 0.91,
+        "sameLogicalStructure": 0.74,
+        "latencyMs": 251.82229000000007
+      }
+    },
+    {
+      "puzzleId": "PZL-0003",
+      "majorityWellFormed": false,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.81,
+        "grammaticallyCorrect": 0.9,
+        "sameLogicalStructure": 0.6,
+        "latencyMs": 266.67556200000035
+      }
+    },
+    {
+      "puzzleId": "PZL-0003",
+      "majorityWellFormed": false,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.8,
+        "grammaticallyCorrect": 0.92,
+        "sameLogicalStructure": 0.67,
+        "latencyMs": 265.80708700000105
+      }
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "majorityWellFormed": false,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.93,
+        "grammaticallyCorrect": 0.94,
+        "sameLogicalStructure": 0.97,
+        "latencyMs": 351.8320760000006
+      }
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.91,
+        "grammaticallyCorrect": 0.86,
+        "sameLogicalStructure": 0.98,
+        "latencyMs": 238.772019
+      }
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "majorityWellFormed": false,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.93,
+        "grammaticallyCorrect": 0.93,
+        "sameLogicalStructure": 0.97,
+        "latencyMs": 289.8893900000003
+      }
+    },
+    {
+      "puzzleId": "PZL-0001",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.87,
+        "grammaticallyCorrect": 0.95,
+        "sameLogicalStructure": 0.89,
+        "latencyMs": 244.1923630000001
+      }
+    },
+    {
+      "puzzleId": "PZL-0001",
+      "majorityWellFormed": false,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.86,
+        "grammaticallyCorrect": 0.94,
+        "sameLogicalStructure": 0.87,
+        "latencyMs": 282.413047
+      }
+    },
+    {
+      "puzzleId": "PZL-0001",
+      "majorityWellFormed": false,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.88,
+        "grammaticallyCorrect": 0.93,
+        "sameLogicalStructure": 0.91,
+        "latencyMs": 245.1314829999992
+      }
+    },
+    {
+      "puzzleId": "PZL-0002",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.92,
+        "grammaticallyCorrect": 0.96,
+        "sameLogicalStructure": 0.97,
+        "latencyMs": 279.5964320000003
+      }
+    },
+    {
+      "puzzleId": "PZL-0002",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.93,
+        "grammaticallyCorrect": 0.97,
+        "sameLogicalStructure": 0.97,
+        "latencyMs": 230.3727999999992
+      }
+    },
+    {
+      "puzzleId": "PZL-0002",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.91,
+        "grammaticallyCorrect": 0.97,
+        "sameLogicalStructure": 0.97,
+        "latencyMs": 286.5460029999995
+      }
+    },
+    {
+      "puzzleId": "PZL-0003",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.76,
+        "grammaticallyCorrect": 0.91,
+        "sameLogicalStructure": 0.68,
+        "latencyMs": 743.6702130000012
+      }
+    },
+    {
+      "puzzleId": "PZL-0003",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.55,
+        "grammaticallyCorrect": 0.84,
+        "sameLogicalStructure": 0.8,
+        "latencyMs": 304.56275300000016
+      }
+    },
+    {
+      "puzzleId": "PZL-0003",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.81,
+        "grammaticallyCorrect": 0.91,
+        "sameLogicalStructure": 0.57,
+        "latencyMs": 250.68193400000018
+      }
+    },
+    {
+      "puzzleId": "PZL-0011",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.85,
+        "grammaticallyCorrect": 0.95,
+        "sameLogicalStructure": 0.96,
+        "latencyMs": 277.2615340000011
+      }
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.88,
+        "grammaticallyCorrect": 0.88,
+        "sameLogicalStructure": 0.97,
+        "latencyMs": 257.1105929999994
+      }
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.89,
+        "grammaticallyCorrect": 0.88,
+        "sameLogicalStructure": 0.98,
+        "latencyMs": 264.7230639999998
+      }
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "majorityWellFormed": false,
+      "jev": {
+        "wellFormed": false,
+        "noLeftoverOldValue": 0.84,
+        "grammaticallyCorrect": 0.05,
+        "sameLogicalStructure": 0.97,
+        "latencyMs": 296.56278700000075
+      }
+    },
+    {
+      "puzzleId": "PZL-0001",
+      "majorityWellFormed": false,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.87,
+        "grammaticallyCorrect": 0.95,
+        "sameLogicalStructure": 0.91,
+        "latencyMs": 235.26155700000163
+      }
+    },
+    {
+      "puzzleId": "PZL-0001",
+      "majorityWellFormed": false,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.88,
+        "grammaticallyCorrect": 0.93,
+        "sameLogicalStructure": 0.9,
+        "latencyMs": 245.68886700000076
+      }
+    },
+    {
+      "puzzleId": "PZL-0001",
+      "majorityWellFormed": false,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.87,
+        "grammaticallyCorrect": 0.95,
+        "sameLogicalStructure": 0.89,
+        "latencyMs": 272.1554359999991
+      }
+    },
+    {
+      "puzzleId": "PZL-0001",
+      "majorityWellFormed": false,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.86,
+        "grammaticallyCorrect": 0.94,
+        "sameLogicalStructure": 0.88,
+        "latencyMs": 235.30575800000224
+      }
+    },
+    {
+      "puzzleId": "PZL-0001",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.85,
+        "grammaticallyCorrect": 0.95,
+        "sameLogicalStructure": 0.9,
+        "latencyMs": 291.67559299999994
+      }
+    },
+    {
+      "puzzleId": "PZL-0001",
+      "majorityWellFormed": false,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.89,
+        "grammaticallyCorrect": 0.95,
+        "sameLogicalStructure": 0.94,
+        "latencyMs": 243.70939499999804
+      }
+    },
+    {
+      "puzzleId": "PZL-0001",
+      "majorityWellFormed": false,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.86,
+        "grammaticallyCorrect": 0.96,
+        "sameLogicalStructure": 0.91,
+        "latencyMs": 273.59095700000034
+      }
+    },
+    {
+      "puzzleId": "PZL-0001",
+      "majorityWellFormed": false,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.84,
+        "grammaticallyCorrect": 0.96,
+        "sameLogicalStructure": 0.89,
+        "latencyMs": 263.2424119999996
+      }
+    },
+    {
+      "puzzleId": "PZL-0002",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.93,
+        "grammaticallyCorrect": 0.97,
+        "sameLogicalStructure": 0.97,
+        "latencyMs": 283.4427199999991
+      }
+    },
+    {
+      "puzzleId": "PZL-0002",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.92,
+        "grammaticallyCorrect": 0.96,
+        "sameLogicalStructure": 0.98,
+        "latencyMs": 210.39597100000174
+      }
+    },
+    {
+      "puzzleId": "PZL-0002",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.9,
+        "grammaticallyCorrect": 0.97,
+        "sameLogicalStructure": 0.97,
+        "latencyMs": 351.05887300000177
+      }
+    },
+    {
+      "puzzleId": "PZL-0002",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.91,
+        "grammaticallyCorrect": 0.97,
+        "sameLogicalStructure": 0.97,
+        "latencyMs": 302.9187920000004
+      }
+    },
+    {
+      "puzzleId": "PZL-0002",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.92,
+        "grammaticallyCorrect": 0.97,
+        "sameLogicalStructure": 0.98,
+        "latencyMs": 285.042763999998
+      }
+    },
+    {
+      "puzzleId": "PZL-0002",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.91,
+        "grammaticallyCorrect": 0.96,
+        "sameLogicalStructure": 0.97,
+        "latencyMs": 273.9493770000008
+      }
+    },
+    {
+      "puzzleId": "PZL-0002",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.93,
+        "grammaticallyCorrect": 0.97,
+        "sameLogicalStructure": 0.97,
+        "latencyMs": 222.1439799999971
+      }
+    },
+    {
+      "puzzleId": "PZL-0002",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.91,
+        "grammaticallyCorrect": 0.97,
+        "sameLogicalStructure": 0.98,
+        "latencyMs": 227.9893379999994
+      }
+    },
+    {
+      "puzzleId": "PZL-0002",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.93,
+        "grammaticallyCorrect": 0.97,
+        "sameLogicalStructure": 0.97,
+        "latencyMs": 277.9416029999993
+      }
+    },
+    {
+      "puzzleId": "PZL-0002",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.91,
+        "grammaticallyCorrect": 0.97,
+        "sameLogicalStructure": 0.97,
+        "latencyMs": 216.115643000001
+      }
+    },
+    {
+      "puzzleId": "PZL-0003",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.76,
+        "grammaticallyCorrect": 0.92,
+        "sameLogicalStructure": 0.73,
+        "latencyMs": 304.5244300000013
+      }
+    },
+    {
+      "puzzleId": "PZL-0003",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": false,
+        "noLeftoverOldValue": 0.79,
+        "grammaticallyCorrect": 0.88,
+        "sameLogicalStructure": 0.48,
+        "latencyMs": 249.90931999999884
+      }
+    },
+    {
+      "puzzleId": "PZL-0003",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.81,
+        "grammaticallyCorrect": 0.89,
+        "sameLogicalStructure": 0.67,
+        "latencyMs": 249.1666210000003
+      }
+    },
+    {
+      "puzzleId": "PZL-0003",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.77,
+        "grammaticallyCorrect": 0.91,
+        "sameLogicalStructure": 0.69,
+        "latencyMs": 235.82549300000028
+      }
+    },
+    {
+      "puzzleId": "PZL-0003",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.78,
+        "grammaticallyCorrect": 0.92,
+        "sameLogicalStructure": 0.74,
+        "latencyMs": 246.71829300000172
+      }
+    },
+    {
+      "puzzleId": "PZL-0003",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.75,
+        "grammaticallyCorrect": 0.92,
+        "sameLogicalStructure": 0.7,
+        "latencyMs": 239.98441000000093
+      }
+    },
+    {
+      "puzzleId": "PZL-0003",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.82,
+        "grammaticallyCorrect": 0.91,
+        "sameLogicalStructure": 0.77,
+        "latencyMs": 294.63706199999797
+      }
+    },
+    {
+      "puzzleId": "PZL-0003",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.79,
+        "grammaticallyCorrect": 0.92,
+        "sameLogicalStructure": 0.65,
+        "latencyMs": 218.1006180000004
+      }
+    },
+    {
+      "puzzleId": "PZL-0003",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.81,
+        "grammaticallyCorrect": 0.91,
+        "sameLogicalStructure": 0.7,
+        "latencyMs": 288.8919829999977
+      }
+    },
+    {
+      "puzzleId": "PZL-0003",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.86,
+        "grammaticallyCorrect": 0.91,
+        "sameLogicalStructure": 0.79,
+        "latencyMs": 279.20296400000007
+      }
+    },
+    {
+      "puzzleId": "PZL-0004",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.88,
+        "grammaticallyCorrect": 0.95,
+        "sameLogicalStructure": 0.95,
+        "latencyMs": 283.2209709999988
+      }
+    },
+    {
+      "puzzleId": "PZL-0011",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.83,
+        "grammaticallyCorrect": 0.94,
+        "sameLogicalStructure": 0.96,
+        "latencyMs": 225.16718299999775
+      }
+    },
+    {
+      "puzzleId": "PZL-0011",
+      "majorityWellFormed": false,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.88,
+        "grammaticallyCorrect": 0.94,
+        "sameLogicalStructure": 0.96,
+        "latencyMs": 270.0078020000001
+      }
+    },
+    {
+      "puzzleId": "PZL-0011",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.86,
+        "grammaticallyCorrect": 0.95,
+        "sameLogicalStructure": 0.96,
+        "latencyMs": 272.7044939999978
+      }
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.92,
+        "grammaticallyCorrect": 0.93,
+        "sameLogicalStructure": 0.97,
+        "latencyMs": 245.8439019999969
+      }
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.9,
+        "grammaticallyCorrect": 0.88,
+        "sameLogicalStructure": 0.98,
+        "latencyMs": 210.9878499999977
+      }
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.92,
+        "grammaticallyCorrect": 0.94,
+        "sameLogicalStructure": 0.97,
+        "latencyMs": 315.5711479999991
+      }
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.93,
+        "grammaticallyCorrect": 0.94,
+        "sameLogicalStructure": 0.97,
+        "latencyMs": 220.70827700000154
+      }
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.9,
+        "grammaticallyCorrect": 0.86,
+        "sameLogicalStructure": 0.97,
+        "latencyMs": 300.02804500000275
+      }
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.91,
+        "grammaticallyCorrect": 0.94,
+        "sameLogicalStructure": 0.97,
+        "latencyMs": 273.5590169999996
+      }
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.89,
+        "grammaticallyCorrect": 0.87,
+        "sameLogicalStructure": 0.97,
+        "latencyMs": 426.1246570000003
+      }
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.93,
+        "grammaticallyCorrect": 0.94,
+        "sameLogicalStructure": 0.97,
+        "latencyMs": 243.4183090000006
+      }
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.88,
+        "grammaticallyCorrect": 0.88,
+        "sameLogicalStructure": 0.98,
+        "latencyMs": 241.76962600000115
+      }
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "majorityWellFormed": true,
+      "jev": {
+        "wellFormed": true,
+        "noLeftoverOldValue": 0.9,
+        "grammaticallyCorrect": 0.94,
+        "sameLogicalStructure": 0.97,
+        "latencyMs": 256.5933850000001
+      }
+    }
+  ]
+}

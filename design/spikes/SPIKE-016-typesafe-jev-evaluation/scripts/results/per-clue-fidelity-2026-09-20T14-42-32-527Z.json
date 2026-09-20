@@ -1,0 +1,608 @@
+{
+  "summary": {
+    "totalCluesChecked": 36,
+    "byRepOutcome": {
+      "SOLVE_MULTIPLY_SATISFIABLE": {
+        "flagged": 9,
+        "total": 17
+      },
+      "SOLVE_UNSATISFIABLE": {
+        "flagged": 7,
+        "total": 7
+      },
+      "SOLVE_UNIQUE": {
+        "flagged": 7,
+        "total": 7
+      },
+      "SOLVE_ERROR": {
+        "flagged": 1,
+        "total": 5
+      }
+    },
+    "totalLatencyMs": 20140.586186000004
+  },
+  "results": [
+    {
+      "puzzleId": "PZL-0010",
+      "repIndex": 0,
+      "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
+      "repVerdict": "MISMATCH",
+      "clue": "1. A pedestrian using a crosswalk always goes before a car approaching from the direction that\n   crosswalk crosses.",
+      "localization": {
+        "clue": "1. A pedestrian using a crosswalk always goes before a car approaching from the direction that\n   crosswalk crosses.",
+        "selectedIndices": [
+          2
+        ],
+        "selectConfidence": 0.48,
+        "fidelityNoul": 0.28,
+        "latencyMs": 2347.963108
+      },
+      "flagged": true
+    },
+    {
+      "puzzleId": "PZL-0010",
+      "repIndex": 0,
+      "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
+      "repVerdict": "MISMATCH",
+      "clue": "2. Otherwise, cars (and the pedestrian) go in the order they arrive at the intersection.",
+      "localization": {
+        "clue": "2. Otherwise, cars (and the pedestrian) go in the order they arrive at the intersection.",
+        "selectedIndices": [
+          4
+        ],
+        "selectConfidence": 0.46,
+        "fidelityNoul": 0.13,
+        "latencyMs": 544.364251
+      },
+      "flagged": true
+    },
+    {
+      "puzzleId": "PZL-0010",
+      "repIndex": 0,
+      "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
+      "repVerdict": "MISMATCH",
+      "clue": "3. If two cars arrive at the same moment, right-of-way rotates clockwise starting from North —\n   of the tied cars, whichever comes first in the order North, East, South, West goes first.\n\nThis morning:",
+      "localization": {
+        "clue": "3. If two cars arrive at the same moment, right-of-way rotates clockwise starting from North —\n   of the tied cars, whichever comes first in the order North, East, South, West goes first.\n\nThis morning:",
+        "selectedIndices": [
+          3
+        ],
+        "selectConfidence": 0.39,
+        "fidelityNoul": 0.04,
+        "latencyMs": 564.503256
+      },
+      "flagged": true
+    },
+    {
+      "puzzleId": "PZL-0010",
+      "repIndex": 0,
+      "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
+      "repVerdict": "MISMATCH",
+      "clue": "4. The pedestrian is crossing at the eastern crosswalk.",
+      "localization": {
+        "clue": "4. The pedestrian is crossing at the eastern crosswalk.",
+        "selectedIndices": [
+          0
+        ],
+        "selectConfidence": 0.73,
+        "fidelityNoul": 0.17,
+        "latencyMs": 589.5702689999998
+      },
+      "flagged": true
+    },
+    {
+      "puzzleId": "PZL-0010",
+      "repIndex": 0,
+      "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
+      "repVerdict": "MISMATCH",
+      "clue": "5. The pedestrian and the East car arrive at the same moment.",
+      "localization": {
+        "clue": "5. The pedestrian and the East car arrive at the same moment.",
+        "selectedIndices": [],
+        "selectConfidence": 0.57,
+        "latencyMs": 261.5442329999996
+      },
+      "flagged": true
+    },
+    {
+      "puzzleId": "PZL-0010",
+      "repIndex": 0,
+      "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
+      "repVerdict": "MISMATCH",
+      "clue": "6. The South car arrives before the pedestrian and the East car.",
+      "localization": {
+        "clue": "6. The South car arrives before the pedestrian and the East car.",
+        "selectedIndices": [
+          1
+        ],
+        "selectConfidence": 0.87,
+        "fidelityNoul": 0.05,
+        "latencyMs": 566.9881200000009
+      },
+      "flagged": true
+    },
+    {
+      "puzzleId": "PZL-0010",
+      "repIndex": 0,
+      "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
+      "repVerdict": "MISMATCH",
+      "clue": "7. The North car and the West car arrive at the same moment, after the pedestrian and the East\n   car.\n\nIn what order do the pedestrian and the four cars go through the intersection?",
+      "localization": {
+        "clue": "7. The North car and the West car arrive at the same moment, after the pedestrian and the East\n   car.\n\nIn what order do the pedestrian and the four cars go through the intersection?",
+        "selectedIndices": [
+          2
+        ],
+        "selectConfidence": 0.34,
+        "fidelityNoul": 0.07,
+        "latencyMs": 571.3767249999992
+      },
+      "flagged": true
+    },
+    {
+      "puzzleId": "PZL-0010",
+      "repIndex": 1,
+      "repOutcome": "SOLVE_UNSATISFIABLE",
+      "repVerdict": "MISMATCH",
+      "clue": "1. A pedestrian using a crosswalk always goes before a car approaching from the direction that\n   crosswalk crosses.",
+      "localization": {
+        "clue": "1. A pedestrian using a crosswalk always goes before a car approaching from the direction that\n   crosswalk crosses.",
+        "selectedIndices": [],
+        "selectConfidence": 0.57,
+        "latencyMs": 833.8120580000004
+      },
+      "flagged": true
+    },
+    {
+      "puzzleId": "PZL-0010",
+      "repIndex": 1,
+      "repOutcome": "SOLVE_UNSATISFIABLE",
+      "repVerdict": "MISMATCH",
+      "clue": "2. Otherwise, cars (and the pedestrian) go in the order they arrive at the intersection.",
+      "localization": {
+        "clue": "2. Otherwise, cars (and the pedestrian) go in the order they arrive at the intersection.",
+        "selectedIndices": [],
+        "selectConfidence": 0.43,
+        "latencyMs": 226.56030199999987
+      },
+      "flagged": true
+    },
+    {
+      "puzzleId": "PZL-0010",
+      "repIndex": 1,
+      "repOutcome": "SOLVE_UNSATISFIABLE",
+      "repVerdict": "MISMATCH",
+      "clue": "3. If two cars arrive at the same moment, right-of-way rotates clockwise starting from North —\n   of the tied cars, whichever comes first in the order North, East, South, West goes first.\n\nThis morning:",
+      "localization": {
+        "clue": "3. If two cars arrive at the same moment, right-of-way rotates clockwise starting from North —\n   of the tied cars, whichever comes first in the order North, East, South, West goes first.\n\nThis morning:",
+        "selectedIndices": [],
+        "selectConfidence": 0.72,
+        "latencyMs": 303.72949400000016
+      },
+      "flagged": true
+    },
+    {
+      "puzzleId": "PZL-0010",
+      "repIndex": 1,
+      "repOutcome": "SOLVE_UNSATISFIABLE",
+      "repVerdict": "MISMATCH",
+      "clue": "4. The pedestrian is crossing at the eastern crosswalk.",
+      "localization": {
+        "clue": "4. The pedestrian is crossing at the eastern crosswalk.",
+        "selectedIndices": [],
+        "selectConfidence": 0.49,
+        "latencyMs": 278.13416899999993
+      },
+      "flagged": true
+    },
+    {
+      "puzzleId": "PZL-0010",
+      "repIndex": 1,
+      "repOutcome": "SOLVE_UNSATISFIABLE",
+      "repVerdict": "MISMATCH",
+      "clue": "5. The pedestrian and the East car arrive at the same moment.",
+      "localization": {
+        "clue": "5. The pedestrian and the East car arrive at the same moment.",
+        "selectedIndices": [],
+        "selectConfidence": 0.49,
+        "latencyMs": 272.8555700000006
+      },
+      "flagged": true
+    },
+    {
+      "puzzleId": "PZL-0010",
+      "repIndex": 1,
+      "repOutcome": "SOLVE_UNSATISFIABLE",
+      "repVerdict": "MISMATCH",
+      "clue": "6. The South car arrives before the pedestrian and the East car.",
+      "localization": {
+        "clue": "6. The South car arrives before the pedestrian and the East car.",
+        "selectedIndices": [
+          1
+        ],
+        "selectConfidence": 0.31,
+        "fidelityNoul": 0.03,
+        "latencyMs": 542.0270440000004
+      },
+      "flagged": true
+    },
+    {
+      "puzzleId": "PZL-0010",
+      "repIndex": 1,
+      "repOutcome": "SOLVE_UNSATISFIABLE",
+      "repVerdict": "MISMATCH",
+      "clue": "7. The North car and the West car arrive at the same moment, after the pedestrian and the East\n   car.\n\nIn what order do the pedestrian and the four cars go through the intersection?",
+      "localization": {
+        "clue": "7. The North car and the West car arrive at the same moment, after the pedestrian and the East\n   car.\n\nIn what order do the pedestrian and the four cars go through the intersection?",
+        "selectedIndices": [
+          4
+        ],
+        "selectConfidence": 0.51,
+        "fidelityNoul": 0.07,
+        "latencyMs": 497.9418139999998
+      },
+      "flagged": true
+    },
+    {
+      "puzzleId": "PZL-0010",
+      "repIndex": 2,
+      "repOutcome": "SOLVE_UNIQUE",
+      "repVerdict": "MATCH",
+      "clue": "1. A pedestrian using a crosswalk always goes before a car approaching from the direction that\n   crosswalk crosses.",
+      "localization": {
+        "clue": "1. A pedestrian using a crosswalk always goes before a car approaching from the direction that\n   crosswalk crosses.",
+        "selectedIndices": [],
+        "selectConfidence": 0.45,
+        "latencyMs": 283.4284090000001
+      },
+      "flagged": true
+    },
+    {
+      "puzzleId": "PZL-0010",
+      "repIndex": 2,
+      "repOutcome": "SOLVE_UNIQUE",
+      "repVerdict": "MATCH",
+      "clue": "2. Otherwise, cars (and the pedestrian) go in the order they arrive at the intersection.",
+      "localization": {
+        "clue": "2. Otherwise, cars (and the pedestrian) go in the order they arrive at the intersection.",
+        "selectedIndices": [],
+        "selectConfidence": 0.66,
+        "latencyMs": 285.9189860000006
+      },
+      "flagged": true
+    },
+    {
+      "puzzleId": "PZL-0010",
+      "repIndex": 2,
+      "repOutcome": "SOLVE_UNIQUE",
+      "repVerdict": "MATCH",
+      "clue": "3. If two cars arrive at the same moment, right-of-way rotates clockwise starting from North —\n   of the tied cars, whichever comes first in the order North, East, South, West goes first.\n\nThis morning:",
+      "localization": {
+        "clue": "3. If two cars arrive at the same moment, right-of-way rotates clockwise starting from North —\n   of the tied cars, whichever comes first in the order North, East, South, West goes first.\n\nThis morning:",
+        "selectedIndices": [],
+        "selectConfidence": 0.39,
+        "latencyMs": 236.23437000000013
+      },
+      "flagged": true
+    },
+    {
+      "puzzleId": "PZL-0010",
+      "repIndex": 2,
+      "repOutcome": "SOLVE_UNIQUE",
+      "repVerdict": "MATCH",
+      "clue": "4. The pedestrian is crossing at the eastern crosswalk.",
+      "localization": {
+        "clue": "4. The pedestrian is crossing at the eastern crosswalk.",
+        "selectedIndices": [
+          2
+        ],
+        "selectConfidence": 0.79,
+        "fidelityNoul": 0.1,
+        "latencyMs": 598.6289530000013
+      },
+      "flagged": true
+    },
+    {
+      "puzzleId": "PZL-0010",
+      "repIndex": 2,
+      "repOutcome": "SOLVE_UNIQUE",
+      "repVerdict": "MATCH",
+      "clue": "5. The pedestrian and the East car arrive at the same moment.",
+      "localization": {
+        "clue": "5. The pedestrian and the East car arrive at the same moment.",
+        "selectedIndices": [],
+        "selectConfidence": 0.78,
+        "latencyMs": 279.77998599999955
+      },
+      "flagged": true
+    },
+    {
+      "puzzleId": "PZL-0010",
+      "repIndex": 2,
+      "repOutcome": "SOLVE_UNIQUE",
+      "repVerdict": "MATCH",
+      "clue": "6. The South car arrives before the pedestrian and the East car.",
+      "localization": {
+        "clue": "6. The South car arrives before the pedestrian and the East car.",
+        "selectedIndices": [
+          0
+        ],
+        "selectConfidence": 0.53,
+        "fidelityNoul": 0.03,
+        "latencyMs": 544.9158399999978
+      },
+      "flagged": true
+    },
+    {
+      "puzzleId": "PZL-0010",
+      "repIndex": 2,
+      "repOutcome": "SOLVE_UNIQUE",
+      "repVerdict": "MATCH",
+      "clue": "7. The North car and the West car arrive at the same moment, after the pedestrian and the East\n   car.\n\nIn what order do the pedestrian and the four cars go through the intersection?",
+      "localization": {
+        "clue": "7. The North car and the West car arrive at the same moment, after the pedestrian and the East\n   car.\n\nIn what order do the pedestrian and the four cars go through the intersection?",
+        "selectedIndices": [
+          3
+        ],
+        "selectConfidence": 0.24,
+        "fidelityNoul": 0.03,
+        "latencyMs": 517.3815709999999
+      },
+      "flagged": true
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "repIndex": 0,
+      "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
+      "repVerdict": "MISMATCH",
+      "clue": "1. The tortoise is in pen 1.",
+      "localization": {
+        "clue": "1. The tortoise is in pen 1.",
+        "selectedIndices": [
+          0
+        ],
+        "selectConfidence": 1,
+        "fidelityNoul": 0.81,
+        "latencyMs": 610.4842370000006
+      },
+      "flagged": false
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "repIndex": 0,
+      "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
+      "repVerdict": "MISMATCH",
+      "clue": "2. The parrot is in pen 2.",
+      "localization": {
+        "clue": "2. The parrot is in pen 2.",
+        "selectedIndices": [
+          1
+        ],
+        "selectConfidence": 1,
+        "fidelityNoul": 0.85,
+        "latencyMs": 565.7612549999994
+      },
+      "flagged": false
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "repIndex": 0,
+      "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
+      "repVerdict": "MISMATCH",
+      "clue": "3. The goat is in pen 3.",
+      "localization": {
+        "clue": "3. The goat is in pen 3.",
+        "selectedIndices": [
+          2
+        ],
+        "selectConfidence": 1,
+        "fidelityNoul": 0.9,
+        "latencyMs": 580.7746420000021
+      },
+      "flagged": false
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "repIndex": 0,
+      "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
+      "repVerdict": "MISMATCH",
+      "clue": "4. The rabbit is in a lower-numbered pen than the wolf.",
+      "localization": {
+        "clue": "4. The rabbit is in a lower-numbered pen than the wolf.",
+        "selectedIndices": [
+          3
+        ],
+        "selectConfidence": 1,
+        "fidelityNoul": 0.88,
+        "latencyMs": 988.5183490000018
+      },
+      "flagged": false
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "repIndex": 0,
+      "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
+      "repVerdict": "MISMATCH",
+      "clue": "5. The wolf preys on the rabbit.\n\nWhere is each animal?",
+      "localization": {
+        "clue": "5. The wolf preys on the rabbit.\n\nWhere is each animal?",
+        "selectedIndices": [
+          3
+        ],
+        "selectConfidence": 0.99,
+        "fidelityNoul": 0.28,
+        "latencyMs": 497.78401199999826
+      },
+      "flagged": true
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "repIndex": 1,
+      "repOutcome": "SOLVE_ERROR",
+      "repVerdict": "N/A",
+      "clue": "1. The tortoise is in pen 1.",
+      "localization": {
+        "clue": "1. The tortoise is in pen 1.",
+        "selectedIndices": [
+          0
+        ],
+        "selectConfidence": 1,
+        "fidelityNoul": 0.77,
+        "latencyMs": 545.0553330000002
+      },
+      "flagged": false
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "repIndex": 1,
+      "repOutcome": "SOLVE_ERROR",
+      "repVerdict": "N/A",
+      "clue": "2. The parrot is in pen 2.",
+      "localization": {
+        "clue": "2. The parrot is in pen 2.",
+        "selectedIndices": [
+          1
+        ],
+        "selectConfidence": 1,
+        "fidelityNoul": 0.85,
+        "latencyMs": 539.8123369999994
+      },
+      "flagged": false
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "repIndex": 1,
+      "repOutcome": "SOLVE_ERROR",
+      "repVerdict": "N/A",
+      "clue": "3. The goat is in pen 3.",
+      "localization": {
+        "clue": "3. The goat is in pen 3.",
+        "selectedIndices": [
+          2
+        ],
+        "selectConfidence": 1,
+        "fidelityNoul": 0.92,
+        "latencyMs": 533.6704679999984
+      },
+      "flagged": false
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "repIndex": 1,
+      "repOutcome": "SOLVE_ERROR",
+      "repVerdict": "N/A",
+      "clue": "4. The rabbit is in a lower-numbered pen than the wolf.",
+      "localization": {
+        "clue": "4. The rabbit is in a lower-numbered pen than the wolf.",
+        "selectedIndices": [
+          3
+        ],
+        "selectConfidence": 0.99,
+        "fidelityNoul": 0.76,
+        "latencyMs": 621.2881190000007
+      },
+      "flagged": false
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "repIndex": 1,
+      "repOutcome": "SOLVE_ERROR",
+      "repVerdict": "N/A",
+      "clue": "5. The wolf preys on the rabbit.\n\nWhere is each animal?",
+      "localization": {
+        "clue": "5. The wolf preys on the rabbit.\n\nWhere is each animal?",
+        "selectedIndices": [
+          3
+        ],
+        "selectConfidence": 0.78,
+        "fidelityNoul": 0.45,
+        "latencyMs": 661.2388030000002
+      },
+      "flagged": true
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "repIndex": 2,
+      "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
+      "repVerdict": "MISMATCH",
+      "clue": "1. The tortoise is in pen 1.",
+      "localization": {
+        "clue": "1. The tortoise is in pen 1.",
+        "selectedIndices": [
+          0
+        ],
+        "selectConfidence": 1,
+        "fidelityNoul": 0.95,
+        "latencyMs": 582.8768960000016
+      },
+      "flagged": false
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "repIndex": 2,
+      "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
+      "repVerdict": "MISMATCH",
+      "clue": "2. The parrot is in pen 2.",
+      "localization": {
+        "clue": "2. The parrot is in pen 2.",
+        "selectedIndices": [
+          1
+        ],
+        "selectConfidence": 1,
+        "fidelityNoul": 0.92,
+        "latencyMs": 543.9149689999977
+      },
+      "flagged": false
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "repIndex": 2,
+      "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
+      "repVerdict": "MISMATCH",
+      "clue": "3. The goat is in pen 3.",
+      "localization": {
+        "clue": "3. The goat is in pen 3.",
+        "selectedIndices": [
+          2
+        ],
+        "selectConfidence": 1,
+        "fidelityNoul": 0.93,
+        "latencyMs": 574.0529869999991
+      },
+      "flagged": false
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "repIndex": 2,
+      "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
+      "repVerdict": "MISMATCH",
+      "clue": "4. The rabbit is in a lower-numbered pen than the wolf.",
+      "localization": {
+        "clue": "4. The rabbit is in a lower-numbered pen than the wolf.",
+        "selectedIndices": [
+          3
+        ],
+        "selectConfidence": 0.98,
+        "fidelityNoul": 0.86,
+        "latencyMs": 612.1844440000023
+      },
+      "flagged": false
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "repIndex": 2,
+      "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
+      "repVerdict": "MISMATCH",
+      "clue": "5. The wolf preys on the rabbit.\n\nWhere is each animal?",
+      "localization": {
+        "clue": "5. The wolf preys on the rabbit.\n\nWhere is each animal?",
+        "selectedIndices": [
+          3
+        ],
+        "selectConfidence": 0.46,
+        "fidelityNoul": 0.24,
+        "latencyMs": 535.5108070000024
+      },
+      "flagged": true
+    }
+  ]
+}

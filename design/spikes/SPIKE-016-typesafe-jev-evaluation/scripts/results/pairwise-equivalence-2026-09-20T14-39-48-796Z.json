@@ -1,0 +1,331 @@
+{
+  "summary": {
+    "curatedAlias": {
+      "correct": 2,
+      "total": 3,
+      "errors": 0
+    },
+    "namedMiss": [
+      {
+        "a": "action",
+        "b": "move",
+        "jevMatch": false,
+        "noul": 0.26
+      },
+      {
+        "a": "game",
+        "b": "move",
+        "jevMatch": false,
+        "noul": 0.04
+      }
+    ],
+    "negativeControl": {
+      "correct": 19,
+      "total": 20,
+      "errors": 0
+    },
+    "totalLatencyMs": 7784.644553000001
+  },
+  "results": [
+    {
+      "pair": {
+        "a": "hardcover book set",
+        "b": "book_set",
+        "contextHint": "a puzzle answer-key value",
+        "source": "curated-alias",
+        "expected": true
+      },
+      "jevMatch": true,
+      "noul": 0.63,
+      "latencyMs": 1165.3680729999999
+    },
+    {
+      "pair": {
+        "a": "hardcover book set",
+        "b": "book set",
+        "contextHint": "a puzzle answer-key value",
+        "source": "curated-alias",
+        "expected": true
+      },
+      "jevMatch": false,
+      "noul": 0.29,
+      "latencyMs": 518.815846
+    },
+    {
+      "pair": {
+        "a": "hardcover book set",
+        "b": "hardcover_book_set",
+        "contextHint": "a puzzle answer-key value",
+        "source": "curated-alias",
+        "expected": true
+      },
+      "jevMatch": true,
+      "noul": 0.97,
+      "latencyMs": 265.55315800000017
+    },
+    {
+      "pair": {
+        "a": "action",
+        "b": "move",
+        "contextHint": "a board game's per-turn options, each turn one is taken",
+        "source": "named-miss",
+        "expected": true
+      },
+      "jevMatch": false,
+      "noul": 0.26,
+      "latencyMs": 230.09238200000004
+    },
+    {
+      "pair": {
+        "a": "game",
+        "b": "move",
+        "contextHint": "a board game's per-turn options, each turn one is taken",
+        "source": "named-miss",
+        "expected": true
+      },
+      "jevMatch": false,
+      "noul": 0.04,
+      "latencyMs": 291.7389680000001
+    },
+    {
+      "pair": {
+        "a": "Blue",
+        "b": "bleach",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.09,
+      "latencyMs": 261.501972
+    },
+    {
+      "pair": {
+        "a": "Red",
+        "b": "Relevance",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.05,
+      "latencyMs": 262.7521410000004
+    },
+    {
+      "pair": {
+        "a": "Norwegian",
+        "b": "North",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.06,
+      "latencyMs": 286.52460199999996
+    },
+    {
+      "pair": {
+        "a": "Norwegian",
+        "b": "non-problem",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.04,
+      "latencyMs": 237.3785630000002
+    },
+    {
+      "pair": {
+        "a": "Norwegian",
+        "b": "normative / ethical — genuinely contested",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.03,
+      "latencyMs": 265.61497299999974
+    },
+    {
+      "pair": {
+        "a": "North",
+        "b": "non-problem",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.04,
+      "latencyMs": 260.67307200000005
+    },
+    {
+      "pair": {
+        "a": "North",
+        "b": "normative / ethical — genuinely contested",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.02,
+      "latencyMs": 220.45307999999932
+    },
+    {
+      "pair": {
+        "a": "non-problem",
+        "b": "normative / ethical — genuinely contested",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.03,
+      "latencyMs": 293.94405499999993
+    },
+    {
+      "pair": {
+        "a": "Spaniard",
+        "b": "sponges",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.04,
+      "latencyMs": 258.17173100000036
+    },
+    {
+      "pair": {
+        "a": "Dog",
+        "b": "Docs",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.33,
+      "latencyMs": 273.15037500000017
+    },
+    {
+      "pair": {
+        "a": "Dog",
+        "b": "domain expertise — universal given the domain, invisible without it",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.03,
+      "latencyMs": 269.42008500000065
+    },
+    {
+      "pair": {
+        "a": "Dog",
+        "b": "dog",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": true,
+      "noul": 0.69,
+      "latencyMs": 247.51471500000025
+    },
+    {
+      "pair": {
+        "a": "Docs",
+        "b": "domain expertise — universal given the domain, invisible without it",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.05,
+      "latencyMs": 233.31567500000074
+    },
+    {
+      "pair": {
+        "a": "Docs",
+        "b": "dog",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.07,
+      "latencyMs": 294.8284729999996
+    },
+    {
+      "pair": {
+        "a": "domain expertise — universal given the domain, invisible without it",
+        "b": "dog",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.03,
+      "latencyMs": 247.48577600000044
+    },
+    {
+      "pair": {
+        "a": "Tea",
+        "b": "Testing",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.04,
+      "latencyMs": 275.6691350000001
+    },
+    {
+      "pair": {
+        "a": "Tea",
+        "b": "teacher",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.07,
+      "latencyMs": 259.2587370000001
+    },
+    {
+      "pair": {
+        "a": "Testing",
+        "b": "teacher",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.06,
+      "latencyMs": 304.81999499999984
+    },
+    {
+      "pair": {
+        "a": "Coffee",
+        "b": "Conservatory",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.04,
+      "latencyMs": 347.44725000000017
+    },
+    {
+      "pair": {
+        "a": "Coffee",
+        "b": "Counter-Offer",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.03,
+      "latencyMs": 213.15172099999927
+    }
+  ]
+}
