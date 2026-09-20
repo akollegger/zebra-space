@@ -46,12 +46,23 @@ function matchCase(matched: string, replacement: string): string {
 
 /** Replaces every occurrence of each oldValue with its newValue, case-insensitively, preserving
  * each individual match's own casing on the replacement (see file header for why this is
- * necessary, not just nice-to-have). */
+ * necessary, not just nice-to-have), in ONE combined pass over the ORIGINAL prose.
+ *
+ * Single-pass, not sequential — found live via review: applying each mapping entry as its own
+ * separate `.replace()` call, one after another against an accumulating draft, means a later
+ * entry can match text a PRIOR entry just wrote. A perfectly valid overlapping/cyclic remap
+ * like A->B, B->C would then replace every A with B, then that same now-B text with C — the
+ * prose no longer reflects the submitted mapping (A ends up as C, never as B). Matching every
+ * oldValue in one combined alternation against the ORIGINAL string avoids this: every match is
+ * found in pre-existing text, never in another replacement's output. Longest oldValue first in
+ * the alternation, so a multi-word entry (e.g. "game move") wins over a shorter one that's also
+ * one of its words (e.g. "move") when both could match at the same position. */
 export function applyMappingToProse(prose: string, mapping: readonly MappingEntry[]): string {
-  let draft = prose
-  for (const { oldValue, newValue } of mapping) {
-    const pattern = new RegExp(`\\b${escapeForRegExp(oldValue)}\\b`, "gi")
-    draft = draft.replace(pattern, (matched) => matchCase(matched, newValue))
-  }
-  return draft
+  if (mapping.length === 0) return prose
+  const byLength = [...mapping].sort((a, b) => b.oldValue.length - a.oldValue.length)
+  const pattern = new RegExp(`\\b(${byLength.map((m) => escapeForRegExp(m.oldValue)).join("|")})\\b`, "gi")
+  return prose.replace(pattern, (matched) => {
+    const entry = byLength.find((m) => m.oldValue.toLowerCase() === matched.toLowerCase())
+    return entry === undefined ? matched : matchCase(matched, entry.newValue)
+  })
 }

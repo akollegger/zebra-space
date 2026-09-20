@@ -86,7 +86,10 @@ export async function judgeSubstitution(
 }
 
 export interface JudgeSubstitutionMajorityResult {
-  /** undefined only when every vote's call failed — see `error` in that case. */
+  /** undefined when every vote's call failed, OR when the successful votes tie with no strict
+   * majority (possible when a failed vote leaves an even-sized pool, e.g. one failure out of
+   * the default 3 leaving a 1-1 split) — see `error` in either case. Never silently resolved to
+   * `false`. */
   readonly wellFormed: boolean | undefined
   /** Issues from the votes that agree with the majority verdict, deduplicated. */
   readonly issues: readonly string[]
@@ -122,6 +125,23 @@ export async function judgeSubstitutionMajority(
   }
 
   const trueVotes = successful.filter((r) => r.judgment.wellFormed).length
+  const votes = successful.map((r) => ({ wellFormed: r.judgment.wellFormed, issues: r.judgment.issues }))
+
+  // A tie (even pool, exactly half true) has no strict majority — found live via review: with
+  // the default 3 votes, one failed call leaves a 2-vote pool that can split 1-1, and
+  // `trueVotes > successful.length / 2` would silently resolve that to `false`, misreporting a
+  // genuine tie as a negative verdict. Report indeterminate instead of guessing.
+  if (successful.length % 2 === 0 && trueVotes * 2 === successful.length) {
+    return {
+      wellFormed: undefined,
+      issues: [],
+      costUsd,
+      votes,
+      ok: false,
+      error: `no strict majority: ${trueVotes}/${successful.length} votes said well-formed (a tie)`,
+    }
+  }
+
   const wellFormed = trueVotes > successful.length / 2
   const agreeing = successful.filter((r) => r.judgment.wellFormed === wellFormed)
   const issues = [...new Set(agreeing.flatMap((r) => r.judgment.issues))]
@@ -130,7 +150,7 @@ export async function judgeSubstitutionMajority(
     wellFormed,
     issues,
     costUsd,
-    votes: successful.map((r) => ({ wellFormed: r.judgment.wellFormed, issues: r.judgment.issues })),
+    votes,
     ok: true,
   }
 }

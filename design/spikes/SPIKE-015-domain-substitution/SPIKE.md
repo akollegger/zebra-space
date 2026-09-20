@@ -1,7 +1,7 @@
 ---
 id: SPIKE-015
 title: Domain Substitution as a Cheaper, Verifiable Generation Task
-status: in-progress
+status: done
 rfcs: [RFC-001]
 created: 2026-09-18
 ---
@@ -757,7 +757,5 @@ reproduced here):
    already-known-correct `.mzn`; a dedicated seed `.mzn` for PZL-0004 that fold-matches its full
    names) remain open, not yet attempted.
 
-Status: core research question answered; remaining gaps are known and characterized, not
-blocking.
-
-Status: in-progress.
+Status: done — core research question answered; remaining gaps (listed above) are known and
+characterized, not blocking.

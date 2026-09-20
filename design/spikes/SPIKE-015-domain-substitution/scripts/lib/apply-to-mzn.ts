@@ -47,22 +47,32 @@ export interface EnumApplyResult {
 }
 
 /** Applies mapping to the .mzn's enum members by fold-matching each oldValue against every
- * declared enum member, requiring EXACTLY ONE match, then rewriting that member EVERYWHERE in
- * the file (not just the enum declaration line — a constraint elsewhere references the same
- * identifier, e.g. `color[1] = OldMember;`, and leaving those un-renamed breaks compilation). A
- * .mzn with no enum declarations at all (e.g. PZL-0007, whose domain is plain int digits) skips
- * every entry with reason "no enum declarations in this .mzn". */
+ * declared enum member, requiring EXACTLY ONE match, then rewriting every matched member
+ * EVERYWHERE in the file (not just the enum declaration line — a constraint elsewhere
+ * references the same identifier, e.g. `color[1] = OldMember;`, and leaving those un-renamed
+ * breaks compilation) in ONE combined pass over the ORIGINAL text. A .mzn with no enum
+ * declarations at all (e.g. PZL-0007, whose domain is plain int digits) skips every entry with
+ * reason "no enum declarations in this .mzn".
+ *
+ * Single-pass, not sequential — found live via review: applying each mapping entry as its own
+ * separate `.replace()` call, one after another against an accumulating draft, means a later
+ * entry can match text a PRIOR entry just wrote (a cyclic/overlapping mapping like A->B, B->C
+ * would rewrite every A to B, then that same now-B text to C, silently producing a MiniZinc
+ * model that no longer matches the mapping shown to the critic). Collecting every real-member ->
+ * replacement pair first, then rewriting all of them in one combined regex pass over the
+ * ORIGINAL `mzn` string, makes every replacement see only pre-existing text, never another
+ * replacement's output. */
 export function applyMappingToMzn(mzn: string, mapping: readonly MappingEntry[]): EnumApplyResult {
   const members = declaredEnumMembers(mzn)
-  let draft = mzn
-  let applied = 0
   const skipped: EnumApplySkip[] = []
+  const replacements = new Map<string, string>()
+  let applied = 0
 
   if (members.length === 0) {
     for (const { oldValue, newValue } of mapping) {
       skipped.push({ oldValue, newValue, reason: "no enum declarations in this .mzn" })
     }
-    return { mzn: draft, applied, skipped }
+    return { mzn, applied, skipped }
   }
 
   for (const { oldValue, newValue } of mapping) {
@@ -78,12 +88,14 @@ export function applyMappingToMzn(mzn: string, mapping: readonly MappingEntry[])
       continue
     }
 
-    const realMember = matches[0]!
-    const replacement = sanitizeIdentifier(newValue)
-    const boundary = new RegExp(`\\b${escapeRegExp(realMember)}\\b`, "g")
-    draft = draft.replace(boundary, replacement)
+    replacements.set(matches[0]!, sanitizeIdentifier(newValue))
     applied += 1
   }
+
+  if (replacements.size === 0) return { mzn, applied, skipped }
+
+  const pattern = new RegExp(`\\b(${[...replacements.keys()].map(escapeRegExp).join("|")})\\b`, "g")
+  const draft = mzn.replace(pattern, (matched) => replacements.get(matched) ?? matched)
 
   return { mzn: draft, applied, skipped }
 }

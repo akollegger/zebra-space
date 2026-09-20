@@ -55,6 +55,18 @@ async function testApplyMappingToProse() {
   const wordBoundaryResult = applyMappingToProse(wordBoundaryProse, [{ oldValue: "Red", newValue: "Orange" }])
   check("unrelated word containing the old value as a substring is untouched", wordBoundaryResult.includes("numbered 1 to 3"), wordBoundaryResult)
   check("the real standalone occurrence is still replaced", wordBoundaryResult.includes("The Orange House is first."), wordBoundaryResult)
+
+  // Found via code review: applying each mapping entry as its own sequential .replace() means a
+  // later entry can match text an EARLIER entry just wrote. A cyclic mapping (A->B, B->C) would
+  // then replace every A with B, then that same now-B text with C, silently corrupting A to C
+  // instead of B. A single combined pass over the original text avoids this.
+  const cyclicProse = "The Blue house is next to the Red house."
+  const cyclicResult = applyMappingToProse(cyclicProse, [
+    { oldValue: "Blue", newValue: "Red" },
+    { oldValue: "Red", newValue: "Green" },
+  ])
+  check("cyclic mapping: Blue becomes Red, not double-substituted to Green", cyclicResult.includes("The Red house"), cyclicResult)
+  check("cyclic mapping: Red becomes Green", cyclicResult.includes("the Green house."), cyclicResult)
 }
 
 async function testApplyMappingToMznAndSolve() {
@@ -79,6 +91,19 @@ async function testApplyMappingToMznAndSolve() {
     check("color[2] renamed Red->Crimson", color[1]?.e === "Crimson", JSON.stringify(color))
     check("color[3] renamed Green->Olive", color[2]?.e === "Olive", JSON.stringify(color))
   }
+
+  // Found via code review: a cyclic/overlapping mapping (Blue->Red, Red->Green) applied as
+  // separate sequential .replace() calls would rewrite every Blue to Red, then that same
+  // now-Red text to Green — silently producing a model that doesn't match the submitted
+  // mapping. A single combined pass over the original enum members avoids this.
+  const cyclicMapping = [
+    { oldValue: "Blue", newValue: "Red" },
+    { oldValue: "Red", newValue: "Green" },
+  ]
+  const cyclic = applyMappingToMzn(mzn, cyclicMapping)
+  check("cyclic mapping: both entries applied", cyclic.applied === 2, `applied=${cyclic.applied}`)
+  check("cyclic mapping: nothing skipped", cyclic.skipped.length === 0, JSON.stringify(cyclic.skipped))
+  check("cyclic mapping: Blue enum member became Red, not double-substituted to Green", /enum COLOR = \{Red, Green,/.test(cyclic.mzn), cyclic.mzn)
 }
 
 async function testApplyMappingToMznNoEnums() {

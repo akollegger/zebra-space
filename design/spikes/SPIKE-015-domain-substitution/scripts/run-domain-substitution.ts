@@ -44,6 +44,10 @@ import type { SolveResult, SolverError } from "../../../../src/solver/types.ts"
 const MODEL = process.env.MODEL ?? "openai/gpt-4o-mini"
 const JUDGE_MODEL = process.env.JUDGE_MODEL ?? "z-ai/glm-5.3-flash"
 const REPS = Number(process.env.REPS ?? 3)
+if (!Number.isInteger(REPS) || REPS <= 0) {
+  console.error(`REPS must be a positive integer, got ${JSON.stringify(process.env.REPS)} (parsed as ${REPS})`)
+  process.exit(1)
+}
 
 // PZL-0007 deliberately excluded — no enum declarations at all (see SPIKE.md §2 step 1 / the
 // smoke test's testApplyMappingToMznNoEnums), not a valid seed for this variant.
@@ -134,10 +138,18 @@ async function runOne(puzzleId: string, prose: string, seedMzn: string): Promise
 
   const substitutedProse = applyMappingToProse(prose, proposal.mapping)
   const { mzn: substitutedMzn, applied, skipped } = applyMappingToMzn(seedMzn, proposal.mapping)
-  if (applied === 0) {
+  // ANY skip, not just a total one, is treated as an apply failure — found via review: a
+  // partial skip (some mapping entries applied, others not) would previously fall through and
+  // get solved/judged anyway, comparing a fully-substituted prose against a PARTIALLY-
+  // substituted .mzn (stale old enum members left alongside the new ones), an internally
+  // inconsistent pair that could still be judged VERIFIED despite not reflecting the mapping.
+  if (skipped.length > 0) {
     return {
-      outcome: "MZN_APPLY_TOTAL_FAILURE",
-      detail: "no mapping entries applied to the seed .mzn",
+      outcome: applied === 0 ? "MZN_APPLY_TOTAL_FAILURE" : "MZN_APPLY_PARTIAL_FAILURE",
+      detail:
+        applied === 0
+          ? "no mapping entries applied to the seed .mzn"
+          : `${skipped.length}/${proposal.mapping.length} mapping entries skipped — prose and .mzn would be inconsistent`,
       mappingCostUsd: mapped.costUsd,
       domainMatchReason: match.reason,
       mznApplied: applied,
@@ -219,7 +231,7 @@ function computeFunnel(reps: readonly RepOutcome[]): Funnel {
   const noGroundTruth = reps.filter((r) => r.outcome === "NO_GROUND_TRUTH")
   const attempted = reps.filter((r) => r.outcome !== "NO_GROUND_TRUTH")
   const domainMatched = attempted.filter((r) => r.outcome !== "MAPPING_CALL_FAILED" && r.outcome !== "DOMAIN_MATCH_FAILED")
-  const mznApplied = domainMatched.filter((r) => r.outcome !== "MZN_APPLY_TOTAL_FAILURE")
+  const mznApplied = domainMatched.filter((r) => r.outcome !== "MZN_APPLY_TOTAL_FAILURE" && r.outcome !== "MZN_APPLY_PARTIAL_FAILURE")
   const solvedUniquely = mznApplied.filter((r) => r.outcome !== "SUBSTITUTED_MZN_SOLVE_ERROR" && r.outcome !== "SUBSTITUTED_MZN_NOT_UNIQUE")
   const judged = solvedUniquely.filter((r) => r.outcome !== "JUDGE_CALL_FAILED")
   const wellFormed = judged.filter((r) => r.outcome === "VERIFIED")
