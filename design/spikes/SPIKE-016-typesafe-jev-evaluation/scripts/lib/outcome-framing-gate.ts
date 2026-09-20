@@ -11,6 +11,7 @@
 // framing-classification accuracy against the answer key's `outcome` field, never as
 // "Jev detects solvability."
 
+import type { Usage } from "@typesafe-ai/sdk"
 import { type AskFn, ask } from "./jev-client.ts"
 
 /** grader.ts's OutcomeClass, restated here rather than imported, since a missing `outcome` field
@@ -33,6 +34,8 @@ export interface OutcomeFramingResult {
   readonly confidence: number | undefined
   readonly probabilities: Readonly<Record<OutcomeClass, number>> | undefined
   readonly latencyMs: number
+  /** Token usage for this call (see pairwise-equivalence.ts's EquivalenceVerdict.usage doc). */
+  readonly usage: Usage | undefined
   readonly error?: string
 }
 
@@ -41,8 +44,8 @@ export async function classifyOutcomeFraming(puzzleId: string, prose: string, ex
     framing: { type: "choice", instructions: "How is this puzzle's prose framed — what kind of answer is it actually asking for?", criteria: FRAMING_CRITERIA },
   })
   if (!response.ok) {
-    return { puzzleId, expected, predicted: undefined, confidence: undefined, probabilities: undefined, latencyMs: response.latencyMs, error: response.error }
+    return { puzzleId, expected, predicted: undefined, confidence: undefined, probabilities: undefined, usage: undefined, latencyMs: response.latencyMs, error: response.error }
   }
   const { choice, confidence, probabilities } = response.result.answers.framing
-  return { puzzleId, expected, predicted: choice, confidence, probabilities, latencyMs: response.latencyMs }
+  return { puzzleId, expected, predicted: choice, confidence, probabilities, usage: response.result.usage, latencyMs: response.latencyMs }
 }

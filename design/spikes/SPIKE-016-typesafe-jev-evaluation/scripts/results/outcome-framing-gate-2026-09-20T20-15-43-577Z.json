@@ -1,0 +1,759 @@
+{
+  "summary": {
+    "total": 39,
+    "scored": 39,
+    "errors": 0,
+    "overallAccuracy": 0.5897435897435898,
+    "perClass": {
+      "determinate": {
+        "correct": 15,
+        "total": 15
+      },
+      "non-problem": {
+        "correct": 2,
+        "total": 7
+      },
+      "cop": {
+        "correct": 6,
+        "total": 6
+      },
+      "ambiguous": {
+        "correct": 0,
+        "total": 5
+      },
+      "subjective": {
+        "correct": 0,
+        "total": 6
+      }
+    },
+    "confusion": {
+      "determinate": {
+        "determinate": 15
+      },
+      "non-problem": {
+        "non-problem": 2,
+        "determinate": 1,
+        "ambiguous": 4
+      },
+      "cop": {
+        "cop": 6
+      },
+      "ambiguous": {
+        "determinate": 5
+      },
+      "subjective": {
+        "determinate": 5,
+        "ambiguous": 1
+      }
+    },
+    "totalLatencyMs": 11323.034838999998,
+    "totalUsage": {
+      "input_tokens": 25782,
+      "output_tokens": 2445
+    }
+  },
+  "results": [
+    {
+      "puzzleId": "PZL-0001",
+      "expected": "determinate",
+      "predicted": "determinate",
+      "confidence": 1,
+      "probabilities": {
+        "non-problem": 0,
+        "ambiguous": 0,
+        "cop": 0,
+        "subjective": 0,
+        "determinate": 1
+      },
+      "usage": {
+        "input_tokens": 743,
+        "output_tokens": 63
+      },
+      "latencyMs": 984.599438
+    },
+    {
+      "puzzleId": "PZL-0002",
+      "expected": "determinate",
+      "predicted": "determinate",
+      "confidence": 1,
+      "probabilities": {
+        "ambiguous": 0,
+        "cop": 0,
+        "determinate": 1,
+        "subjective": 0,
+        "non-problem": 0
+      },
+      "usage": {
+        "input_tokens": 653,
+        "output_tokens": 63
+      },
+      "latencyMs": 346.33981100000005
+    },
+    {
+      "puzzleId": "PZL-0003",
+      "expected": "determinate",
+      "predicted": "determinate",
+      "confidence": 0.84,
+      "probabilities": {
+        "ambiguous": 0,
+        "cop": 0.12,
+        "non-problem": 0,
+        "subjective": 0,
+        "determinate": 0.88
+      },
+      "usage": {
+        "input_tokens": 594,
+        "output_tokens": 63
+      },
+      "latencyMs": 431.2896619999999
+    },
+    {
+      "puzzleId": "PZL-0004",
+      "expected": "determinate",
+      "predicted": "determinate",
+      "confidence": 0.98,
+      "probabilities": {
+        "ambiguous": 0,
+        "determinate": 0.99,
+        "subjective": 0,
+        "cop": 0,
+        "non-problem": 0.01
+      },
+      "usage": {
+        "input_tokens": 692,
+        "output_tokens": 63
+      },
+      "latencyMs": 260.2968799999999
+    },
+    {
+      "puzzleId": "PZL-0005",
+      "expected": "determinate",
+      "predicted": "determinate",
+      "confidence": 0.86,
+      "probabilities": {
+        "ambiguous": 0.1,
+        "non-problem": 0.02,
+        "cop": 0,
+        "determinate": 0.88,
+        "subjective": 0
+      },
+      "usage": {
+        "input_tokens": 718,
+        "output_tokens": 63
+      },
+      "latencyMs": 237.38237100000015
+    },
+    {
+      "puzzleId": "PZL-0006",
+      "expected": "determinate",
+      "predicted": "determinate",
+      "confidence": 0.98,
+      "probabilities": {
+        "non-problem": 0.01,
+        "cop": 0,
+        "subjective": 0,
+        "determinate": 0.98,
+        "ambiguous": 0.01
+      },
+      "usage": {
+        "input_tokens": 647,
+        "output_tokens": 63
+      },
+      "latencyMs": 236.11240699999962
+    },
+    {
+      "puzzleId": "PZL-0007",
+      "expected": "determinate",
+      "predicted": "determinate",
+      "confidence": 1,
+      "probabilities": {
+        "ambiguous": 0,
+        "cop": 0,
+        "subjective": 0,
+        "determinate": 1,
+        "non-problem": 0
+      },
+      "usage": {
+        "input_tokens": 637,
+        "output_tokens": 63
+      },
+      "latencyMs": 267.6923019999999
+    },
+    {
+      "puzzleId": "PZL-0008",
+      "expected": "determinate",
+      "predicted": "determinate",
+      "confidence": 0.99,
+      "probabilities": {
+        "cop": 0,
+        "non-problem": 0,
+        "ambiguous": 0,
+        "determinate": 1,
+        "subjective": 0
+      },
+      "usage": {
+        "input_tokens": 637,
+        "output_tokens": 63
+      },
+      "latencyMs": 270.33108300000004
+    },
+    {
+      "puzzleId": "PZL-0009",
+      "expected": "determinate",
+      "predicted": "determinate",
+      "confidence": 1,
+      "probabilities": {
+        "non-problem": 0,
+        "determinate": 1,
+        "ambiguous": 0,
+        "cop": 0,
+        "subjective": 0
+      },
+      "usage": {
+        "input_tokens": 654,
+        "output_tokens": 63
+      },
+      "latencyMs": 244.20897799999966
+    },
+    {
+      "puzzleId": "PZL-0010",
+      "expected": "determinate",
+      "predicted": "determinate",
+      "confidence": 1,
+      "probabilities": {
+        "cop": 0,
+        "non-problem": 0,
+        "ambiguous": 0,
+        "determinate": 1,
+        "subjective": 0
+      },
+      "usage": {
+        "input_tokens": 790,
+        "output_tokens": 63
+      },
+      "latencyMs": 276.7213270000002
+    },
+    {
+      "puzzleId": "PZL-0011",
+      "expected": "determinate",
+      "predicted": "determinate",
+      "confidence": 1,
+      "probabilities": {
+        "non-problem": 0,
+        "subjective": 0,
+        "determinate": 1,
+        "cop": 0,
+        "ambiguous": 0
+      },
+      "usage": {
+        "input_tokens": 784,
+        "output_tokens": 63
+      },
+      "latencyMs": 236.9250550000006
+    },
+    {
+      "puzzleId": "PZL-0012",
+      "expected": "determinate",
+      "predicted": "determinate",
+      "confidence": 0.89,
+      "probabilities": {
+        "non-problem": 0,
+        "ambiguous": 0.08,
+        "determinate": 0.92,
+        "cop": 0,
+        "subjective": 0
+      },
+      "usage": {
+        "input_tokens": 642,
+        "output_tokens": 63
+      },
+      "latencyMs": 288.476592
+    },
+    {
+      "puzzleId": "PZL-0013",
+      "expected": "determinate",
+      "predicted": "determinate",
+      "confidence": 0.8,
+      "probabilities": {
+        "cop": 0.06,
+        "non-problem": 0,
+        "ambiguous": 0.09,
+        "determinate": 0.84,
+        "subjective": 0.01
+      },
+      "usage": {
+        "input_tokens": 693,
+        "output_tokens": 63
+      },
+      "latencyMs": 257.59723099999974
+    },
+    {
+      "puzzleId": "PZL-0014",
+      "expected": "determinate",
+      "predicted": "determinate",
+      "confidence": 0.73,
+      "probabilities": {
+        "cop": 0,
+        "subjective": 0,
+        "determinate": 0.78,
+        "ambiguous": 0.21,
+        "non-problem": 0.01
+      },
+      "usage": {
+        "input_tokens": 631,
+        "output_tokens": 63
+      },
+      "latencyMs": 258.3631740000001
+    },
+    {
+      "puzzleId": "PZL-0015",
+      "expected": "non-problem",
+      "predicted": "non-problem",
+      "confidence": 0.75,
+      "probabilities": {
+        "cop": 0,
+        "determinate": 0.19,
+        "ambiguous": 0.01,
+        "non-problem": 0.8,
+        "subjective": 0
+      },
+      "usage": {
+        "input_tokens": 560,
+        "output_tokens": 63
+      },
+      "latencyMs": 238.5208849999999
+    },
+    {
+      "puzzleId": "PZL-0016",
+      "expected": "non-problem",
+      "predicted": "determinate",
+      "confidence": 0.65,
+      "probabilities": {
+        "cop": 0,
+        "determinate": 0.72,
+        "ambiguous": 0.09,
+        "non-problem": 0.19,
+        "subjective": 0
+      },
+      "usage": {
+        "input_tokens": 629,
+        "output_tokens": 63
+      },
+      "latencyMs": 233.9960719999999
+    },
+    {
+      "puzzleId": "PZL-0017",
+      "expected": "non-problem",
+      "predicted": "ambiguous",
+      "confidence": 0.84,
+      "probabilities": {
+        "ambiguous": 0.87,
+        "cop": 0,
+        "non-problem": 0.01,
+        "subjective": 0,
+        "determinate": 0.12
+      },
+      "usage": {
+        "input_tokens": 622,
+        "output_tokens": 63
+      },
+      "latencyMs": 286.74593599999935
+    },
+    {
+      "puzzleId": "PZL-0018",
+      "expected": "non-problem",
+      "predicted": "non-problem",
+      "confidence": 0.95,
+      "probabilities": {
+        "determinate": 0.01,
+        "subjective": 0.01,
+        "ambiguous": 0.02,
+        "cop": 0,
+        "non-problem": 0.96
+      },
+      "usage": {
+        "input_tokens": 603,
+        "output_tokens": 63
+      },
+      "latencyMs": 222.5578489999998
+    },
+    {
+      "puzzleId": "PZL-0019",
+      "expected": "non-problem",
+      "predicted": "ambiguous",
+      "confidence": 0.54,
+      "probabilities": {
+        "cop": 0,
+        "subjective": 0,
+        "non-problem": 0.07,
+        "ambiguous": 0.63,
+        "determinate": 0.3
+      },
+      "usage": {
+        "input_tokens": 674,
+        "output_tokens": 63
+      },
+      "latencyMs": 204.7840040000001
+    },
+    {
+      "puzzleId": "PZL-0020",
+      "expected": "non-problem",
+      "predicted": "ambiguous",
+      "confidence": 0.33,
+      "probabilities": {
+        "subjective": 0.11,
+        "determinate": 0.14,
+        "cop": 0.03,
+        "non-problem": 0.26,
+        "ambiguous": 0.46
+      },
+      "usage": {
+        "input_tokens": 615,
+        "output_tokens": 63
+      },
+      "latencyMs": 207.381985
+    },
+    {
+      "puzzleId": "PZL-0021",
+      "expected": "non-problem",
+      "predicted": "ambiguous",
+      "confidence": 0.41,
+      "probabilities": {
+        "non-problem": 0.24,
+        "cop": 0,
+        "subjective": 0,
+        "determinate": 0.23,
+        "ambiguous": 0.53
+      },
+      "usage": {
+        "input_tokens": 613,
+        "output_tokens": 63
+      },
+      "latencyMs": 208.5793330000006
+    },
+    {
+      "puzzleId": "PZL-0022",
+      "expected": "cop",
+      "predicted": "cop",
+      "confidence": 1,
+      "probabilities": {
+        "non-problem": 0,
+        "subjective": 0,
+        "determinate": 0,
+        "ambiguous": 0,
+        "cop": 1
+      },
+      "usage": {
+        "input_tokens": 685,
+        "output_tokens": 61
+      },
+      "latencyMs": 254.798135
+    },
+    {
+      "puzzleId": "PZL-0023",
+      "expected": "cop",
+      "predicted": "cop",
+      "confidence": 1,
+      "probabilities": {
+        "subjective": 0,
+        "ambiguous": 0,
+        "non-problem": 0,
+        "cop": 1,
+        "determinate": 0
+      },
+      "usage": {
+        "input_tokens": 702,
+        "output_tokens": 61
+      },
+      "latencyMs": 336.45270100000016
+    },
+    {
+      "puzzleId": "PZL-0024",
+      "expected": "cop",
+      "predicted": "cop",
+      "confidence": 1,
+      "probabilities": {
+        "subjective": 0,
+        "cop": 1,
+        "non-problem": 0,
+        "ambiguous": 0,
+        "determinate": 0
+      },
+      "usage": {
+        "input_tokens": 671,
+        "output_tokens": 61
+      },
+      "latencyMs": 283.44882699999926
+    },
+    {
+      "puzzleId": "PZL-0025",
+      "expected": "cop",
+      "predicted": "cop",
+      "confidence": 0.99,
+      "probabilities": {
+        "non-problem": 0,
+        "determinate": 0.01,
+        "ambiguous": 0,
+        "cop": 0.99,
+        "subjective": 0
+      },
+      "usage": {
+        "input_tokens": 610,
+        "output_tokens": 61
+      },
+      "latencyMs": 266.31025800000043
+    },
+    {
+      "puzzleId": "PZL-0026",
+      "expected": "cop",
+      "predicted": "cop",
+      "confidence": 0.99,
+      "probabilities": {
+        "determinate": 0,
+        "ambiguous": 0,
+        "cop": 1,
+        "non-problem": 0,
+        "subjective": 0
+      },
+      "usage": {
+        "input_tokens": 720,
+        "output_tokens": 61
+      },
+      "latencyMs": 235.21683400000074
+    },
+    {
+      "puzzleId": "PZL-0027",
+      "expected": "cop",
+      "predicted": "cop",
+      "confidence": 0.99,
+      "probabilities": {
+        "non-problem": 0,
+        "subjective": 0,
+        "cop": 1,
+        "ambiguous": 0,
+        "determinate": 0
+      },
+      "usage": {
+        "input_tokens": 701,
+        "output_tokens": 61
+      },
+      "latencyMs": 262.2083530000009
+    },
+    {
+      "puzzleId": "PZL-0028",
+      "expected": "ambiguous",
+      "predicted": "determinate",
+      "confidence": 0.61,
+      "probabilities": {
+        "non-problem": 0.04,
+        "cop": 0,
+        "subjective": 0,
+        "determinate": 0.69,
+        "ambiguous": 0.27
+      },
+      "usage": {
+        "input_tokens": 628,
+        "output_tokens": 63
+      },
+      "latencyMs": 266.3750769999988
+    },
+    {
+      "puzzleId": "PZL-0029",
+      "expected": "ambiguous",
+      "predicted": "determinate",
+      "confidence": 0.92,
+      "probabilities": {
+        "non-problem": 0,
+        "ambiguous": 0.06,
+        "determinate": 0.9400000000000001,
+        "cop": 0,
+        "subjective": 0
+      },
+      "usage": {
+        "input_tokens": 661,
+        "output_tokens": 63
+      },
+      "latencyMs": 384.7785619999995
+    },
+    {
+      "puzzleId": "PZL-0030",
+      "expected": "ambiguous",
+      "predicted": "determinate",
+      "confidence": 0.93,
+      "probabilities": {
+        "non-problem": 0,
+        "determinate": 0.95,
+        "ambiguous": 0.05,
+        "cop": 0,
+        "subjective": 0
+      },
+      "usage": {
+        "input_tokens": 647,
+        "output_tokens": 63
+      },
+      "latencyMs": 234.77099999999882
+    },
+    {
+      "puzzleId": "PZL-0031",
+      "expected": "ambiguous",
+      "predicted": "determinate",
+      "confidence": 0.98,
+      "probabilities": {
+        "non-problem": 0,
+        "subjective": 0,
+        "determinate": 0.99,
+        "cop": 0,
+        "ambiguous": 0.01
+      },
+      "usage": {
+        "input_tokens": 639,
+        "output_tokens": 63
+      },
+      "latencyMs": 292.30105900000126
+    },
+    {
+      "puzzleId": "PZL-0032",
+      "expected": "ambiguous",
+      "predicted": "determinate",
+      "confidence": 0.99,
+      "probabilities": {
+        "ambiguous": 0,
+        "cop": 0,
+        "non-problem": 0,
+        "subjective": 0,
+        "determinate": 1
+      },
+      "usage": {
+        "input_tokens": 645,
+        "output_tokens": 63
+      },
+      "latencyMs": 253.96768300000076
+    },
+    {
+      "puzzleId": "PZL-0033",
+      "expected": "subjective",
+      "predicted": "determinate",
+      "confidence": 0.99,
+      "probabilities": {
+        "ambiguous": 0,
+        "subjective": 0,
+        "cop": 0,
+        "determinate": 1,
+        "non-problem": 0
+      },
+      "usage": {
+        "input_tokens": 647,
+        "output_tokens": 63
+      },
+      "latencyMs": 268.6983169999985
+    },
+    {
+      "puzzleId": "PZL-0034",
+      "expected": "subjective",
+      "predicted": "determinate",
+      "confidence": 0.85,
+      "probabilities": {
+        "non-problem": 0.01,
+        "cop": 0,
+        "subjective": 0,
+        "determinate": 0.88,
+        "ambiguous": 0.11
+      },
+      "usage": {
+        "input_tokens": 649,
+        "output_tokens": 63
+      },
+      "latencyMs": 219.46501700000044
+    },
+    {
+      "puzzleId": "PZL-0035",
+      "expected": "subjective",
+      "predicted": "ambiguous",
+      "confidence": 0.39,
+      "probabilities": {
+        "ambiguous": 0.52,
+        "cop": 0,
+        "determinate": 0.42,
+        "non-problem": 0.06,
+        "subjective": 0
+      },
+      "usage": {
+        "input_tokens": 639,
+        "output_tokens": 63
+      },
+      "latencyMs": 484.0853210000005
+    },
+    {
+      "puzzleId": "PZL-0036",
+      "expected": "subjective",
+      "predicted": "determinate",
+      "confidence": 0.69,
+      "probabilities": {
+        "subjective": 0,
+        "cop": 0,
+        "non-problem": 0.02,
+        "determinate": 0.75,
+        "ambiguous": 0.23
+      },
+      "usage": {
+        "input_tokens": 641,
+        "output_tokens": 63
+      },
+      "latencyMs": 338.00359899999967
+    },
+    {
+      "puzzleId": "PZL-0037",
+      "expected": "subjective",
+      "predicted": "determinate",
+      "confidence": 0.84,
+      "probabilities": {
+        "ambiguous": 0.11,
+        "subjective": 0,
+        "determinate": 0.88,
+        "cop": 0,
+        "non-problem": 0.01
+      },
+      "usage": {
+        "input_tokens": 691,
+        "output_tokens": 63
+      },
+      "latencyMs": 202.41229799999928
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "expected": "determinate",
+      "predicted": "determinate",
+      "confidence": 0.8,
+      "probabilities": {
+        "non-problem": 0.04,
+        "subjective": 0,
+        "determinate": 0.85,
+        "ambiguous": 0.11,
+        "cop": 0
+      },
+      "usage": {
+        "input_tokens": 700,
+        "output_tokens": 63
+      },
+      "latencyMs": 316.21141799999896
+    },
+    {
+      "puzzleId": "PZL-0039",
+      "expected": "subjective",
+      "predicted": "determinate",
+      "confidence": 0.86,
+      "probabilities": {
+        "determinate": 0.89,
+        "subjective": 0,
+        "non-problem": 0.01,
+        "cop": 0,
+        "ambiguous": 0.1
+      },
+      "usage": {
+        "input_tokens": 675,
+        "output_tokens": 63
+      },
+      "latencyMs": 224.62800500000048
+    }
+  ]
+}

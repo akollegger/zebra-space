@@ -2,6 +2,8 @@
 //   design/spikes/SPIKE-016-typesafe-jev-evaluation/scripts/run-pairwise-equivalence.ts
 
 import { readFile } from "node:fs/promises"
+import { stringsMatch } from "../../../../src/eval/aliases.ts"
+import { totalUsage } from "./lib/jev-client.ts"
 import { type EquivalencePair, type EquivalenceVerdict, judgeEquivalence } from "./lib/pairwise-equivalence.ts"
 
 const ROOT = new URL("../../../../", import.meta.url)
@@ -30,7 +32,13 @@ const NAMED_MISS_PAIRS: readonly EquivalencePair[] = [
  * that share a lowercase 2-letter prefix (the closest lexical neighbors in the catalog, and so
  * the pairs most likely to tempt a false merge) rather than a random sample across unrelated
  * words, which would trivially all read "no match" and prove nothing. Capped to keep the live
- * call count small for a first-contact spike. */
+ * call count small for a first-contact spike.
+ *
+ * Filters out any pair the project's OWN case/whitespace/pluralization fold (`stringsMatch`,
+ * ADR-011) already considers the same value (e.g. "Dog"/"dog") before adding it — Copilot review
+ * (PR #37) found the prefix-bucketing let one such pair through mislabeled `expected: false`,
+ * when by this project's own definition of "distinct value" it's a true positive, not a
+ * negative control. */
 async function loadNegativeControlPairs(cap = 20): Promise<EquivalencePair[]> {
   const raw = JSON.parse(await readFile(new URL("eval/answer-keys.json", ROOT), "utf8")) as Record<string, unknown>
   const { $comment: _ignored, ...entries } = raw
@@ -53,7 +61,10 @@ async function loadNegativeControlPairs(cap = 20): Promise<EquivalencePair[]> {
   for (const bucket of byPrefix.values()) {
     for (let i = 0; i < bucket.length && pairs.length < cap; i++) {
       for (let j = i + 1; j < bucket.length && pairs.length < cap; j++) {
-        pairs.push({ a: bucket[i]!, b: bucket[j]!, contextHint: "distinct values from this project's puzzle answer keys", source: "negative-control", expected: false })
+        const a = bucket[i]!
+        const b = bucket[j]!
+        if (stringsMatch(a, b)) continue
+        pairs.push({ a, b, contextHint: "distinct values from this project's puzzle answer keys", source: "negative-control", expected: false })
       }
     }
   }
@@ -84,6 +95,7 @@ async function main(): Promise<void> {
     namedMiss: bySource("named-miss").map((r) => ({ a: r.pair.a, b: r.pair.b, jevMatch: r.jevMatch, noul: r.noul })),
     negativeControl: accuracy(bySource("negative-control")),
     totalLatencyMs: results.reduce((s, r) => s + r.latencyMs, 0),
+    totalUsage: totalUsage(results),
   }
   console.log("\nSummary:", JSON.stringify(summary, null, 2))
 

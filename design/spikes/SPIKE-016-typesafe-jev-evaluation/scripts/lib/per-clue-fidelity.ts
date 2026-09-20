@@ -9,7 +9,13 @@
 // pipeline, each call given only the one clue plus the specific constraint line(s) — never the
 // whole prose or the whole .mzn file.
 
+import type { Usage } from "@typesafe-ai/sdk"
 import { type AskFn, ask } from "./jev-client.ts"
+
+function sumUsage(a: Usage | undefined, b: Usage | undefined): Usage | undefined {
+  if (a === undefined && b === undefined) return undefined
+  return { input_tokens: (a?.input_tokens ?? 0) + (b?.input_tokens ?? 0), output_tokens: (a?.output_tokens ?? 0) + (b?.output_tokens ?? 0) }
+}
 
 /** Extracts each top-level `constraint ...;` statement from a raw .mzn source, in source order.
  * Deliberately simple (MiniZinc statements in this project's own generated output are always
@@ -29,6 +35,9 @@ export interface ClueLocalizationResult {
   /** undefined when selectedIndices is empty — nothing to judge fidelity of. */
   readonly fidelityNoul: number | undefined
   readonly latencyMs: number
+  /** Summed token usage across both the select and judge calls (see pairwise-equivalence.ts's
+   * EquivalenceVerdict.usage doc). */
+  readonly usage: Usage | undefined
   readonly error: string | undefined
 }
 
@@ -44,7 +53,7 @@ async function selectAddressingLine(
   clue: string,
   constraintLines: readonly string[],
   askFn: AskFn,
-): Promise<{ readonly index: number | undefined; readonly confidence: number | undefined; readonly latencyMs: number; readonly error?: string }> {
+): Promise<{ readonly index: number | undefined; readonly confidence: number | undefined; readonly usage: Usage | undefined; readonly latencyMs: number; readonly error?: string }> {
   const criteria: Record<string, string> = { [NONE_LABEL]: "No constraint line addresses this clue at all." }
   constraintLines.forEach((line, i) => {
     criteria[`line${i}`] = line
@@ -59,17 +68,17 @@ async function selectAddressingLine(
       },
     },
   )
-  if (!response.ok) return { index: undefined, confidence: undefined, latencyMs: response.latencyMs, error: response.error }
+  if (!response.ok) return { index: undefined, confidence: undefined, usage: undefined, latencyMs: response.latencyMs, error: response.error }
   const { choice, confidence } = response.result.answers.addressedBy
-  if (choice === NONE_LABEL) return { index: undefined, confidence, latencyMs: response.latencyMs }
+  if (choice === NONE_LABEL) return { index: undefined, confidence, usage: response.result.usage, latencyMs: response.latencyMs }
   const index = Number(choice.replace("line", ""))
-  return { index, confidence, latencyMs: response.latencyMs }
+  return { index, confidence, usage: response.result.usage, latencyMs: response.latencyMs }
 }
 
 /** Step 2 (judge): given ONLY the clue and its selected line, does the line fully and correctly
  * capture it? Per jaggedness bullet 1 (literal reading), the boundary case is spelled out
  * explicitly rather than left implied — "fully" means every entity/relation the clue mentions. */
-async function judgeFidelity(clue: string, selectedLine: string, askFn: AskFn): Promise<{ readonly noul: number | undefined; readonly latencyMs: number; readonly error?: string }> {
+async function judgeFidelity(clue: string, selectedLine: string, askFn: AskFn): Promise<{ readonly noul: number | undefined; readonly usage: Usage | undefined; readonly latencyMs: number; readonly error?: string }> {
   const response = await askFn(
     { clue, constraintLine: selectedLine },
     {
@@ -83,17 +92,17 @@ async function judgeFidelity(clue: string, selectedLine: string, askFn: AskFn): 
       },
     },
   )
-  if (!response.ok) return { noul: undefined, latencyMs: response.latencyMs, error: response.error }
-  return { noul: response.result.answers.fullyCaptures.noul, latencyMs: response.latencyMs }
+  if (!response.ok) return { noul: undefined, usage: undefined, latencyMs: response.latencyMs, error: response.error }
+  return { noul: response.result.answers.fullyCaptures.noul, usage: response.result.usage, latencyMs: response.latencyMs }
 }
 
 export async function checkClueLocalization(clue: string, constraintLines: readonly string[], askFn: AskFn = ask): Promise<ClueLocalizationResult> {
   const selected = await selectAddressingLine(clue, constraintLines, askFn)
   if (selected.error !== undefined) {
-    return { clue, selectedIndices: [], selectConfidence: undefined, fidelityNoul: undefined, latencyMs: selected.latencyMs, error: selected.error }
+    return { clue, selectedIndices: [], selectConfidence: undefined, fidelityNoul: undefined, usage: selected.usage, latencyMs: selected.latencyMs, error: selected.error }
   }
   if (selected.index === undefined) {
-    return { clue, selectedIndices: [], selectConfidence: selected.confidence, fidelityNoul: undefined, latencyMs: selected.latencyMs, error: undefined }
+    return { clue, selectedIndices: [], selectConfidence: selected.confidence, fidelityNoul: undefined, usage: selected.usage, latencyMs: selected.latencyMs, error: undefined }
   }
   const judged = await judgeFidelity(clue, constraintLines[selected.index]!, askFn)
   return {
@@ -101,6 +110,7 @@ export async function checkClueLocalization(clue: string, constraintLines: reado
     selectedIndices: [selected.index],
     selectConfidence: selected.confidence,
     fidelityNoul: judged.noul,
+    usage: sumUsage(selected.usage, judged.usage),
     latencyMs: selected.latencyMs + judged.latencyMs,
     error: judged.error,
   }

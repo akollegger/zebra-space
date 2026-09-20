@@ -191,43 +191,106 @@ up `"Dog"` vs. `"dog"` as a same-bucket pair and labeled it `expected: false` (a
 pair) — but these are the SAME value differing only by case, not a real collision like
 `tests/eval/grader.test.ts:302`'s own collision-guard is designed to catch. Jev's `true` answer
 for that pair was actually correct; the raw 19/20 negative-control accuracy is really 20/20 once
-this one mislabeled fixture is discounted (§5.3).
+this one mislabeled fixture is discounted (§5.3). **Superseded 2026-09-20 (below): fixed at the
+source rather than discounted by hand.**
+
+**2026-09-20 — Copilot review on PR #37 found four real, independent bugs; all four fixed and
+every affected experiment re-run before this write-up.** Full detail in the fix commit; summary:
+
+1. **Sub-question 1's loader only read `entry.outcome` (top-level), never the nested
+   `entry.answer.outcome` shape most non-`determinate` entries actually use** (e.g. PZL-0015
+   through PZL-0021, PZL-0028 through PZL-0037) — every one of those silently defaulted to
+   `determinate`, which is why the first pass showed only two classes present at all. Fixed with
+   a fallback mirroring `scripts/eval-extraction.ts`'s own private `effectiveOutcomeClass`/
+   SPIKE-008's `grade.ts`'s `effectiveOutcome` (both unexported, so restated locally rather than
+   imported). **This invalidated the entire original §5.1 finding, not just its numbers** — the
+   corrected class distribution (15 determinate, 7 non-problem, 6 cop, 5 ambiguous, 6 subjective)
+   is qualitatively different from the "only two classes exist" picture the bug produced.
+2. **Sub-question 2's checker discarded `splitClues`'s `preamble` entirely**, so a global
+   constraint stated only in the puzzle's setup sentence (PZL-0038's "one animal per pen," the
+   EXACT `alldifferent(pens)` SPIKE-014 §5.4 diagnosed as silently dropped) was never checked at
+   all — the clue-5 flag the first pass reported was a real but DIFFERENT omission (the predation
+   clue), not the one this write-up originally claimed to reproduce. Fixed by checking the
+   preamble as its own item, tagged `isPreamble`, alongside the numbered clues.
+3. **`jev-client.ts` discarded `SystemOneResult.usage` entirely** — the "fraction of the cost"
+   framing sub-questions 3/4 exist to test had no persisted data to back it, and TypeSafe has not
+   published per-token pricing as of this spike (checked live), so token counts (input/output),
+   not a $ figure, are now the recorded cost proxy. Fixed by threading `usage` through every lib
+   module's result type and adding a shared `totalUsage` helper each run script's summary calls.
+4. **Sub-question 3's "hard negative" sampler let a case-only pair (`"Dog"`/`"dog"`) through**
+   as a `negative-control` — the project's own `stringsMatch` fold (ADR-011) already considers
+   that the SAME value, so labeling it `expected: false` was wrong by this project's own
+   definition of "distinct." Fixed by filtering candidate pairs through `stringsMatch` before
+   adding them.
+5. **Sub-question 4's replay loader accepted BOTH genuine majority-of-3 records (`judgeVotes`
+   present, length ≥ 2) and the project's earlier legacy single-judge result files (no
+   `judgeVotes` at all)**, silently mixing a lone frontier-model judgment in among the actual
+   3-vote verdicts this sub-question claims to compare against — 22 of the original 89 replayed
+   reps were legacy records. Fixed by requiring `judgeVotes.length >= 2`; the corrected replay
+   set is 67 reps, all genuine majority-of-3 comparisons.
+
+All five fixes verified with the existing offline smoke test (still 10/10 passing, unchanged
+behavior for anything the stub exercises) before spending anything, then every one of the four
+live sweeps was re-run in full. **The corrected numbers below replace the original ones
+throughout — this section documents that a real, substantive review caught real, substantive
+bugs, not a discrepancy to footnote.**
 
 ## 5. Findings
 
-All four sub-questions were run live against real data in one pass (39-puzzle answer-key
-catalog, 89 replayed SPIKE-015 substitution reps, 6 PZL-0010/0038 formalize-mzn drafts, 25
-pairwise-equivalence checks). Raw results: `scripts/results/{pairwise-equivalence,
-wellformed-decomposed,outcome-framing-gate,per-clue-fidelity}-2026-09-20T*.json`.
+All four sub-questions were run live against real data (39-puzzle answer-key catalog, 67
+validated majority-of-3 SPIKE-015 substitution reps, 42 preamble+clue checks across 6
+PZL-0010/0038 formalize-mzn drafts, 25 pairwise-equivalence checks), corrected and re-run once
+per the 2026-09-20 Copilot-review fixes above. Raw results (post-fix; the pre-fix files were
+deleted, not kept alongside, to avoid citing stale numbers by accident):
+`scripts/results/{pairwise-equivalence,wellformed-decomposed,outcome-framing-gate,
+per-clue-fidelity}-2026-09-20T20-1*.json`.
 
-### 5.1 Sub-question 1 — outcome-framing gate: 82% overall, but the catalog has no ambiguous/subjective/non-problem examples to test against
+### 5.1 Sub-question 1 — outcome-framing gate: 59% overall once the class-distribution bug is fixed — strong on determinate/cop, a real failure on ambiguous/subjective
 
-32/39 correct (82%) across the FULL current catalog. But `perClass`/`confusion` show the current
-`eval/answer-keys.json` has **zero puzzles labeled `ambiguous`, `subjective`, or `non-problem`** —
-every entry is `determinate` (33) or `cop` (6). `cop` scored 6/6 (100%); `determinate` scored
-26/33 (79%), with all 7 misses being Jev OVER-flagging a genuinely determinate puzzle as
-`non-problem` (2 cases: PZL-0015, PZL-0018) or `ambiguous` (5 cases: PZL-0017, PZL-0019, PZL-0020,
-PZL-0021, PZL-0035) — a real, one-directional calibration bias toward the rarer classes, not
-random noise. **This finding is incomplete by construction**: the redesigned framing gate can
-only be validated against the classes the catalog actually contains; whether it correctly
-recognizes a genuinely ambiguous/subjective/non-problem puzzle remains untested. Latency:
-11.5s total / 39 calls ≈ 294ms/call.
+Corrected run: 23/39 correct (59%), all five classes present and scored (15 determinate, 7
+non-problem, 6 cop, 5 ambiguous, 6 subjective — the catalog is NOT missing these classes, §4's
+bug was hiding them). Per class:
 
-### 5.2 Sub-question 4 — decomposed well-formedness: 71% agreement with the majority-of-3, and a directional bias
+| Class | Correct/Total |
+|---|---|
+| `determinate` | 15/15 (100%) |
+| `cop` | 6/6 (100%) |
+| `non-problem` | 2/7 (29%) |
+| `ambiguous` | 0/5 (0%) |
+| `subjective` | 0/6 (0%) |
 
-89/89 reps scored (0 errors), 71% agreement (63/89) with the recorded 3-vote majority verdict.
-Disagreements are NOT symmetric: Jev is more lenient — most disagreements are `majority=false,
-jev=true` (Jev calling something well-formed that the 3-vote frontier critic flagged), clustered
-heavily on PZL-0001 (8 of PZL-0001's 9 disagreeing reps go this direction). PZL-0001 is exactly
-the puzzle SPIKE-015's own file header cites as its motivating case-sensitivity/word-boundary bug
-example — a subtle single-word placement mismatch ("The Swedish lives in the first house" instead
-of substituting "Norwegian"→"Swede" correctly) that the frontier 3-vote critic caught but Jev's
-decomposed Nouls largely missed. This is consistent with the jaggedness doc's own "indirection"
-warning: spotting one specific misplaced word inside a 14-line paragraph is a multi-hop
-localization task, not a literal surface read. Note the confound from §4's fixture gap (no
-`mapping` available for this replay) — some of this gap may narrow with the mapping present;
-untested. Latency: 26.2s total / 89 reps ≈ 294ms/rep (3 parallel Nouls per rep, same wall-clock
-as one).
+**A real, sharp capability split, not noise**: Jev's framing classification is perfect on the two
+classes with the most textually distinctive signals (an optimization keyword for `cop`; a fully
+specified, closed clue set for `determinate`), and it FAILS COMPLETELY on `ambiguous` and
+`subjective` — the confusion matrix shows both classes' misses land almost entirely on
+`determinate` (5/5 ambiguous puzzles, 5/6 subjective puzzles predicted `determinate`), meaning
+Jev is reading these puzzles' surface completeness as evidence they're fully determinate, missing
+the interpretive gap or preference-based framing entirely. `non-problem` is a genuine middle
+case (29%, better than chance but far from reliable), with most misses landing on `ambiguous`.
+**This is a real negative finding for three of five classes**, not an artifact of a class the
+catalog happens to lack — the original "incomplete by construction, untested" framing was itself
+a symptom of the bug, not an honest hedge. Latency: 11.3s total / 39 calls ≈ 290ms/call. Token
+usage: 25,782 input / 2,445 output tokens (no $ pricing published as of this spike).
+
+### 5.2 Sub-question 4 — decomposed well-formedness: 73% agreement with a VALID majority-of-3 sample, and a directional bias
+
+Corrected run: 67 genuine majority-of-3 reps (22 legacy single-judge reps excluded per §4's fix),
+all 67 scored (0 errors), **73% agreement (49/67)** with the recorded 3-vote majority verdict —
+close to, but not the same number as, the pre-fix 71%/89, since the excluded 22 reps weren't a
+random sample (removing them shifted the rate slightly, confirming they were a real confound, not
+a rounding difference). Disagreements are NOT symmetric: Jev is more lenient — most disagreements
+are `majority=false, jev=true` (Jev calling something well-formed that the 3-vote frontier critic
+flagged), clustered heavily on PZL-0001 (7 of its 9 disagreeing reps go this direction). PZL-0001
+is exactly the puzzle SPIKE-015's own file header cites as its motivating case-sensitivity/
+word-boundary bug example — a subtle single-word placement mismatch ("The Swedish lives in the
+first house" instead of substituting "Norwegian"→"Swede" correctly) that the frontier 3-vote
+critic caught but Jev's decomposed Nouls largely missed. This is consistent with the jaggedness
+doc's own "indirection" warning: spotting one specific misplaced word inside a 14-line paragraph
+is a multi-hop localization task, not a literal surface read. Note the STILL-OPEN confound from
+§4's fixture gap (no `mapping` available for this replay, unrelated to the majority-of-3 filter
+fix) — some of this gap may narrow with the mapping present; untested. Latency: 21.1s total / 67
+reps ≈ 315ms/rep (3 parallel Nouls per rep, same wall-clock as one). Token usage: 59,436 input /
+4,556 output tokens.
 
 ### 5.3 Sub-question 3 — pairwise equivalence: strong on lexical variants and negative controls, but did NOT close the named domain-synonym gap
 
@@ -241,26 +304,29 @@ as one).
   more than the puzzle-specific domain framing. **This is a real, direct negative result**: Jev
   does not, as tested, close the exact gap `score-domain-match.ts`'s own comments named as
   something "curation alone can't close."
-- **Negative control (hard-negative sample, capped 20 pairs)**: 19/20 correct as scored; 20/20
-  once the one mislabeled `"Dog"`/`"dog"` pair is discounted (§4) — Jev never produced a false
-  merge on a genuinely distinct pair, including lexically close ones like `"Norwegian"`/`"North"`
-  or `"Coffee"`/`"Conservatory"`.
-- Total latency: 7.8s / 25 calls ≈ 311ms/call.
+- **Negative control (hard-negative sample, capped 20 pairs)**: corrected run, with the
+  case-only `"Dog"`/`"dog"` pair filtered out at the source (§4) rather than discounted by hand —
+  **20/20 correct**. Jev never produced a false merge on a genuinely distinct pair, including
+  lexically close ones like `"Norwegian"`/`"North"` or `"Coffee"`/`"Conservatory"`.
+- Total latency: 7.6s / 25 calls ≈ 305ms/call. Token usage: 10,514 input / 550 output tokens.
 
-### 5.4 Sub-question 2 — per-clue fidelity: a clean, consistent signal on PZL-0038; a real false-positive problem on PZL-0010
+### 5.4 Sub-question 2 — per-clue fidelity: with the preamble now checked, PZL-0038 shows the ACTUAL diagnosed failure caught, plus one more; PZL-0010 remains a real false-positive problem
 
-**PZL-0038 (3 reps, all outcomes): a genuinely clean, consistent result.** Clues 1-4 (simple
-"animal is in pen N" and one ordering clue) all localized correctly to their own constraint line
-with high fidelity (0.76-0.95) in every rep. **Clue 5 ("The wolf preys on the rabbit") was
-flagged in all 3 reps** (fidelity 0.24, 0.45, 0.28) — correctly forced onto the same line as
-clue 4 (no dedicated line exists for it) and correctly judged as not fully capturing it. This
-lines up with SPIKE-014 §5.4's hand-diagnosed finding that this draft never encoded the predation
-constraint at all (there diagnosed as a missing `alldifferent`/uniqueness constraint) — the exact
-failure class this sub-question exists to test, caught mechanically and consistently across
-every rep, MATCH and non-MATCH alike (the SOLVE_MULTIPLY_SATISFIABLE/MISMATCH reps and the
-SOLVE_ERROR rep all show the identical clue-5-only flag pattern).
+**PZL-0038 (3 reps, all outcomes): now a genuinely clean, TWO-PART confirmed result.** Checking
+`splitClues`'s `preamble` as its own item (§4's fix) directly targets SPIKE-014 §5.4's actual
+claim — the prose's setup sentence ("one animal per pen") never mapped to any constraint line in
+**all 3 reps** (`NO MATCHING LINE`), i.e. no `alldifferent(pens)`-equivalent exists in any of
+them — this is now a verified, not inferred, match to §5.4's hand diagnosis. Separately, the 5
+numbered clues also show their own clean pattern: clues 1-4 (simple "animal is in pen N" and one
+ordering clue) all localize correctly with high fidelity (0.70-0.94) in every rep, and **clue 5
+("The wolf preys on the rabbit") is flagged in all 3 reps** (fidelity 0.28-0.37) — a second, real,
+but DIFFERENT omission from the preamble's global constraint (the original write-up conflated
+the two; they are now reported separately and both hold up). The two flagged items per rep (one
+preamble, one clue) are consistent across every rep regardless of solve outcome.
 
-**PZL-0010 (3 reps): a real limitation, not a clean result.** Every clue in every rep was
+**PZL-0010 (3 reps): unchanged, a real limitation.** The preamble is ALSO flagged in 2 of 3 reps
+here (weakly matched in the third, fidelity 0.04), consistent with the puzzle's own clues being
+compound/conditional rather than the preamble specifically. Every numbered clue in every rep was
 flagged, INCLUDING the one `SOLVE_UNIQUE`/`MATCH` rep — a false-positive rate this mechanism
 cannot be trusted at, as tested. Root cause, inspecting the raw selections: PZL-0010's clues are
 compound/conditional ("if two cars arrive at the same moment, right-of-way rotates clockwise...")
@@ -270,41 +336,60 @@ single-line SELECT step, given only a flat numbered list of constraint lines wit
 context, frequently picked a low-relevance line or found no match at all, then correctly (but
 unhelpfully) judged that low-relevance line as not fully capturing the clue. This is a
 methodology limitation of this spike's simple line-level selection design on compound clues, not
-evidence that Jev cannot help with fidelity checking in general — PZL-0038's clean result on
-the SAME mechanism shows it works when clue-to-line correspondence is closer to 1:1.
+evidence that Jev cannot help with fidelity checking in general — PZL-0038's clean, now-verified
+result on the SAME mechanism shows it works when clue-to-line correspondence is closer to 1:1.
 
-Total latency: 20.1s / 36 clue-checks ≈ 559ms/check (two calls — select, then judge — per clue
-when a line was selected).
+Totals (both puzzles, preamble + numbered clues, 42 items checked): latency 20.6s ≈ 490ms/check
+(two calls — select, then judge — per item when a line was selected). Token usage: 37,485 input
+/ 3,693 output tokens.
 
 ## 6. Conclusion
 
-**No single verdict across all four — each resolves independently, as planned:**
+**No single verdict across all four — each resolves independently, as planned. Numbers below are
+the corrected, post-Copilot-review ones (§4) — the pre-fix write-up materially overstated
+sub-question 1 and understated the fixture confounds in 2/3/4.**
 
-- **Outcome-framing gate (1)**: promising but unvalidated on 3 of 5 classes (§5.1) — the catalog
-  itself needs at least one `ambiguous`/`subjective`/`non-problem` example before this can be
-  trusted as a real puzzle-type gate. Worth adding such examples to the catalog specifically to
-  close this gap, independent of any Jev decision.
-- **Well-formedness critic substitution (4)**: 71% agreement with the existing majority-of-3 is
-  not close enough to substitute outright, and the disagreement pattern (Jev more lenient,
-  missing subtle single-word-placement errors) is a real, name-able weakness, not noise — but the
-  replay's fixture gap (no `mapping`) is a genuine confound worth closing with a live re-run
-  (new frontier-model substitution calls, small cost) before treating 71% as final.
+- **Outcome-framing gate (1)**: a genuine, sharp split — perfect on `determinate`/`cop` (21/21),
+  a complete failure on `ambiguous`/`subjective` (0/11), a weak middle result on `non-problem`
+  (2/7). This is NOT "unvalidated due to missing catalog examples" (the original, bug-driven
+  conclusion) — it's a real, now-measured capability gap: Jev's literal-reading strength reads an
+  ambiguous or subjective puzzle's surface completeness as evidence it's fully determinate. **Not
+  usable as a general puzzle-type gate as designed**; possibly still useful as a narrower
+  `determinate`-vs-`cop` discriminator, which is a different, smaller claim than originally
+  framed.
+- **Well-formedness critic substitution (4)**: 73% agreement on a verified, majority-of-3-only
+  sample is not close enough to substitute outright, and the disagreement pattern (Jev more
+  lenient, missing subtle single-word-placement errors) is a real, name-able weakness, not noise
+  — and the STILL-OPEN `mapping` fixture gap (§4, distinct from the majority-of-3 filter fix)
+  means even 73% may be a floor, not a final number. Worth closing with a live re-run (new
+  frontier-model substitution calls, small cost) before treating this as final either way.
 - **Alias/equivalence folding (3)**: the curated fold's own named gap (context-specific synonyms)
-  was NOT closed by Jev with a context hint, a clean negative result — but Jev also never
-  introduced a false merge on any tested negative-control pair, and its one curated-alias miss
-  (an easy case) suggests it isn't a reliable drop-in even for what the fold already handles well.
-  **Recommendation: do not pursue this replacement** based on this evidence.
-- **Per-clue fidelity/localization (2)**: the most genuinely promising result — a real,
-  mechanistically clean catch on PZL-0038 (SPIKE-014's own hand-diagnosed failure, reproduced
-  automatically) — but the PZL-0010 false-positive rate shows the simple select-then-judge design
-  as built doesn't generalize to compound/conditional clues. **Worth a follow-up spike**
-  specifically on improving the SELECT step (e.g. giving Jev the draft's own `%`-comments as
-  context, or allowing multi-line selection) before drawing a final verdict — the PZL-0038 result
-  alone is strong enough evidence this direction isn't dead.
+  was NOT closed by Jev with a context hint, a clean negative result — and now a clean 20/20 on
+  the negative control (no false merges at all, once the fixture itself was fixed rather than
+  hand-discounted). Its one curated-alias miss (an easy case) suggests it isn't a reliable drop-in
+  even for what the fold already handles well. **Recommendation: do not pursue this replacement**
+  based on this evidence.
+- **Per-clue fidelity/localization (2)**: the most genuinely promising result, and now on firmer
+  footing — PZL-0038 shows TWO independently-confirmed catches (the preamble's actual missing
+  global constraint, verified against SPIKE-014 §5.4's own claim rather than a different
+  omission standing in for it; plus a second, separate dropped clue) — but the PZL-0010
+  false-positive rate shows the simple select-then-judge design as built doesn't generalize to
+  compound/conditional clues. **Worth a follow-up spike** specifically on improving the SELECT
+  step (e.g. giving Jev the draft's own `%`-comments as context, or allowing multi-line
+  selection) before drawing a final verdict — the PZL-0038 result alone is strong enough evidence
+  this direction isn't dead.
 
-**For RFC-003**: cite §5.4's PZL-0038 result and §5.1's framing-gate result as the two candidates
-worth a dedicated follow-up spike; cite §5.3's negative result on the alias-folding replacement as
-closing that specific candidate (§7.1/§7.4 remain otherwise unaffected — this spike doesn't touch
-the intermediate-representation or offline-testing open questions directly). Manual citation into
-RFC-003's Open Questions/Appendix is a step the user takes separately, per this skill's own
-scope guard.
+**Process note worth carrying forward**: sub-question 1's bug (silently defaulting most
+non-`determinate` entries to `determinate`) produced a plausible-LOOKING but wrong 82% headline
+that a less thorough review would have let stand — the corrected 59%, with its sharp per-class
+split, is a more useful and more honest finding, and the general lesson (validate a classifier's
+INPUT LOADER's coverage of the answer format's actual variants before trusting a class-imbalanced
+accuracy number) applies beyond this spike.
+
+**For RFC-003**: cite §5.4's PZL-0038 result as the strongest candidate worth a dedicated
+follow-up spike; cite §5.1's corrected framing-gate split (not the original inflated number) if
+citing it at all, framed as a `determinate`/`cop` discriminator rather than a general gate; cite
+§5.3's negative result on the alias-folding replacement as closing that specific candidate
+(§7.1/§7.4 remain otherwise unaffected — this spike doesn't touch the intermediate-representation
+or offline-testing open questions directly). Manual citation into RFC-003's Open Questions/
+Appendix is a step the user takes separately, per this skill's own scope guard.

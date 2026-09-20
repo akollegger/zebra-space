@@ -1,25 +1,29 @@
 {
   "summary": {
-    "totalCluesChecked": 36,
+    "totalCluesChecked": 42,
     "byRepOutcome": {
       "SOLVE_MULTIPLY_SATISFIABLE": {
-        "flagged": 9,
-        "total": 17
+        "flagged": 12,
+        "total": 20
       },
       "SOLVE_UNSATISFIABLE": {
-        "flagged": 7,
-        "total": 7
+        "flagged": 8,
+        "total": 8
       },
       "SOLVE_UNIQUE": {
-        "flagged": 7,
-        "total": 7
+        "flagged": 8,
+        "total": 8
       },
       "SOLVE_ERROR": {
-        "flagged": 1,
-        "total": 5
+        "flagged": 2,
+        "total": 6
       }
     },
-    "totalLatencyMs": 20140.586186000004
+    "totalLatencyMs": 20603.761808000007,
+    "totalUsage": {
+      "input_tokens": 37485,
+      "output_tokens": 3693
+    }
   },
   "results": [
     {
@@ -27,15 +31,39 @@
       "repIndex": 0,
       "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
       "repVerdict": "MISMATCH",
+      "clue": "A four-way stop intersection has arms North, South, East, and West, plus a pedestrian crosswalk\non the eastern approach. A pedestrian and one car from each direction all want to go through.\nNone of the four cars are turning — each one drives straight through the intersection.\n\nGeneral rules:",
+      "isPreamble": true,
+      "localization": {
+        "clue": "A four-way stop intersection has arms North, South, East, and West, plus a pedestrian crosswalk\non the eastern approach. A pedestrian and one car from each direction all want to go through.\nNone of the four cars are turning — each one drives straight through the intersection.\n\nGeneral rules:",
+        "selectedIndices": [],
+        "selectConfidence": 0.3,
+        "usage": {
+          "input_tokens": 624,
+          "output_tokens": 71
+        },
+        "latencyMs": 1002.495987
+      },
+      "flagged": true
+    },
+    {
+      "puzzleId": "PZL-0010",
+      "repIndex": 0,
+      "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
+      "repVerdict": "MISMATCH",
       "clue": "1. A pedestrian using a crosswalk always goes before a car approaching from the direction that\n   crosswalk crosses.",
+      "isPreamble": false,
       "localization": {
         "clue": "1. A pedestrian using a crosswalk always goes before a car approaching from the direction that\n   crosswalk crosses.",
         "selectedIndices": [
           2
         ],
-        "selectConfidence": 0.48,
-        "fidelityNoul": 0.28,
-        "latencyMs": 2347.963108
+        "selectConfidence": 0.36,
+        "fidelityNoul": 0.24,
+        "usage": {
+          "input_tokens": 1010,
+          "output_tokens": 92
+        },
+        "latencyMs": 1037.7537120000002
       },
       "flagged": true
     },
@@ -45,14 +73,19 @@
       "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
       "repVerdict": "MISMATCH",
       "clue": "2. Otherwise, cars (and the pedestrian) go in the order they arrive at the intersection.",
+      "isPreamble": false,
       "localization": {
         "clue": "2. Otherwise, cars (and the pedestrian) go in the order they arrive at the intersection.",
         "selectedIndices": [
           4
         ],
-        "selectConfidence": 0.46,
-        "fidelityNoul": 0.13,
-        "latencyMs": 544.364251
+        "selectConfidence": 0.47,
+        "fidelityNoul": 0.12,
+        "usage": {
+          "input_tokens": 979,
+          "output_tokens": 92
+        },
+        "latencyMs": 526.828735
       },
       "flagged": true
     },
@@ -62,14 +95,19 @@
       "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
       "repVerdict": "MISMATCH",
       "clue": "3. If two cars arrive at the same moment, right-of-way rotates clockwise starting from North —\n   of the tied cars, whichever comes first in the order North, East, South, West goes first.\n\nThis morning:",
+      "isPreamble": false,
       "localization": {
         "clue": "3. If two cars arrive at the same moment, right-of-way rotates clockwise starting from North —\n   of the tied cars, whichever comes first in the order North, East, South, West goes first.\n\nThis morning:",
         "selectedIndices": [
           3
         ],
-        "selectConfidence": 0.39,
-        "fidelityNoul": 0.04,
-        "latencyMs": 564.503256
+        "selectConfidence": 0.36,
+        "fidelityNoul": 0.05,
+        "usage": {
+          "input_tokens": 1038,
+          "output_tokens": 92
+        },
+        "latencyMs": 524.0236479999999
       },
       "flagged": true
     },
@@ -79,14 +117,19 @@
       "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
       "repVerdict": "MISMATCH",
       "clue": "4. The pedestrian is crossing at the eastern crosswalk.",
+      "isPreamble": false,
       "localization": {
         "clue": "4. The pedestrian is crossing at the eastern crosswalk.",
         "selectedIndices": [
           0
         ],
-        "selectConfidence": 0.73,
+        "selectConfidence": 0.61,
         "fidelityNoul": 0.17,
-        "latencyMs": 589.5702689999998
+        "usage": {
+          "input_tokens": 971,
+          "output_tokens": 92
+        },
+        "latencyMs": 517.0757800000001
       },
       "flagged": true
     },
@@ -96,11 +139,16 @@
       "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
       "repVerdict": "MISMATCH",
       "clue": "5. The pedestrian and the East car arrive at the same moment.",
+      "isPreamble": false,
       "localization": {
         "clue": "5. The pedestrian and the East car arrive at the same moment.",
         "selectedIndices": [],
-        "selectConfidence": 0.57,
-        "latencyMs": 261.5442329999996
+        "selectConfidence": 0.59,
+        "usage": {
+          "input_tokens": 576,
+          "output_tokens": 71
+        },
+        "latencyMs": 219.170842
       },
       "flagged": true
     },
@@ -110,6 +158,7 @@
       "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
       "repVerdict": "MISMATCH",
       "clue": "6. The South car arrives before the pedestrian and the East car.",
+      "isPreamble": false,
       "localization": {
         "clue": "6. The South car arrives before the pedestrian and the East car.",
         "selectedIndices": [
@@ -117,7 +166,11 @@
         ],
         "selectConfidence": 0.87,
         "fidelityNoul": 0.05,
-        "latencyMs": 566.9881200000009
+        "usage": {
+          "input_tokens": 973,
+          "output_tokens": 92
+        },
+        "latencyMs": 542.5462769999995
       },
       "flagged": true
     },
@@ -127,14 +180,41 @@
       "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
       "repVerdict": "MISMATCH",
       "clue": "7. The North car and the West car arrive at the same moment, after the pedestrian and the East\n   car.\n\nIn what order do the pedestrian and the four cars go through the intersection?",
+      "isPreamble": false,
       "localization": {
         "clue": "7. The North car and the West car arrive at the same moment, after the pedestrian and the East\n   car.\n\nIn what order do the pedestrian and the four cars go through the intersection?",
         "selectedIndices": [
           2
         ],
-        "selectConfidence": 0.34,
+        "selectConfidence": 0.35,
         "fidelityNoul": 0.07,
-        "latencyMs": 571.3767249999992
+        "usage": {
+          "input_tokens": 1040,
+          "output_tokens": 92
+        },
+        "latencyMs": 572.8561570000002
+      },
+      "flagged": true
+    },
+    {
+      "puzzleId": "PZL-0010",
+      "repIndex": 1,
+      "repOutcome": "SOLVE_UNSATISFIABLE",
+      "repVerdict": "MISMATCH",
+      "clue": "A four-way stop intersection has arms North, South, East, and West, plus a pedestrian crosswalk\non the eastern approach. A pedestrian and one car from each direction all want to go through.\nNone of the four cars are turning — each one drives straight through the intersection.\n\nGeneral rules:",
+      "isPreamble": true,
+      "localization": {
+        "clue": "A four-way stop intersection has arms North, South, East, and West, plus a pedestrian crosswalk\non the eastern approach. A pedestrian and one car from each direction all want to go through.\nNone of the four cars are turning — each one drives straight through the intersection.\n\nGeneral rules:",
+        "selectedIndices": [
+          2
+        ],
+        "selectConfidence": 0.82,
+        "fidelityNoul": 0.04,
+        "usage": {
+          "input_tokens": 1298,
+          "output_tokens": 116
+        },
+        "latencyMs": 532.4308310000006
       },
       "flagged": true
     },
@@ -144,11 +224,16 @@
       "repOutcome": "SOLVE_UNSATISFIABLE",
       "repVerdict": "MISMATCH",
       "clue": "1. A pedestrian using a crosswalk always goes before a car approaching from the direction that\n   crosswalk crosses.",
+      "isPreamble": false,
       "localization": {
         "clue": "1. A pedestrian using a crosswalk always goes before a car approaching from the direction that\n   crosswalk crosses.",
         "selectedIndices": [],
-        "selectConfidence": 0.57,
-        "latencyMs": 833.8120580000004
+        "selectConfidence": 0.52,
+        "usage": {
+          "input_tokens": 791,
+          "output_tokens": 95
+        },
+        "latencyMs": 247.64166300000034
       },
       "flagged": true
     },
@@ -158,11 +243,16 @@
       "repOutcome": "SOLVE_UNSATISFIABLE",
       "repVerdict": "MISMATCH",
       "clue": "2. Otherwise, cars (and the pedestrian) go in the order they arrive at the intersection.",
+      "isPreamble": false,
       "localization": {
         "clue": "2. Otherwise, cars (and the pedestrian) go in the order they arrive at the intersection.",
         "selectedIndices": [],
-        "selectConfidence": 0.43,
-        "latencyMs": 226.56030199999987
+        "selectConfidence": 0.51,
+        "usage": {
+          "input_tokens": 785,
+          "output_tokens": 95
+        },
+        "latencyMs": 293.0592120000001
       },
       "flagged": true
     },
@@ -172,11 +262,16 @@
       "repOutcome": "SOLVE_UNSATISFIABLE",
       "repVerdict": "MISMATCH",
       "clue": "3. If two cars arrive at the same moment, right-of-way rotates clockwise starting from North —\n   of the tied cars, whichever comes first in the order North, East, South, West goes first.\n\nThis morning:",
+      "isPreamble": false,
       "localization": {
         "clue": "3. If two cars arrive at the same moment, right-of-way rotates clockwise starting from North —\n   of the tied cars, whichever comes first in the order North, East, South, West goes first.\n\nThis morning:",
         "selectedIndices": [],
-        "selectConfidence": 0.72,
-        "latencyMs": 303.72949400000016
+        "selectConfidence": 0.67,
+        "usage": {
+          "input_tokens": 812,
+          "output_tokens": 95
+        },
+        "latencyMs": 244.97458199999983
       },
       "flagged": true
     },
@@ -186,11 +281,16 @@
       "repOutcome": "SOLVE_UNSATISFIABLE",
       "repVerdict": "MISMATCH",
       "clue": "4. The pedestrian is crossing at the eastern crosswalk.",
+      "isPreamble": false,
       "localization": {
         "clue": "4. The pedestrian is crossing at the eastern crosswalk.",
         "selectedIndices": [],
-        "selectConfidence": 0.49,
-        "latencyMs": 278.13416899999993
+        "selectConfidence": 0.5,
+        "usage": {
+          "input_tokens": 778,
+          "output_tokens": 95
+        },
+        "latencyMs": 265.58424399999967
       },
       "flagged": true
     },
@@ -200,11 +300,16 @@
       "repOutcome": "SOLVE_UNSATISFIABLE",
       "repVerdict": "MISMATCH",
       "clue": "5. The pedestrian and the East car arrive at the same moment.",
+      "isPreamble": false,
       "localization": {
         "clue": "5. The pedestrian and the East car arrive at the same moment.",
         "selectedIndices": [],
-        "selectConfidence": 0.49,
-        "latencyMs": 272.8555700000006
+        "selectConfidence": 0.48,
+        "usage": {
+          "input_tokens": 779,
+          "output_tokens": 95
+        },
+        "latencyMs": 227.18567600000006
       },
       "flagged": true
     },
@@ -214,14 +319,19 @@
       "repOutcome": "SOLVE_UNSATISFIABLE",
       "repVerdict": "MISMATCH",
       "clue": "6. The South car arrives before the pedestrian and the East car.",
+      "isPreamble": false,
       "localization": {
         "clue": "6. The South car arrives before the pedestrian and the East car.",
         "selectedIndices": [
           1
         ],
-        "selectConfidence": 0.31,
+        "selectConfidence": 0.33,
         "fidelityNoul": 0.03,
-        "latencyMs": 542.0270440000004
+        "usage": {
+          "input_tokens": 1172,
+          "output_tokens": 116
+        },
+        "latencyMs": 530.5006139999996
       },
       "flagged": true
     },
@@ -231,14 +341,38 @@
       "repOutcome": "SOLVE_UNSATISFIABLE",
       "repVerdict": "MISMATCH",
       "clue": "7. The North car and the West car arrive at the same moment, after the pedestrian and the East\n   car.\n\nIn what order do the pedestrian and the four cars go through the intersection?",
+      "isPreamble": false,
       "localization": {
         "clue": "7. The North car and the West car arrive at the same moment, after the pedestrian and the East\n   car.\n\nIn what order do the pedestrian and the four cars go through the intersection?",
         "selectedIndices": [
           4
         ],
-        "selectConfidence": 0.51,
+        "selectConfidence": 0.45,
         "fidelityNoul": 0.07,
-        "latencyMs": 497.9418139999998
+        "usage": {
+          "input_tokens": 1252,
+          "output_tokens": 116
+        },
+        "latencyMs": 589.8878370000002
+      },
+      "flagged": true
+    },
+    {
+      "puzzleId": "PZL-0010",
+      "repIndex": 2,
+      "repOutcome": "SOLVE_UNIQUE",
+      "repVerdict": "MATCH",
+      "clue": "A four-way stop intersection has arms North, South, East, and West, plus a pedestrian crosswalk\non the eastern approach. A pedestrian and one car from each direction all want to go through.\nNone of the four cars are turning — each one drives straight through the intersection.\n\nGeneral rules:",
+      "isPreamble": true,
+      "localization": {
+        "clue": "A four-way stop intersection has arms North, South, East, and West, plus a pedestrian crosswalk\non the eastern approach. A pedestrian and one car from each direction all want to go through.\nNone of the four cars are turning — each one drives straight through the intersection.\n\nGeneral rules:",
+        "selectedIndices": [],
+        "selectConfidence": 0.31,
+        "usage": {
+          "input_tokens": 576,
+          "output_tokens": 71
+        },
+        "latencyMs": 237.54478799999924
       },
       "flagged": true
     },
@@ -248,11 +382,16 @@
       "repOutcome": "SOLVE_UNIQUE",
       "repVerdict": "MATCH",
       "clue": "1. A pedestrian using a crosswalk always goes before a car approaching from the direction that\n   crosswalk crosses.",
+      "isPreamble": false,
       "localization": {
         "clue": "1. A pedestrian using a crosswalk always goes before a car approaching from the direction that\n   crosswalk crosses.",
         "selectedIndices": [],
-        "selectConfidence": 0.45,
-        "latencyMs": 283.4284090000001
+        "selectConfidence": 0.41,
+        "usage": {
+          "input_tokens": 540,
+          "output_tokens": 71
+        },
+        "latencyMs": 249.0918819999988
       },
       "flagged": true
     },
@@ -262,11 +401,16 @@
       "repOutcome": "SOLVE_UNIQUE",
       "repVerdict": "MATCH",
       "clue": "2. Otherwise, cars (and the pedestrian) go in the order they arrive at the intersection.",
+      "isPreamble": false,
       "localization": {
         "clue": "2. Otherwise, cars (and the pedestrian) go in the order they arrive at the intersection.",
         "selectedIndices": [],
-        "selectConfidence": 0.66,
-        "latencyMs": 285.9189860000006
+        "selectConfidence": 0.69,
+        "usage": {
+          "input_tokens": 534,
+          "output_tokens": 71
+        },
+        "latencyMs": 402.634528999999
       },
       "flagged": true
     },
@@ -276,11 +420,16 @@
       "repOutcome": "SOLVE_UNIQUE",
       "repVerdict": "MATCH",
       "clue": "3. If two cars arrive at the same moment, right-of-way rotates clockwise starting from North —\n   of the tied cars, whichever comes first in the order North, East, South, West goes first.\n\nThis morning:",
+      "isPreamble": false,
       "localization": {
         "clue": "3. If two cars arrive at the same moment, right-of-way rotates clockwise starting from North —\n   of the tied cars, whichever comes first in the order North, East, South, West goes first.\n\nThis morning:",
         "selectedIndices": [],
         "selectConfidence": 0.39,
-        "latencyMs": 236.23437000000013
+        "usage": {
+          "input_tokens": 561,
+          "output_tokens": 71
+        },
+        "latencyMs": 410.2674640000005
       },
       "flagged": true
     },
@@ -290,14 +439,19 @@
       "repOutcome": "SOLVE_UNIQUE",
       "repVerdict": "MATCH",
       "clue": "4. The pedestrian is crossing at the eastern crosswalk.",
+      "isPreamble": false,
       "localization": {
         "clue": "4. The pedestrian is crossing at the eastern crosswalk.",
         "selectedIndices": [
           2
         ],
-        "selectConfidence": 0.79,
+        "selectConfidence": 0.81,
         "fidelityNoul": 0.1,
-        "latencyMs": 598.6289530000013
+        "usage": {
+          "input_tokens": 919,
+          "output_tokens": 92
+        },
+        "latencyMs": 507.7893010000007
       },
       "flagged": true
     },
@@ -307,11 +461,16 @@
       "repOutcome": "SOLVE_UNIQUE",
       "repVerdict": "MATCH",
       "clue": "5. The pedestrian and the East car arrive at the same moment.",
+      "isPreamble": false,
       "localization": {
         "clue": "5. The pedestrian and the East car arrive at the same moment.",
         "selectedIndices": [],
-        "selectConfidence": 0.78,
-        "latencyMs": 279.77998599999955
+        "selectConfidence": 0.76,
+        "usage": {
+          "input_tokens": 528,
+          "output_tokens": 71
+        },
+        "latencyMs": 334.0657339999998
       },
       "flagged": true
     },
@@ -321,14 +480,19 @@
       "repOutcome": "SOLVE_UNIQUE",
       "repVerdict": "MATCH",
       "clue": "6. The South car arrives before the pedestrian and the East car.",
+      "isPreamble": false,
       "localization": {
         "clue": "6. The South car arrives before the pedestrian and the East car.",
         "selectedIndices": [
           0
         ],
-        "selectConfidence": 0.53,
+        "selectConfidence": 0.55,
         "fidelityNoul": 0.03,
-        "latencyMs": 544.9158399999978
+        "usage": {
+          "input_tokens": 921,
+          "output_tokens": 92
+        },
+        "latencyMs": 477.51509500000066
       },
       "flagged": true
     },
@@ -338,14 +502,38 @@
       "repOutcome": "SOLVE_UNIQUE",
       "repVerdict": "MATCH",
       "clue": "7. The North car and the West car arrive at the same moment, after the pedestrian and the East\n   car.\n\nIn what order do the pedestrian and the four cars go through the intersection?",
+      "isPreamble": false,
       "localization": {
         "clue": "7. The North car and the West car arrive at the same moment, after the pedestrian and the East\n   car.\n\nIn what order do the pedestrian and the four cars go through the intersection?",
         "selectedIndices": [
           3
         ],
-        "selectConfidence": 0.24,
+        "selectConfidence": 0.27,
         "fidelityNoul": 0.03,
-        "latencyMs": 517.3815709999999
+        "usage": {
+          "input_tokens": 975,
+          "output_tokens": 92
+        },
+        "latencyMs": 590.0658059999987
+      },
+      "flagged": true
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "repIndex": 0,
+      "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
+      "repVerdict": "MISMATCH",
+      "clue": "A wildlife park is moving five animals — a wolf, a rabbit, a goat, a parrot, and a tortoise —\ninto five holding pens standing in a row, numbered 1 to 5, one animal per pen. Each pen is fully\nenclosed on all sides by a solid concrete wall; no animal in any pen can see, smell, hear, or\nreach any animal in another.",
+      "isPreamble": true,
+      "localization": {
+        "clue": "A wildlife park is moving five animals — a wolf, a rabbit, a goat, a parrot, and a tortoise —\ninto five holding pens standing in a row, numbered 1 to 5, one animal per pen. Each pen is fully\nenclosed on all sides by a solid concrete wall; no animal in any pen can see, smell, hear, or\nreach any animal in another.",
+        "selectedIndices": [],
+        "selectConfidence": 0.5,
+        "usage": {
+          "input_tokens": 625,
+          "output_tokens": 63
+        },
+        "latencyMs": 392.5630799999999
       },
       "flagged": true
     },
@@ -355,14 +543,19 @@
       "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
       "repVerdict": "MISMATCH",
       "clue": "1. The tortoise is in pen 1.",
+      "isPreamble": false,
       "localization": {
         "clue": "1. The tortoise is in pen 1.",
         "selectedIndices": [
           0
         ],
         "selectConfidence": 1,
-        "fidelityNoul": 0.81,
-        "latencyMs": 610.4842370000006
+        "fidelityNoul": 0.8,
+        "usage": {
+          "input_tokens": 943,
+          "output_tokens": 84
+        },
+        "latencyMs": 915.018809000001
       },
       "flagged": false
     },
@@ -372,14 +565,19 @@
       "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
       "repVerdict": "MISMATCH",
       "clue": "2. The parrot is in pen 2.",
+      "isPreamble": false,
       "localization": {
         "clue": "2. The parrot is in pen 2.",
         "selectedIndices": [
           1
         ],
         "selectConfidence": 1,
-        "fidelityNoul": 0.85,
-        "latencyMs": 565.7612549999994
+        "fidelityNoul": 0.84,
+        "usage": {
+          "input_tokens": 943,
+          "output_tokens": 84
+        },
+        "latencyMs": 523.8713250000001
       },
       "flagged": false
     },
@@ -389,14 +587,19 @@
       "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
       "repVerdict": "MISMATCH",
       "clue": "3. The goat is in pen 3.",
+      "isPreamble": false,
       "localization": {
         "clue": "3. The goat is in pen 3.",
         "selectedIndices": [
           2
         ],
         "selectConfidence": 1,
-        "fidelityNoul": 0.9,
-        "latencyMs": 580.7746420000021
+        "fidelityNoul": 0.91,
+        "usage": {
+          "input_tokens": 940,
+          "output_tokens": 84
+        },
+        "latencyMs": 497.85273899999993
       },
       "flagged": false
     },
@@ -406,14 +609,19 @@
       "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
       "repVerdict": "MISMATCH",
       "clue": "4. The rabbit is in a lower-numbered pen than the wolf.",
+      "isPreamble": false,
       "localization": {
         "clue": "4. The rabbit is in a lower-numbered pen than the wolf.",
         "selectedIndices": [
           3
         ],
-        "selectConfidence": 1,
-        "fidelityNoul": 0.88,
-        "latencyMs": 988.5183490000018
+        "selectConfidence": 0.99,
+        "fidelityNoul": 0.85,
+        "usage": {
+          "input_tokens": 981,
+          "output_tokens": 84
+        },
+        "latencyMs": 543.3784610000002
       },
       "flagged": false
     },
@@ -423,14 +631,38 @@
       "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
       "repVerdict": "MISMATCH",
       "clue": "5. The wolf preys on the rabbit.\n\nWhere is each animal?",
+      "isPreamble": false,
       "localization": {
         "clue": "5. The wolf preys on the rabbit.\n\nWhere is each animal?",
         "selectedIndices": [
           3
         ],
         "selectConfidence": 0.99,
-        "fidelityNoul": 0.28,
-        "latencyMs": 497.78401199999826
+        "fidelityNoul": 0.31,
+        "usage": {
+          "input_tokens": 981,
+          "output_tokens": 84
+        },
+        "latencyMs": 662.3091870000007
+      },
+      "flagged": true
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "repIndex": 1,
+      "repOutcome": "SOLVE_ERROR",
+      "repVerdict": "N/A",
+      "clue": "A wildlife park is moving five animals — a wolf, a rabbit, a goat, a parrot, and a tortoise —\ninto five holding pens standing in a row, numbered 1 to 5, one animal per pen. Each pen is fully\nenclosed on all sides by a solid concrete wall; no animal in any pen can see, smell, hear, or\nreach any animal in another.",
+      "isPreamble": true,
+      "localization": {
+        "clue": "A wildlife park is moving five animals — a wolf, a rabbit, a goat, a parrot, and a tortoise —\ninto five holding pens standing in a row, numbered 1 to 5, one animal per pen. Each pen is fully\nenclosed on all sides by a solid concrete wall; no animal in any pen can see, smell, hear, or\nreach any animal in another.",
+        "selectedIndices": [],
+        "selectConfidence": 0.48,
+        "usage": {
+          "input_tokens": 676,
+          "output_tokens": 71
+        },
+        "latencyMs": 253.4380799999999
       },
       "flagged": true
     },
@@ -440,14 +672,19 @@
       "repOutcome": "SOLVE_ERROR",
       "repVerdict": "N/A",
       "clue": "1. The tortoise is in pen 1.",
+      "isPreamble": false,
       "localization": {
         "clue": "1. The tortoise is in pen 1.",
         "selectedIndices": [
           0
         ],
         "selectConfidence": 1,
-        "fidelityNoul": 0.77,
-        "latencyMs": 545.0553330000002
+        "fidelityNoul": 0.8,
+        "usage": {
+          "input_tokens": 994,
+          "output_tokens": 92
+        },
+        "latencyMs": 509.224212000001
       },
       "flagged": false
     },
@@ -457,14 +694,19 @@
       "repOutcome": "SOLVE_ERROR",
       "repVerdict": "N/A",
       "clue": "2. The parrot is in pen 2.",
+      "isPreamble": false,
       "localization": {
         "clue": "2. The parrot is in pen 2.",
         "selectedIndices": [
           1
         ],
         "selectConfidence": 1,
-        "fidelityNoul": 0.85,
-        "latencyMs": 539.8123369999994
+        "fidelityNoul": 0.83,
+        "usage": {
+          "input_tokens": 994,
+          "output_tokens": 92
+        },
+        "latencyMs": 520.5152179999986
       },
       "flagged": false
     },
@@ -474,6 +716,7 @@
       "repOutcome": "SOLVE_ERROR",
       "repVerdict": "N/A",
       "clue": "3. The goat is in pen 3.",
+      "isPreamble": false,
       "localization": {
         "clue": "3. The goat is in pen 3.",
         "selectedIndices": [
@@ -481,7 +724,11 @@
         ],
         "selectConfidence": 1,
         "fidelityNoul": 0.92,
-        "latencyMs": 533.6704679999984
+        "usage": {
+          "input_tokens": 991,
+          "output_tokens": 92
+        },
+        "latencyMs": 544.6612310000019
       },
       "flagged": false
     },
@@ -491,14 +738,19 @@
       "repOutcome": "SOLVE_ERROR",
       "repVerdict": "N/A",
       "clue": "4. The rabbit is in a lower-numbered pen than the wolf.",
+      "isPreamble": false,
       "localization": {
         "clue": "4. The rabbit is in a lower-numbered pen than the wolf.",
         "selectedIndices": [
           3
         ],
         "selectConfidence": 0.99,
-        "fidelityNoul": 0.76,
-        "latencyMs": 621.2881190000007
+        "fidelityNoul": 0.7,
+        "usage": {
+          "input_tokens": 1026,
+          "output_tokens": 92
+        },
+        "latencyMs": 538.4549460000017
       },
       "flagged": false
     },
@@ -508,14 +760,38 @@
       "repOutcome": "SOLVE_ERROR",
       "repVerdict": "N/A",
       "clue": "5. The wolf preys on the rabbit.\n\nWhere is each animal?",
+      "isPreamble": false,
       "localization": {
         "clue": "5. The wolf preys on the rabbit.\n\nWhere is each animal?",
         "selectedIndices": [
           3
         ],
-        "selectConfidence": 0.78,
-        "fidelityNoul": 0.45,
-        "latencyMs": 661.2388030000002
+        "selectConfidence": 0.85,
+        "fidelityNoul": 0.37,
+        "usage": {
+          "input_tokens": 1026,
+          "output_tokens": 92
+        },
+        "latencyMs": 470.73635899999863
+      },
+      "flagged": true
+    },
+    {
+      "puzzleId": "PZL-0038",
+      "repIndex": 2,
+      "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
+      "repVerdict": "MISMATCH",
+      "clue": "A wildlife park is moving five animals — a wolf, a rabbit, a goat, a parrot, and a tortoise —\ninto five holding pens standing in a row, numbered 1 to 5, one animal per pen. Each pen is fully\nenclosed on all sides by a solid concrete wall; no animal in any pen can see, smell, hear, or\nreach any animal in another.",
+      "isPreamble": true,
+      "localization": {
+        "clue": "A wildlife park is moving five animals — a wolf, a rabbit, a goat, a parrot, and a tortoise —\ninto five holding pens standing in a row, numbered 1 to 5, one animal per pen. Each pen is fully\nenclosed on all sides by a solid concrete wall; no animal in any pen can see, smell, hear, or\nreach any animal in another.",
+        "selectedIndices": [],
+        "selectConfidence": 0.58,
+        "usage": {
+          "input_tokens": 712,
+          "output_tokens": 71
+        },
+        "latencyMs": 371.5754589999997
       },
       "flagged": true
     },
@@ -525,14 +801,19 @@
       "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
       "repVerdict": "MISMATCH",
       "clue": "1. The tortoise is in pen 1.",
+      "isPreamble": false,
       "localization": {
         "clue": "1. The tortoise is in pen 1.",
         "selectedIndices": [
           0
         ],
         "selectConfidence": 1,
-        "fidelityNoul": 0.95,
-        "latencyMs": 582.8768960000016
+        "fidelityNoul": 0.94,
+        "usage": {
+          "input_tokens": 1030,
+          "output_tokens": 92
+        },
+        "latencyMs": 629.3945899999999
       },
       "flagged": false
     },
@@ -542,6 +823,7 @@
       "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
       "repVerdict": "MISMATCH",
       "clue": "2. The parrot is in pen 2.",
+      "isPreamble": false,
       "localization": {
         "clue": "2. The parrot is in pen 2.",
         "selectedIndices": [
@@ -549,7 +831,11 @@
         ],
         "selectConfidence": 1,
         "fidelityNoul": 0.92,
-        "latencyMs": 543.9149689999977
+        "usage": {
+          "input_tokens": 1030,
+          "output_tokens": 92
+        },
+        "latencyMs": 561.2296670000032
       },
       "flagged": false
     },
@@ -559,6 +845,7 @@
       "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
       "repVerdict": "MISMATCH",
       "clue": "3. The goat is in pen 3.",
+      "isPreamble": false,
       "localization": {
         "clue": "3. The goat is in pen 3.",
         "selectedIndices": [
@@ -566,7 +853,11 @@
         ],
         "selectConfidence": 1,
         "fidelityNoul": 0.93,
-        "latencyMs": 574.0529869999991
+        "usage": {
+          "input_tokens": 1027,
+          "output_tokens": 92
+        },
+        "latencyMs": 546.144479999999
       },
       "flagged": false
     },
@@ -576,14 +867,19 @@
       "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
       "repVerdict": "MISMATCH",
       "clue": "4. The rabbit is in a lower-numbered pen than the wolf.",
+      "isPreamble": false,
       "localization": {
         "clue": "4. The rabbit is in a lower-numbered pen than the wolf.",
         "selectedIndices": [
           3
         ],
-        "selectConfidence": 0.98,
-        "fidelityNoul": 0.86,
-        "latencyMs": 612.1844440000023
+        "selectConfidence": 0.95,
+        "fidelityNoul": 0.85,
+        "usage": {
+          "input_tokens": 1067,
+          "output_tokens": 92
+        },
+        "latencyMs": 505.4026870000016
       },
       "flagged": false
     },
@@ -593,14 +889,19 @@
       "repOutcome": "SOLVE_MULTIPLY_SATISFIABLE",
       "repVerdict": "MISMATCH",
       "clue": "5. The wolf preys on the rabbit.\n\nWhere is each animal?",
+      "isPreamble": false,
       "localization": {
         "clue": "5. The wolf preys on the rabbit.\n\nWhere is each animal?",
         "selectedIndices": [
           3
         ],
-        "selectConfidence": 0.46,
-        "fidelityNoul": 0.24,
-        "latencyMs": 535.5108070000024
+        "selectConfidence": 0.51,
+        "fidelityNoul": 0.28,
+        "usage": {
+          "input_tokens": 1067,
+          "output_tokens": 92
+        },
+        "latencyMs": 535.0008820000003
       },
       "flagged": true
     }

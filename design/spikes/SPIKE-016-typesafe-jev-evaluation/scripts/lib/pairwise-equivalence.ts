@@ -8,6 +8,7 @@
 // reason — a bare two-string call would produce false negatives for the wrong reason (Jev
 // correctly saying "no" under general English when the puzzle-specific context says "yes").
 
+import type { Usage } from "@typesafe-ai/sdk"
 import { type AskFn, ask } from "./jev-client.ts"
 
 export interface EquivalencePair {
@@ -27,6 +28,11 @@ export interface EquivalenceVerdict {
   readonly jevMatch: boolean | undefined
   readonly noul: number | undefined
   readonly latencyMs: number
+  /** Token usage for this call — TypeSafe has not published per-token pricing as of this spike
+   * (checked live, see SPIKE.md §4), so this is recorded as the reproducible cost proxy rather
+   * than a $ figure, per Copilot review (PR #37): usage was previously discarded entirely,
+   * making any cost comparison against SPIKE-015's own $-denominated costs unverifiable. */
+  readonly usage: Usage | undefined
   readonly error?: string
 }
 
@@ -50,8 +56,8 @@ export async function judgeEquivalence(pair: EquivalencePair, askFn: AskFn = ask
     },
   )
   if (!response.ok) {
-    return { pair, jevMatch: undefined, noul: undefined, latencyMs: response.latencyMs, error: response.error }
+    return { pair, jevMatch: undefined, noul: undefined, usage: undefined, latencyMs: response.latencyMs, error: response.error }
   }
   const noul = response.result.answers.sameValue.noul
-  return { pair, jevMatch: noul >= 0.5, noul, latencyMs: response.latencyMs }
+  return { pair, jevMatch: noul >= 0.5, noul, usage: response.result.usage, latencyMs: response.latencyMs }
 }

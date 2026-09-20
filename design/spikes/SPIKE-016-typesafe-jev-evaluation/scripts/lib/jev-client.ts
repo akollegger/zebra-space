@@ -4,7 +4,7 @@
 // sub-question's lib/*.ts calls `ask` directly rather than the raw client, so latency/usage
 // tracking happens once, not duplicated four times.
 
-import { type EntryType, type Questions, type SystemOneResult, TypeSafeClient } from "@typesafe-ai/sdk"
+import { type EntryType, type Questions, type SystemOneResult, TypeSafeClient, type Usage } from "@typesafe-ai/sdk"
 
 export interface JevCallResult<Q extends Questions> {
   readonly ok: true
@@ -41,6 +41,16 @@ export async function ask<const Q extends Questions>(state: EntryType, questions
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e), latencyMs: performance.now() - start }
   }
+}
+
+/** Sums `usage` across a batch of per-item results for a run script's summary — TypeSafe has not
+ * published per-token pricing as of this spike (checked live, see SPIKE.md §4), so token counts
+ * are the reproducible cost proxy every run script's summary reports instead of a $ figure. */
+export function totalUsage(items: readonly { readonly usage: Usage | undefined }[]): Usage {
+  return items.reduce(
+    (sum, item) => ({ input_tokens: sum.input_tokens + (item.usage?.input_tokens ?? 0), output_tokens: sum.output_tokens + (item.usage?.output_tokens ?? 0) }),
+    { input_tokens: 0, output_tokens: 0 },
+  )
 }
 
 /** For an offline smoke test: swaps in a fake `ask` so a lib module's plumbing can be verified

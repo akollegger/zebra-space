@@ -20,11 +20,15 @@
       }
     ],
     "negativeControl": {
-      "correct": 19,
+      "correct": 20,
       "total": 20,
       "errors": 0
     },
-    "totalLatencyMs": 7784.644553000001
+    "totalLatencyMs": 7618.836146999999,
+    "totalUsage": {
+      "input_tokens": 10514,
+      "output_tokens": 550
+    }
   },
   "results": [
     {
@@ -36,8 +40,12 @@
         "expected": true
       },
       "jevMatch": true,
-      "noul": 0.63,
-      "latencyMs": 1165.3680729999999
+      "noul": 0.69,
+      "usage": {
+        "input_tokens": 418,
+        "output_tokens": 22
+      },
+      "latencyMs": 897.554803
     },
     {
       "pair": {
@@ -48,8 +56,12 @@
         "expected": true
       },
       "jevMatch": false,
-      "noul": 0.29,
-      "latencyMs": 518.815846
+      "noul": 0.28,
+      "usage": {
+        "input_tokens": 418,
+        "output_tokens": 22
+      },
+      "latencyMs": 620.29152
     },
     {
       "pair": {
@@ -61,7 +73,11 @@
       },
       "jevMatch": true,
       "noul": 0.97,
-      "latencyMs": 265.55315800000017
+      "usage": {
+        "input_tokens": 421,
+        "output_tokens": 22
+      },
+      "latencyMs": 233.03982999999994
     },
     {
       "pair": {
@@ -73,7 +89,11 @@
       },
       "jevMatch": false,
       "noul": 0.26,
-      "latencyMs": 230.09238200000004
+      "usage": {
+        "input_tokens": 421,
+        "output_tokens": 22
+      },
+      "latencyMs": 276.95428300000003
     },
     {
       "pair": {
@@ -85,7 +105,11 @@
       },
       "jevMatch": false,
       "noul": 0.04,
-      "latencyMs": 291.7389680000001
+      "usage": {
+        "input_tokens": 421,
+        "output_tokens": 22
+      },
+      "latencyMs": 214.91322499999978
     },
     {
       "pair": {
@@ -96,8 +120,12 @@
         "expected": false
       },
       "jevMatch": false,
-      "noul": 0.09,
-      "latencyMs": 261.501972
+      "noul": 0.1,
+      "usage": {
+        "input_tokens": 418,
+        "output_tokens": 22
+      },
+      "latencyMs": 315.69690299999957
     },
     {
       "pair": {
@@ -109,7 +137,11 @@
       },
       "jevMatch": false,
       "noul": 0.05,
-      "latencyMs": 262.7521410000004
+      "usage": {
+        "input_tokens": 419,
+        "output_tokens": 22
+      },
+      "latencyMs": 240.18651500000033
     },
     {
       "pair": {
@@ -120,8 +152,12 @@
         "expected": false
       },
       "jevMatch": false,
-      "noul": 0.06,
-      "latencyMs": 286.52460199999996
+      "noul": 0.05,
+      "usage": {
+        "input_tokens": 419,
+        "output_tokens": 22
+      },
+      "latencyMs": 277.4746320000004
     },
     {
       "pair": {
@@ -133,7 +169,11 @@
       },
       "jevMatch": false,
       "noul": 0.04,
-      "latencyMs": 237.3785630000002
+      "usage": {
+        "input_tokens": 421,
+        "output_tokens": 22
+      },
+      "latencyMs": 261.8376159999998
     },
     {
       "pair": {
@@ -145,7 +185,11 @@
       },
       "jevMatch": false,
       "noul": 0.03,
-      "latencyMs": 265.61497299999974
+      "usage": {
+        "input_tokens": 425,
+        "output_tokens": 22
+      },
+      "latencyMs": 266.31903699999975
     },
     {
       "pair": {
@@ -157,7 +201,11 @@
       },
       "jevMatch": false,
       "noul": 0.04,
-      "latencyMs": 260.67307200000005
+      "usage": {
+        "input_tokens": 419,
+        "output_tokens": 22
+      },
+      "latencyMs": 198.31504099999984
     },
     {
       "pair": {
@@ -169,7 +217,11 @@
       },
       "jevMatch": false,
       "noul": 0.02,
-      "latencyMs": 220.45307999999932
+      "usage": {
+        "input_tokens": 423,
+        "output_tokens": 22
+      },
+      "latencyMs": 237.31424999999945
     },
     {
       "pair": {
@@ -181,7 +233,11 @@
       },
       "jevMatch": false,
       "noul": 0.03,
-      "latencyMs": 293.94405499999993
+      "usage": {
+        "input_tokens": 425,
+        "output_tokens": 22
+      },
+      "latencyMs": 326.1302829999995
     },
     {
       "pair": {
@@ -192,8 +248,12 @@
         "expected": false
       },
       "jevMatch": false,
-      "noul": 0.04,
-      "latencyMs": 258.17173100000036
+      "noul": 0.05,
+      "usage": {
+        "input_tokens": 420,
+        "output_tokens": 22
+      },
+      "latencyMs": 288.9929119999997
     },
     {
       "pair": {
@@ -204,8 +264,12 @@
         "expected": false
       },
       "jevMatch": false,
-      "noul": 0.33,
-      "latencyMs": 273.15037500000017
+      "noul": 0.32,
+      "usage": {
+        "input_tokens": 417,
+        "output_tokens": 22
+      },
+      "latencyMs": 238.5486860000001
     },
     {
       "pair": {
@@ -217,19 +281,11 @@
       },
       "jevMatch": false,
       "noul": 0.03,
-      "latencyMs": 269.42008500000065
-    },
-    {
-      "pair": {
-        "a": "Dog",
-        "b": "dog",
-        "contextHint": "distinct values from this project's puzzle answer keys",
-        "source": "negative-control",
-        "expected": false
+      "usage": {
+        "input_tokens": 427,
+        "output_tokens": 22
       },
-      "jevMatch": true,
-      "noul": 0.69,
-      "latencyMs": 247.51471500000025
+      "latencyMs": 280.1302679999999
     },
     {
       "pair": {
@@ -241,7 +297,11 @@
       },
       "jevMatch": false,
       "noul": 0.05,
-      "latencyMs": 233.31567500000074
+      "usage": {
+        "input_tokens": 427,
+        "output_tokens": 22
+      },
+      "latencyMs": 201.25093200000083
     },
     {
       "pair": {
@@ -253,7 +313,11 @@
       },
       "jevMatch": false,
       "noul": 0.07,
-      "latencyMs": 294.8284729999996
+      "usage": {
+        "input_tokens": 417,
+        "output_tokens": 22
+      },
+      "latencyMs": 329.396299
     },
     {
       "pair": {
@@ -265,7 +329,11 @@
       },
       "jevMatch": false,
       "noul": 0.03,
-      "latencyMs": 247.48577600000044
+      "usage": {
+        "input_tokens": 427,
+        "output_tokens": 22
+      },
+      "latencyMs": 233.00370199999998
     },
     {
       "pair": {
@@ -276,8 +344,12 @@
         "expected": false
       },
       "jevMatch": false,
-      "noul": 0.04,
-      "latencyMs": 275.6691350000001
+      "noul": 0.05,
+      "usage": {
+        "input_tokens": 417,
+        "output_tokens": 22
+      },
+      "latencyMs": 290.05999000000065
     },
     {
       "pair": {
@@ -288,8 +360,12 @@
         "expected": false
       },
       "jevMatch": false,
-      "noul": 0.07,
-      "latencyMs": 259.2587370000001
+      "noul": 0.06,
+      "usage": {
+        "input_tokens": 417,
+        "output_tokens": 22
+      },
+      "latencyMs": 214.54105600000003
     },
     {
       "pair": {
@@ -301,7 +377,11 @@
       },
       "jevMatch": false,
       "noul": 0.06,
-      "latencyMs": 304.81999499999984
+      "usage": {
+        "input_tokens": 417,
+        "output_tokens": 22
+      },
+      "latencyMs": 217.5506580000001
     },
     {
       "pair": {
@@ -312,8 +392,12 @@
         "expected": false
       },
       "jevMatch": false,
-      "noul": 0.04,
-      "latencyMs": 347.44725000000017
+      "noul": 0.03,
+      "usage": {
+        "input_tokens": 419,
+        "output_tokens": 22
+      },
+      "latencyMs": 358.2725279999995
     },
     {
       "pair": {
@@ -325,7 +409,27 @@
       },
       "jevMatch": false,
       "noul": 0.03,
-      "latencyMs": 213.15172099999927
+      "usage": {
+        "input_tokens": 420,
+        "output_tokens": 22
+      },
+      "latencyMs": 267.48414200000025
+    },
+    {
+      "pair": {
+        "a": "Coffee",
+        "b": "Constitutive constraints",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.03,
+      "usage": {
+        "input_tokens": 421,
+        "output_tokens": 22
+      },
+      "latencyMs": 333.5770359999997
     }
   ]
 }

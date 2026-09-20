@@ -11,6 +11,7 @@
 // and AND-gates them in code, mirroring how judge-substitution.ts's own file header describes
 // the original bundled criteria verbatim.
 
+import type { Usage } from "@typesafe-ai/sdk"
 import { type AskFn, ask } from "./jev-client.ts"
 
 export interface MappingEntry {
@@ -24,6 +25,11 @@ export interface DecomposedWellFormedResult {
   readonly grammaticallyCorrect: number | undefined
   readonly sameLogicalStructure: number | undefined
   readonly latencyMs: number
+  /** Token usage for this call (see pairwise-equivalence.ts's EquivalenceVerdict.usage doc for
+   * why this is tokens, not a $ figure). Previously discarded entirely — Copilot review (PR
+   * #37) found the "fraction of the cost" framing this sub-question exists to test had no
+   * persisted usage data to back it. */
+  readonly usage: Usage | undefined
   readonly error?: string
 }
 
@@ -89,6 +95,7 @@ export async function judgeWellFormedDecomposed(
       noLeftoverOldValue: undefined,
       grammaticallyCorrect: undefined,
       sameLogicalStructure: undefined,
+      usage: undefined,
       latencyMs: response.latencyMs,
       error: response.error,
     }
@@ -100,6 +107,7 @@ export async function judgeWellFormedDecomposed(
     noLeftoverOldValue: noLeftoverOldValue.noul,
     grammaticallyCorrect: grammaticallyCorrect.noul,
     sameLogicalStructure: sameLogicalStructure.noul,
+    usage: response.result.usage,
     latencyMs: response.latencyMs,
   }
 }
