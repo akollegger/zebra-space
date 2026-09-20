@@ -1,0 +1,574 @@
+[
+  {
+    "id": "PZL-0001",
+    "reps": [
+      {
+        "outcome": "SUBSTITUTION_NOT_WELL_FORMED",
+        "detail": "Line 9: \"The Swedish lives in the first house.\" (should be \"The Norwegian lives in the first house.\"); Line 14: \"The Swedish lives next to the blue house.\" (should be \"The Norwegian lives next to the blue house.\"); The Swedish lives in the first house. (The Norwegian should be substituted by Swedish but the placement in the clue has been mismatched.); The man who smokes Chesterfields lives in the house next to the man with the fox. (No change occurs here, this is acceptable.); Kools are smoked in the house next to the house where the horse is kept. (No change occurs here, this is acceptable.); The Lucky Strike smoker drinks orange juice. (No change occurs here, this is acceptable.); The Chinese smokes Parliaments. (No change occurs here, this is acceptable.); The Swedish lives next to the blue house. (The Norwegian should be substituted by Swedish but the placement in the clue has been mismatched.); The substituted text in point 9 is incorrect: 'The Swedish lives in the first house.' should have replaced 'Norwegian' with 'Swede' for grammatical consistency. The correct would be 'The Swedish person lives in the first house.'; In point 14, the use of 'The Swedish' without a noun (like 'man' or 'person') is ambiguous and grammatically incorrect, which should have been 'The Swedish person lives next to the blue house.'",
+        "mappingCostUsd": 0.00015435,
+        "judgeCostUsd": 0.0006183,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 5,
+        "mznSkipped": [],
+        "wellFormed": false,
+        "issues": [
+          "Line 9: \"The Swedish lives in the first house.\" (should be \"The Norwegian lives in the first house.\")",
+          "Line 14: \"The Swedish lives next to the blue house.\" (should be \"The Norwegian lives next to the blue house.\")",
+          "The Swedish lives in the first house. (The Norwegian should be substituted by Swedish but the placement in the clue has been mismatched.)",
+          "The man who smokes Chesterfields lives in the house next to the man with the fox. (No change occurs here, this is acceptable.)",
+          "Kools are smoked in the house next to the house where the horse is kept. (No change occurs here, this is acceptable.)",
+          "The Lucky Strike smoker drinks orange juice. (No change occurs here, this is acceptable.)",
+          "The Chinese smokes Parliaments. (No change occurs here, this is acceptable.)",
+          "The Swedish lives next to the blue house. (The Norwegian should be substituted by Swedish but the placement in the clue has been mismatched.)",
+          "The substituted text in point 9 is incorrect: 'The Swedish lives in the first house.' should have replaced 'Norwegian' with 'Swede' for grammatical consistency. The correct would be 'The Swedish person lives in the first house.'",
+          "In point 14, the use of 'The Swedish' without a noun (like 'man' or 'person') is ambiguous and grammatically incorrect, which should have been 'The Swedish person lives next to the blue house.'"
+        ],
+        "judgeVotes": [
+          {
+            "wellFormed": false,
+            "issues": [
+              "Line 9: \"The Swedish lives in the first house.\" (should be \"The Norwegian lives in the first house.\")",
+              "Line 14: \"The Swedish lives next to the blue house.\" (should be \"The Norwegian lives next to the blue house.\")"
+            ]
+          },
+          {
+            "wellFormed": false,
+            "issues": [
+              "The Swedish lives in the first house. (The Norwegian should be substituted by Swedish but the placement in the clue has been mismatched.)",
+              "The man who smokes Chesterfields lives in the house next to the man with the fox. (No change occurs here, this is acceptable.)",
+              "Kools are smoked in the house next to the house where the horse is kept. (No change occurs here, this is acceptable.)",
+              "The Lucky Strike smoker drinks orange juice. (No change occurs here, this is acceptable.)",
+              "The Chinese smokes Parliaments. (No change occurs here, this is acceptable.)",
+              "The Swedish lives next to the blue house. (The Norwegian should be substituted by Swedish but the placement in the clue has been mismatched.)"
+            ]
+          },
+          {
+            "wellFormed": false,
+            "issues": [
+              "The substituted text in point 9 is incorrect: 'The Swedish lives in the first house.' should have replaced 'Norwegian' with 'Swede' for grammatical consistency. The correct would be 'The Swedish person lives in the first house.'",
+              "In point 14, the use of 'The Swedish' without a noun (like 'man' or 'person') is ambiguous and grammatically incorrect, which should have been 'The Swedish person lives next to the blue house.'"
+            ]
+          }
+        ],
+        "substitutedProse": "There are five houses.\n\n1. The Frenchman lives in the red house.\n2. The Italian owns the dog.\n3. Coffee is drunk in the green house.\n4. The Polish drinks tea.\n5. The green house is immediately to the right of the ivory house.\n6. The Old Gold smoker owns snails.\n7. Kools are smoked in the yellow house.\n8. Milk is drunk in the middle house.\n9. The Swedish lives in the first house.\n10. The man who smokes Chesterfields lives in the house next to the man with the fox.\n11. Kools are smoked in the house next to the house where the horse is kept.\n12. The Lucky Strike smoker drinks orange juice.\n13. The Chinese smokes Parliaments.\n14. The Swedish lives next to the blue house.\n\nNow, who drinks water? Who owns the zebra?"
+      },
+      {
+        "outcome": "SUBSTITUTION_NOT_WELL_FORMED",
+        "detail": "The Swedish lives in the first house. (Line 9 and Line 14) - 'The Norwegian' was replaced with 'The Swedish' but it should retain the position in the clues.; The Frenchman lives in the red house.; The Italian owns the dog.; The German drinks tea.; The Swedish lives in the first house.; The Chinese smokes Parliaments.; The Swedish lives in the first house. (Line 9); The Swedish lives next to the blue house. (Line 14)",
+        "mappingCostUsd": 0.00015375,
+        "judgeCostUsd": 0.00049785,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 5,
+        "mznSkipped": [],
+        "wellFormed": false,
+        "issues": [
+          "The Swedish lives in the first house. (Line 9 and Line 14) - 'The Norwegian' was replaced with 'The Swedish' but it should retain the position in the clues.",
+          "The Frenchman lives in the red house.",
+          "The Italian owns the dog.",
+          "The German drinks tea.",
+          "The Swedish lives in the first house.",
+          "The Chinese smokes Parliaments.",
+          "The Swedish lives in the first house. (Line 9)",
+          "The Swedish lives next to the blue house. (Line 14)"
+        ],
+        "judgeVotes": [
+          {
+            "wellFormed": false,
+            "issues": [
+              "The Swedish lives in the first house. (Line 9 and Line 14) - 'The Norwegian' was replaced with 'The Swedish' but it should retain the position in the clues."
+            ]
+          },
+          {
+            "wellFormed": false,
+            "issues": [
+              "The Frenchman lives in the red house.",
+              "The Italian owns the dog.",
+              "The German drinks tea.",
+              "The Swedish lives in the first house.",
+              "The Chinese smokes Parliaments."
+            ]
+          },
+          {
+            "wellFormed": false,
+            "issues": [
+              "The Swedish lives in the first house. (Line 9)",
+              "The Swedish lives next to the blue house. (Line 14)"
+            ]
+          }
+        ],
+        "substitutedProse": "There are five houses.\n\n1. The Frenchman lives in the red house.\n2. The Italian owns the dog.\n3. Coffee is drunk in the green house.\n4. The German drinks tea.\n5. The green house is immediately to the right of the ivory house.\n6. The Old Gold smoker owns snails.\n7. Kools are smoked in the yellow house.\n8. Milk is drunk in the middle house.\n9. The Swedish lives in the first house.\n10. The man who smokes Chesterfields lives in the house next to the man with the fox.\n11. Kools are smoked in the house next to the house where the horse is kept.\n12. The Lucky Strike smoker drinks orange juice.\n13. The Chinese smokes Parliaments.\n14. The Swedish lives next to the blue house.\n\nNow, who drinks water? Who owns the zebra?"
+      },
+      {
+        "outcome": "SUBSTITUTION_NOT_WELL_FORMED",
+        "detail": "Line 9: \"The Swedish lives in the first house.\" - This should refer to the Norwegian, instead of the Swedish. It is an incorrect replacement that alters the relationship structure.; The Swedish lives in the first house.; The Swedish lives next to the blue house.; The man who smokes Chesterfields lives in the house next to the man with the fox.; Kools are smoked in the house next to the house where the horse is kept.; The Lucky Strike smoker drinks orange juice.; The Chinese smokes Parliaments.",
+        "mappingCostUsd": 0.00015435,
+        "judgeCostUsd": 0.0005055,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 5,
+        "mznSkipped": [],
+        "wellFormed": false,
+        "issues": [
+          "Line 9: \"The Swedish lives in the first house.\" - This should refer to the Norwegian, instead of the Swedish. It is an incorrect replacement that alters the relationship structure.",
+          "The Swedish lives in the first house.",
+          "The Swedish lives next to the blue house.",
+          "The man who smokes Chesterfields lives in the house next to the man with the fox.",
+          "Kools are smoked in the house next to the house where the horse is kept.",
+          "The Lucky Strike smoker drinks orange juice.",
+          "The Chinese smokes Parliaments."
+        ],
+        "judgeVotes": [
+          {
+            "wellFormed": false,
+            "issues": [
+              "Line 9: \"The Swedish lives in the first house.\" - This should refer to the Norwegian, instead of the Swedish. It is an incorrect replacement that alters the relationship structure."
+            ]
+          },
+          {
+            "wellFormed": false,
+            "issues": [
+              "The Swedish lives in the first house.",
+              "The Swedish lives next to the blue house."
+            ]
+          },
+          {
+            "wellFormed": false,
+            "issues": [
+              "The Swedish lives in the first house.",
+              "The man who smokes Chesterfields lives in the house next to the man with the fox.",
+              "Kools are smoked in the house next to the house where the horse is kept.",
+              "The Lucky Strike smoker drinks orange juice.",
+              "The Chinese smokes Parliaments."
+            ]
+          }
+        ],
+        "substitutedProse": "There are five houses.\n\n1. The Frenchman lives in the red house.\n2. The Italian owns the dog.\n3. Coffee is drunk in the green house.\n4. The Polish drinks tea.\n5. The green house is immediately to the right of the ivory house.\n6. The Old Gold smoker owns snails.\n7. Kools are smoked in the yellow house.\n8. Milk is drunk in the middle house.\n9. The Swedish lives in the first house.\n10. The man who smokes Chesterfields lives in the house next to the man with the fox.\n11. Kools are smoked in the house next to the house where the horse is kept.\n12. The Lucky Strike smoker drinks orange juice.\n13. The Chinese smokes Parliaments.\n14. The Swedish lives next to the blue house.\n\nNow, who drinks water? Who owns the zebra?"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0002",
+    "reps": [
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.0001167,
+        "judgeCostUsd": 0.00034875,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "Three houses stand in a row, numbered 1 to 3 from left to right. Each has a unique color —\nYellow, Purple, or Orange — and is home to a unique animal — Dog, Cat, or Zebra.\n\n1. The Cat lives in the Purple House.\n2. The Purple House is the middle house.\n3. The Yellow House is directly to the left of the Purple House.\n4. The Dog lives in the Yellow House.\n\nWhere does the Zebra live?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.0001167,
+        "judgeCostUsd": 0.00034875,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "Three houses stand in a row, numbered 1 to 3 from left to right. Each has a unique color —\nYellow, Purple, or Orange — and is home to a unique animal — Dog, Cat, or Zebra.\n\n1. The Cat lives in the Purple House.\n2. The Purple House is the middle house.\n3. The Yellow House is directly to the left of the Purple House.\n4. The Dog lives in the Yellow House.\n\nWhere does the Zebra live?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.0001167,
+        "judgeCostUsd": 0.00034875,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "Three houses stand in a row, numbered 1 to 3 from left to right. Each has a unique color —\nYellow, Purple, or Orange — and is home to a unique animal — Dog, Cat, or Zebra.\n\n1. The Cat lives in the Purple House.\n2. The Purple House is the middle house.\n3. The Yellow House is directly to the left of the Purple House.\n4. The Dog lives in the Yellow House.\n\nWhere does the Zebra live?"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0003",
+    "reps": [
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.00010965,
+        "judgeCostUsd": 0.00029565,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "You're playing water-sand-fire.\n\n1. Water beats sand.\n2. Sand beats fire.\n3. Fire beats water.\n4. Your opponent plays sand.\n\nWhat should you play?"
+      },
+      {
+        "outcome": "SUBSTITUTION_NOT_WELL_FORMED",
+        "detail": "1. Lizard beats spock. (original: Paper beats rock.); 2. Spock beats water. (original: Rock beats scissors.); 3. Water beats lizard. (original: Scissors beats paper.); 4. Your opponent plays spock. (original: Your opponent plays rock.); 1. Lizard beats spock.; 2. Spock beats water.; 3. Water beats lizard.",
+        "mappingCostUsd": 0.00011085,
+        "judgeCostUsd": 0.00036525,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": false,
+        "issues": [
+          "1. Lizard beats spock. (original: Paper beats rock.)",
+          "2. Spock beats water. (original: Rock beats scissors.)",
+          "3. Water beats lizard. (original: Scissors beats paper.)",
+          "4. Your opponent plays spock. (original: Your opponent plays rock.)",
+          "1. Lizard beats spock.",
+          "2. Spock beats water.",
+          "3. Water beats lizard."
+        ],
+        "judgeVotes": [
+          {
+            "wellFormed": false,
+            "issues": [
+              "1. Lizard beats spock. (original: Paper beats rock.)",
+              "2. Spock beats water. (original: Rock beats scissors.)",
+              "3. Water beats lizard. (original: Scissors beats paper.)",
+              "4. Your opponent plays spock. (original: Your opponent plays rock.)"
+            ]
+          },
+          {
+            "wellFormed": false,
+            "issues": [
+              "1. Lizard beats spock.",
+              "2. Spock beats water.",
+              "3. Water beats lizard."
+            ]
+          },
+          {
+            "wellFormed": false,
+            "issues": [
+              "1. Lizard beats spock.",
+              "2. Spock beats water.",
+              "3. Water beats lizard."
+            ]
+          }
+        ],
+        "substitutedProse": "You're playing lizard-spock-water.\n\n1. Lizard beats spock.\n2. Spock beats water.\n3. Water beats lizard.\n4. Your opponent plays spock.\n\nWhat should you play?"
+      },
+      {
+        "outcome": "SUBSTITUTION_NOT_WELL_FORMED",
+        "detail": "1. Lizard beats spock. (Should be 'lizard beats spock' instead of 'spock beats lizard'); 2. Spock beats water. (Should be 'rock beats scissors' instead of 'spock beats water'); 3. Water beats lizard. (Should be 'scissors beats paper' instead of 'water beats lizard'); 4. Your opponent plays spock. (Should be 'your opponent plays rock' instead of 'your opponent plays spock'); Original clue: \"Paper beats rock.\" - Substituted as: \"Lizard beats spock.\" (Incorrect mapping in relationship); Original clue: \"Rock beats scissors.\" - Substituted as: \"Spock beats water.\" (Incorrect mapping in relationship); Original clue: \"Scissors beats paper.\" - Substituted as: \"Water beats lizard.\" (Incorrect mapping in relationship); 1. Lizard beats spock.; 2. Spock beats water.; 3. Water beats lizard.",
+        "mappingCostUsd": 0.00011085,
+        "judgeCostUsd": 0.00042525000000000006,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": false,
+        "issues": [
+          "1. Lizard beats spock. (Should be 'lizard beats spock' instead of 'spock beats lizard')",
+          "2. Spock beats water. (Should be 'rock beats scissors' instead of 'spock beats water')",
+          "3. Water beats lizard. (Should be 'scissors beats paper' instead of 'water beats lizard')",
+          "4. Your opponent plays spock. (Should be 'your opponent plays rock' instead of 'your opponent plays spock')",
+          "Original clue: \"Paper beats rock.\" - Substituted as: \"Lizard beats spock.\" (Incorrect mapping in relationship)",
+          "Original clue: \"Rock beats scissors.\" - Substituted as: \"Spock beats water.\" (Incorrect mapping in relationship)",
+          "Original clue: \"Scissors beats paper.\" - Substituted as: \"Water beats lizard.\" (Incorrect mapping in relationship)",
+          "1. Lizard beats spock.",
+          "2. Spock beats water.",
+          "3. Water beats lizard."
+        ],
+        "judgeVotes": [
+          {
+            "wellFormed": false,
+            "issues": [
+              "1. Lizard beats spock. (Should be 'lizard beats spock' instead of 'spock beats lizard')",
+              "2. Spock beats water. (Should be 'rock beats scissors' instead of 'spock beats water')",
+              "3. Water beats lizard. (Should be 'scissors beats paper' instead of 'water beats lizard')",
+              "4. Your opponent plays spock. (Should be 'your opponent plays rock' instead of 'your opponent plays spock')"
+            ]
+          },
+          {
+            "wellFormed": false,
+            "issues": [
+              "Original clue: \"Paper beats rock.\" - Substituted as: \"Lizard beats spock.\" (Incorrect mapping in relationship)",
+              "Original clue: \"Rock beats scissors.\" - Substituted as: \"Spock beats water.\" (Incorrect mapping in relationship)",
+              "Original clue: \"Scissors beats paper.\" - Substituted as: \"Water beats lizard.\" (Incorrect mapping in relationship)"
+            ]
+          },
+          {
+            "wellFormed": false,
+            "issues": [
+              "1. Lizard beats spock.",
+              "2. Spock beats water.",
+              "3. Water beats lizard."
+            ]
+          }
+        ],
+        "substitutedProse": "You're playing lizard-spock-water.\n\n1. Lizard beats spock.\n2. Spock beats water.\n3. Water beats lizard.\n4. Your opponent plays spock.\n\nWhat should you play?"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0004",
+    "reps": [
+      {
+        "outcome": "MZN_APPLY_TOTAL_FAILURE",
+        "detail": "no mapping entries applied to the seed .mzn",
+        "mappingCostUsd": 0.00013185,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 0,
+        "mznSkipped": [
+          {
+            "oldValue": "Miss Scarlett",
+            "newValue": "Miss Green",
+            "reason": "not found among declared enum members"
+          },
+          {
+            "oldValue": "Colonel Mustard",
+            "newValue": "Mr. Black",
+            "reason": "not found among declared enum members"
+          },
+          {
+            "oldValue": "Professor Plum",
+            "newValue": "Dr. White",
+            "reason": "not found among declared enum members"
+          }
+        ]
+      },
+      {
+        "outcome": "MZN_APPLY_TOTAL_FAILURE",
+        "detail": "no mapping entries applied to the seed .mzn",
+        "mappingCostUsd": 0.00013245,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 0,
+        "mznSkipped": [
+          {
+            "oldValue": "Miss Scarlett",
+            "newValue": "Dr. Green",
+            "reason": "not found among declared enum members"
+          },
+          {
+            "oldValue": "Colonel Mustard",
+            "newValue": "Mrs. White",
+            "reason": "not found among declared enum members"
+          },
+          {
+            "oldValue": "Professor Plum",
+            "newValue": "Mr. Black",
+            "reason": "not found among declared enum members"
+          }
+        ]
+      },
+      {
+        "outcome": "MZN_APPLY_TOTAL_FAILURE",
+        "detail": "no mapping entries applied to the seed .mzn",
+        "mappingCostUsd": 0.00013245,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 0,
+        "mznSkipped": [
+          {
+            "oldValue": "Miss Scarlett",
+            "newValue": "Mrs. Green",
+            "reason": "not found among declared enum members"
+          },
+          {
+            "oldValue": "Colonel Mustard",
+            "newValue": "Mr. White",
+            "reason": "not found among declared enum members"
+          },
+          {
+            "oldValue": "Professor Plum",
+            "newValue": "Dr. Black",
+            "reason": "not found among declared enum members"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "PZL-0011",
+    "reps": [
+      {
+        "outcome": "DOMAIN_MATCH_FAILED",
+        "detail": "closest expected domain (name(s): outcome, decision) has a different value set: missing [Denied, Approved, Counter-Offer]; invented [680, 750]",
+        "mappingCostUsd": 0.00012795,
+        "domainMatchReason": "closest expected domain (name(s): outcome, decision) has a different value set: missing [Denied, Approved, Counter-Offer]; invented [680, 750]"
+      },
+      {
+        "outcome": "DOMAIN_MATCH_FAILED",
+        "detail": "closest expected domain (name(s): outcome, decision) has a different value set: missing [Denied, Approved, Counter-Offer]; invented [680, 750]",
+        "mappingCostUsd": 0.00012795,
+        "domainMatchReason": "closest expected domain (name(s): outcome, decision) has a different value set: missing [Denied, Approved, Counter-Offer]; invented [680, 750]"
+      },
+      {
+        "outcome": "DOMAIN_MATCH_FAILED",
+        "detail": "closest expected domain (name(s): outcome, decision) has a different value set: missing [Denied, Approved, Counter-Offer]; invented [680, 750]",
+        "mappingCostUsd": 0.00012795,
+        "domainMatchReason": "closest expected domain (name(s): outcome, decision) has a different value set: missing [Denied, Approved, Counter-Offer]; invented [680, 750]"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0038",
+    "reps": [
+      {
+        "outcome": "SUBSTITUTION_NOT_WELL_FORMED",
+        "detail": "The phrase 'a lion' should be 'an lion' due to the vowel sound at the beginning of 'lion'.; The phrase 'the lizard is in pen 1' should match the substituted naming convention and meaning appropriately, but 'the lizard' corresponds to 'the tortoise' in the original, hence any grammatical context remains with its role.; The lizard is in pen 1. The tortoise should be replaced with 'lizard', but that relationship in the original implies the tortoise is in pen 1 while 'lizard' must now replace it correctly without changing the grammar or meaning. However, it remains correct as 'the lizard is in pen 1' is grammatically correct. The issue here is in terms of original relationship parallels rather than fragments.']}",
+        "mappingCostUsd": 0.0001455,
+        "judgeCostUsd": 0.0005029500000000001,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 5,
+        "mznSkipped": [],
+        "wellFormed": false,
+        "issues": [
+          "The phrase 'a lion' should be 'an lion' due to the vowel sound at the beginning of 'lion'.",
+          "The phrase 'the lizard is in pen 1' should match the substituted naming convention and meaning appropriately, but 'the lizard' corresponds to 'the tortoise' in the original, hence any grammatical context remains with its role.",
+          "The lizard is in pen 1. The tortoise should be replaced with 'lizard', but that relationship in the original implies the tortoise is in pen 1 while 'lizard' must now replace it correctly without changing the grammar or meaning. However, it remains correct as 'the lizard is in pen 1' is grammatically correct. The issue here is in terms of original relationship parallels rather than fragments.']}"
+        ],
+        "judgeVotes": [
+          {
+            "wellFormed": false,
+            "issues": [
+              "The phrase 'a lion' should be 'an lion' due to the vowel sound at the beginning of 'lion'.",
+              "The phrase 'the lizard is in pen 1' should match the substituted naming convention and meaning appropriately, but 'the lizard' corresponds to 'the tortoise' in the original, hence any grammatical context remains with its role."
+            ]
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": false,
+            "issues": [
+              "The lizard is in pen 1. The tortoise should be replaced with 'lizard', but that relationship in the original implies the tortoise is in pen 1 while 'lizard' must now replace it correctly without changing the grammar or meaning. However, it remains correct as 'the lizard is in pen 1' is grammatically correct. The issue here is in terms of original relationship parallels rather than fragments.']}"
+            ]
+          }
+        ],
+        "substitutedProse": "A wildlife park is moving five animals — a lion, a hamster, a sheep, a canary, and a lizard —\ninto five holding pens standing in a row, numbered 1 to 5, one animal per pen. Each pen is fully\nenclosed on all sides by a solid concrete wall; no animal in any pen can see, smell, hear, or\nreach any animal in another.\n\n1. The lizard is in pen 1.\n2. The canary is in pen 2.\n3. The sheep is in pen 3.\n4. The hamster is in a lower-numbered pen than the lion.\n5. The lion preys on the hamster.\n\nWhere is each animal?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.0001455,
+        "judgeCostUsd": 0.0004189500000000001,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 5,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": false,
+            "issues": [
+              "The tortoise is in pen 1.",
+              "The parrot is in pen 2.",
+              "The goat is in pen 3."
+            ]
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "A wildlife park is moving five animals — a lion, a hare, a sheep, a canary, and a snapping turtle —\ninto five holding pens standing in a row, numbered 1 to 5, one animal per pen. Each pen is fully\nenclosed on all sides by a solid concrete wall; no animal in any pen can see, smell, hear, or\nreach any animal in another.\n\n1. The snapping turtle is in pen 1.\n2. The canary is in pen 2.\n3. The sheep is in pen 3.\n4. The hare is in a lower-numbered pen than the lion.\n5. The lion preys on the hare.\n\nWhere is each animal?"
+      },
+      {
+        "outcome": "SUBSTITUTION_NOT_WELL_FORMED",
+        "detail": "The frog is in pen 1.; The canary is in pen 2.; The sheep is in pen 3.; The frog is in pen 1. (original: The tortoise is in pen 1.); The canary is in pen 2. (original: The parrot is in pen 2.); The sheep is in pen 3. (original: The goat is in pen 3.); The deer is in a lower-numbered pen than the lion. (original: The rabbit is in a lower-numbered pen than the wolf.); The lion preys on the deer. (original: The wolf preys on the rabbit.)",
+        "mappingCostUsd": 0.0001449,
+        "judgeCostUsd": 0.00048479999999999997,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 5,
+        "mznSkipped": [],
+        "wellFormed": false,
+        "issues": [
+          "The frog is in pen 1.",
+          "The canary is in pen 2.",
+          "The sheep is in pen 3.",
+          "The frog is in pen 1. (original: The tortoise is in pen 1.)",
+          "The canary is in pen 2. (original: The parrot is in pen 2.)",
+          "The sheep is in pen 3. (original: The goat is in pen 3.)",
+          "The deer is in a lower-numbered pen than the lion. (original: The rabbit is in a lower-numbered pen than the wolf.)",
+          "The lion preys on the deer. (original: The wolf preys on the rabbit.)"
+        ],
+        "judgeVotes": [
+          {
+            "wellFormed": false,
+            "issues": [
+              "The frog is in pen 1.",
+              "The canary is in pen 2.",
+              "The sheep is in pen 3."
+            ]
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": false,
+            "issues": [
+              "The frog is in pen 1. (original: The tortoise is in pen 1.)",
+              "The canary is in pen 2. (original: The parrot is in pen 2.)",
+              "The sheep is in pen 3. (original: The goat is in pen 3.)",
+              "The deer is in a lower-numbered pen than the lion. (original: The rabbit is in a lower-numbered pen than the wolf.)",
+              "The lion preys on the deer. (original: The wolf preys on the rabbit.)"
+            ]
+          }
+        ],
+        "substitutedProse": "A wildlife park is moving five animals — a lion, a deer, a sheep, a canary, and a frog —\ninto five holding pens standing in a row, numbered 1 to 5, one animal per pen. Each pen is fully\nenclosed on all sides by a solid concrete wall; no animal in any pen can see, smell, hear, or\nreach any animal in another.\n\n1. The frog is in pen 1.\n2. The canary is in pen 2.\n3. The sheep is in pen 3.\n4. The deer is in a lower-numbered pen than the lion.\n5. The lion preys on the deer.\n\nWhere is each animal?"
+      }
+    ]
+  }
+]

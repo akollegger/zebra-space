@@ -1,0 +1,1508 @@
+[
+  {
+    "id": "PZL-0001",
+    "reps": [
+      {
+        "outcome": "SUBSTITUTION_NOT_WELL_FORMED",
+        "detail": "Line 9: \"The Swedish lives in the first house.\" — \"Swedish\" is an adjective (or the language), not a noun denoting a person, so the sentence is ungrammatical. The original \"The Norwegian\" was a person noun; the grammatical replacement would be \"The Swede\".; Line 14: \"The Swedish lives next to the blue house.\" — same problem: \"The Swedish\" is not a well-formed person reference; it should read e.g. \"The Swede lives next to the blue house.\"; \"The Swedish lives in the first house.\" — nationality used as a noun form incorrectly; should be \"The Swede\" or \"the Swedish man\" (also \"The Swedish lives next to the blue house.\"); Line 9: \"The Swedish lives in the first house.\" — nationality adjective used as a plural noun; the substitution for \"Norwegian\" requires a singular person noun, e.g. \"the Swede\". Same issue in line 14: \"The Swedish lives next to the blue house.\"; Line 13: \"The Korean smokes Parliaments.\" — grammatically acceptable, but note the article+noun agreement is fine; the primary errors are lines 9 and 14.",
+        "mappingCostUsd": 0.00015435,
+        "judgeCostUsd": 0.0007259500000000001,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 5,
+        "mznSkipped": [],
+        "wellFormed": false,
+        "issues": [
+          "Line 9: \"The Swedish lives in the first house.\" — \"Swedish\" is an adjective (or the language), not a noun denoting a person, so the sentence is ungrammatical. The original \"The Norwegian\" was a person noun; the grammatical replacement would be \"The Swede\".",
+          "Line 14: \"The Swedish lives next to the blue house.\" — same problem: \"The Swedish\" is not a well-formed person reference; it should read e.g. \"The Swede lives next to the blue house.\"",
+          "\"The Swedish lives in the first house.\" — nationality used as a noun form incorrectly; should be \"The Swede\" or \"the Swedish man\" (also \"The Swedish lives next to the blue house.\")",
+          "Line 9: \"The Swedish lives in the first house.\" — nationality adjective used as a plural noun; the substitution for \"Norwegian\" requires a singular person noun, e.g. \"the Swede\". Same issue in line 14: \"The Swedish lives next to the blue house.\"",
+          "Line 13: \"The Korean smokes Parliaments.\" — grammatically acceptable, but note the article+noun agreement is fine; the primary errors are lines 9 and 14."
+        ],
+        "judgeVotes": [
+          {
+            "wellFormed": false,
+            "issues": [
+              "Line 9: \"The Swedish lives in the first house.\" — \"Swedish\" is an adjective (or the language), not a noun denoting a person, so the sentence is ungrammatical. The original \"The Norwegian\" was a person noun; the grammatical replacement would be \"The Swede\".",
+              "Line 14: \"The Swedish lives next to the blue house.\" — same problem: \"The Swedish\" is not a well-formed person reference; it should read e.g. \"The Swede lives next to the blue house.\""
+            ]
+          },
+          {
+            "wellFormed": false,
+            "issues": [
+              "\"The Swedish lives in the first house.\" — nationality used as a noun form incorrectly; should be \"The Swede\" or \"the Swedish man\" (also \"The Swedish lives next to the blue house.\")"
+            ]
+          },
+          {
+            "wellFormed": false,
+            "issues": [
+              "Line 9: \"The Swedish lives in the first house.\" — nationality adjective used as a plural noun; the substitution for \"Norwegian\" requires a singular person noun, e.g. \"the Swede\". Same issue in line 14: \"The Swedish lives next to the blue house.\"",
+              "Line 13: \"The Korean smokes Parliaments.\" — grammatically acceptable, but note the article+noun agreement is fine; the primary errors are lines 9 and 14."
+            ]
+          }
+        ],
+        "substitutedProse": "There are five houses.\n\n1. The Frenchman lives in the red house.\n2. The Italian owns the dog.\n3. Coffee is drunk in the green house.\n4. The German drinks tea.\n5. The green house is immediately to the right of the ivory house.\n6. The Old Gold smoker owns snails.\n7. Kools are smoked in the yellow house.\n8. Milk is drunk in the middle house.\n9. The Swedish lives in the first house.\n10. The man who smokes Chesterfields lives in the house next to the man with the fox.\n11. Kools are smoked in the house next to the house where the horse is kept.\n12. The Lucky Strike smoker drinks orange juice.\n13. The Korean smokes Parliaments.\n14. The Swedish lives next to the blue house.\n\nNow, who drinks water? Who owns the zebra?"
+      },
+      {
+        "outcome": "SUBSTITUTION_NOT_WELL_FORMED",
+        "detail": "\"The Polish drinks tea\" — nationality adjective used as singular noun; should be \"The Pole\" (or \"Polish man\").; \"The Swedish lives in the first house\" — same adjective-for-noun issue; should be \"The Swede\".; \"The Swedish lives next to the blue house\" — same issue.; Clue 4: \"The Polish drinks tea\" — \"Polish\" is an adjective, not a nationality noun; reads ungrammatically (should be e.g. \"The Pole\" or \"The Polish person\").; Clue 9: \"The Swedish lives in the first house\" — \"Swedish\" is an adjective, not a noun; ungrammatical (should be e.g. \"The Swede\").; Clue 14: \"The Swedish lives next to the blue house\" — same problem with \"Swedish\" as a noun substitute.",
+        "mappingCostUsd": 0.00015435,
+        "judgeCostUsd": 0.00035333,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 5,
+        "mznSkipped": [],
+        "wellFormed": false,
+        "issues": [
+          "\"The Polish drinks tea\" — nationality adjective used as singular noun; should be \"The Pole\" (or \"Polish man\").",
+          "\"The Swedish lives in the first house\" — same adjective-for-noun issue; should be \"The Swede\".",
+          "\"The Swedish lives next to the blue house\" — same issue.",
+          "Clue 4: \"The Polish drinks tea\" — \"Polish\" is an adjective, not a nationality noun; reads ungrammatically (should be e.g. \"The Pole\" or \"The Polish person\").",
+          "Clue 9: \"The Swedish lives in the first house\" — \"Swedish\" is an adjective, not a noun; ungrammatical (should be e.g. \"The Swede\").",
+          "Clue 14: \"The Swedish lives next to the blue house\" — same problem with \"Swedish\" as a noun substitute."
+        ],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": [
+              "\"The Polish drinks tea\" — nationality adjective used as a noun, grammatically awkward (original: \"The Ukrainian\"); similarly \"The Swedish lives...\". Not a substitution error per se, but degraded grammar."
+            ]
+          },
+          {
+            "wellFormed": false,
+            "issues": [
+              "\"The Polish drinks tea\" — nationality adjective used as singular noun; should be \"The Pole\" (or \"Polish man\").",
+              "\"The Swedish lives in the first house\" — same adjective-for-noun issue; should be \"The Swede\".",
+              "\"The Swedish lives next to the blue house\" — same issue."
+            ]
+          },
+          {
+            "wellFormed": false,
+            "issues": [
+              "Clue 4: \"The Polish drinks tea\" — \"Polish\" is an adjective, not a nationality noun; reads ungrammatically (should be e.g. \"The Pole\" or \"The Polish person\").",
+              "Clue 9: \"The Swedish lives in the first house\" — \"Swedish\" is an adjective, not a noun; ungrammatical (should be e.g. \"The Swede\").",
+              "Clue 14: \"The Swedish lives next to the blue house\" — same problem with \"Swedish\" as a noun substitute."
+            ]
+          }
+        ],
+        "substitutedProse": "There are five houses.\n\n1. The Frenchman lives in the red house.\n2. The Italian owns the dog.\n3. Coffee is drunk in the green house.\n4. The Polish drinks tea.\n5. The green house is immediately to the right of the ivory house.\n6. The Old Gold smoker owns snails.\n7. Kools are smoked in the yellow house.\n8. Milk is drunk in the middle house.\n9. The Swedish lives in the first house.\n10. The man who smokes Chesterfields lives in the house next to the man with the fox.\n11. Kools are smoked in the house next to the house where the horse is kept.\n12. The Lucky Strike smoker drinks orange juice.\n13. The Chinese smokes Parliaments.\n14. The Swedish lives next to the blue house.\n\nNow, who drinks water? Who owns the zebra?"
+      },
+      {
+        "outcome": "SUBSTITUTION_NOT_WELL_FORMED",
+        "detail": "Lines 9 and 14: \"The Norwegian\" was replaced with \"The Swedish\", which is not a grammatically valid noun phrase for a person — \"the Swedish lives in the first house\" / \"The Swedish lives next to the blue house\" should read \"The Swede\" (or \"The Swedish man\").; Nationality/adjective mismatch: \"The Swedish lives in the first house\" (clue 9) and \"The Swedish lives next to the blue house\" (clue 14) — \"Swedish\" is an adjective and cannot stand as a noun phrase for a person; the mapping \"Norwegian\" -> \"Swedish\" produces ungrammatical text (should be e.g. \"the Swede\").; Clause 9: \"The Swedish lives in the first house\" — the nationality \"Norwegian\" was replaced by \"Swedish\", which is an adjective, not a noun for a person; it should be \"The Swede\" (grammatical/agreement failure around the replaced value).; Clause 14: \"The Swedish lives next to the blue house\" — same problem: \"The Swedish\" is not a grammatically correct reference to a person; should be \"The Swede\".",
+        "mappingCostUsd": 0.00015375,
+        "judgeCostUsd": 0.000744,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 5,
+        "mznSkipped": [],
+        "wellFormed": false,
+        "issues": [
+          "Lines 9 and 14: \"The Norwegian\" was replaced with \"The Swedish\", which is not a grammatically valid noun phrase for a person — \"the Swedish lives in the first house\" / \"The Swedish lives next to the blue house\" should read \"The Swede\" (or \"The Swedish man\").",
+          "Nationality/adjective mismatch: \"The Swedish lives in the first house\" (clue 9) and \"The Swedish lives next to the blue house\" (clue 14) — \"Swedish\" is an adjective and cannot stand as a noun phrase for a person; the mapping \"Norwegian\" -> \"Swedish\" produces ungrammatical text (should be e.g. \"the Swede\").",
+          "Clause 9: \"The Swedish lives in the first house\" — the nationality \"Norwegian\" was replaced by \"Swedish\", which is an adjective, not a noun for a person; it should be \"The Swede\" (grammatical/agreement failure around the replaced value).",
+          "Clause 14: \"The Swedish lives next to the blue house\" — same problem: \"The Swedish\" is not a grammatically correct reference to a person; should be \"The Swede\"."
+        ],
+        "judgeVotes": [
+          {
+            "wellFormed": false,
+            "issues": [
+              "Lines 9 and 14: \"The Norwegian\" was replaced with \"The Swedish\", which is not a grammatically valid noun phrase for a person — \"the Swedish lives in the first house\" / \"The Swedish lives next to the blue house\" should read \"The Swede\" (or \"The Swedish man\")."
+            ]
+          },
+          {
+            "wellFormed": false,
+            "issues": [
+              "Nationality/adjective mismatch: \"The Swedish lives in the first house\" (clue 9) and \"The Swedish lives next to the blue house\" (clue 14) — \"Swedish\" is an adjective and cannot stand as a noun phrase for a person; the mapping \"Norwegian\" -> \"Swedish\" produces ungrammatical text (should be e.g. \"the Swede\")."
+            ]
+          },
+          {
+            "wellFormed": false,
+            "issues": [
+              "Clause 9: \"The Swedish lives in the first house\" — the nationality \"Norwegian\" was replaced by \"Swedish\", which is an adjective, not a noun for a person; it should be \"The Swede\" (grammatical/agreement failure around the replaced value).",
+              "Clause 14: \"The Swedish lives next to the blue house\" — same problem: \"The Swedish\" is not a grammatically correct reference to a person; should be \"The Swede\"."
+            ]
+          }
+        ],
+        "substitutedProse": "There are five houses.\n\n1. The Frenchman lives in the red house.\n2. The Italian owns the dog.\n3. Coffee is drunk in the green house.\n4. The German drinks tea.\n5. The green house is immediately to the right of the ivory house.\n6. The Old Gold smoker owns snails.\n7. Kools are smoked in the yellow house.\n8. Milk is drunk in the middle house.\n9. The Swedish lives in the first house.\n10. The man who smokes Chesterfields lives in the house next to the man with the fox.\n11. Kools are smoked in the house next to the house where the horse is kept.\n12. The Lucky Strike smoker drinks orange juice.\n13. The Chinese smokes Parliaments.\n14. The Swedish lives next to the blue house.\n\nNow, who drinks water? Who owns the zebra?"
+      },
+      {
+        "outcome": "SUBSTITUTION_NOT_WELL_FORMED",
+        "detail": "Clue 9: \"The Swedish lives in the first house.\" — the adjective form \"Swedish\" is used as a noun, yielding ungrammatical text (original: \"The Norwegian\"). It should be \"The Swede\" (or \"The Swedish man\").; Clue 14: \"The Swedish lives next to the blue house.\" — same problem: \"Swedish\" used ungrammatically as a person noun; should be \"The Swede\".; Grammar/agreement problem: 'The Swedish lives in the first house' (clue 9) and 'The Swedish lives next to the blue house' (clue 14) use the adjective 'Swedish' where the nationality noun is required (cf. 'The Englishman/Frenchman', should be 'The Swede').; Line 9: \"The Swedish lives in the first house.\" — \"Swedish\" is an adjective; the substituted nationality should be a noun phrase like \"the Swede\" (grammatically ill-formed as written).; Line 14: \"The Swedish lives next to the blue house.\" — same grammatical/agreement problem with \"Swedish\" used as a singular noun.",
+        "mappingCostUsd": 0.00015375,
+        "judgeCostUsd": 0.00041354400000000006,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 5,
+        "mznSkipped": [],
+        "wellFormed": false,
+        "issues": [
+          "Clue 9: \"The Swedish lives in the first house.\" — the adjective form \"Swedish\" is used as a noun, yielding ungrammatical text (original: \"The Norwegian\"). It should be \"The Swede\" (or \"The Swedish man\").",
+          "Clue 14: \"The Swedish lives next to the blue house.\" — same problem: \"Swedish\" used ungrammatically as a person noun; should be \"The Swede\".",
+          "Grammar/agreement problem: 'The Swedish lives in the first house' (clue 9) and 'The Swedish lives next to the blue house' (clue 14) use the adjective 'Swedish' where the nationality noun is required (cf. 'The Englishman/Frenchman', should be 'The Swede').",
+          "Line 9: \"The Swedish lives in the first house.\" — \"Swedish\" is an adjective; the substituted nationality should be a noun phrase like \"the Swede\" (grammatically ill-formed as written).",
+          "Line 14: \"The Swedish lives next to the blue house.\" — same grammatical/agreement problem with \"Swedish\" used as a singular noun."
+        ],
+        "judgeVotes": [
+          {
+            "wellFormed": false,
+            "issues": [
+              "Clue 9: \"The Swedish lives in the first house.\" — the adjective form \"Swedish\" is used as a noun, yielding ungrammatical text (original: \"The Norwegian\"). It should be \"The Swede\" (or \"The Swedish man\").",
+              "Clue 14: \"The Swedish lives next to the blue house.\" — same problem: \"Swedish\" used ungrammatically as a person noun; should be \"The Swede\"."
+            ]
+          },
+          {
+            "wellFormed": false,
+            "issues": [
+              "Grammar/agreement problem: 'The Swedish lives in the first house' (clue 9) and 'The Swedish lives next to the blue house' (clue 14) use the adjective 'Swedish' where the nationality noun is required (cf. 'The Englishman/Frenchman', should be 'The Swede')."
+            ]
+          },
+          {
+            "wellFormed": false,
+            "issues": [
+              "Line 9: \"The Swedish lives in the first house.\" — \"Swedish\" is an adjective; the substituted nationality should be a noun phrase like \"the Swede\" (grammatically ill-formed as written).",
+              "Line 14: \"The Swedish lives next to the blue house.\" — same grammatical/agreement problem with \"Swedish\" used as a singular noun."
+            ]
+          }
+        ],
+        "substitutedProse": "There are five houses.\n\n1. The Frenchman lives in the red house.\n2. The Italian owns the dog.\n3. Coffee is drunk in the green house.\n4. The German drinks tea.\n5. The green house is immediately to the right of the ivory house.\n6. The Old Gold smoker owns snails.\n7. Kools are smoked in the yellow house.\n8. Milk is drunk in the middle house.\n9. The Swedish lives in the first house.\n10. The man who smokes Chesterfields lives in the house next to the man with the fox.\n11. Kools are smoked in the house next to the house where the horse is kept.\n12. The Lucky Strike smoker drinks orange juice.\n13. The Chinese smokes Parliaments.\n14. The Swedish lives next to the blue house.\n\nNow, who drinks water? Who owns the zebra?"
+      },
+      {
+        "outcome": "DOMAIN_MATCH_FAILED",
+        "detail": "closest expected domain (name(s): color) has a different value set: invented [dog, tea, snails, milk, orange juice, Chesterfields, fox, Kools, horse, Lucky Strike, Parliaments]",
+        "mappingCostUsd": 0.00024135,
+        "domainMatchReason": "closest expected domain (name(s): color) has a different value set: invented [dog, tea, snails, milk, orange juice, Chesterfields, fox, Kools, horse, Lucky Strike, Parliaments]"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.00015375,
+        "judgeCostUsd": 0.00057349,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 5,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "There are five houses.\n\n1. The Frenchman lives in the red house.\n2. The Italian owns the dog.\n3. Coffee is drunk in the green house.\n4. The Russian drinks tea.\n5. The green house is immediately to the right of the ivory house.\n6. The Old Gold smoker owns snails.\n7. Kools are smoked in the yellow house.\n8. Milk is drunk in the middle house.\n9. The Swede lives in the first house.\n10. The man who smokes Chesterfields lives in the house next to the man with the fox.\n11. Kools are smoked in the house next to the house where the horse is kept.\n12. The Lucky Strike smoker drinks orange juice.\n13. The Chinese smokes Parliaments.\n14. The Swede lives next to the blue house.\n\nNow, who drinks water? Who owns the zebra?"
+      },
+      {
+        "outcome": "SUBSTITUTION_NOT_WELL_FORMED",
+        "detail": "Clue 9: \"The Swedish lives in the first house.\" — \"Swedish\" is an adjective/collective demonym, not a singular person noun, so \"The Swedish lives\" is grammatically ill-formed (unlike the original \"The Norwegian lives\", where \"Norwegian\" is a valid singular person noun).; Clue 14: \"The Swedish lives next to the blue house.\" — same agreement problem: \"The Swedish\" cannot denote one individual who \"lives\"; a singular noun (e.g. \"Swede\") is required for grammatical correctness.; Clue 9: \"The Swedish lives in the first house.\" — \"Swedish\" is an adjective, not a nationality noun; it should read \"The Swede lives in the first house.\"; Clue 14: \"The Swedish lives next to the blue house.\" — same problem: \"The Swedish\" is not a grammatical person reference; it should be \"The Swede\".",
+        "mappingCostUsd": 0.00015435,
+        "judgeCostUsd": 0.00227695,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 5,
+        "mznSkipped": [],
+        "wellFormed": false,
+        "issues": [
+          "Clue 9: \"The Swedish lives in the first house.\" — \"Swedish\" is an adjective/collective demonym, not a singular person noun, so \"The Swedish lives\" is grammatically ill-formed (unlike the original \"The Norwegian lives\", where \"Norwegian\" is a valid singular person noun).",
+          "Clue 14: \"The Swedish lives next to the blue house.\" — same agreement problem: \"The Swedish\" cannot denote one individual who \"lives\"; a singular noun (e.g. \"Swede\") is required for grammatical correctness.",
+          "Clue 9: \"The Swedish lives in the first house.\" — \"Swedish\" is an adjective, not a nationality noun; it should read \"The Swede lives in the first house.\"",
+          "Clue 14: \"The Swedish lives next to the blue house.\" — same problem: \"The Swedish\" is not a grammatical person reference; it should be \"The Swede\"."
+        ],
+        "judgeVotes": [
+          {
+            "wellFormed": false,
+            "issues": [
+              "Clue 9: \"The Swedish lives in the first house.\" — \"Swedish\" is an adjective/collective demonym, not a singular person noun, so \"The Swedish lives\" is grammatically ill-formed (unlike the original \"The Norwegian lives\", where \"Norwegian\" is a valid singular person noun).",
+              "Clue 14: \"The Swedish lives next to the blue house.\" — same agreement problem: \"The Swedish\" cannot denote one individual who \"lives\"; a singular noun (e.g. \"Swede\") is required for grammatical correctness."
+            ]
+          },
+          {
+            "wellFormed": false,
+            "issues": [
+              "Clue 9: \"The Swedish lives in the first house.\" — \"Swedish\" is an adjective, not a nationality noun; it should read \"The Swede lives in the first house.\"",
+              "Clue 14: \"The Swedish lives next to the blue house.\" — same problem: \"The Swedish\" is not a grammatical person reference; it should be \"The Swede\"."
+            ]
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "There are five houses.\n\n1. The Canadian lives in the red house.\n2. The Mexican owns the dog.\n3. Coffee is drunk in the green house.\n4. The Russian drinks tea.\n5. The green house is immediately to the right of the ivory house.\n6. The Old Gold smoker owns snails.\n7. Kools are smoked in the yellow house.\n8. Milk is drunk in the middle house.\n9. The Swedish lives in the first house.\n10. The man who smokes Chesterfields lives in the house next to the man with the fox.\n11. Kools are smoked in the house next to the house where the horse is kept.\n12. The Lucky Strike smoker drinks orange juice.\n13. The Korean smokes Parliaments.\n14. The Swedish lives next to the blue house.\n\nNow, who drinks water? Who owns the zebra?"
+      },
+      {
+        "outcome": "SUBSTITUTION_NOT_WELL_FORMED",
+        "detail": "Clue 9: \"The Swedish lives in the first house.\" — \"Swedish\" is an adjective/demonym-adjective in English; the person should be \"the Swede\". As written, \"The Swedish\" reads as a collective plural, so \"lives\" (singular) is a grammatical agreement error. Same problem in clue 14: \"The Swedish lives next to the blue house.\"; All other replacements (Frenchman, Italian, Russian, Chinese) were applied cleanly with correct grammar and the same relationship structure as the original.; Clue 9: \"The Swedish lives in the first house.\" — \"Swedish\" is an adjective (or the language name), not a nationality noun, so \"the Swedish\" is ungrammatical as a reference to a person; the substitution needed a noun form such as \"the Swede\".; Clue 14: \"The Swedish lives next to the blue house.\" — same problem: \"the Swedish\" cannot grammatically stand in for the person referred to by \"the Norwegian\" in the original.; Clue 9: \"The Swedish lives in the first house.\" — \"Swedish\" is an adjective, not a singular nationality noun, so \"The Swedish lives\" is ungrammatical (the original \"The Norwegian lives...\" used a proper demonym; \"Swede\" would be needed here).; Clue 14: \"The Swedish lives next to the blue house.\" — same problem: \"The Swedish\" cannot stand alone as a person; the substitution left an ungrammatical noun phrase where the original had \"The Norwegian\".",
+        "mappingCostUsd": 0.00015375,
+        "judgeCostUsd": 0.00113378,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 5,
+        "mznSkipped": [],
+        "wellFormed": false,
+        "issues": [
+          "Clue 9: \"The Swedish lives in the first house.\" — \"Swedish\" is an adjective/demonym-adjective in English; the person should be \"the Swede\". As written, \"The Swedish\" reads as a collective plural, so \"lives\" (singular) is a grammatical agreement error. Same problem in clue 14: \"The Swedish lives next to the blue house.\"",
+          "All other replacements (Frenchman, Italian, Russian, Chinese) were applied cleanly with correct grammar and the same relationship structure as the original.",
+          "Clue 9: \"The Swedish lives in the first house.\" — \"Swedish\" is an adjective (or the language name), not a nationality noun, so \"the Swedish\" is ungrammatical as a reference to a person; the substitution needed a noun form such as \"the Swede\".",
+          "Clue 14: \"The Swedish lives next to the blue house.\" — same problem: \"the Swedish\" cannot grammatically stand in for the person referred to by \"the Norwegian\" in the original.",
+          "Clue 9: \"The Swedish lives in the first house.\" — \"Swedish\" is an adjective, not a singular nationality noun, so \"The Swedish lives\" is ungrammatical (the original \"The Norwegian lives...\" used a proper demonym; \"Swede\" would be needed here).",
+          "Clue 14: \"The Swedish lives next to the blue house.\" — same problem: \"The Swedish\" cannot stand alone as a person; the substitution left an ungrammatical noun phrase where the original had \"The Norwegian\"."
+        ],
+        "judgeVotes": [
+          {
+            "wellFormed": false,
+            "issues": [
+              "Clue 9: \"The Swedish lives in the first house.\" — \"Swedish\" is an adjective/demonym-adjective in English; the person should be \"the Swede\". As written, \"The Swedish\" reads as a collective plural, so \"lives\" (singular) is a grammatical agreement error. Same problem in clue 14: \"The Swedish lives next to the blue house.\"",
+              "All other replacements (Frenchman, Italian, Russian, Chinese) were applied cleanly with correct grammar and the same relationship structure as the original."
+            ]
+          },
+          {
+            "wellFormed": false,
+            "issues": [
+              "Clue 9: \"The Swedish lives in the first house.\" — \"Swedish\" is an adjective (or the language name), not a nationality noun, so \"the Swedish\" is ungrammatical as a reference to a person; the substitution needed a noun form such as \"the Swede\".",
+              "Clue 14: \"The Swedish lives next to the blue house.\" — same problem: \"the Swedish\" cannot grammatically stand in for the person referred to by \"the Norwegian\" in the original."
+            ]
+          },
+          {
+            "wellFormed": false,
+            "issues": [
+              "Clue 9: \"The Swedish lives in the first house.\" — \"Swedish\" is an adjective, not a singular nationality noun, so \"The Swedish lives\" is ungrammatical (the original \"The Norwegian lives...\" used a proper demonym; \"Swede\" would be needed here).",
+              "Clue 14: \"The Swedish lives next to the blue house.\" — same problem: \"The Swedish\" cannot stand alone as a person; the substitution left an ungrammatical noun phrase where the original had \"The Norwegian\"."
+            ]
+          }
+        ],
+        "substitutedProse": "There are five houses.\n\n1. The Frenchman lives in the red house.\n2. The Italian owns the dog.\n3. Coffee is drunk in the green house.\n4. The Russian drinks tea.\n5. The green house is immediately to the right of the ivory house.\n6. The Old Gold smoker owns snails.\n7. Kools are smoked in the yellow house.\n8. Milk is drunk in the middle house.\n9. The Swedish lives in the first house.\n10. The man who smokes Chesterfields lives in the house next to the man with the fox.\n11. Kools are smoked in the house next to the house where the horse is kept.\n12. The Lucky Strike smoker drinks orange juice.\n13. The Chinese smokes Parliaments.\n14. The Swedish lives next to the blue house.\n\nNow, who drinks water? Who owns the zebra?"
+      },
+      {
+        "outcome": "SUBSTITUTION_NOT_WELL_FORMED",
+        "detail": "Clue 9: \"The Swedish lives in the first house.\" — \"Swedish\" is an adjective/language name, not a person noun, so \"The Swedish lives\" is ungrammatical; the mapped name should be a demonym like \"Swede\".; Clue 14: \"The Swedish lives next to the blue house.\" — same problem as clue 9: \"The Swedish\" cannot stand as a singular person noun; it reads as ungrammatical (or as the language) rather than as the person mapped from \"Norwegian\".; Clue 9: \"The Swedish lives in the first house.\" — \"Swedish\" is an adjective/nationality-collective and does not work with the singular article as a person noun; it should be \"the Swede\". Same problem in clue 14: \"The Swedish lives next to the blue house.\"; Clue 13: \"The Chinese smokes Parliaments.\" — \"Chinese\" as a person noun with singular verb is non-standard; should be \"the Chinese man\" or similar, mirroring \"The Japanese\" (which functions as a singular noun) in the original.; Clause 9: \"The Swedish lives in the first house.\" — \"Swedish\" is an adjective, so \"The Swedish\" is not a grammatically well-formed singular noun phrase (unlike \"the Norwegian\"). Should be e.g. \"the Swede\" or \"the Swedish man\".; Clause 14: \"The Swedish lives next to the blue house.\" — same problem, \"The Swedish\" used as a singular person-noun.",
+        "mappingCostUsd": 0.00015375,
+        "judgeCostUsd": 0.0013184459999999998,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 5,
+        "mznSkipped": [],
+        "wellFormed": false,
+        "issues": [
+          "Clue 9: \"The Swedish lives in the first house.\" — \"Swedish\" is an adjective/language name, not a person noun, so \"The Swedish lives\" is ungrammatical; the mapped name should be a demonym like \"Swede\".",
+          "Clue 14: \"The Swedish lives next to the blue house.\" — same problem as clue 9: \"The Swedish\" cannot stand as a singular person noun; it reads as ungrammatical (or as the language) rather than as the person mapped from \"Norwegian\".",
+          "Clue 9: \"The Swedish lives in the first house.\" — \"Swedish\" is an adjective/nationality-collective and does not work with the singular article as a person noun; it should be \"the Swede\". Same problem in clue 14: \"The Swedish lives next to the blue house.\"",
+          "Clue 13: \"The Chinese smokes Parliaments.\" — \"Chinese\" as a person noun with singular verb is non-standard; should be \"the Chinese man\" or similar, mirroring \"The Japanese\" (which functions as a singular noun) in the original.",
+          "Clause 9: \"The Swedish lives in the first house.\" — \"Swedish\" is an adjective, so \"The Swedish\" is not a grammatically well-formed singular noun phrase (unlike \"the Norwegian\"). Should be e.g. \"the Swede\" or \"the Swedish man\".",
+          "Clause 14: \"The Swedish lives next to the blue house.\" — same problem, \"The Swedish\" used as a singular person-noun."
+        ],
+        "judgeVotes": [
+          {
+            "wellFormed": false,
+            "issues": [
+              "Clue 9: \"The Swedish lives in the first house.\" — \"Swedish\" is an adjective/language name, not a person noun, so \"The Swedish lives\" is ungrammatical; the mapped name should be a demonym like \"Swede\".",
+              "Clue 14: \"The Swedish lives next to the blue house.\" — same problem as clue 9: \"The Swedish\" cannot stand as a singular person noun; it reads as ungrammatical (or as the language) rather than as the person mapped from \"Norwegian\"."
+            ]
+          },
+          {
+            "wellFormed": false,
+            "issues": [
+              "Clue 9: \"The Swedish lives in the first house.\" — \"Swedish\" is an adjective/nationality-collective and does not work with the singular article as a person noun; it should be \"the Swede\". Same problem in clue 14: \"The Swedish lives next to the blue house.\"",
+              "Clue 13: \"The Chinese smokes Parliaments.\" — \"Chinese\" as a person noun with singular verb is non-standard; should be \"the Chinese man\" or similar, mirroring \"The Japanese\" (which functions as a singular noun) in the original."
+            ]
+          },
+          {
+            "wellFormed": false,
+            "issues": [
+              "Clause 9: \"The Swedish lives in the first house.\" — \"Swedish\" is an adjective, so \"The Swedish\" is not a grammatically well-formed singular noun phrase (unlike \"the Norwegian\"). Should be e.g. \"the Swede\" or \"the Swedish man\".",
+              "Clause 14: \"The Swedish lives next to the blue house.\" — same problem, \"The Swedish\" used as a singular person-noun."
+            ]
+          }
+        ],
+        "substitutedProse": "There are five houses.\n\n1. The Frenchman lives in the red house.\n2. The Italian owns the dog.\n3. Coffee is drunk in the green house.\n4. The German drinks tea.\n5. The green house is immediately to the right of the ivory house.\n6. The Old Gold smoker owns snails.\n7. Kools are smoked in the yellow house.\n8. Milk is drunk in the middle house.\n9. The Swedish lives in the first house.\n10. The man who smokes Chesterfields lives in the house next to the man with the fox.\n11. Kools are smoked in the house next to the house where the horse is kept.\n12. The Lucky Strike smoker drinks orange juice.\n13. The Chinese smokes Parliaments.\n14. The Swedish lives next to the blue house.\n\nNow, who drinks water? Who owns the zebra?"
+      },
+      {
+        "outcome": "DOMAIN_MATCH_FAILED",
+        "detail": "closest expected domain (name(s): color) has a different value set: invented [dog, tea, snails, Kools, milk, fox, horse, orange juice, Parliaments, water, zebra]",
+        "mappingCostUsd": 0.00023775,
+        "domainMatchReason": "closest expected domain (name(s): color) has a different value set: invented [dog, tea, snails, Kools, milk, fox, horse, orange juice, Parliaments, water, zebra]"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0002",
+    "reps": [
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.0001167,
+        "judgeCostUsd": 0.0008072000000000001,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "Three houses stand in a row, numbered 1 to 3 from left to right. Each has a unique color —\nYellow, Purple, or Orange — and is home to a unique animal — Dog, Cat, or Zebra.\n\n1. The Cat lives in the Purple House.\n2. The Purple House is the middle house.\n3. The Yellow House is directly to the left of the Purple House.\n4. The Dog lives in the Yellow House.\n\nWhere does the Zebra live?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.0001167,
+        "judgeCostUsd": 0.0007256,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "Three houses stand in a row, numbered 1 to 3 from left to right. Each has a unique color —\nYellow, Orange, or Purple — and is home to a unique animal — Dog, Cat, or Zebra.\n\n1. The Cat lives in the Orange House.\n2. The Orange House is the middle house.\n3. The Yellow House is directly to the left of the Orange House.\n4. The Dog lives in the Yellow House.\n\nWhere does the Zebra live?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.0001167,
+        "judgeCostUsd": 0.0005889,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "Three houses stand in a row, numbered 1 to 3 from left to right. Each has a unique color —\nYellow, Pink, or Purple — and is home to a unique animal — Dog, Cat, or Zebra.\n\n1. The Cat lives in the Pink House.\n2. The Pink House is the middle house.\n3. The Yellow House is directly to the left of the Pink House.\n4. The Dog lives in the Yellow House.\n\nWhere does the Zebra live?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.0001167,
+        "judgeCostUsd": 0.0006319,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "Three houses stand in a row, numbered 1 to 3 from left to right. Each has a unique color —\nYellow, Purple, or Orange — and is home to a unique animal — Dog, Cat, or Zebra.\n\n1. The Cat lives in the Purple House.\n2. The Purple House is the middle house.\n3. The Yellow House is directly to the left of the Purple House.\n4. The Dog lives in the Yellow House.\n\nWhere does the Zebra live?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.0001167,
+        "judgeCostUsd": 0.00068924,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "Three houses stand in a row, numbered 1 to 3 from left to right. Each has a unique color —\nYellow, Purple, or Orange — and is home to a unique animal — Dog, Cat, or Zebra.\n\n1. The Cat lives in the Purple House.\n2. The Purple House is the middle house.\n3. The Yellow House is directly to the left of the Purple House.\n4. The Dog lives in the Yellow House.\n\nWhere does the Zebra live?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.0001167,
+        "judgeCostUsd": 0.0006422,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "Three houses stand in a row, numbered 1 to 3 from left to right. Each has a unique color —\nYellow, Orange, or Purple — and is home to a unique animal — Dog, Cat, or Zebra.\n\n1. The Cat lives in the Orange House.\n2. The Orange House is the middle house.\n3. The Yellow House is directly to the left of the Orange House.\n4. The Dog lives in the Yellow House.\n\nWhere does the Zebra live?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.0001167,
+        "judgeCostUsd": 0.0006802399999999999,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "Three houses stand in a row, numbered 1 to 3 from left to right. Each has a unique color —\nYellow, Purple, or Orange — and is home to a unique animal — Dog, Cat, or Zebra.\n\n1. The Cat lives in the Purple House.\n2. The Purple House is the middle house.\n3. The Yellow House is directly to the left of the Purple House.\n4. The Dog lives in the Yellow House.\n\nWhere does the Zebra live?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.0001167,
+        "judgeCostUsd": 0.00067082,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "Three houses stand in a row, numbered 1 to 3 from left to right. Each has a unique color —\nYellow, Purple, or Orange — and is home to a unique animal — Dog, Cat, or Zebra.\n\n1. The Cat lives in the Purple House.\n2. The Purple House is the middle house.\n3. The Yellow House is directly to the left of the Purple House.\n4. The Dog lives in the Yellow House.\n\nWhere does the Zebra live?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.0001167,
+        "judgeCostUsd": 0.00063032,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "Three houses stand in a row, numbered 1 to 3 from left to right. Each has a unique color —\nYellow, Purple, or Orange — and is home to a unique animal — Dog, Cat, or Zebra.\n\n1. The Cat lives in the Purple House.\n2. The Purple House is the middle house.\n3. The Yellow House is directly to the left of the Purple House.\n4. The Dog lives in the Yellow House.\n\nWhere does the Zebra live?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.0001167,
+        "judgeCostUsd": 0.00072882,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "Three houses stand in a row, numbered 1 to 3 from left to right. Each has a unique color —\nYellow, Purple, or Orange — and is home to a unique animal — Dog, Cat, or Zebra.\n\n1. The Cat lives in the Purple House.\n2. The Purple House is the middle house.\n3. The Yellow House is directly to the left of the Purple House.\n4. The Dog lives in the Yellow House.\n\nWhere does the Zebra live?"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0003",
+    "reps": [
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.00011085,
+        "judgeCostUsd": 0.00090945,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "You're playing lizard-spock-alien.\n\n1. Lizard beats spock.\n2. Spock beats alien.\n3. Alien beats lizard.\n4. Your opponent plays spock.\n\nWhat should you play?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.00011025,
+        "judgeCostUsd": 0.00089375,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "You're playing stone-wood-shears.\n\n1. Stone beats wood.\n2. Wood beats shears.\n3. Shears beats stone.\n4. Your opponent plays wood.\n\nWhat should you play?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.00011085,
+        "judgeCostUsd": 0.00037771,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "You're playing lizard-spock-water.\n\n1. Lizard beats spock.\n2. Spock beats water.\n3. Water beats lizard.\n4. Your opponent plays spock.\n\nWhat should you play?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.00011085,
+        "judgeCostUsd": 0.0005863699999999999,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "You're playing lizard-Spock-fire.\n\n1. Lizard beats Spock.\n2. Spock beats fire.\n3. Fire beats lizard.\n4. Your opponent plays Spock.\n\nWhat should you play?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.00011025,
+        "judgeCostUsd": 0.0005034,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "You're playing lizard-spock-dragon.\n\n1. Lizard beats spock.\n2. Spock beats dragon.\n3. Dragon beats lizard.\n4. Your opponent plays spock.\n\nWhat should you play?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.00011085,
+        "judgeCostUsd": 0.00049871,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "You're playing lizard-spock-dragon.\n\n1. Lizard beats spock.\n2. Spock beats dragon.\n3. Dragon beats lizard.\n4. Your opponent plays spock.\n\nWhat should you play?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.00010965,
+        "judgeCostUsd": 0.0005770700000000001,
+        "domainMatchReason": "complete value set matches (name(s): move, game move); proposed domain name \"game\" doesn't resemble it — informational only, does not affect the match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "You're playing water-sand-bamboo.\n\n1. Water beats sand.\n2. Sand beats bamboo.\n3. Bamboo beats water.\n4. Your opponent plays sand.\n\nWhat should you play?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.00011085,
+        "judgeCostUsd": 0.00054627,
+        "domainMatchReason": "complete value set matches (name(s): move, game move); proposed domain name \"hand signs\" doesn't resemble it — informational only, does not affect the match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "You're playing lizard-spock-water.\n\n1. Lizard beats spock.\n2. Spock beats water.\n3. Water beats lizard.\n4. Your opponent plays spock.\n\nWhat should you play?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.00011085,
+        "judgeCostUsd": 0.00053472,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "You're playing lizard-spock-fire.\n\n1. Lizard beats spock.\n2. Spock beats fire.\n3. Fire beats lizard.\n4. Your opponent plays spock.\n\nWhat should you play?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.00010965,
+        "judgeCostUsd": 0.0004199,
+        "domainMatchReason": "complete value set matches (name(s): move, game move); proposed domain name \"game option\" doesn't resemble it — informational only, does not affect the match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "You're playing water-fire-wind.\n\n1. Water beats fire.\n2. Fire beats wind.\n3. Wind beats water.\n4. Your opponent plays fire.\n\nWhat should you play?"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0004",
+    "reps": [
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.00012765,
+        "judgeCostUsd": 0.00058478,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "There has been a murder. The culprit is one of three suspects, using one of three weapons, in\none of three rooms.\n\nSuspects: Miss Scarlett, Colonel Mustard, Professor Plum.\nWeapons: Dagger, Poison, Axe.\nRooms: Kitchen, Library, Conservatory.\n\n1. The culprit is not Colonel Mustard.\n2. The culprit is not Miss Scarlett.\n3. The murder weapon was not the Poison.\n4. The murder weapon was not the Axe.\n5. The murder did not take place in the Kitchen.\n6. The murder did not take place in the Library.\n\nWhodunit — and with what, and where?"
+      },
+      {
+        "outcome": "MZN_APPLY_TOTAL_FAILURE",
+        "detail": "no mapping entries applied to the seed .mzn",
+        "mappingCostUsd": 0.00013245,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 0,
+        "mznSkipped": [
+          {
+            "oldValue": "Miss Scarlett",
+            "newValue": "Mrs. White",
+            "reason": "not found among declared enum members"
+          },
+          {
+            "oldValue": "Colonel Mustard",
+            "newValue": "Mr. Green",
+            "reason": "not found among declared enum members"
+          },
+          {
+            "oldValue": "Professor Plum",
+            "newValue": "Mrs. Peacock",
+            "reason": "not found among declared enum members"
+          }
+        ]
+      },
+      {
+        "outcome": "MZN_APPLY_TOTAL_FAILURE",
+        "detail": "no mapping entries applied to the seed .mzn",
+        "mappingCostUsd": 0.00013185,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 0,
+        "mznSkipped": [
+          {
+            "oldValue": "Miss Scarlett",
+            "newValue": "Miss Green",
+            "reason": "not found among declared enum members"
+          },
+          {
+            "oldValue": "Colonel Mustard",
+            "newValue": "Mr. Black",
+            "reason": "not found among declared enum members"
+          },
+          {
+            "oldValue": "Professor Plum",
+            "newValue": "Dr. White",
+            "reason": "not found among declared enum members"
+          }
+        ]
+      },
+      {
+        "outcome": "MZN_APPLY_TOTAL_FAILURE",
+        "detail": "no mapping entries applied to the seed .mzn",
+        "mappingCostUsd": 0.00013245,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 0,
+        "mznSkipped": [
+          {
+            "oldValue": "Miss Scarlett",
+            "newValue": "Mr. Green",
+            "reason": "not found among declared enum members"
+          },
+          {
+            "oldValue": "Colonel Mustard",
+            "newValue": "Mrs. White",
+            "reason": "not found among declared enum members"
+          },
+          {
+            "oldValue": "Professor Plum",
+            "newValue": "Mrs. Peacock",
+            "reason": "not found among declared enum members"
+          }
+        ]
+      },
+      {
+        "outcome": "MZN_APPLY_TOTAL_FAILURE",
+        "detail": "no mapping entries applied to the seed .mzn",
+        "mappingCostUsd": 0.00013245,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 0,
+        "mznSkipped": [
+          {
+            "oldValue": "Miss Scarlett",
+            "newValue": "Mr. Green",
+            "reason": "not found among declared enum members"
+          },
+          {
+            "oldValue": "Colonel Mustard",
+            "newValue": "Mrs. White",
+            "reason": "not found among declared enum members"
+          },
+          {
+            "oldValue": "Professor Plum",
+            "newValue": "Mr. Black",
+            "reason": "not found among declared enum members"
+          }
+        ]
+      },
+      {
+        "outcome": "MZN_APPLY_TOTAL_FAILURE",
+        "detail": "no mapping entries applied to the seed .mzn",
+        "mappingCostUsd": 0.00013245,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 0,
+        "mznSkipped": [
+          {
+            "oldValue": "Miss Scarlett",
+            "newValue": "Mr. Green",
+            "reason": "not found among declared enum members"
+          },
+          {
+            "oldValue": "Colonel Mustard",
+            "newValue": "Mrs. White",
+            "reason": "not found among declared enum members"
+          },
+          {
+            "oldValue": "Professor Plum",
+            "newValue": "Mrs. Peacock",
+            "reason": "not found among declared enum members"
+          }
+        ]
+      },
+      {
+        "outcome": "MZN_APPLY_TOTAL_FAILURE",
+        "detail": "no mapping entries applied to the seed .mzn",
+        "mappingCostUsd": 0.00013245,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 0,
+        "mznSkipped": [
+          {
+            "oldValue": "Miss Scarlett",
+            "newValue": "Mr. Green",
+            "reason": "not found among declared enum members"
+          },
+          {
+            "oldValue": "Colonel Mustard",
+            "newValue": "Mrs. Peacock",
+            "reason": "not found among declared enum members"
+          },
+          {
+            "oldValue": "Professor Plum",
+            "newValue": "Dr. Orchid",
+            "reason": "not found among declared enum members"
+          }
+        ]
+      },
+      {
+        "outcome": "MZN_APPLY_TOTAL_FAILURE",
+        "detail": "no mapping entries applied to the seed .mzn",
+        "mappingCostUsd": 0.00013245,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 0,
+        "mznSkipped": [
+          {
+            "oldValue": "Miss Scarlett",
+            "newValue": "Mr. Green",
+            "reason": "not found among declared enum members"
+          },
+          {
+            "oldValue": "Colonel Mustard",
+            "newValue": "Mrs. White",
+            "reason": "not found among declared enum members"
+          },
+          {
+            "oldValue": "Professor Plum",
+            "newValue": "Dr. Orchid",
+            "reason": "not found among declared enum members"
+          }
+        ]
+      },
+      {
+        "outcome": "MZN_APPLY_TOTAL_FAILURE",
+        "detail": "no mapping entries applied to the seed .mzn",
+        "mappingCostUsd": 0.00013245,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 0,
+        "mznSkipped": [
+          {
+            "oldValue": "Miss Scarlett",
+            "newValue": "Mr. Green",
+            "reason": "not found among declared enum members"
+          },
+          {
+            "oldValue": "Colonel Mustard",
+            "newValue": "Mrs. White",
+            "reason": "not found among declared enum members"
+          },
+          {
+            "oldValue": "Professor Plum",
+            "newValue": "Dr. Orchid",
+            "reason": "not found among declared enum members"
+          }
+        ]
+      },
+      {
+        "outcome": "MZN_APPLY_TOTAL_FAILURE",
+        "detail": "no mapping entries applied to the seed .mzn",
+        "mappingCostUsd": 0.00013185,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 0,
+        "mznSkipped": [
+          {
+            "oldValue": "Miss Scarlett",
+            "newValue": "Ms. Green",
+            "reason": "not found among declared enum members"
+          },
+          {
+            "oldValue": "Colonel Mustard",
+            "newValue": "Captain Brown",
+            "reason": "not found among declared enum members"
+          },
+          {
+            "oldValue": "Professor Plum",
+            "newValue": "Dr. Black",
+            "reason": "not found among declared enum members"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "PZL-0011",
+    "reps": [
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.00013815,
+        "judgeCostUsd": 0.00137519,
+        "domainMatchReason": "complete value set matches (name(s): outcome, decision); proposed domain name \"credit tier\" doesn't resemble it — informational only, does not affect the match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "Priya and Sam are applying jointly for a mortgage.\n\nGeneral rules:\n\n1. The couple's credit tier uses the lower of their two individual credit scores. If that score\n   is below 600, the loan is Rejected.\n2. The couple's debt-to-income (DTI) ratio is their combined monthly debt divided by their\n   combined monthly income. If that ratio exceeds 43%, the loan is Rejected.\n3. If not Rejected by rules 1-2, and the requested amount is within policy limits for their\n   combined income, the loan is Accepted.\n4. If not Rejected by rules 1-2, but the requested amount exceeds policy limits, they receive a\n   Negotiation.\n\nThis application:\n\n5. Priya's credit score is 680; Sam's credit score is 750.\n6. Their combined monthly income is $9,000; their combined monthly debt payments are $3,200.\n7. Their requested loan amount exceeds the policy limit for their combined income.\n\nWhat is the outcome of their application?"
+      },
+      {
+        "outcome": "SUBSTITUTION_NOT_WELL_FORMED",
+        "detail": "Rule 4: 'they receive a Alternative-Offer.' — the article was not adjusted for the new value; since 'Alternative' begins with a vowel sound, it should read 'an Alternative-Offer'. (Also, the mid-sentence 'denied' in rules 3-4 was replaced with capitalized 'Rejected', though this is minor.); Rule 4: \"they receive a Alternative-Offer\" — the article \"a\" no longer agrees with the replacement value; \"Alternative-Offer\" begins with a vowel sound, so it should read \"an Alternative-Offer\" (original: \"a Counter-Offer\").; Minor capitalization inconsistency: in rules 3 and 4 the original used lowercase mid-sentence (\"If not denied by rules 1-2\"), but the substituted text renders it capitalized mid-sentence (\"If not Rejected by rules 1-2\"). All occurrences were nonetheless fully replaced, with no leftover fragments of \"Denied\", \"Approved\", or \"Counter-Offer\", and all clue relationships (below-600 score → denied/rejected; DTI > 43% → denied/rejected; within limits → approved/accepted; exceeds limits → counter-/alternative-offer) connect the same positions as the original.; Rule 4: \"they receive a Alternative-Offer\" — article agreement error; before the vowel-initial \"Alternative-Offer\" the article should be \"an\" (original correctly read \"a Counter-Offer\").; Rules 3-4: mid-sentence case inconsistency — the original used lowercase \"denied\" (\"If not denied by rules 1-2\"), but the substitution inserted capitalized \"Rejected\" (\"If not Rejected by rules 1-2\"), which reads as an uncapitalized-style sentence with an unexpectedly capitalized word.",
+        "mappingCostUsd": 0.00013875,
+        "judgeCostUsd": 0.0023492,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": false,
+        "issues": [
+          "Rule 4: 'they receive a Alternative-Offer.' — the article was not adjusted for the new value; since 'Alternative' begins with a vowel sound, it should read 'an Alternative-Offer'. (Also, the mid-sentence 'denied' in rules 3-4 was replaced with capitalized 'Rejected', though this is minor.)",
+          "Rule 4: \"they receive a Alternative-Offer\" — the article \"a\" no longer agrees with the replacement value; \"Alternative-Offer\" begins with a vowel sound, so it should read \"an Alternative-Offer\" (original: \"a Counter-Offer\").",
+          "Minor capitalization inconsistency: in rules 3 and 4 the original used lowercase mid-sentence (\"If not denied by rules 1-2\"), but the substituted text renders it capitalized mid-sentence (\"If not Rejected by rules 1-2\"). All occurrences were nonetheless fully replaced, with no leftover fragments of \"Denied\", \"Approved\", or \"Counter-Offer\", and all clue relationships (below-600 score → denied/rejected; DTI > 43% → denied/rejected; within limits → approved/accepted; exceeds limits → counter-/alternative-offer) connect the same positions as the original.",
+          "Rule 4: \"they receive a Alternative-Offer\" — article agreement error; before the vowel-initial \"Alternative-Offer\" the article should be \"an\" (original correctly read \"a Counter-Offer\").",
+          "Rules 3-4: mid-sentence case inconsistency — the original used lowercase \"denied\" (\"If not denied by rules 1-2\"), but the substitution inserted capitalized \"Rejected\" (\"If not Rejected by rules 1-2\"), which reads as an uncapitalized-style sentence with an unexpectedly capitalized word."
+        ],
+        "judgeVotes": [
+          {
+            "wellFormed": false,
+            "issues": [
+              "Rule 4: 'they receive a Alternative-Offer.' — the article was not adjusted for the new value; since 'Alternative' begins with a vowel sound, it should read 'an Alternative-Offer'. (Also, the mid-sentence 'denied' in rules 3-4 was replaced with capitalized 'Rejected', though this is minor.)"
+            ]
+          },
+          {
+            "wellFormed": false,
+            "issues": [
+              "Rule 4: \"they receive a Alternative-Offer\" — the article \"a\" no longer agrees with the replacement value; \"Alternative-Offer\" begins with a vowel sound, so it should read \"an Alternative-Offer\" (original: \"a Counter-Offer\").",
+              "Minor capitalization inconsistency: in rules 3 and 4 the original used lowercase mid-sentence (\"If not denied by rules 1-2\"), but the substituted text renders it capitalized mid-sentence (\"If not Rejected by rules 1-2\"). All occurrences were nonetheless fully replaced, with no leftover fragments of \"Denied\", \"Approved\", or \"Counter-Offer\", and all clue relationships (below-600 score → denied/rejected; DTI > 43% → denied/rejected; within limits → approved/accepted; exceeds limits → counter-/alternative-offer) connect the same positions as the original."
+            ]
+          },
+          {
+            "wellFormed": false,
+            "issues": [
+              "Rule 4: \"they receive a Alternative-Offer\" — article agreement error; before the vowel-initial \"Alternative-Offer\" the article should be \"an\" (original correctly read \"a Counter-Offer\").",
+              "Rules 3-4: mid-sentence case inconsistency — the original used lowercase \"denied\" (\"If not denied by rules 1-2\"), but the substitution inserted capitalized \"Rejected\" (\"If not Rejected by rules 1-2\"), which reads as an uncapitalized-style sentence with an unexpectedly capitalized word."
+            ]
+          }
+        ],
+        "substitutedProse": "Priya and Sam are applying jointly for a mortgage.\n\nGeneral rules:\n\n1. The couple's credit tier uses the lower of their two individual credit scores. If that score\n   is below 600, the loan is Rejected.\n2. The couple's debt-to-income (DTI) ratio is their combined monthly debt divided by their\n   combined monthly income. If that ratio exceeds 43%, the loan is Rejected.\n3. If not Rejected by rules 1-2, and the requested amount is within policy limits for their\n   combined income, the loan is Accepted.\n4. If not Rejected by rules 1-2, but the requested amount exceeds policy limits, they receive a\n   Alternative-Offer.\n\nThis application:\n\n5. Priya's credit score is 680; Sam's credit score is 750.\n6. Their combined monthly income is $9,000; their combined monthly debt payments are $3,200.\n7. Their requested loan amount exceeds the policy limit for their combined income.\n\nWhat is the outcome of their application?"
+      },
+      {
+        "outcome": "DOMAIN_MATCH_FAILED",
+        "detail": "closest expected domain (name(s): outcome, decision) has a different value set: missing [Denied, Approved, Counter-Offer]; invented [680, 750]",
+        "mappingCostUsd": 0.00012795,
+        "domainMatchReason": "closest expected domain (name(s): outcome, decision) has a different value set: missing [Denied, Approved, Counter-Offer]; invented [680, 750]"
+      },
+      {
+        "outcome": "DOMAIN_MATCH_FAILED",
+        "detail": "closest expected domain (name(s): outcome, decision) has a different value set: missing [Denied, Approved, Counter-Offer]; invented [680, 750]",
+        "mappingCostUsd": 0.00012795,
+        "domainMatchReason": "closest expected domain (name(s): outcome, decision) has a different value set: missing [Denied, Approved, Counter-Offer]; invented [680, 750]"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.00013815,
+        "judgeCostUsd": 0.00120748,
+        "domainMatchReason": "complete value set matches (name(s): outcome, decision); proposed domain name \"credit tier\" doesn't resemble it — informational only, does not affect the match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "Priya and Sam are applying jointly for a mortgage.\n\nGeneral rules:\n\n1. The couple's credit tier uses the lower of their two individual credit scores. If that score\n   is below 600, the loan is Rejected.\n2. The couple's debt-to-income (DTI) ratio is their combined monthly debt divided by their\n   combined monthly income. If that ratio exceeds 43%, the loan is Rejected.\n3. If not Rejected by rules 1-2, and the requested amount is within policy limits for their\n   combined income, the loan is Granted.\n4. If not Rejected by rules 1-2, but the requested amount exceeds policy limits, they receive a\n   Negotiation.\n\nThis application:\n\n5. Priya's credit score is 680; Sam's credit score is 750.\n6. Their combined monthly income is $9,000; their combined monthly debt payments are $3,200.\n7. Their requested loan amount exceeds the policy limit for their combined income.\n\nWhat is the outcome of their application?"
+      },
+      {
+        "outcome": "DOMAIN_MATCH_FAILED",
+        "detail": "closest expected domain (name(s): outcome, decision) has a different value set: missing [Denied, Approved, Counter-Offer]; invented [680, 750]",
+        "mappingCostUsd": 0.00012795,
+        "domainMatchReason": "closest expected domain (name(s): outcome, decision) has a different value set: missing [Denied, Approved, Counter-Offer]; invented [680, 750]"
+      },
+      {
+        "outcome": "DOMAIN_MATCH_FAILED",
+        "detail": "closest expected domain (name(s): outcome, decision) has a different value set: missing [Denied, Approved, Counter-Offer]; invented [680, 750]",
+        "mappingCostUsd": 0.00012795,
+        "domainMatchReason": "closest expected domain (name(s): outcome, decision) has a different value set: missing [Denied, Approved, Counter-Offer]; invented [680, 750]"
+      },
+      {
+        "outcome": "DOMAIN_MATCH_FAILED",
+        "detail": "closest expected domain (name(s): outcome, decision) has a different value set: missing [Denied, Approved, Counter-Offer]; invented [680, 750]",
+        "mappingCostUsd": 0.00012795,
+        "domainMatchReason": "closest expected domain (name(s): outcome, decision) has a different value set: missing [Denied, Approved, Counter-Offer]; invented [680, 750]"
+      },
+      {
+        "outcome": "DOMAIN_MATCH_FAILED",
+        "detail": "closest expected domain (name(s): outcome, decision) has a different value set: missing [Denied, Approved, Counter-Offer]; invented [680, 750]",
+        "mappingCostUsd": 0.00012795,
+        "domainMatchReason": "closest expected domain (name(s): outcome, decision) has a different value set: missing [Denied, Approved, Counter-Offer]; invented [680, 750]"
+      },
+      {
+        "outcome": "DOMAIN_MATCH_FAILED",
+        "detail": "closest expected domain (name(s): outcome, decision) has a different value set: missing [Denied, Approved, Counter-Offer]; invented [680, 750]",
+        "mappingCostUsd": 0.00012795,
+        "domainMatchReason": "closest expected domain (name(s): outcome, decision) has a different value set: missing [Denied, Approved, Counter-Offer]; invented [680, 750]"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0038",
+    "reps": [
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.0001449,
+        "judgeCostUsd": 0.0008034499999999999,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 5,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "A wildlife park is moving five animals — a lion, a mouse, a sheep, a canary, and a lizard —\ninto five holding pens standing in a row, numbered 1 to 5, one animal per pen. Each pen is fully\nenclosed on all sides by a solid concrete wall; no animal in any pen can see, smell, hear, or\nreach any animal in another.\n\n1. The lizard is in pen 1.\n2. The canary is in pen 2.\n3. The sheep is in pen 3.\n4. The mouse is in a lower-numbered pen than the lion.\n5. The lion preys on the mouse.\n\nWhere is each animal?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.0001455,
+        "judgeCostUsd": 0.0008511,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 5,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "A wildlife park is moving five animals — a lion, a hare, a sheep, a finch, and a snapping turtle —\ninto five holding pens standing in a row, numbered 1 to 5, one animal per pen. Each pen is fully\nenclosed on all sides by a solid concrete wall; no animal in any pen can see, smell, hear, or\nreach any animal in another.\n\n1. The snapping turtle is in pen 1.\n2. The finch is in pen 2.\n3. The sheep is in pen 3.\n4. The hare is in a lower-numbered pen than the lion.\n5. The lion preys on the hare.\n\nWhere is each animal?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.0001455,
+        "judgeCostUsd": 0.00113538,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 5,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "A wildlife park is moving five animals — a lion, a guinea pig, a sheep, a canary, and a snake —\ninto five holding pens standing in a row, numbered 1 to 5, one animal per pen. Each pen is fully\nenclosed on all sides by a solid concrete wall; no animal in any pen can see, smell, hear, or\nreach any animal in another.\n\n1. The snake is in pen 1.\n2. The canary is in pen 2.\n3. The sheep is in pen 3.\n4. The guinea pig is in a lower-numbered pen than the lion.\n5. The lion preys on the guinea pig.\n\nWhere is each animal?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.0001443,
+        "judgeCostUsd": 0.0009248,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 5,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "A wildlife park is moving five animals — a lion, a mouse, a sheep, a sparrow, and a frog —\ninto five holding pens standing in a row, numbered 1 to 5, one animal per pen. Each pen is fully\nenclosed on all sides by a solid concrete wall; no animal in any pen can see, smell, hear, or\nreach any animal in another.\n\n1. The frog is in pen 1.\n2. The sparrow is in pen 2.\n3. The sheep is in pen 3.\n4. The mouse is in a lower-numbered pen than the lion.\n5. The lion preys on the mouse.\n\nWhere is each animal?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.0001455,
+        "judgeCostUsd": 0.0008971000000000001,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 5,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "A wildlife park is moving five animals — a lion, a mouse, a sheep, a canary, and a snapping turtle —\ninto five holding pens standing in a row, numbered 1 to 5, one animal per pen. Each pen is fully\nenclosed on all sides by a solid concrete wall; no animal in any pen can see, smell, hear, or\nreach any animal in another.\n\n1. The snapping turtle is in pen 1.\n2. The canary is in pen 2.\n3. The sheep is in pen 3.\n4. The mouse is in a lower-numbered pen than the lion.\n5. The lion preys on the mouse.\n\nWhere is each animal?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.0001443,
+        "judgeCostUsd": 0.0008248000000000001,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 5,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "A wildlife park is moving five animals — a lion, a hare, a sheep, a sparrow, and a frog —\ninto five holding pens standing in a row, numbered 1 to 5, one animal per pen. Each pen is fully\nenclosed on all sides by a solid concrete wall; no animal in any pen can see, smell, hear, or\nreach any animal in another.\n\n1. The frog is in pen 1.\n2. The sparrow is in pen 2.\n3. The sheep is in pen 3.\n4. The hare is in a lower-numbered pen than the lion.\n5. The lion preys on the hare.\n\nWhere is each animal?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.0001455,
+        "judgeCostUsd": 0.000686,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 5,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "A wildlife park is moving five animals — a lion, a hare, a sheep, a sparrow, and a snapping turtle —\ninto five holding pens standing in a row, numbered 1 to 5, one animal per pen. Each pen is fully\nenclosed on all sides by a solid concrete wall; no animal in any pen can see, smell, hear, or\nreach any animal in another.\n\n1. The snapping turtle is in pen 1.\n2. The sparrow is in pen 2.\n3. The sheep is in pen 3.\n4. The hare is in a lower-numbered pen than the lion.\n5. The lion preys on the hare.\n\nWhere is each animal?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.0001455,
+        "judgeCostUsd": 0.0005705,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 5,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "A wildlife park is moving five animals — a lion, a hamster, a sheep, a canary, and a snail —\ninto five holding pens standing in a row, numbered 1 to 5, one animal per pen. Each pen is fully\nenclosed on all sides by a solid concrete wall; no animal in any pen can see, smell, hear, or\nreach any animal in another.\n\n1. The snail is in pen 1.\n2. The canary is in pen 2.\n3. The sheep is in pen 3.\n4. The hamster is in a lower-numbered pen than the lion.\n5. The lion preys on the hamster.\n\nWhere is each animal?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.0001455,
+        "judgeCostUsd": 0.0010726,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 5,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "A wildlife park is moving five animals — a lion, a mouse, a sheep, a canary, and a snapping turtle —\ninto five holding pens standing in a row, numbered 1 to 5, one animal per pen. Each pen is fully\nenclosed on all sides by a solid concrete wall; no animal in any pen can see, smell, hear, or\nreach any animal in another.\n\n1. The snapping turtle is in pen 1.\n2. The canary is in pen 2.\n3. The sheep is in pen 3.\n4. The mouse is in a lower-numbered pen than the lion.\n5. The lion preys on the mouse.\n\nWhere is each animal?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.0001449,
+        "judgeCostUsd": 0.0011993,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 5,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "judgeVotes": [
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          },
+          {
+            "wellFormed": true,
+            "issues": []
+          }
+        ],
+        "substitutedProse": "A wildlife park is moving five animals — a lion, a hare, a sheep, a sparrow, and a turtle —\ninto five holding pens standing in a row, numbered 1 to 5, one animal per pen. Each pen is fully\nenclosed on all sides by a solid concrete wall; no animal in any pen can see, smell, hear, or\nreach any animal in another.\n\n1. The turtle is in pen 1.\n2. The sparrow is in pen 2.\n3. The sheep is in pen 3.\n4. The hare is in a lower-numbered pen than the lion.\n5. The lion preys on the hare.\n\nWhere is each animal?"
+      }
+    ]
+  }
+]

@@ -12,7 +12,7 @@ groundTruth:
   entityAxisSize: 2  # player + opponent
   expectedDomains:
     - alternatives:
-        - names: [move]
+        - names: [move, game move]
           values: [Paper, Rock, Scissors]
 ---
 

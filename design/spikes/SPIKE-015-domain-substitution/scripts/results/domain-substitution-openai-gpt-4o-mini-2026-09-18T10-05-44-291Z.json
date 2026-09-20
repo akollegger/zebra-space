@@ -1,0 +1,29 @@
+[
+  {
+    "id": "PZL-0002",
+    "reps": [
+      {
+        "outcome": "VERIFIED",
+        "detail": "all rows match under overlap alignment",
+        "mappingCostUsd": 0.0001167,
+        "verifierCostUsd": 0.00023595,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "verifierVerdict": "MATCH",
+        "substitutedProse": "Three houses stand in a row, numbered 1 to 3 from left to right. Each has a unique color —\nYellow, Purple, or Orange — and is home to a unique animal — Dog, Cat, or Zebra.\n\n1. The Cat lives in the Purple House.\n2. The Purple House is the middle house.\n3. The Yellow House is directly to the left of the Purple House.\n4. The Dog lives in the Yellow House.\n\nWhere does the Zebra live?"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0003",
+    "reps": [
+      {
+        "outcome": "DOMAIN_MATCH_FAILED",
+        "detail": "no expected domain has the name \"game moves\"",
+        "mappingCostUsd": 0.00010965,
+        "domainMatchReason": "no expected domain has the name \"game moves\""
+      }
+    ]
+  }
+]

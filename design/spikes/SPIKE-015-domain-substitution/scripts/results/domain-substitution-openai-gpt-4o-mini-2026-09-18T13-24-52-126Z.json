@@ -1,0 +1,62 @@
+[
+  {
+    "id": "PZL-0002",
+    "reps": [
+      {
+        "outcome": "VERIFIED",
+        "detail": "all rows match under overlap alignment",
+        "mappingCostUsd": 0.0001167,
+        "verifierCostUsd": 0.00024735,
+        "domainMatchReason": "domain name (approximately) and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "verifierVerdict": "MATCH",
+        "substitutedProse": "Three houses stand in a row, numbered 1 to 3 from left to right. Each has a unique color —\nYellow, Purple, or Orange — and is home to a unique animal — Dog, Cat, or Zebra.\n\n1. The Cat lives in the Purple House.\n2. The Purple House is the middle house.\n3. The Yellow House is directly to the left of the Purple House.\n4. The Dog lives in the Yellow House.\n\nWhere does the Zebra live?"
+      },
+      {
+        "outcome": "VERIFIER_SOLVE_ERROR",
+        "detail": "ModelSyntaxError: Error: type error: no function or predicate with name `find_index' found\n/private/var/folders/t_/xcdyhzm5185g8bsc5klh4y6h0000gn/T/minizinc-zb3O8D/model.mzn:14.24-53\n",
+        "mappingCostUsd": 0.0001173,
+        "verifierCostUsd": 0.00026115,
+        "domainMatchReason": "domain name (approximately) and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "substitutedProse": "Three houses stand in a row, numbered 1 to 3 from left to right. Each has a unique color —\nYellow, Purple, or Cyan — and is home to a unique animal — Dog, Cat, or Zebra.\n\n1. The Cat lives in the Purple House.\n2. The Purple House is the middle house.\n3. The Yellow House is directly to the left of the Purple House.\n4. The Dog lives in the Yellow House.\n\nWhere does the Zebra live?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "all rows match under overlap alignment",
+        "mappingCostUsd": 0.0001167,
+        "verifierCostUsd": 0.00025755,
+        "domainMatchReason": "domain name (approximately) and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "verifierVerdict": "MATCH",
+        "substitutedProse": "Three houses stand in a row, numbered 1 to 3 from left to right. Each has a unique color —\nYellow, Purple, or Orange — and is home to a unique animal — Dog, Cat, or Zebra.\n\n1. The Cat lives in the Purple House.\n2. The Purple House is the middle house.\n3. The Yellow House is directly to the left of the Purple House.\n4. The Dog lives in the Yellow House.\n\nWhere does the Zebra live?"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0003",
+    "reps": [
+      {
+        "outcome": "DOMAIN_MATCH_FAILED",
+        "detail": "currentValues exactly match a real domain (name(s): move), but proposed domain name \"game moves\" doesn't resemble it",
+        "mappingCostUsd": 0.00011085,
+        "domainMatchReason": "currentValues exactly match a real domain (name(s): move), but proposed domain name \"game moves\" doesn't resemble it"
+      },
+      {
+        "outcome": "DOMAIN_MATCH_FAILED",
+        "detail": "currentValues exactly match a real domain (name(s): move), but proposed domain name \"game moves\" doesn't resemble it",
+        "mappingCostUsd": 0.00010965,
+        "domainMatchReason": "currentValues exactly match a real domain (name(s): move), but proposed domain name \"game moves\" doesn't resemble it"
+      },
+      {
+        "outcome": "DOMAIN_MATCH_FAILED",
+        "detail": "currentValues exactly match a real domain (name(s): move), but proposed domain name \"game moves\" doesn't resemble it",
+        "mappingCostUsd": 0.00011085,
+        "domainMatchReason": "currentValues exactly match a real domain (name(s): move), but proposed domain name \"game moves\" doesn't resemble it"
+      }
+    ]
+  }
+]

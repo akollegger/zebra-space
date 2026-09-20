@@ -1,0 +1,99 @@
+[
+  {
+    "id": "PZL-0002",
+    "reps": [
+      {
+        "outcome": "SUBSTITUTION_NOT_WELL_FORMED",
+        "detail": "numbeOrange 1 to 3",
+        "mappingCostUsd": 0.0001167,
+        "judgeCostUsd": 0.00010095,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": false,
+        "issues": [
+          "numbeOrange 1 to 3"
+        ],
+        "substitutedProse": "Three houses stand in a row, numbeOrange 1 to 3 from left to right. Each has a unique color —\nYellow, Orange, or Purple — and is home to a unique animal — Dog, Cat, or Zebra.\n\n1. The Cat lives in the Orange House.\n2. The Orange House is the middle house.\n3. The Yellow House is directly to the left of the Orange House.\n4. The Dog lives in the Yellow House.\n\nWhere does the Zebra live?"
+      },
+      {
+        "outcome": "SUBSTITUTION_NOT_WELL_FORMED",
+        "detail": "numbePurple 1 to 3 from left to right.",
+        "mappingCostUsd": 0.0001167,
+        "judgeCostUsd": 0.00010395,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": false,
+        "issues": [
+          "numbePurple 1 to 3 from left to right."
+        ],
+        "substitutedProse": "Three houses stand in a row, numbePurple 1 to 3 from left to right. Each has a unique color —\nYellow, Purple, or Orange — and is home to a unique animal — Dog, Cat, or Zebra.\n\n1. The Cat lives in the Purple House.\n2. The Purple House is the middle house.\n3. The Yellow House is directly to the left of the Purple House.\n4. The Dog lives in the Yellow House.\n\nWhere does the Zebra live?"
+      },
+      {
+        "outcome": "SUBSTITUTION_NOT_WELL_FORMED",
+        "detail": "numbeYellow 1 to 3",
+        "mappingCostUsd": 0.0001167,
+        "judgeCostUsd": 0.00010095,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": false,
+        "issues": [
+          "numbeYellow 1 to 3"
+        ],
+        "substitutedProse": "Three houses stand in a row, numbeYellow 1 to 3 from left to right. Each has a unique color —\nPurple, Yellow, or Orange — and is home to a unique animal — Dog, Cat, or Zebra.\n\n1. The Cat lives in the Yellow House.\n2. The Yellow House is the middle house.\n3. The Purple House is directly to the left of the Yellow House.\n4. The Dog lives in the Purple House.\n\nWhere does the Zebra live?"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0003",
+    "reps": [
+      {
+        "outcome": "SUBSTITUTION_NOT_WELL_FORMED",
+        "detail": "\"lizard beats spock\" does not correspond to the original \"paper beats rock\" in terms of game rules as lizard does not beat spock.",
+        "mappingCostUsd": 0.00011085,
+        "judgeCostUsd": 0.00009855,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": false,
+        "issues": [
+          "\"lizard beats spock\" does not correspond to the original \"paper beats rock\" in terms of game rules as lizard does not beat spock."
+        ],
+        "substitutedProse": "You're playing lizard-spock-water.\n\n1. Lizard beats spock.\n2. Spock beats water.\n3. Water beats lizard.\n4. Your opponent plays spock.\n\nWhat should you play?"
+      },
+      {
+        "outcome": "SUBSTITUTION_NOT_WELL_FORMED",
+        "detail": "\"Lizard beats spock.\" (Incorrect logic, as Lizard does not beat Spock); \"Spock beats water.\" (Incorrect logic, as Spock does not beat Water); \"Water beats lizard.\" (Incorrect logic, as Water does not beat Lizard); \"Your opponent plays spock.\" (Requires consistency with prior logic and phrases)",
+        "mappingCostUsd": 0.00011085,
+        "judgeCostUsd": 0.00012435,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": false,
+        "issues": [
+          "\"Lizard beats spock.\" (Incorrect logic, as Lizard does not beat Spock)",
+          "\"Spock beats water.\" (Incorrect logic, as Spock does not beat Water)",
+          "\"Water beats lizard.\" (Incorrect logic, as Water does not beat Lizard)",
+          "\"Your opponent plays spock.\" (Requires consistency with prior logic and phrases)"
+        ],
+        "substitutedProse": "You're playing lizard-spock-water.\n\n1. Lizard beats spock.\n2. Spock beats water.\n3. Water beats lizard.\n4. Your opponent plays spock.\n\nWhat should you play?"
+      },
+      {
+        "outcome": "SUBSTITUTION_NOT_WELL_FORMED",
+        "detail": "\"lizard\" should be substituted with \"fire\" in point 3 but it has not been entirely replaced. It incorrectly indicates \"Fire beats lizard\" which should be \"Fire beats spock.\"",
+        "mappingCostUsd": 0.00011085,
+        "judgeCostUsd": 0.00010395,
+        "domainMatchReason": "complete value set matches (name(s): move, game move); proposed domain name \"hand gestures\" doesn't resemble it — informational only, does not affect the match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": false,
+        "issues": [
+          "\"lizard\" should be substituted with \"fire\" in point 3 but it has not been entirely replaced. It incorrectly indicates \"Fire beats lizard\" which should be \"Fire beats spock.\""
+        ],
+        "substitutedProse": "You're playing lizard-spock-fire.\n\n1. Lizard beats spock.\n2. Spock beats fire.\n3. Fire beats lizard.\n4. Your opponent plays spock.\n\nWhat should you play?"
+      }
+    ]
+  }
+]

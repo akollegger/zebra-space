@@ -1,0 +1,92 @@
+[
+  {
+    "id": "PZL-0002",
+    "reps": [
+      {
+        "outcome": "SUBSTITUTION_NOT_WELL_FORMED",
+        "detail": "The Dog lives in the Yellow House.",
+        "mappingCostUsd": 0.0001167,
+        "judgeCostUsd": 0.00012165,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": false,
+        "issues": [
+          "The Dog lives in the Yellow House."
+        ],
+        "substitutedProse": "Three houses stand in a row, numbered 1 to 3 from left to right. Each has a unique color —\nYellow, Purple, or Orange — and is home to a unique animal — Dog, Cat, or Zebra.\n\n1. The Cat lives in the Purple House.\n2. The Purple House is the middle house.\n3. The Yellow House is directly to the left of the Purple House.\n4. The Dog lives in the Yellow House.\n\nWhere does the Zebra live?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.0001167,
+        "judgeCostUsd": 0.00011625,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "substitutedProse": "Three houses stand in a row, numbered 1 to 3 from left to right. Each has a unique color —\nYellow, Purple, or Orange — and is home to a unique animal — Dog, Cat, or Zebra.\n\n1. The Cat lives in the Purple House.\n2. The Purple House is the middle house.\n3. The Yellow House is directly to the left of the Purple House.\n4. The Dog lives in the Yellow House.\n\nWhere does the Zebra live?"
+      },
+      {
+        "outcome": "SUBSTITUTION_NOT_WELL_FORMED",
+        "detail": "The Dog lives in the Yellow House.",
+        "mappingCostUsd": 0.0001167,
+        "judgeCostUsd": 0.00012165,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": false,
+        "issues": [
+          "The Dog lives in the Yellow House."
+        ],
+        "substitutedProse": "Three houses stand in a row, numbered 1 to 3 from left to right. Each has a unique color —\nYellow, Purple, or Orange — and is home to a unique animal — Dog, Cat, or Zebra.\n\n1. The Cat lives in the Purple House.\n2. The Purple House is the middle house.\n3. The Yellow House is directly to the left of the Purple House.\n4. The Dog lives in the Yellow House.\n\nWhere does the Zebra live?"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0003",
+    "reps": [
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.00010965,
+        "judgeCostUsd": 0.00009915,
+        "domainMatchReason": "complete value set matches (name(s): move, game move); proposed domain name \"game\" doesn't resemble it — informational only, does not affect the match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "substitutedProse": "You're playing water-spock-fire.\n\n1. Water beats spock.\n2. Spock beats fire.\n3. Fire beats water.\n4. Your opponent plays spock.\n\nWhat should you play?"
+      },
+      {
+        "outcome": "SUBSTITUTION_NOT_WELL_FORMED",
+        "detail": "Lizard beats spock.; Spock beats fire.; Fire beats lizard.",
+        "mappingCostUsd": 0.00011085,
+        "judgeCostUsd": 0.00010995,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": false,
+        "issues": [
+          "Lizard beats spock.",
+          "Spock beats fire.",
+          "Fire beats lizard."
+        ],
+        "substitutedProse": "You're playing lizard-spock-fire.\n\n1. Lizard beats spock.\n2. Spock beats fire.\n3. Fire beats lizard.\n4. Your opponent plays spock.\n\nWhat should you play?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.00010965,
+        "judgeCostUsd": 0.0000984,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "substitutedProse": "You're playing water-fire-air.\n\n1. Water beats fire.\n2. Fire beats air.\n3. Air beats water.\n4. Your opponent plays fire.\n\nWhat should you play?"
+      }
+    ]
+  }
+]

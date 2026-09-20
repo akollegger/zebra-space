@@ -1,0 +1,77 @@
+[
+  {
+    "id": "PZL-0002",
+    "reps": [
+      {
+        "outcome": "VERIFIED",
+        "detail": "all rows match under overlap alignment",
+        "mappingCostUsd": 0.0001167,
+        "verifierCostUsd": 0.00025095,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "verifierVerdict": "MATCH",
+        "substitutedProse": "Three houses stand in a row, numbered 1 to 3 from left to right. Each has a unique color —\nYellow, Pink, or Orange — and is home to a unique animal — Dog, Cat, or Zebra.\n\n1. The Cat lives in the Pink House.\n2. The Pink House is the middle house.\n3. The Yellow House is directly to the left of the Pink House.\n4. The Dog lives in the Yellow House.\n\nWhere does the Zebra live?"
+      },
+      {
+        "outcome": "VERIFIER_SOLVE_ERROR",
+        "detail": "ModelSyntaxError: /private/var/folders/t_/xcdyhzm5185g8bsc5klh4y6h0000gn/T/minizinc-R3SX1v/model.mzn:21.100:\nforall(i in 1..3)(house_animal[i] == Zebra -> house_color[i] != Purple /\\ house_color[i] != Yellow);\n        ",
+        "mappingCostUsd": 0.0001167,
+        "verifierCostUsd": 0.00026535,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "substitutedProse": "Three houses stand in a row, numbered 1 to 3 from left to right. Each has a unique color —\nYellow, Purple, or Orange — and is home to a unique animal — Dog, Cat, or Zebra.\n\n1. The Cat lives in the Purple House.\n2. The Purple House is the middle house.\n3. The Yellow House is directly to the left of the Purple House.\n4. The Dog lives in the Yellow House.\n\nWhere does the Zebra live?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "all rows match under overlap alignment",
+        "mappingCostUsd": 0.0001167,
+        "verifierCostUsd": 0.00023175,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "verifierVerdict": "MATCH",
+        "substitutedProse": "Three houses stand in a row, numbered 1 to 3 from left to right. Each has a unique color —\nYellow, Pink, or Purple — and is home to a unique animal — Dog, Cat, or Zebra.\n\n1. The Cat lives in the Pink House.\n2. The Pink House is the middle house.\n3. The Yellow House is directly to the left of the Pink House.\n4. The Dog lives in the Yellow House.\n\nWhere does the Zebra live?"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0003",
+    "reps": [
+      {
+        "outcome": "VERIFIED",
+        "detail": "expected a unique solution, got Unsatisfiable",
+        "mappingCostUsd": 0.00011085,
+        "verifierCostUsd": 0.0001917,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "verifierVerdict": "NOT_UNIQUE",
+        "substitutedProse": "You're playing lizard-spock-water.\n\n1. Paper beats spock.\n2. Rock beats water.\n3. Scissors beats lizard.\n4. Your opponent plays spock.\n\nWhat should you play?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "missing tokens: water, fire",
+        "mappingCostUsd": 0.00010905,
+        "verifierCostUsd": 0.00018495,
+        "domainMatchReason": "complete value set matches (name(s): move, game move); proposed domain name \"game\" doesn't resemble it — informational only, does not affect the match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "verifierVerdict": "MISMATCH",
+        "substitutedProse": "You're playing water-fire-earth.\n\n1. Paper beats fire.\n2. Rock beats earth.\n3. Scissors beats water.\n4. Your opponent plays fire.\n\nWhat should you play?"
+      },
+      {
+        "outcome": "VERIFIED",
+        "detail": "expected a unique solution, got MultiplySatisfiable",
+        "mappingCostUsd": 0.00011025,
+        "verifierCostUsd": 0.0002157,
+        "domainMatchReason": "complete value set matches (name(s): move, game move); proposed domain name \"gesture\" doesn't resemble it — informational only, does not affect the match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "verifierVerdict": "NOT_UNIQUE",
+        "substitutedProse": "You're playing lizard-spock-fire.\n\n1. Paper beats spock.\n2. Rock beats fire.\n3. Scissors beats lizard.\n4. Your opponent plays spock.\n\nWhat should you play?"
+      }
+    ]
+  }
+]

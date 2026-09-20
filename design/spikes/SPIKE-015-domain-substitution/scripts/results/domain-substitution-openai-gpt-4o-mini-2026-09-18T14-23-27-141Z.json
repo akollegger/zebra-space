@@ -1,0 +1,114 @@
+[
+  {
+    "id": "PZL-0001",
+    "reps": [
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.00015435,
+        "judgeCostUsd": 0.0001449,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 5,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "substitutedProse": "There are five houses.\n\n1. The Frenchman lives in the red house.\n2. The Italian owns the dog.\n3. Coffee is drunk in the green house.\n4. The Polish drinks tea.\n5. The green house is immediately to the right of the ivory house.\n6. The Old Gold smoker owns snails.\n7. Kools are smoked in the yellow house.\n8. Milk is drunk in the middle house.\n9. The Swedish lives in the first house.\n10. The man who smokes Chesterfields lives in the house next to the man with the fox.\n11. Kools are smoked in the house next to the house where the horse is kept.\n12. The Lucky Strike smoker drinks orange juice.\n13. The Chinese smokes Parliaments.\n14. The Swedish lives next to the blue house.\n\nNow, who drinks water? Who owns the zebra?"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0002",
+    "reps": [
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.0001167,
+        "judgeCostUsd": 0.00011625,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "substitutedProse": "Three houses stand in a row, numbered 1 to 3 from left to right. Each has a unique color —\nYellow, Purple, or Orange — and is home to a unique animal — Dog, Cat, or Zebra.\n\n1. The Cat lives in the Purple House.\n2. The Purple House is the middle house.\n3. The Yellow House is directly to the left of the Purple House.\n4. The Dog lives in the Yellow House.\n\nWhere does the Zebra live?"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0003",
+    "reps": [
+      {
+        "outcome": "SUBSTITUTION_NOT_WELL_FORMED",
+        "detail": "1. Lizard beats spock.; 2. Spock beats water.; 3. Water beats lizard.",
+        "mappingCostUsd": 0.00011085,
+        "judgeCostUsd": 0.00011355,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 3,
+        "mznSkipped": [],
+        "wellFormed": false,
+        "issues": [
+          "1. Lizard beats spock.",
+          "2. Spock beats water.",
+          "3. Water beats lizard."
+        ],
+        "substitutedProse": "You're playing lizard-spock-water.\n\n1. Lizard beats spock.\n2. Spock beats water.\n3. Water beats lizard.\n4. Your opponent plays spock.\n\nWhat should you play?"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0004",
+    "reps": [
+      {
+        "outcome": "MZN_APPLY_TOTAL_FAILURE",
+        "detail": "no mapping entries applied to the seed .mzn",
+        "mappingCostUsd": 0.00013245,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 0,
+        "mznSkipped": [
+          {
+            "oldValue": "Miss Scarlett",
+            "newValue": "Mr. Green",
+            "reason": "not found among declared enum members"
+          },
+          {
+            "oldValue": "Colonel Mustard",
+            "newValue": "Mrs. White",
+            "reason": "not found among declared enum members"
+          },
+          {
+            "oldValue": "Professor Plum",
+            "newValue": "Mrs. Peacock",
+            "reason": "not found among declared enum members"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "PZL-0011",
+    "reps": [
+      {
+        "outcome": "DOMAIN_MATCH_FAILED",
+        "detail": "closest expected domain (name(s): outcome, decision) has a different value set: missing [Denied, Approved, Counter-Offer]; invented [680, 750]",
+        "mappingCostUsd": 0.00012795,
+        "domainMatchReason": "closest expected domain (name(s): outcome, decision) has a different value set: missing [Denied, Approved, Counter-Offer]; invented [680, 750]"
+      }
+    ]
+  },
+  {
+    "id": "PZL-0038",
+    "reps": [
+      {
+        "outcome": "VERIFIED",
+        "detail": "",
+        "mappingCostUsd": 0.0001455,
+        "judgeCostUsd": 0.00013425,
+        "domainMatchReason": "domain name and complete value set both match",
+        "mznApplied": 5,
+        "mznSkipped": [],
+        "wellFormed": true,
+        "issues": [],
+        "substitutedProse": "A wildlife park is moving five animals — a lion, a hare, a sheep, a sparrow, and a snapping turtle —\ninto five holding pens standing in a row, numbered 1 to 5, one animal per pen. Each pen is fully\nenclosed on all sides by a solid concrete wall; no animal in any pen can see, smell, hear, or\nreach any animal in another.\n\n1. The snapping turtle is in pen 1.\n2. The sparrow is in pen 2.\n3. The sheep is in pen 3.\n4. The hare is in a lower-numbered pen than the lion.\n5. The lion preys on the hare.\n\nWhere is each animal?"
+      }
+    ]
+  }
+]
