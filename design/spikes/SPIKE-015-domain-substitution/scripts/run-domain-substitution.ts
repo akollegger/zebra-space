@@ -26,6 +26,7 @@
 // Usage: node --env-file-if-exists=.env design/spikes/SPIKE-015-domain-substitution/scripts/run-domain-substitution.ts
 // REPS=<n> overrides the default of 3. MODEL=<model> overrides the mapper's default gpt-4o-mini.
 // JUDGE_MODEL=<model> overrides the critic's default z-ai/glm-5.3-flash.
+// EXCLUDE_SEEDS=<comma-separated ids> overrides the default known-broken-seed list (PZL-0004).
 
 import { readFileSync, readdirSync } from "node:fs"
 import { fileURLToPath } from "node:url"
@@ -65,7 +66,9 @@ const SEED_PUZZLE_IDS = ["PZL-0001", "PZL-0002", "PZL-0003", "PZL-0004", "PZL-00
 // sweeps) for a puzzle-file reason, not a model-capability one — see SPIKE.md §5.7. Used only
 // to compute an adjusted (excluding-known-broken-seeds) rate/cost alongside the raw one; the
 // puzzle stays in SEED_PUZZLE_IDS and every rep against it still runs and is logged normally.
-const KNOWN_BROKEN_SEED_IDS = ["PZL-0004"]
+// EXCLUDE_SEEDS=<comma-separated ids> overrides this default without a code change (e.g. to
+// adjust for a future seed's own known-broken domain).
+const KNOWN_BROKEN_SEED_IDS = process.env.EXCLUDE_SEEDS?.split(",").map((id) => id.trim()).filter((id) => id !== "") ?? ["PZL-0004"]
 
 const MZN_DIR = new URL("../../../../catalog/mzn/", import.meta.url)
 
