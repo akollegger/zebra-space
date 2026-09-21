@@ -27,8 +27,32 @@ interface Spike015Record {
   readonly reps: readonly Spike015Rep[]
 }
 
+/** Deduplicates by `puzzleId|substitutedProse` — the three qualifying result files (a bare
+ * frontier-judge run, plus two independent-judge-model runs per SPIKE-015 SPIKE.md §5.9) cover
+ * the SAME six puzzles and their outputs collide: 28 of the original 67 qualifying reps were
+ * exact repeats of one of 39 distinct items, re-spending Jev on byte-identical input and
+ * inflating the §5.2 denominator (Kilo Code review, PR #37). Keeps the FIRST occurrence in
+ * file-then-rep order (files sorted for determinism) — one real disagreement exists across
+ * duplicates of the same prose (PZL-0003's "lizard-spock-water" item: 2 `false`/3 `true` across
+ * its 5 copies, likely reflecting the different judge models across files, not a bug) and is
+ * left as-is rather than re-resolved by a second-order vote, since this sub-question compares
+ * against WHATEVER majority verdict SPIKE-015 recorded for that occurrence, not an idealized one. */
+function dedupeByProse(
+  items: readonly { readonly puzzleId: string; readonly rep: Spike015Rep; readonly majorityWellFormed: boolean }[],
+): { readonly puzzleId: string; readonly rep: Spike015Rep; readonly majorityWellFormed: boolean }[] {
+  const seen = new Set<string>()
+  const deduped: { readonly puzzleId: string; readonly rep: Spike015Rep; readonly majorityWellFormed: boolean }[] = []
+  for (const item of items) {
+    const key = `${item.puzzleId}|${item.rep.substitutedProse}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    deduped.push(item)
+  }
+  return deduped
+}
+
 async function loadReplayItems(): Promise<{ readonly puzzleId: string; readonly rep: Spike015Rep; readonly majorityWellFormed: boolean }[]> {
-  const files = (await readdir(RESULTS_DIR)).filter((f) => f.endsWith(".json"))
+  const files = (await readdir(RESULTS_DIR)).filter((f) => f.endsWith(".json")).sort()
   const items: { readonly puzzleId: string; readonly rep: Spike015Rep; readonly majorityWellFormed: boolean }[] = []
   let skippedNonMajority = 0
   for (const file of files) {
@@ -45,7 +69,9 @@ async function loadReplayItems(): Promise<{ readonly puzzleId: string; readonly 
     }
   }
   if (skippedNonMajority > 0) console.log(`Skipped ${skippedNonMajority} rep(s) without a recorded majority-of-3+ judgeVotes (legacy single-judge records).`)
-  return items
+  const deduped = dedupeByProse(items)
+  if (deduped.length < items.length) console.log(`Deduplicated ${items.length - deduped.length} repeated (puzzleId, substitutedProse) item(s) across overlapping result files.`)
+  return deduped
 }
 
 async function main(): Promise<void> {

@@ -38,7 +38,15 @@ const NAMED_MISS_PAIRS: readonly EquivalencePair[] = [
  * ADR-011) already considers the same value (e.g. "Dog"/"dog") before adding it — Copilot review
  * (PR #37) found the prefix-bucketing let one such pair through mislabeled `expected: false`,
  * when by this project's own definition of "distinct value" it's a true positive, not a
- * negative control. */
+ * negative control.
+ *
+ * Also skips any entry whose `answer` carries an `outcome` field — per §4's Copilot-review-bug-
+ * fix's own finding (run-outcome-framing-gate.ts), that field is present ONLY on non-determinate
+ * entries (PZL-0015 onward), whose `answer` is diagnostic METADATA (`failing_condition`,
+ * `contestability`, `diagnosis`, `readings[].reading`, ...), not domain VALUES. Kilo Code review
+ * (PR #37) found this loader harvested that metadata too, producing pairs like `"Norwegian"` vs.
+ * `"non-problem"` or `"Coffee"` vs. `"Constitutive constraints"` — trivially easy negatives that
+ * contradict `contextHint`/this function's own docstring and inflated §5.3's 20/20. */
 async function loadNegativeControlPairs(cap = 20): Promise<EquivalencePair[]> {
   const raw = JSON.parse(await readFile(new URL("eval/answer-keys.json", ROOT), "utf8")) as Record<string, unknown>
   const { $comment: _ignored, ...entries } = raw
@@ -48,7 +56,11 @@ async function loadNegativeControlPairs(cap = 20): Promise<EquivalencePair[]> {
     else if (v !== null && typeof v === "object") Object.values(v as Record<string, unknown>).forEach(collect)
     else if (typeof v === "string" && !/^-?\d+$/.test(v)) values.add(v)
   }
-  for (const entry of Object.values(entries)) collect((entry as { answer?: unknown }).answer)
+  for (const entry of Object.values(entries)) {
+    const answer = (entry as { answer?: unknown }).answer
+    if (answer !== null && typeof answer === "object" && !Array.isArray(answer) && "outcome" in (answer as Record<string, unknown>)) continue
+    collect(answer)
+  }
 
   const byPrefix = new Map<string, string[]>()
   for (const v of values) {

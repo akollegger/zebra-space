@@ -235,15 +235,56 @@ live sweeps was re-run in full. **The corrected numbers below replace the origin
 throughout — this section documents that a real, substantive review caught real, substantive
 bugs, not a discrepancy to footnote.**
 
+**2026-09-21 — Kilo Code review on PR #37 found four more real issues in the corrected write-up
+(one WARNING, three SUGGESTIONs); all four fixed/addressed.** Summary:
+
+1. **Sub-question 4's replay still double-counted**: the three qualifying result files (one bare
+   frontier-judge run, two independent-judge-model runs per SPIKE-015 §5.9) cover the SAME six
+   puzzles, and their outputs collide — 28 of the 67 "validated majority-of-3" reps were exact
+   repeats of one of 39 DISTINCT `(puzzleId, substitutedProse)` items, re-spending Jev on
+   byte-identical input and inflating the denominator. Fixed by deduplicating to the first
+   occurrence per distinct item (one genuine cross-file disagreement exists on a repeated item —
+   PZL-0003's "lizard-spock-water" prose splits 2 `false`/3 `true` across its 5 copies, plausibly
+   from the different judge models across files — left as-is rather than re-resolved by a
+   second-order vote, per this fix's own code comment).
+2. **Sub-question 3's negative-control pool harvested diagnostic METADATA, not domain VALUES**:
+   the collector walked every string leaf under `answer`, and non-determinate entries
+   (PZL-0015 onward) store `outcome`/`failing_condition`/`diagnosis`/`contestability`/
+   `readings[].reading` text there instead of puzzle values — producing pairs like
+   `"Norwegian"` vs. `"non-problem"` or `"Coffee"` vs. `"Constitutive constraints"`, which
+   contradict `contextHint` and are trivially easy negatives that inflated 20/20. Fixed by
+   skipping any entry whose `answer` carries an `outcome` field (the same signal §4's fix #1
+   established distinguishes a real value entry from a diagnostic one) before collecting.
+3. **§5.4's PZL-0010 preamble claim ("flagged in 2 of 3 reps") didn't match the committed
+   result**: rep 1's preamble check DID select a line (index 2, fidelity 0.04) rather than
+   finding no match, but 0.04 is still well under the 0.5 flag threshold, so all 3 reps are in
+   fact flagged — the write-up conflated "no matching line" with "flagged" instead of reporting
+   the actual rule. Corrected in §5.4 below.
+4. **§5.3's cited noul value was off by 0.01** (0.29 written, 0.28 recorded) — corrected.
+5. **§5.1's `subjective` criterion may not describe the class it's scored against** — `FRAMING_
+   CRITERIA.subjective` asks about preference/opinion prose, but the catalog's `subjective`
+   entries (PZL-0033 onward) are unstated-premise puzzles that read as ordinary determinate
+   puzzles and never ask for a preference at all (confirmed by inspecting their `answer` shape:
+   `unstated_premise`/`contestability`/`agreement`/`stakes` fields, no preference language). The
+   redesign's deliberate literal-surface-reading approach cannot detect an imported premise by
+   construction, so part of `subjective`'s 0/6 measures a criterion/taxonomy mismatch, not only
+   Jev's capability — distinguished explicitly from `ambiguous`'s 0/5 (whose criterion DOES match
+   its class's actual readings-based definition) in §5.1/§6 below, per Kilo's own suggested
+   caveat rather than a design change to the criteria themselves.
+
+Sub-questions 3 and 4 were re-run after their code fixes; §5.1/§5.3/§5.4's TEXT was corrected for
+the two documentation-only findings (3, 4) without a re-run, since nothing about the underlying
+data changed — only what was written about it.
+
 ## 5. Findings
 
-All four sub-questions were run live against real data (39-puzzle answer-key catalog, 67
-validated majority-of-3 SPIKE-015 substitution reps, 42 preamble+clue checks across 6
-PZL-0010/0038 formalize-mzn drafts, 25 pairwise-equivalence checks), corrected and re-run once
-per the 2026-09-20 Copilot-review fixes above. Raw results (post-fix; the pre-fix files were
-deleted, not kept alongside, to avoid citing stale numbers by accident):
-`scripts/results/{pairwise-equivalence,wellformed-decomposed,outcome-framing-gate,
-per-clue-fidelity}-2026-09-20T20-1*.json`.
+All four sub-questions were run live against real data (39-puzzle answer-key catalog, 39
+deduplicated majority-of-3 SPIKE-015 substitution reps, 42 preamble+clue checks across 6
+PZL-0010/0038 formalize-mzn drafts, 20 value-only pairwise-equivalence checks), corrected and
+re-run per the 2026-09-20 Copilot-review and 2026-09-21 Kilo-review fixes above. Raw results
+(pre-fix files deleted at each round, not kept alongside, to avoid citing stale numbers by
+accident): `scripts/results/{pairwise-equivalence,wellformed-decomposed,outcome-framing-gate,
+per-clue-fidelity}-2026-09-2*.json`.
 
 ### 5.1 Sub-question 1 — outcome-framing gate: 59% overall once the class-distribution bug is fixed — strong on determinate/cop, a real failure on ambiguous/subjective
 
@@ -263,52 +304,68 @@ bug was hiding them). Per class:
 classes with the most textually distinctive signals (an optimization keyword for `cop`; a fully
 specified, closed clue set for `determinate`), and it FAILS COMPLETELY on `ambiguous` and
 `subjective` — the confusion matrix shows both classes' misses land almost entirely on
-`determinate` (5/5 ambiguous puzzles, 5/6 subjective puzzles predicted `determinate`), meaning
-Jev is reading these puzzles' surface completeness as evidence they're fully determinate, missing
-the interpretive gap or preference-based framing entirely. `non-problem` is a genuine middle
-case (29%, better than chance but far from reliable), with most misses landing on `ambiguous`.
-**This is a real negative finding for three of five classes**, not an artifact of a class the
-catalog happens to lack — the original "incomplete by construction, untested" framing was itself
-a symptom of the bug, not an honest hedge. Latency: 11.3s total / 39 calls ≈ 290ms/call. Token
-usage: 25,782 input / 2,445 output tokens (no $ pricing published as of this spike).
+`determinate` (5/5 ambiguous puzzles, 5/6 subjective puzzles predicted `determinate`). `non-
+problem` is a genuine middle case (29%, better than chance but far from reliable), with most
+misses landing on `ambiguous`. **This is a real negative finding for three of five classes**,
+not an artifact of a class the catalog happens to lack — the original "incomplete by
+construction, untested" framing was itself a symptom of the bug, not an honest hedge.
 
-### 5.2 Sub-question 4 — decomposed well-formedness: 73% agreement with a VALID majority-of-3 sample, and a directional bias
+**`ambiguous` and `subjective`'s 0% share a symptom but not necessarily a single cause** (Kilo
+Code review, PR #37): `ambiguous`'s `FRAMING_CRITERIA` ("leaves out information needed to settle
+on one reading") DOES match that class's actual definition (its `readings[]` field records
+genuinely multiple valid interpretations) — its 0/5 is a clean capability-gap read, Jev reading
+surface completeness as evidence of a single determinate answer when a real interpretive gap
+exists. `subjective`'s criterion ("asks for a preference, opinion, or value judgment") does NOT
+match that class's actual shape — PZL-0033 onward are UNSTATED-PREMISE puzzles (an assumed norm
+like "perishables should be refrigerated" that isn't stated in the prose, per their
+`unstated_premise`/`contestability`/`agreement`/`stakes` fields) that read as ordinary,
+fully-specified determinate puzzles on their surface and never ask for a preference at all. The
+redesign's deliberate literal-surface-reading approach (per the jaggedness doc's own guidance)
+cannot detect an imported premise BY CONSTRUCTION, regardless of Jev's capability — so
+`subjective`'s 0/6 partly measures that the criterion never described the class being scored
+against, not purely a Jev limitation. This doesn't overturn the finding (Jev still can't
+recognize either class as tested), but the TWO classes' 0% share a symptom, not necessarily one
+cause. Latency: 11.3s total / 39 calls ≈ 290ms/call. Token usage: 25,782 input / 2,445 output
+tokens (no $ pricing published as of this spike).
 
-Corrected run: 67 genuine majority-of-3 reps (22 legacy single-judge reps excluded per §4's fix),
-all 67 scored (0 errors), **73% agreement (49/67)** with the recorded 3-vote majority verdict —
-close to, but not the same number as, the pre-fix 71%/89, since the excluded 22 reps weren't a
-random sample (removing them shifted the rate slightly, confirming they were a real confound, not
-a rounding difference). Disagreements are NOT symmetric: Jev is more lenient — most disagreements
-are `majority=false, jev=true` (Jev calling something well-formed that the 3-vote frontier critic
-flagged), clustered heavily on PZL-0001 (7 of its 9 disagreeing reps go this direction). PZL-0001
-is exactly the puzzle SPIKE-015's own file header cites as its motivating case-sensitivity/
-word-boundary bug example — a subtle single-word placement mismatch ("The Swedish lives in the
-first house" instead of substituting "Norwegian"→"Swede" correctly) that the frontier 3-vote
-critic caught but Jev's decomposed Nouls largely missed. This is consistent with the jaggedness
-doc's own "indirection" warning: spotting one specific misplaced word inside a 14-line paragraph
-is a multi-hop localization task, not a literal surface read. Note the STILL-OPEN confound from
-§4's fixture gap (no `mapping` available for this replay, unrelated to the majority-of-3 filter
-fix) — some of this gap may narrow with the mapping present; untested. Latency: 21.1s total / 67
-reps ≈ 315ms/rep (3 parallel Nouls per rep, same wall-clock as one). Token usage: 59,436 input /
-4,556 output tokens.
+### 5.2 Sub-question 4 — decomposed well-formedness: 77% agreement on a deduplicated, VALID majority-of-3 sample, and a completely one-directional bias
 
-### 5.3 Sub-question 3 — pairwise equivalence: strong on lexical variants and negative controls, but did NOT close the named domain-synonym gap
+Corrected run: 39 DISTINCT `(puzzleId, substitutedProse)` items (22 legacy single-judge reps
+excluded per §4's fix; a further 28 exact-duplicate reps across three overlapping SPIKE-015
+result files collapsed to their first occurrence per the 2026-09-21 dedup fix above), all 39
+scored (0 errors), **77% agreement (30/39)** with the recorded 3-vote majority verdict. The 9
+disagreements are **100% one-directional** — every one is `majority=false, jev=true` (Jev
+calling something well-formed that the 3-vote frontier critic flagged), never the reverse.
+5 of the 9 are PZL-0001, exactly the puzzle SPIKE-015's own file header cites as its motivating
+case-sensitivity/word-boundary bug example — a subtle single-word placement mismatch ("The
+Swedish lives in the first house" instead of substituting "Norwegian"→"Swede" correctly) that
+the frontier 3-vote critic caught but Jev's decomposed Nouls missed entirely. This is consistent
+with the jaggedness doc's own "indirection" warning: spotting one specific misplaced word inside
+a 14-line paragraph is a multi-hop localization task, not a literal surface read. Note the
+STILL-OPEN confound from §4's fixture gap (no `mapping` available for this replay, unrelated to
+either dedup fix) — some of this gap may narrow with the mapping present; untested. Latency:
+12.1s total / 39 reps ≈ 311ms/rep (3 parallel Nouls per rep, same wall-clock as one). Token
+usage: 35,018 input / 2,652 output tokens.
 
-- **Curated-alias pairs**: 2/3 correct. Missed `"hardcover book set"` vs. `"book set"` (noul=0.29,
+### 5.3 Sub-question 3 — pairwise equivalence: strong on lexical variants and a now-genuine negative control, but did NOT close the named domain-synonym gap
+
+- **Curated-alias pairs**: 2/3 correct. Missed `"hardcover book set"` vs. `"book set"` (noul=0.28,
   i.e. leaning "no match") — a plain underscore/space + word-drop variant the existing
   deterministic fold handles trivially. A real, surprising miss on an easy case.
 - **Named-miss pairs (the actual gap this sub-question exists to test)**: 0/2. Both `"action"` vs.
-  `"move"` (noul=0.26) and `"game"` vs. `"move"` (noul=0.04) — WITH the puzzle's own domain
+  `"move"` (noul=0.27) and `"game"` vs. `"move"` (noul=0.04) — WITH the puzzle's own domain
   description as `contextHint` — were judged NOT the same value. The context-hint mitigation the
   redesign added (see §2) was not enough; Jev's judgment tracked general-English synonymy far
   more than the puzzle-specific domain framing. **This is a real, direct negative result**: Jev
   does not, as tested, close the exact gap `score-domain-match.ts`'s own comments named as
   something "curation alone can't close."
-- **Negative control (hard-negative sample, capped 20 pairs)**: corrected run, with the
-  case-only `"Dog"`/`"dog"` pair filtered out at the source (§4) rather than discounted by hand —
-  **20/20 correct**. Jev never produced a false merge on a genuinely distinct pair, including
-  lexically close ones like `"Norwegian"`/`"North"` or `"Coffee"`/`"Conservatory"`.
-- Total latency: 7.6s / 25 calls ≈ 305ms/call. Token usage: 10,514 input / 550 output tokens.
+- **Negative control (hard-negative sample, capped 20 pairs)**: corrected run, now filtered to
+  genuine domain VALUES rather than diagnostic metadata (§4's 2026-09-21 fix) — 15 pairs
+  available after filtering (fewer than the original 20-pair cap, since the value-only pool is
+  smaller), **15/15 correct**. Jev never produced a false merge on a genuinely distinct value
+  pair, including lexically close ones like `"Norwegian"`/`"North"` or `"Coffee"`/
+  `"Conservatory"` — a smaller but now-honest number, replacing the metadata-inflated 20/20.
+- Total latency: 6.1s / 20 calls ≈ 304ms/call. Token usage: 8,394 input / 440 output tokens.
 
 ### 5.4 Sub-question 2 — per-clue fidelity: with the preamble now checked, PZL-0038 shows the ACTUAL diagnosed failure caught, plus one more; PZL-0010 remains a real false-positive problem
 
@@ -324,9 +381,11 @@ but DIFFERENT omission from the preamble's global constraint (the original write
 the two; they are now reported separately and both hold up). The two flagged items per rep (one
 preamble, one clue) are consistent across every rep regardless of solve outcome.
 
-**PZL-0010 (3 reps): unchanged, a real limitation.** The preamble is ALSO flagged in 2 of 3 reps
-here (weakly matched in the third, fidelity 0.04), consistent with the puzzle's own clues being
-compound/conditional rather than the preamble specifically. Every numbered clue in every rep was
+**PZL-0010 (3 reps): unchanged, a real limitation.** The preamble is ALSO flagged in **all 3
+reps** here — `NO MATCHING LINE` in 2 of 3, plus a weak match in the third (line 2, fidelity
+0.04, still well under the 0.5 flag threshold, so it flags too) — consistent with the puzzle's
+own clues being compound/conditional rather than the preamble specifically. Every numbered clue
+in every rep was
 flagged, INCLUDING the one `SOLVE_UNIQUE`/`MATCH` rep — a false-positive rate this mechanism
 cannot be trusted at, as tested. Root cause, inspecting the raw selections: PZL-0010's clues are
 compound/conditional ("if two cars arrive at the same moment, right-of-way rotates clockwise...")
@@ -345,30 +404,34 @@ Totals (both puzzles, preamble + numbered clues, 42 items checked): latency 20.6
 
 ## 6. Conclusion
 
-**No single verdict across all four — each resolves independently, as planned. Numbers below are
-the corrected, post-Copilot-review ones (§4) — the pre-fix write-up materially overstated
-sub-question 1 and understated the fixture confounds in 2/3/4.**
+**No single verdict across all four — each resolves independently, as planned. Numbers below
+reflect BOTH review rounds (Copilot, §4's first five fixes; Kilo, §4's second four fixes) — the
+original write-up materially overstated sub-question 1, understated the fixture confounds in
+2/3/4, and (after the first fix round) still double-counted duplicate reps in 4 and metadata
+noise in 3.**
 
 - **Outcome-framing gate (1)**: a genuine, sharp split — perfect on `determinate`/`cop` (21/21),
   a complete failure on `ambiguous`/`subjective` (0/11), a weak middle result on `non-problem`
   (2/7). This is NOT "unvalidated due to missing catalog examples" (the original, bug-driven
-  conclusion) — it's a real, now-measured capability gap: Jev's literal-reading strength reads an
-  ambiguous or subjective puzzle's surface completeness as evidence it's fully determinate. **Not
-  usable as a general puzzle-type gate as designed**; possibly still useful as a narrower
-  `determinate`-vs-`cop` discriminator, which is a different, smaller claim than originally
-  framed.
-- **Well-formedness critic substitution (4)**: 73% agreement on a verified, majority-of-3-only
-  sample is not close enough to substitute outright, and the disagreement pattern (Jev more
-  lenient, missing subtle single-word-placement errors) is a real, name-able weakness, not noise
-  — and the STILL-OPEN `mapping` fixture gap (§4, distinct from the majority-of-3 filter fix)
-  means even 73% may be a floor, not a final number. Worth closing with a live re-run (new
-  frontier-model substitution calls, small cost) before treating this as final either way.
+  conclusion) — it's a real, now-measured capability gap for `ambiguous` specifically; `subjective`'s
+  0/6 is confounded by a criterion/taxonomy mismatch (§5.1) and shouldn't be read as an equally
+  clean capability-gap result. **Not usable as a general puzzle-type gate as designed**; possibly
+  still useful as a narrower `determinate`-vs-`cop` discriminator, which is a different, smaller
+  claim than originally framed.
+- **Well-formedness critic substitution (4)**: 77% agreement on a deduplicated, verified
+  majority-of-3-only sample (39 distinct items) is not close enough to substitute outright, and
+  the disagreement pattern (Jev more lenient, 100% one-directional, missing subtle single-word-
+  placement errors) is a real, name-able weakness, not noise — and the STILL-OPEN `mapping`
+  fixture gap (§4, distinct from both the majority-filter and dedup fixes) means even 77% may be
+  a floor, not a final number. Worth closing with a live re-run (new frontier-model substitution
+  calls, small cost) before treating this as final either way.
 - **Alias/equivalence folding (3)**: the curated fold's own named gap (context-specific synonyms)
-  was NOT closed by Jev with a context hint, a clean negative result — and now a clean 20/20 on
-  the negative control (no false merges at all, once the fixture itself was fixed rather than
-  hand-discounted). Its one curated-alias miss (an easy case) suggests it isn't a reliable drop-in
-  even for what the fold already handles well. **Recommendation: do not pursue this replacement**
-  based on this evidence.
+  was NOT closed by Jev with a context hint, a clean negative result — and now a clean 15/15 on
+  a genuinely value-only negative control (no false merges at all, once BOTH the case-only
+  mislabel and the metadata-harvesting bug were fixed at the source rather than hand-discounted
+  or left unnoticed). Its one curated-alias miss (an easy case) suggests it isn't a reliable
+  drop-in even for what the fold already handles well. **Recommendation: do not pursue this
+  replacement** based on this evidence.
 - **Per-clue fidelity/localization (2)**: the most genuinely promising result, and now on firmer
   footing — PZL-0038 shows TWO independently-confirmed catches (the preamble's actual missing
   global constraint, verified against SPIKE-014 §5.4's own claim rather than a different
@@ -379,12 +442,16 @@ sub-question 1 and understated the fixture confounds in 2/3/4.**
   selection) before drawing a final verdict — the PZL-0038 result alone is strong enough evidence
   this direction isn't dead.
 
-**Process note worth carrying forward**: sub-question 1's bug (silently defaulting most
-non-`determinate` entries to `determinate`) produced a plausible-LOOKING but wrong 82% headline
-that a less thorough review would have let stand — the corrected 59%, with its sharp per-class
-split, is a more useful and more honest finding, and the general lesson (validate a classifier's
-INPUT LOADER's coverage of the answer format's actual variants before trusting a class-imbalanced
-accuracy number) applies beyond this spike.
+**Process note worth carrying forward**: TWO rounds of independent automated review each found
+real bugs the other missed — Copilot caught the outcome-loader defect, the discarded preamble,
+the discarded usage data, and two fixture-labeling errors; a SECOND round from Kilo, reviewing
+the ALREADY-CORRECTED code, still found a denominator double-count (duplicate reps across
+overlapping SPIKE-015 files) and a metadata-vs-value contamination bug in the very fixtures the
+first round had just touched, plus two numbers-vs-claims drifts in the write-up itself. Neither
+round was rubber-stamping the other's fix. The general lesson (validate a classifier's INPUT
+LOADER's coverage of the answer format's actual variants; check for exact-duplicate inputs
+across any UNION of multiple source files; re-verify every specific number cited in prose
+against the actual committed JSON, not memory) applies beyond this spike.
 
 **For RFC-003**: cite §5.4's PZL-0038 result as the strongest candidate worth a dedicated
 follow-up spike; cite §5.1's corrected framing-gate split (not the original inflated number) if
