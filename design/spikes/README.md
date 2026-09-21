@@ -87,3 +87,4 @@ into the RFC rather than copied verbatim.
 | [SPIKE-013](SPIKE-013-vocabulary-construction-isolation/SPIKE.md) | Isolating Vocabulary Construction — Self-Consistency, Correctness, and Two Library Candidates | done | RFC-003 |
 | [SPIKE-014](SPIKE-014-informal-reasoning-formalization/SPIKE.md) | Informal Reasoning, Then Formalize the Whole CSP | done | RFC-003 |
 | [SPIKE-015](SPIKE-015-domain-substitution/SPIKE.md) | Domain Substitution as a Cheaper, Verifiable Generation Task | done | RFC-001 |
+| [SPIKE-016](SPIKE-016-typesafe-jev-evaluation/SPIKE.md) | TypeSafe Jev — First-Contact Evaluation of a Judgment-Primitive Model | done | RFC-003 |

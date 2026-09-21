@@ -1,0 +1,355 @@
+{
+  "summary": {
+    "curatedAlias": {
+      "correct": 2,
+      "total": 3,
+      "errors": 0
+    },
+    "namedMiss": [
+      {
+        "a": "action",
+        "b": "move",
+        "jevMatch": false,
+        "noul": 0.27
+      },
+      {
+        "a": "game",
+        "b": "move",
+        "jevMatch": false,
+        "noul": 0.04
+      }
+    ],
+    "negativeControl": {
+      "correct": 15,
+      "total": 15,
+      "errors": 0
+    },
+    "totalLatencyMs": 6084.923311999999,
+    "totalUsage": {
+      "input_tokens": 8394,
+      "output_tokens": 440
+    }
+  },
+  "results": [
+    {
+      "pair": {
+        "a": "hardcover book set",
+        "b": "book_set",
+        "contextHint": "a puzzle answer-key value",
+        "source": "curated-alias",
+        "expected": true
+      },
+      "jevMatch": true,
+      "noul": 0.63,
+      "usage": {
+        "input_tokens": 418,
+        "output_tokens": 22
+      },
+      "latencyMs": 901.511373
+    },
+    {
+      "pair": {
+        "a": "hardcover book set",
+        "b": "book set",
+        "contextHint": "a puzzle answer-key value",
+        "source": "curated-alias",
+        "expected": true
+      },
+      "jevMatch": false,
+      "noul": 0.3,
+      "usage": {
+        "input_tokens": 418,
+        "output_tokens": 22
+      },
+      "latencyMs": 507.7016229999999
+    },
+    {
+      "pair": {
+        "a": "hardcover book set",
+        "b": "hardcover_book_set",
+        "contextHint": "a puzzle answer-key value",
+        "source": "curated-alias",
+        "expected": true
+      },
+      "jevMatch": true,
+      "noul": 0.97,
+      "usage": {
+        "input_tokens": 421,
+        "output_tokens": 22
+      },
+      "latencyMs": 275.85781399999996
+    },
+    {
+      "pair": {
+        "a": "action",
+        "b": "move",
+        "contextHint": "a board game's per-turn options, each turn one is taken",
+        "source": "named-miss",
+        "expected": true
+      },
+      "jevMatch": false,
+      "noul": 0.27,
+      "usage": {
+        "input_tokens": 421,
+        "output_tokens": 22
+      },
+      "latencyMs": 240.1773589999998
+    },
+    {
+      "pair": {
+        "a": "game",
+        "b": "move",
+        "contextHint": "a board game's per-turn options, each turn one is taken",
+        "source": "named-miss",
+        "expected": true
+      },
+      "jevMatch": false,
+      "noul": 0.04,
+      "usage": {
+        "input_tokens": 421,
+        "output_tokens": 22
+      },
+      "latencyMs": 281.6979629999996
+    },
+    {
+      "pair": {
+        "a": "Norwegian",
+        "b": "North",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.05,
+      "usage": {
+        "input_tokens": 419,
+        "output_tokens": 22
+      },
+      "latencyMs": 236.05643100000043
+    },
+    {
+      "pair": {
+        "a": "Dog",
+        "b": "Docs",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.31,
+      "usage": {
+        "input_tokens": 417,
+        "output_tokens": 22
+      },
+      "latencyMs": 287.218785
+    },
+    {
+      "pair": {
+        "a": "Tea",
+        "b": "Testing",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.05,
+      "usage": {
+        "input_tokens": 417,
+        "output_tokens": 22
+      },
+      "latencyMs": 251.70841999999993
+    },
+    {
+      "pair": {
+        "a": "Coffee",
+        "b": "Conservatory",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.04,
+      "usage": {
+        "input_tokens": 419,
+        "output_tokens": 22
+      },
+      "latencyMs": 271.4498779999999
+    },
+    {
+      "pair": {
+        "a": "Coffee",
+        "b": "Counter-Offer",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.03,
+      "usage": {
+        "input_tokens": 420,
+        "output_tokens": 22
+      },
+      "latencyMs": 216.352801
+    },
+    {
+      "pair": {
+        "a": "Conservatory",
+        "b": "Counter-Offer",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.04,
+      "usage": {
+        "input_tokens": 422,
+        "output_tokens": 22
+      },
+      "latencyMs": 313.75683999999956
+    },
+    {
+      "pair": {
+        "a": "Chesterfields",
+        "b": "Chen",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.04,
+      "usage": {
+        "input_tokens": 420,
+        "output_tokens": 22
+      },
+      "latencyMs": 204.6613900000002
+    },
+    {
+      "pair": {
+        "a": "Parliaments",
+        "b": "Paper",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.03,
+      "usage": {
+        "input_tokens": 419,
+        "output_tokens": 22
+      },
+      "latencyMs": 223.8062829999999
+    },
+    {
+      "pair": {
+        "a": "Cat",
+        "b": "Candlestick",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.02,
+      "usage": {
+        "input_tokens": 419,
+        "output_tokens": 22
+      },
+      "latencyMs": 302.0507740000003
+    },
+    {
+      "pair": {
+        "a": "Cat",
+        "b": "cast-iron skillet",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.03,
+      "usage": {
+        "input_tokens": 420,
+        "output_tokens": 22
+      },
+      "latencyMs": 316.3759309999996
+    },
+    {
+      "pair": {
+        "a": "Cat",
+        "b": "Caldwell",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.06,
+      "usage": {
+        "input_tokens": 419,
+        "output_tokens": 22
+      },
+      "latencyMs": 225.3715830000001
+    },
+    {
+      "pair": {
+        "a": "Candlestick",
+        "b": "cast-iron skillet",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.05,
+      "usage": {
+        "input_tokens": 422,
+        "output_tokens": 22
+      },
+      "latencyMs": 290.78323700000055
+    },
+    {
+      "pair": {
+        "a": "Candlestick",
+        "b": "Caldwell",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.06,
+      "usage": {
+        "input_tokens": 421,
+        "output_tokens": 22
+      },
+      "latencyMs": 253.85017400000015
+    },
+    {
+      "pair": {
+        "a": "cast-iron skillet",
+        "b": "Caldwell",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.04,
+      "usage": {
+        "input_tokens": 422,
+        "output_tokens": 22
+      },
+      "latencyMs": 274.5994219999993
+    },
+    {
+      "pair": {
+        "a": "Design",
+        "b": "Deepak",
+        "contextHint": "distinct values from this project's puzzle answer keys",
+        "source": "negative-control",
+        "expected": false
+      },
+      "jevMatch": false,
+      "noul": 0.04,
+      "usage": {
+        "input_tokens": 419,
+        "output_tokens": 22
+      },
+      "latencyMs": 209.93523099999948
+    }
+  ]
+}

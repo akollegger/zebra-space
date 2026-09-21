@@ -30,6 +30,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.5.8",
     "@types/node": "^26.2.0",
+    "@typesafe-ai/sdk": "^0.6.0",
     "@web/dev-server": "^1.0.0",
     "typescript": "^7.0.2"
   }
